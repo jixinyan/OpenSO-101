@@ -12,7 +12,7 @@
 #   different kernels — that's the wheel we want.
 #
 # Usage:
-#   conda activate safe_sim2real
+#   conda activate openso101
 #   pip install -r requirements-cuda.txt    # GPU-correct torch first
 #   pip install -e .                        # then the project
 #
