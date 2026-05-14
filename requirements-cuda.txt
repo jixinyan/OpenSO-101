@@ -1,0 +1,26 @@
+# CUDA-correct PyTorch wheels for Safe Sim2Real.
+#
+# Why this file exists:
+#   The project pins `torch==2.7.0` (to match what Isaac Lab 2.3.0 expects).
+#   PyPI's default index ships `2.7.0+cu126`, which was built BEFORE Blackwell
+#   (RTX 50-series, GH200, B100/B200) and therefore lacks `sm_120` kernels —
+#   any CUDA tensor allocation on those GPUs fails with
+#   "no kernel image is available for execution on the device".
+#
+#   The PyTorch project also publishes `2.7.0+cu128` on its own index, built
+#   against CUDA 12.8 with the Blackwell kernels included. Same version pin,
+#   different kernels — that's the wheel we want.
+#
+# Usage:
+#   conda activate safe_sim2real
+#   pip install -r requirements-cuda.txt    # GPU-correct torch first
+#   pip install -e .                        # then the project
+#
+# If you are on an older GPU (Ampere/Hopper) the cu128 wheel still works fine,
+# so this file is the recommended install path on every machine.
+
+--index-url https://download.pytorch.org/whl/cu128
+--extra-index-url https://pypi.org/simple
+
+torch==2.7.0
+torchvision==0.22.0

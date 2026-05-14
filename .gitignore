@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.pytest_cache/
+
+# Build / dist
+build/
+dist/
+
+# Environments
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs / outputs / runs
+logs/
+outputs/
+wandb/
+runs/
+teleop_data/
+camera_preview/
+
+# OS
+.DS_Store
