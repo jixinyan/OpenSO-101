@@ -6,4 +6,7 @@
 __version__ = "0.1.0"
 
 # Trigger gym registration of built-in example tasks on package import.
-from . import tasks  # noqa: F401
+try:
+    from . import tasks  # noqa: F401
+except ModuleNotFoundError:
+    pass  # isaaclab not installed; submodules (teleop, robots) still importable
