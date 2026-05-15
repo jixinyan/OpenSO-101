@@ -1,48 +1,48 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""SO-101 RL reward design defaults shared by all built-in tasks.
+"""SO101-specific RL defaults for manipulation tasks.
 
-SKELETON: real values will be ported from
-`/data/safe_sim2real/src/safe_sim2real/tasks/so101_rl_defaults.py` once
-the source is finalized. The legacy module documents the upstream
-MuammerBay/isaac_so_arm101 chain-reward design (coarse + fine reach,
-grip-near, lift, goal-track) tuned for SO-101 workspace scale.
-"""
+Reward design follows the upstream MuammerBay/isaac_so_arm101 pattern:
+minimal AND-conjunctions, dense chain rewards (reach → grip-near → lift →
+goal-track), height-only gating once the cube is airborne. Values are
+adapted for SO101's ~35cm starting EE-cube distance (vs upstream's ~10cm)
+via a coarse+fine two-tanh reach kernel.
 
-from __future__ import annotations
+Smoothness penalties start at 0 and curriculum in once lift fires; otherwise
+they suppress exploration before the chain bootstraps."""
 
 # Reach reward: coarse kernel for long-range gradient, fine for grasp approach
-SO101_REACH_REWARD_COARSE_STD: float = 0.0
-SO101_REACH_REWARD_COARSE_WEIGHT: float = 0.0
-SO101_REACH_REWARD_STD: float = 0.0
+SO101_REACH_REWARD_COARSE_STD = 0.20
+SO101_REACH_REWARD_COARSE_WEIGHT = 0.5
+SO101_REACH_REWARD_STD = 0.05
+SO101_CLOSE_GRIPPER_NEAR_THRESHOLD = 0.08
+SO101_CLOSE_GRIPPER_CLOSED_STD = 0.12
 
-# Grip-near gating
-SO101_CLOSE_GRIPPER_NEAR_THRESHOLD: float = 0.0
-SO101_CLOSE_GRIPPER_CLOSED_STD: float = 0.0
+SO101_CONTROLLED_OBJECT_MIN_HEIGHT = 0.04
+SO101_CONTROLLED_GRASP_DISTANCE_THRESHOLD = 0.08
+SO101_GRIPPER_CLOSED_THRESHOLD = 0.12
 
-# Controlled-grasp predicates
-SO101_CONTROLLED_OBJECT_MIN_HEIGHT: float = 0.0
-SO101_CONTROLLED_GRASP_DISTANCE_THRESHOLD: float = 0.0
-SO101_GRIPPER_CLOSED_THRESHOLD: float = 0.0
-
-# Goal tracking
-SO101_GOAL_TRACKING_STD: float = 0.0
-SO101_GOAL_TRACKING_FINE_STD: float = 0.0
+SO101_GOAL_TRACKING_STD = 0.30
+SO101_GOAL_TRACKING_FINE_STD = 0.05
 
 # Smoothness penalties: disabled at step 0; curriculum ramps in after lift fires
-SO101_ACTION_RATE_WEIGHT: float = 0.0
-SO101_JOINT_VEL_WEIGHT: float = 0.0
-SO101_JOINT_POS_DELTA_WEIGHT: float = 0.0
-SO101_SMOOTHNESS_CURRICULUM_WEIGHT: float = 0.0
-SO101_SMOOTHNESS_CURRICULUM_STEPS: int = 0
+SO101_ACTION_RATE_WEIGHT = 0.0
+SO101_JOINT_VEL_WEIGHT = 0.0
+SO101_JOINT_POS_DELTA_WEIGHT = 0.0
+SO101_SMOOTHNESS_CURRICULUM_WEIGHT = -1.0e-4
+SO101_SMOOTHNESS_CURRICULUM_STEPS = 48_000
 
-# PPO training defaults
-SO101_PPO_NUM_STEPS_PER_ENV: int = 0
-SO101_PPO_INIT_NOISE_STD: float = 0.0
+SO101_PPO_NUM_STEPS_PER_ENV = 96
+SO101_PPO_INIT_NOISE_STD = 1.0
 SO101_PPO_NOISE_STD_TYPE: str = "log"
-SO101_PPO_ENTROPY_COEF: float = 0.0
-SO101_PPO_GAMMA: float = 0.0
+"""Use log-parameterization for the PPO action-noise std so sigma = exp(param)
+stays strictly positive. The default "scalar" lets sigma drift negative under
+gradient noise and crashes torch.distributions.Normal.sample(). Observed crash:
+2026-05-14 lift training, iter 79, RuntimeError "normal expects all elements
+of std >= 0.0"."""
+SO101_PPO_ENTROPY_COEF = 0.005
+SO101_PPO_GAMMA = 0.98
 
 
 __all__ = [
