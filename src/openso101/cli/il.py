@@ -484,10 +484,10 @@ def _cmd_record(args: argparse.Namespace) -> int:
 
     import openso101.tasks  # noqa: F401
     from openso101.teleop.camera_viewports import open_teleop_viewports
-    from openso101.teleop.hdf5_recorder import SafeSim2RealHDF5TeleopRecorder
+    from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder
     from openso101.teleop.lerobot_interface import LeRobotSO101Leader
     from openso101.teleop.lerobot_recorder import (
-        SafeSim2RealLeRobotRecorder,
+        OpenSO101LeRobotRecorder,
         collect_camera_buffers,
         discover_camera_metadata,
         ordered_action_to_numpy,
@@ -553,7 +553,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
         checkpoints = None
         if not args.no_record:
             if args.record_format == "hdf5":
-                recorder = SafeSim2RealHDF5TeleopRecorder(
+                recorder = OpenSO101HDF5TeleopRecorder(
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
@@ -562,7 +562,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     sim_joint_names=sim_joint_names,
                 )
             else:
-                recorder = SafeSim2RealLeRobotRecorder(
+                recorder = OpenSO101LeRobotRecorder(
                     repo_id=args.repo_id,
                     root=args.repo_root,
                     task_name=args.task_name,

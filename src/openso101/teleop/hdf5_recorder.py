@@ -84,7 +84,7 @@ def validate_hdf5_dataset(root: str | Path) -> list[Path]:
     return episode_files
 
 
-class SafeSim2RealHDF5TeleopRecorder:
+class OpenSO101HDF5TeleopRecorder:
     """Streaming chunked HDF5 recorder with an ACT/LeRobot-friendly layout.
 
     Frames added via :meth:`add_frame` are buffered and flushed to disk in
@@ -181,7 +181,7 @@ class SafeSim2RealHDF5TeleopRecorder:
     def _write_episode_attrs(self, *, success: bool) -> None:
         assert self._h5 is not None
         h5 = self._h5
-        h5.attrs["format"] = "safe_sim2real_teleop_hdf5_v1"
+        h5.attrs["format"] = "openso101_teleop_hdf5_v1"
         h5.attrs["dataset_id"] = self.dataset_id
         h5.attrs["task"] = self.task_name
         h5.attrs["fps"] = int(self.fps)

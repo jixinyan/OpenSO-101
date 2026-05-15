@@ -299,8 +299,11 @@ def _cmd_play(args: argparse.Namespace) -> int:
     @hydra_task_config(args.task, agent_entry_point)
     def _run(env_cfg, agent_cfg):
         """Play with RSL-RL agent."""
+        # OpenSO-101 uses one gym ID per task (no '-Play' suffix variant —
+        # play mode is selected via configure_play below), so the task
+        # name is also the training task name.
         task_name = args.task.split(":")[-1]
-        train_task_name = task_name.replace("-Play", "")
+        train_task_name = task_name
 
         agent_cfg = _cli_args.update_rsl_rl_cfg(agent_cfg, args)
 
@@ -346,7 +349,20 @@ def _cmd_play(args: argparse.Namespace) -> int:
             runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
         else:
             raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
-        runner.load(resume_path)
+        try:
+            runner.load(resume_path)
+        except RuntimeError as e:
+            if "size mismatch" in str(e):
+                raise SystemExit(
+                    f"\n[ERROR]: Checkpoint shape mismatch — the checkpoint at\n"
+                    f"  {resume_path}\n"
+                    f"was trained for a different task than {task_name!r}.\n"
+                    f"Checkpoints are NOT transferable across OpenSO-101 tasks: each "
+                    f"task has its own observation and action space (e.g. PickPlace "
+                    f"includes a 3-stage curriculum goal that Lift/Stack don't). Use "
+                    f"a checkpoint produced by 'openso101 rl train --task {task_name}'.\n"
+                ) from e
+            raise
 
         policy = runner.get_inference_policy(device=env.unwrapped.device)
 
