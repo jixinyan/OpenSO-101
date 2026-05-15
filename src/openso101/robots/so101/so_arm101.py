@@ -49,40 +49,32 @@ back to a baked constant; see ``_usd_bounds._BAKED_BASE_PRIM_LOCAL_Z_MIN``.
 """
 
 SO101_CANONICAL_INIT_JOINT_POS: dict[str, float] = {
-    **SO101_DEFAULT_JOINT_POS,
-    SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
-}
-"""Canonical SO101 reset posture shared by every task that uses ``SO_ARM101_CFG``.
-
-This is the *RL* baseline: SO101_DEFAULT_JOINT_POS is the "natural rest"
-pose tuned to put the end-effector ~15 cm from the typical cube spawn
-(0.2, 0, 0.03), giving the dense reach reward a usable gradient at iter
-0. Good for training, *bad* for teleop ergonomics — the leader operator
-has to drag the arm a long way from the side-tilted rest pose to the
-forward-facing pose needed to grasp the cube.
-
-For teleop use ``SO101_TELEOP_INIT_JOINT_POS`` instead, which starts the
-arm upright and facing the cube.
-"""
-
-
-SO101_TELEOP_INIT_JOINT_POS: dict[str, float] = {
-    "Rotation": 0.0,
+    "Rotation": 1.5708,    # +π/2 — base yawed LEFT 90° so the arm faces the
+                           # cube spawn (at +X in the world; with the SO-101
+                           # base zero pointing along +Y, +π/2 rotates the
+                           # arm's front to +X).
     "Pitch": 0.0,
     "Elbow": 0.0,
     "Wrist_Pitch": 1.5708,  # π/2 — gripper pointing straight down at table
     "Wrist_Roll": 0.0,
     SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
 }
-"""Teleop-optimized SO101 reset posture: arm upright, base rotation = 0,
-gripper pointing straight down at table height. This puts the simulated
-follower in roughly the same physical posture as a real SO101 leader at
-its 'home' calibration, so the operator doesn't see a large lurch when
-teleop starts.
+"""Canonical SO101 reset posture used by both RL training and teleop.
 
-Used by ``SO_ARM101_TELEOP_CFG`` only; RL training continues to use
-``SO101_CANONICAL_INIT_JOINT_POS``.
+The arm starts upright with the base yawed +π/2 so the gripper points
+straight at the cube spawn (0.3, 0, 0.015), and the gripper is pointed
+straight down so it can descend onto the cube. Used by both
+``SO_ARM101_CFG`` (RL) and ``SO_ARM101_TELEOP_CFG`` (teleop) — the same
+"face the cube" pose is the right default for both pillars (a trained
+policy moves away from any init pose within a few timesteps; teleop
+operators want minimal lurch from their leader's home calibration; both
+favor a forward-facing rest).
 """
+
+
+# Backwards-compatible alias: legacy code referenced SO101_TELEOP_INIT_JOINT_POS
+# directly. Keep the name as a pointer to the unified pose.
+SO101_TELEOP_INIT_JOINT_POS = SO101_CANONICAL_INIT_JOINT_POS
 
 
 def spawn_so101_usd_with_safe_collisions(
