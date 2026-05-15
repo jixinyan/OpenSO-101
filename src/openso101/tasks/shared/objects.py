@@ -1,31 +1,23 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Shared SO-101 manipulation object physics defaults (cube).
-
-SKELETON: real constant values will be ported from
-`/data/safe_sim2real/src/safe_sim2real/tasks/so101_object_cfg.py` once
-the source is finalized.
-"""
+"""Shared SO-101 manipulation object physics."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from isaaclab.assets import RigidObjectCfg
-    import isaaclab.sim as sim_utils
-    from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
+import isaaclab.sim as sim_utils
+from isaaclab.assets import RigidObjectCfg
+from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
 
-
-SO101_CUBE_SIZE: float = 0.0
-SO101_CUBE_MASS: float = 0.0
-SO101_CUBE_CONTACT_OFFSET: float = 0.0
-SO101_CUBE_REST_OFFSET: float = 0.0
-SO101_CUBE_STATIC_FRICTION: float = 0.0
-SO101_CUBE_DYNAMIC_FRICTION: float = 0.0
-SO101_CUBE_RESTITUTION: float = 0.0
+SO101_CUBE_SIZE = 0.03
+SO101_CUBE_MASS = 0.02
+SO101_CUBE_CONTACT_OFFSET = 0.004
+SO101_CUBE_REST_OFFSET = 0.0
+SO101_CUBE_STATIC_FRICTION = 1.0
+SO101_CUBE_DYNAMIC_FRICTION = 1.0
+SO101_CUBE_RESTITUTION = 0.0
 
 
 def so101_cube_rigid_props(
@@ -33,11 +25,16 @@ def so101_cube_rigid_props(
     solver_position_iteration_count: int = 16,
     solver_velocity_iteration_count: int = 1,
     max_depenetration_velocity: float = 5.0,
-) -> "RigidBodyPropertiesCfg":
+) -> RigidBodyPropertiesCfg:
     """Return rigid-body solver settings shared by SO-101 cube tasks."""
-    raise NotImplementedError(
-        "so101_cube_rigid_props not yet ported. Source reference: "
-        "/data/safe_sim2real/src/safe_sim2real/tasks/so101_object_cfg.py"
+
+    return RigidBodyPropertiesCfg(
+        solver_position_iteration_count=solver_position_iteration_count,
+        solver_velocity_iteration_count=solver_velocity_iteration_count,
+        max_angular_velocity=1000.0,
+        max_linear_velocity=1000.0,
+        max_depenetration_velocity=max_depenetration_velocity,
+        disable_gravity=False,
     )
 
 
@@ -52,11 +49,26 @@ def so101_cube_spawn_cfg(
     restitution: float = SO101_CUBE_RESTITUTION,
     diffuse_color: Sequence[float] = (0.8, 0.5, 0.1),
     metallic: float = 0.0,
-) -> "sim_utils.CuboidCfg":
+) -> sim_utils.CuboidCfg:
     """Create the canonical 3 cm plastic cube used by SO-101 tasks."""
-    raise NotImplementedError(
-        "so101_cube_spawn_cfg not yet ported. Source reference: "
-        "/data/safe_sim2real/src/safe_sim2real/tasks/so101_object_cfg.py"
+
+    return sim_utils.CuboidCfg(
+        size=(size, size, size),
+        rigid_props=so101_cube_rigid_props(),
+        mass_props=sim_utils.MassPropertiesCfg(mass=mass),
+        collision_props=sim_utils.CollisionPropertiesCfg(
+            contact_offset=contact_offset,
+            rest_offset=rest_offset,
+        ),
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            static_friction=static_friction,
+            dynamic_friction=dynamic_friction,
+            restitution=restitution,
+        ),
+        visual_material=sim_utils.PreviewSurfaceCfg(
+            diffuse_color=tuple(diffuse_color),
+            metallic=metallic,
+        ),
     )
 
 
@@ -67,11 +79,13 @@ def so101_cube_object_cfg(
     init_rot: Sequence[float] = (1.0, 0.0, 0.0, 0.0),
     diffuse_color: Sequence[float] = (0.8, 0.5, 0.1),
     size: float = SO101_CUBE_SIZE,
-) -> "RigidObjectCfg":
+) -> RigidObjectCfg:
     """Create a rigid object cfg with canonical SO-101 cube physics."""
-    raise NotImplementedError(
-        "so101_cube_object_cfg not yet ported. Source reference: "
-        "/data/safe_sim2real/src/safe_sim2real/tasks/so101_object_cfg.py"
+
+    return RigidObjectCfg(
+        prim_path=prim_path,
+        init_state=RigidObjectCfg.InitialStateCfg(pos=list(init_pos), rot=list(init_rot)),
+        spawn=so101_cube_spawn_cfg(size=size, diffuse_color=diffuse_color),
     )
 
 
