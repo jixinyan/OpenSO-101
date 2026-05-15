@@ -11,6 +11,22 @@ import argparse
 _PREFIX = "OpenSO101-"
 
 
+def _launch_isaac_app(headless: bool = True):
+    """Launch Isaac Sim's SimulationApp and import OpenSO-101 tasks.
+
+    Returns the `SimulationApp` handle (caller is responsible for `.close()`).
+    Returns None if `isaaclab` is unavailable (skeleton-only test envs).
+    """
+    try:
+        from isaaclab.app import AppLauncher
+    except ModuleNotFoundError:
+        return None
+    launcher = AppLauncher(headless=headless)
+    # Trigger gym.register calls for the built-in tasks.
+    import openso101.tasks  # noqa: F401
+    return launcher.app
+
+
 def list_envs() -> list[str]:
     """Return registered OpenSO-101 task IDs, sorted."""
     import gymnasium as gym
@@ -19,19 +35,29 @@ def list_envs() -> list[str]:
 
 
 def _cmd_list(args: argparse.Namespace) -> int:
-    for eid in list_envs():
-        print(eid)
+    app = _launch_isaac_app(headless=True)
+    try:
+        for eid in list_envs():
+            print(eid)
+    finally:
+        if app is not None:
+            app.close()
     return 0
 
 
 def _cmd_random(args: argparse.Namespace) -> int:
     import gymnasium as gym
 
-    env = gym.make(args.task, cameras=args.with_cameras)
-    env.reset(seed=0)
-    for _ in range(args.steps):
-        env.step(env.action_space.sample())
-    env.close()
+    app = _launch_isaac_app(headless=False)
+    try:
+        env = gym.make(args.task, cameras=args.with_cameras)
+        env.reset(seed=0)
+        for _ in range(args.steps):
+            env.step(env.action_space.sample())
+        env.close()
+    finally:
+        if app is not None:
+            app.close()
     return 0
 
 
@@ -39,23 +65,33 @@ def _cmd_zero(args: argparse.Namespace) -> int:
     import gymnasium as gym
     import numpy as np
 
-    env = gym.make(args.task, cameras=args.with_cameras)
-    env.reset(seed=0)
-    zero_action = np.zeros(env.action_space.shape, dtype=env.action_space.dtype)
-    for _ in range(args.steps):
-        env.step(zero_action)
-    env.close()
+    app = _launch_isaac_app(headless=False)
+    try:
+        env = gym.make(args.task, cameras=args.with_cameras)
+        env.reset(seed=0)
+        zero_action = np.zeros(env.action_space.shape, dtype=env.action_space.dtype)
+        for _ in range(args.steps):
+            env.step(zero_action)
+        env.close()
+    finally:
+        if app is not None:
+            app.close()
     return 0
 
 
 def _cmd_preview(args: argparse.Namespace) -> int:
     import gymnasium as gym
 
-    env = gym.make(args.task, cameras=True)
-    env.reset(seed=0)
-    for _ in range(args.steps):
-        env.step(env.action_space.sample())
-    env.close()
+    app = _launch_isaac_app(headless=False)
+    try:
+        env = gym.make(args.task, cameras=True)
+        env.reset(seed=0)
+        for _ in range(args.steps):
+            env.step(env.action_space.sample())
+        env.close()
+    finally:
+        if app is not None:
+            app.close()
     return 0
 
 
