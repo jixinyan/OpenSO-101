@@ -1,6 +1,24 @@
+# Conda env scaffold for OpenSO-101.
+#
+# This file intentionally pins ONLY the Python version. The actual runtime
+# deps (Isaac Sim, Isaac Lab, rsl_rl, lerobot, torch, etc.) live in
+# `pyproject.toml` and `requirements-cuda.txt` and are installed via
+# `pip install -e .`.
+#
+# Usage:
+#   conda env create -f environment.yml
+#   conda activate openso101
+#   pip install -r requirements-cuda.txt   # CUDA 12.8 torch wheels (Blackwell + earlier)
+#   pip install -e .                       # pulls isaaclab, rsl_rl, lerobot, ...
+#
+# Why this split: the conda layer just isolates Python so the heavy
+# AI/sim stack (which ships best as pip wheels from PyPI / pypi.nvidia.com)
+# can resolve cleanly without conflicting with conda's solver.
+
 name: openso101
 channels:
   - conda-forge
+  - nvidia
 dependencies:
   - python=3.11
   - pip
