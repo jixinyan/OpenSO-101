@@ -1,10 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Shared MDP observation functions used by built-in manipulation tasks.
-
-SKELETON: bodies raise NotImplementedError until the real port from
-`/data/safe_sim2real/src/safe_sim2real/tasks/shared/observations.py` lands.
+"""Shared observation functions for all atomic skills.
 
 Every atomic skill uses the same 24-dim unified observation space:
     joint_pos_rel (6) + joint_vel_rel (6) + object_position (3) +
@@ -15,22 +12,28 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import torch
+from isaaclab.assets import RigidObject
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import subtract_frame_transforms
+
 if TYPE_CHECKING:
-    import torch
     from isaaclab.envs import ManagerBasedRLEnv
-    from isaaclab.managers import SceneEntityCfg
 
 
 def object_position_in_robot_root_frame(
-    env: "ManagerBasedRLEnv",
-    robot_cfg: "SceneEntityCfg" = None,
-    object_cfg: "SceneEntityCfg" = None,
-) -> "torch.Tensor":
+    env: ManagerBasedRLEnv,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
     """The position of the object in the robot's root frame."""
-    raise NotImplementedError(
-        "object_position_in_robot_root_frame not yet ported. Source reference: "
-        "/data/safe_sim2real/src/safe_sim2real/tasks/shared/observations.py"
+    robot = env.scene[robot_cfg.name]
+    obj: RigidObject = env.scene[object_cfg.name]
+    object_pos_w = obj.data.root_pos_w[:, :3]
+    object_pos_b, _ = subtract_frame_transforms(
+        robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], object_pos_w
     )
+    return object_pos_b
 
 
 __all__ = [
