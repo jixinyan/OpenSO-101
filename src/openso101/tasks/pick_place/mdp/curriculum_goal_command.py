@@ -1,124 +1,272 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""PickPlace task-local MDP curriculum goal command.
+"""3-stage curriculum goal command for pick-and-place.
 
-SKELETON: bodies raise NotImplementedError until the real port from
-`/data/safe_sim2real/src/safe_sim2real/tasks/composite/pick_and_place/mdp/curriculum_goal_command.py` lands.
+The policy always solves the same task: "get the cube to the green ball".
+The curriculum is in *where the ball is*, not in the reward function:
 
-Exports two symbols:
-- ``CurriculumGoalCommand`` — a ``CommandTerm`` subclass that tracks per-env
-  curriculum stage (Lift → Carry → Place) and exposes the active goal in robot
-  root frame as the command tensor.
-- ``CurriculumGoalCommandCfg`` — the matching ``@configclass`` / ``CommandTermCfg``
-  subclass.  Requires Isaac Lab at import time; wrapped in a try/except so the
-  skeleton stays importable without Isaac Lab installed (the name is still exported
-  as ``None`` with a TODO note).
+- Stage 0 (Lift): goal is directly above the cube's spawn xy at a fixed height.
+  Touching it teaches the policy to grasp + lift cleanly.
+- Stage 1 (Carry): goal jumps above the final placement xy at a fixed carry
+  height. Touching it teaches the policy to transport the lifted cube laterally
+  without dropping.
+- Stage 2 (Place): goal moves down to the table surface at the same placement xy.
+  Touching it teaches the policy to lower and release.
+
+Stage advancement happens *within* an episode: as soon as the cube touches the
+current goal sphere, that env's stage increments and the marker jumps to the
+next stage's location. The policy must then track the goal again. The episode
+terminates only at stage-2 success (or time-out / cube drop).
+
+The marker config provides one sphere mesh per stage so the visualizer can
+select by stage. The task config can keep them visually identical if the only
+intended cue is the goal position moving.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import MISSING
 from typing import TYPE_CHECKING
+
+import torch
+from isaaclab.assets import Articulation, RigidObject
+from isaaclab.managers import CommandTerm, CommandTermCfg
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.math import combine_frame_transforms, subtract_frame_transforms
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
 
-class CurriculumGoalCommand:
-    """Per-env stage tracker that exposes ``goal - in robot root frame`` as the command.
+class CurriculumGoalCommand(CommandTerm):
+    """Per-env stage tracker that exposes `goal - in robot root frame` as the command.
 
-    Subclasses :class:`isaaclab.managers.CommandTerm` so it integrates
-    seamlessly with the rest of Isaac Lab (reward functions and observations
-    read it via ``env.command_manager.get_command(name)``; debug-vis spawns
-    the marker automatically).
-
-    SKELETON — instantiation raises NotImplementedError until the real port
-    lands.
+    Subclasses :class:`isaaclab.managers.CommandTerm` so it integrates seamlessly
+    with the rest of Isaac Lab (reward functions and observations read it via
+    ``env.command_manager.get_command(name)``; debug-vis spawns the marker
+    automatically).
     """
 
-    def __init__(self, *args, **kwargs):
-        raise NotImplementedError(
-            "CurriculumGoalCommand not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/tasks/composite/pick_and_place/mdp/curriculum_goal_command.py"
-        )
+    cfg: "CurriculumGoalCommandCfg"
 
-    def goal_for_stage(self, stage: int) -> "torch.Tensor":  # noqa: F821
-        """Return the per-env goal position for a specific curriculum stage."""
-        raise NotImplementedError(
-            "CurriculumGoalCommand.goal_for_stage not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/tasks/composite/pick_and_place/mdp/curriculum_goal_command.py"
-        )
+    def __init__(self, cfg: "CurriculumGoalCommandCfg", env: "ManagerBasedEnv"):
+        super().__init__(cfg, env)
+        self.robot: Articulation = env.scene[cfg.asset_name]
+        self.object: RigidObject = env.scene[cfg.object_name]
 
-    def is_touching_goal(
-        self,
-        cube_pos_b: "torch.Tensor",  # noqa: F821
-        goal_pos_b: "torch.Tensor | None" = None,  # noqa: F821
-        threshold: "float | None" = None,
-    ) -> "torch.Tensor":  # noqa: F821
-        """Return true when the cube surface touches the goal sphere."""
-        raise NotImplementedError(
-            "CurriculumGoalCommand.is_touching_goal not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/tasks/composite/pick_and_place/mdp/curriculum_goal_command.py"
+        n = self.num_envs
+        # Per-env state.
+        self.stage = torch.zeros(n, dtype=torch.long, device=self.device)
+        self.cube_spawn_xy_b = torch.zeros(n, 2, device=self.device)
+        # Goal in robot root frame (the "command" returned to consumers).
+        self.goal_pos_b = torch.zeros(n, 3, device=self.device)
+        # Goal in world frame (used only for marker visualization).
+        self.goal_pos_w = torch.zeros(n, 3, device=self.device)
+
+        # Cache fixed-stage goals as tensors. Stage 1 derives its x/y from the
+        # final place goal so the carry target is always directly above the
+        # eventual placement location.
+        self._place_goal_b = torch.tensor(cfg.place_goal, device=self.device)
+        self._carry_goal_b = self._place_goal_b.clone()
+        self._carry_goal_b[2] = cfg.carry_height
+
+        # Metrics tracked per step.
+        self.just_completed_stage = torch.full((n,), -1, dtype=torch.long, device=self.device)
+        self.metrics["stage"] = torch.zeros(n, device=self.device)
+        self.metrics["distance_to_goal"] = torch.zeros(n, device=self.device)
+        self.metrics["surface_distance_to_goal"] = torch.zeros(n, device=self.device)
+
+    def __str__(self) -> str:
+        return (
+            f"CurriculumGoalCommand(num_envs={self.num_envs}, "
+            f"lift_height={self.cfg.lift_height}, "
+            f"carry_height={self.cfg.carry_height}, place={self.cfg.place_goal}, "
+            f"advance_threshold={self.cfg.advance_threshold}, "
+            f"object_contact_radius={self.cfg.object_contact_radius})"
         )
 
     @property
-    def command(self) -> "torch.Tensor":  # noqa: F821
+    def command(self) -> torch.Tensor:
         """Goal position in robot root frame, shape (num_envs, 3)."""
-        raise NotImplementedError(
-            "CurriculumGoalCommand.command not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/tasks/composite/pick_and_place/mdp/curriculum_goal_command.py"
+        return self.goal_pos_b
+
+    def goal_for_stage(self, stage: int) -> torch.Tensor:
+        """Return the per-env goal position for a specific curriculum stage."""
+        if stage == 0:
+            goal = torch.zeros_like(self.goal_pos_b)
+            goal[:, 0] = self.cube_spawn_xy_b[:, 0]
+            goal[:, 1] = self.cube_spawn_xy_b[:, 1]
+            goal[:, 2] = self.cfg.lift_height
+            return goal
+        if stage == 1:
+            return self._carry_goal_b.expand_as(self.goal_pos_b)
+        if stage == 2:
+            return self._place_goal_b.expand_as(self.goal_pos_b)
+        raise ValueError(f"Invalid curriculum stage: {stage}")
+
+    def is_touching_goal(
+        self,
+        cube_pos_b: torch.Tensor,
+        goal_pos_b: torch.Tensor | None = None,
+        threshold: float | None = None,
+    ) -> torch.Tensor:
+        """Return true when the cube surface touches the goal sphere.
+
+        The marker radius describes the visible goal sphere. The cube is not a
+        point, so contact should be measured with an expanded threshold:
+        ``sphere_radius + object_contact_radius``.
+        """
+        goal = self.goal_pos_b if goal_pos_b is None else goal_pos_b
+        sphere_radius = self.cfg.advance_threshold if threshold is None else threshold
+        contact_threshold = sphere_radius + self.cfg.object_contact_radius
+        distance = torch.norm(cube_pos_b - goal, dim=1)
+        return distance <= contact_threshold
+
+    # --- Implementation hooks called by CommandTerm ----------------------
+
+    def _update_metrics(self):
+        """Per-step metrics. Called before `_update_command` each step."""
+        cube_pos_b, _ = subtract_frame_transforms(
+            self.robot.data.root_pos_w,
+            self.robot.data.root_quat_w,
+            self.object.data.root_pos_w,
+        )
+        distance = torch.norm(cube_pos_b - self.goal_pos_b, dim=1)
+        self.metrics["distance_to_goal"] = distance
+        self.metrics["surface_distance_to_goal"] = torch.clamp(
+            distance - (self.cfg.advance_threshold + self.cfg.object_contact_radius),
+            min=0.0,
+        )
+        self.metrics["stage"] = self.stage.float()
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        """Episode reset for these envs: stage <- 0, record cube spawn xy, set goal."""
+        self.stage[env_ids] = 0
+        self.just_completed_stage[env_ids] = -1
+        cube_pos_w = self.object.data.root_pos_w[env_ids]
+        cube_pos_b, _ = subtract_frame_transforms(
+            self.robot.data.root_pos_w[env_ids],
+            self.robot.data.root_quat_w[env_ids],
+            cube_pos_w,
+        )
+        self.cube_spawn_xy_b[env_ids] = cube_pos_b[:, :2]
+        self._refresh_goals(torch.as_tensor(env_ids, device=self.device, dtype=torch.long))
+
+    def _update_command(self):
+        """Each step: advance stage for envs whose cube reached the current goal."""
+        self.just_completed_stage.fill_(-1)
+        cube_pos_b, _ = subtract_frame_transforms(
+            self.robot.data.root_pos_w,
+            self.robot.data.root_quat_w,
+            self.object.data.root_pos_w,
+        )
+        # Advance only envs that are not yet at the final stage.
+        reached = self.is_touching_goal(cube_pos_b) & (self.stage < 2)
+        if reached.any():
+            advance_ids = reached.nonzero(as_tuple=False).flatten()
+            self.just_completed_stage[advance_ids] = self.stage[advance_ids]
+            self.stage[advance_ids] += 1
+            self._refresh_goals(advance_ids)
+
+        # Refresh world-frame goal each step (robot root may move; for fixed-base it's constant).
+        self.goal_pos_w, _ = combine_frame_transforms(
+            self.robot.data.root_pos_w,
+            self.robot.data.root_quat_w,
+            self.goal_pos_b,
+        )
+
+    # --- Stage <-> goal mapping ------------------------------------------
+
+    def _refresh_goals(self, env_ids: torch.Tensor):
+        """Vectorised: set goal_pos_b for the given envs based on their stage."""
+        stages = self.stage[env_ids]
+
+        lift_mask = stages == 0
+        if lift_mask.any():
+            ids = env_ids[lift_mask]
+            self.goal_pos_b[ids, 0] = self.cube_spawn_xy_b[ids, 0]
+            self.goal_pos_b[ids, 1] = self.cube_spawn_xy_b[ids, 1]
+            self.goal_pos_b[ids, 2] = self.cfg.lift_height
+
+        carry_mask = stages == 1
+        if carry_mask.any():
+            ids = env_ids[carry_mask]
+            self.goal_pos_b[ids] = self._carry_goal_b
+
+        place_mask = stages == 2
+        if place_mask.any():
+            ids = env_ids[place_mask]
+            self.goal_pos_b[ids] = self._place_goal_b
+
+    # --- Visualization ----------------------------------------------------
+
+    def _set_debug_vis_impl(self, debug_vis: bool):
+        if debug_vis:
+            if not hasattr(self, "goal_visualizer"):
+                self.goal_visualizer = VisualizationMarkers(self.cfg.goal_pose_visualizer_cfg)
+            self.goal_visualizer.set_visibility(True)
+        else:
+            if hasattr(self, "goal_visualizer"):
+                self.goal_visualizer.set_visibility(False)
+
+    def _debug_vis_callback(self, event):
+        if not self.robot.is_initialized:
+            return
+        # `marker_indices` selects which mesh from the cfg's `markers` dict to render
+        # for each env.
+        self.goal_visualizer.visualize(
+            translations=self.goal_pos_w,
+            marker_indices=self.stage,
         )
 
 
-# CurriculumGoalCommandCfg requires isaaclab.managers.CommandTermCfg and
-# isaaclab.utils.configclass at class-definition time. Wrap the import so the
-# skeleton stays importable without Isaac Lab.
-# TODO: replace with the real @configclass subclass during the full port.
-try:
-    from dataclasses import MISSING
+@configclass
+class CurriculumGoalCommandCfg(CommandTermCfg):
+    """Configuration for :class:`CurriculumGoalCommand`."""
 
-    from isaaclab.managers import CommandTermCfg
-    from isaaclab.markers import VisualizationMarkersCfg
-    from isaaclab.utils import configclass
+    class_type: type = CurriculumGoalCommand
 
-    @configclass
-    class CurriculumGoalCommandCfg(CommandTermCfg):
-        """Configuration for :class:`CurriculumGoalCommand`.
+    asset_name: str = "robot"
+    """Name of the robot articulation in the scene."""
 
-        SKELETON — fields declare the public surface; the class_type and
-        defaults will be filled in during the real port.
-        """
+    object_name: str = "object"
+    """Name of the rigid object the policy must move to the goal."""
 
-        class_type: type = CurriculumGoalCommand
+    # --- Stage 0 (lift) ---
+    lift_height: float = 0.10
+    """Height (in robot root frame z) at which the lift goal sits, directly above the
+    cube's spawn xy. Cube spawns at z ~= 0.015 so 0.10 = real lift of ~8.5cm."""
 
-        asset_name: str = "robot"
-        """Name of the robot articulation in the scene."""
+    # --- Stage 1 (carry) ---
+    carry_height: float = 0.15
+    """Robot-root-frame z height for stage 1.
 
-        object_name: str = "object"
-        """Name of the rigid object the policy must move to the goal."""
+    Stage 1 uses ``(place_goal.x, place_goal.y, carry_height)`` so the target is
+    directly above the final placement point.
+    """
 
-        lift_height: float = 0.10
-        """Height (in robot root frame z) at which the lift goal sits."""
+    # --- Stage 2 (place) ---
+    place_goal: tuple[float, float, float] = (0.20, 0.18, 0.02)
+    """Fixed table pose in robot root frame for stage 2 (z ~= cube half-height)."""
 
-        carry_height: float = 0.15
-        """Robot-root-frame z height for stage 1 (carry)."""
+    advance_threshold: float = 0.03
+    """Visible goal sphere radius."""
 
-        place_goal: tuple = (0.20, 0.18, 0.02)
-        """Fixed table pose in robot root frame for stage 2 (place)."""
+    object_contact_radius: float = 0.015
+    """Approximate object surface radius used for goal-sphere contact.
 
-        advance_threshold: float = 0.03
-        """Visible goal sphere radius."""
+    The SO-101 pick-place cube is 3 cm wide, so 0.015 m makes logical contact
+    match the cube face touching the visible sphere instead of requiring the
+    cube center to enter the sphere.
+    """
 
-        object_contact_radius: float = 0.015
-        """Approximate object surface radius used for goal-sphere contact."""
-
-        goal_pose_visualizer_cfg: VisualizationMarkersCfg = MISSING  # type: ignore
-        """Marker config with three sphere variants (one per stage)."""
-
-except ModuleNotFoundError:
-    # Isaac Lab not installed — export a sentinel so callers can detect absence.
-    # TODO: replace with the real @configclass during the full port.
-    CurriculumGoalCommandCfg = None  # type: ignore
+    goal_pose_visualizer_cfg: VisualizationMarkersCfg = MISSING  # type: ignore
+    """Marker config with three sphere variants (one per stage). Indexed by stage.
+    Tasks must set this explicitly in the env_cfg so marker styles stay configurable
+    per task."""
 
 
 __all__ = [
