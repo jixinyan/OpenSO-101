@@ -55,12 +55,24 @@ def register_task(
             action_mode: str = default_action_mode,
             cameras: bool = default_cameras,
             play: bool = default_play,
+            cfg: OpenSO101EnvCfg | None = None,
             **kwargs: Any,
         ) -> ManagerBasedRLEnv:
-            cfg = cfg_cls()
-            cfg.configure_action_mode(action_mode)
-            cfg.configure_cameras(cameras)
-            cfg.configure_play(play)
+            # If the caller (e.g. Hydra-decorated train script) supplied a
+            # pre-built cfg, trust it: variant hooks are assumed to have been
+            # applied upstream. Otherwise instantiate + run the variant hooks.
+            if cfg is None:
+                cfg = cfg_cls()
+                cfg.configure_action_mode(action_mode)
+                cfg.configure_cameras(cameras)
+                cfg.configure_play(play)
+            # Drop the env_cfg_entry_point / agent_cfgs strings from kwargs;
+            # those are spec metadata and not constructor args for the env.
+            for spec_only in (
+                "env_cfg_entry_point",
+                "rsl_rl_cfg_entry_point",
+            ):
+                kwargs.pop(spec_only, None)
             return ManagerBasedRLEnv(cfg=cfg, **kwargs)
 
         # Expose the cfg class via an `env_cfg_entry_point` string so Isaac

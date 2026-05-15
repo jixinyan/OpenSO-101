@@ -264,7 +264,7 @@ from .pour_tea_env_cfg import PourTeaEnvCfg
 register_task(
     "MyLab-PourTea-v0",
     agent_cfgs={
-        "rsl_rl_ppo_cfg_entry_point": "mypkg.tasks.pour_tea.agents.rsl_rl_ppo_cfg:PourTeaPPORunnerCfg",
+        "rsl_rl_cfg_entry_point": "mypkg.tasks.pour_tea.agents.rsl_rl_ppo_cfg:PourTeaPPORunnerCfg",
     },
 )(PourTeaEnvCfg)
 ```
