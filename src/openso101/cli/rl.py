@@ -251,6 +251,7 @@ def _cmd_play(args: argparse.Namespace) -> int:
     # --- Rest of imports (must follow AppLauncher) ---
     import gymnasium as gym
     import os
+    import sys
     import time
 
     import torch
@@ -323,6 +324,24 @@ def _cmd_play(args: argparse.Namespace) -> int:
         print(f"[INFO] Loading experiment from directory: {log_root_path}")
         if args.checkpoint:
             resume_path = retrieve_file_path(args.checkpoint)
+            # Task-identity check: refuse to load a checkpoint from a
+            # different task's experiment dir even when shapes happen to
+            # match. The runner cfg's experiment_name is task-specific
+            # (pick_place / lift / stack), so a checkpoint whose ancestor
+            # path doesn't contain `/rsl_rl/<expected>/` is cross-task
+            # and will silently misbehave.
+            expected = f"/rsl_rl/{agent_cfg.experiment_name}/"
+            if expected not in os.path.abspath(resume_path):
+                raise SystemExit(
+                    f"\n[ERROR]: Checkpoint is from a different task.\n"
+                    f"  --task             : {args.task}  (experiment {agent_cfg.experiment_name!r})\n"
+                    f"  --checkpoint       : {resume_path}\n"
+                    f"OpenSO-101 task policies are NOT cross-task transferable; "
+                    f"even when observation dims happen to match, the semantics "
+                    f"of each observation term (curriculum stage, goal pose, ...) "
+                    f"differ between tasks. Re-run with a checkpoint from "
+                    f"logs/rsl_rl/{agent_cfg.experiment_name}/...\n"
+                )
         else:
             try:
                 resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
@@ -384,12 +403,30 @@ def _cmd_play(args: argparse.Namespace) -> int:
 
         dt = env.unwrapped.step_dt
 
+        # Heartbeat print so users know the play loop is stepping (Isaac
+        # Sim's stdio hijack tends to swallow the otherwise-silent inner
+        # loop and makes the process look hung).
+        print(
+            f"[INFO]: Play loop running. Stepping policy at dt={dt:.4f}s. "
+            f"Close the Isaac Sim window or Ctrl+C to stop.",
+            flush=True,
+        )
+
         obs = env.get_observations()
+        step_count = 0
+        last_heartbeat = time.time()
         while simulation_app.is_running():
             _ = time.time()
             with torch.inference_mode():
                 actions = policy(obs)
                 obs, _, _, _ = env.step(actions)
+            step_count += 1
+            # Heartbeat every ~5 s of wall time.
+            now = time.time()
+            if now - last_heartbeat > 5.0:
+                sys.__stdout__.write(f"[INFO]: play step {step_count}\n")
+                sys.__stdout__.flush()
+                last_heartbeat = now
 
         env.close()
 
