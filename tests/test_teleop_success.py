@@ -1,15 +1,8 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_teleop_success.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import numpy as np
 
-from openso101.scripts.lerobot.teleop_agent import _prompt_save_successful_episode, _success_prompt_response
+from openso101.cli.il import _prompt_save_successful_episode, _success_prompt_response
 
 
 def test_success_prompt_response_accepts_yes_answers():

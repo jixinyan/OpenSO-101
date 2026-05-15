@@ -1,12 +1,5 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_hdf5_teleop_recorder.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import h5py
 import numpy as np
 

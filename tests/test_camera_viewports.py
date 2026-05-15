@@ -1,12 +1,5 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_camera_viewports.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 from openso101.teleop.camera_viewports import (
     camera_prim_path,
     teleop_viewport_dock_specs,

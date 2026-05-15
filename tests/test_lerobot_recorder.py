@@ -1,12 +1,5 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_lerobot_recorder.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import numpy as np
 
 from openso101.teleop.lerobot_recorder import (
