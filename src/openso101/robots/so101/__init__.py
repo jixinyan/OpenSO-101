@@ -3,8 +3,9 @@
 
 """SO-101 robot articulation, cameras, and shared constants.
 
-SKELETON: contents are placeholders. See per-module SKELETON notes for
-the source files this will eventually port from.
+Constants are imported eagerly because they are cheap. ArticulationCfg and
+camera factory imports are deferred via module-level ``__getattr__`` so
+Isaac Lab is not imported until a caller actually asks for those symbols.
 """
 
 from .constants import (
