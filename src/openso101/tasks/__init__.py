@@ -9,3 +9,4 @@ Custom user tasks should use `from openso101.envs import register_task`.
 
 from . import lift  # noqa: F401
 from . import pick_place  # noqa: F401
+from . import stack  # noqa: F401
