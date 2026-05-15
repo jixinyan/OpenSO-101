@@ -22,8 +22,17 @@ SO101_GRIPPER_REST_OFFSET = 0.0
 
 
 def so101_usd_path() -> Path:
-    """Return the local SO101 USD asset path."""
+    """Return the local SO101 USD asset path.
 
+    Resolution order:
+    1. ``$OPENSO101_SO101_USD_PATH`` env var if set.
+    2. ``<repo_root>/assets/so101/usd/SO-ARM101-USD.usd`` (the default
+       fetched location).
+
+    The USD file is **not** committed to the repository (it's a 23 MB
+    third-party binary). Run ``scripts/fetch_so101_usd.sh`` after a
+    fresh clone, or follow :doc:`/docs/guides/install` ``Step 6``.
+    """
     configured = os.environ.get("OPENSO101_SO101_USD_PATH")
     if configured:
         return Path(configured).expanduser()
