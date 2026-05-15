@@ -1,15 +1,8 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_teleop_agent_keyboard.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 from types import SimpleNamespace
 
-from openso101.scripts.lerobot.teleop_agent import (
+from openso101.cli.il import (
     _TeleopResumeHold,
     _TeleopTargetRateLimiter,
     _handle_recording_key_events,

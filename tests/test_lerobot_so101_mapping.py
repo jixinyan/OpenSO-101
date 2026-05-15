@@ -1,12 +1,5 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_lerobot_so101_mapping.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import math
 
 from openso101.robots import SO101_SIM_JOINT_NAMES

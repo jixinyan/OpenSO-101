@@ -44,10 +44,9 @@ def test_so101_object_reset_events_do_not_assume_specific_body_name():
 
 
 def test_prebuilt_block_probe_path_is_not_exposed_as_supported_teleop_physics():
-    teleop_agent_path = REPO_ROOT / "src" / "openso101" / "scripts" / "lerobot" / "teleop_agent.py"
+    # In OpenSO-101 the teleop_agent.py body lives inline in cli/il.py.
+    teleop_agent_path = REPO_ROOT / "src" / "openso101" / "cli" / "il.py"
     object_cfg_path = TASK_SRC / "shared" / "objects.py"
-    if not teleop_agent_path.exists() or not object_cfg_path.exists():
-        pytest.skip("requires concrete teleop_agent.py and shared/objects.py (skeleton mode)")
 
     teleop_agent = teleop_agent_path.read_text()
     object_cfg = object_cfg_path.read_text()
@@ -58,7 +57,6 @@ def test_prebuilt_block_probe_path_is_not_exposed_as_supported_teleop_physics():
     assert offenders == []
 
 
-@pytest.mark.skip(reason="skeleton mode: so_arm101.py body (USD spawn, friction binding) not yet ported")
 def test_so101_gripper_contact_collisions_get_contact_material_and_offsets():
     robot_cfg = (REPO_ROOT / "src" / "openso101" / "robots" / "so101" / "so_arm101.py").read_text()
 
