@@ -220,7 +220,25 @@ class PourTeaCfg(OpenSO101EnvCfg):
         # ... your scene, rewards, terminations ...
 ```
 
-For deep dives see `docs/concepts/{tasks_and_envs,rl_algorithms,imitation_learning,data_generation,sim2real}.md`.
+For deep dives:
+
+**Concepts**
+- [Tasks and Environments](docs/concepts/tasks_and_envs.md) — the single-class-per-task pattern and the three variant hooks.
+- [RL Algorithms](docs/concepts/rl_algorithms.md) — PPO, SAC roadmap, why safe-RL stays in `safe_sim2real`.
+- [Imitation Learning](docs/concepts/imitation_learning.md) — teleop → HDF5 → LeRobot → ACT/Diffusion.
+- [Synthetic Data Generation](docs/concepts/data_generation.md) — MimicGen and Isaac Lab Mimic adapters.
+- [Sim-to-Real Robustness](docs/concepts/sim2real.md) — phase-1 DR today, phase-2 deploy bridge later.
+
+**Guides**
+- [Installation](docs/guides/install.md) — fresh Ubuntu 22.04 walkthrough.
+- [Quickstart](docs/guides/quickstart.md) — install to trained PPO checkpoint in 20 min.
+- [Teleop setup](docs/guides/teleop.md) — leader-arm wiring, calibration, recording.
+- [Add a Custom Task](docs/guides/add_a_task.md) — subclass `OpenSO101EnvCfg`, register, configure variants.
+- [Migration from `safe_sim2real`](docs/guides/migration_from_safe_sim2real.md) — naming map, CLI map, common gotchas.
+
+**Operating notes**
+- [Development diary](docs/development_diary.md) — dated decision log.
+- [Isaac Sim learning guide](docs/isaac_sim_learning_guide.md) — Isaac Lab concepts cheat-sheet.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
