@@ -3,7 +3,7 @@
 
 """OpenSO-101 env base classes and task-registration helpers."""
 
-from .base import OpenSO101EnvCfg, UnsupportedVariantError
+from .base import OpenSO101EnvCfg, TeleopActionsCfg, UnsupportedVariantError
 from .registry import register_task
 
-__all__ = ["OpenSO101EnvCfg", "UnsupportedVariantError", "register_task"]
+__all__ = ["OpenSO101EnvCfg", "TeleopActionsCfg", "UnsupportedVariantError", "register_task"]
