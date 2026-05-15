@@ -147,7 +147,7 @@ from .pick_place_env_cfg import PickPlaceEnvCfg
 register_task(
     "OpenSO101-PickPlace-v0",
     agent_cfgs={
-        "rsl_rl_ppo_cfg_entry_point": "openso101.tasks.pick_place.agents.rsl_rl_ppo_cfg:PickPlacePPORunnerCfg",
+        "rsl_rl_cfg_entry_point": "openso101.tasks.pick_place.agents.rsl_rl_ppo_cfg:PickPlacePPORunnerCfg",
     },
 )(PickPlaceEnvCfg)
 ```
@@ -157,7 +157,7 @@ That registration means:
 - The simulator environment class is `ManagerBasedRLEnv` (wrapped by an
   `OpenSO101EnvCfg`-aware factory).
 - The task behavior comes from the decorated `OpenSO101EnvCfg` subclass.
-- The PPO settings come from `agent_cfgs["rsl_rl_ppo_cfg_entry_point"]`.
+- The PPO settings come from `agent_cfgs["rsl_rl_cfg_entry_point"]`.
 - Variants (cameras, teleop, play) are selected at `gym.make(...)` time via
   the `action_mode`, `cameras`, `play` kwargs.
 

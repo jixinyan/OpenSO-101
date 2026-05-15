@@ -73,7 +73,7 @@ from openso101.tasks.shared.objects import so101_cube_object_cfg
 @register_task(
     "MyLab-PourTea-v0",
     agent_cfgs={
-        "rsl_rl_ppo_cfg_entry_point":
+        "rsl_rl_cfg_entry_point":
             "mypkg.tasks.pour_tea.agents.rsl_rl_ppo_cfg:PourTeaPPORunnerCfg",
     },
 )
