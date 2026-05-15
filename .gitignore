@@ -25,5 +25,11 @@ runs/
 teleop_data/
 camera_preview/
 
+# USD assets (fetched out-of-tree per legacy convention)
+**/*.usd
+**/*.usda
+**/*.usdc
+**/*.usdz
+
 # OS
 .DS_Store

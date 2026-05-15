@@ -14,6 +14,19 @@ except ImportError:
 if _RslRlRunner is not None:
     class OnPolicyRunner(_RslRlRunner):
         """Alias for `rsl_rl.runners.OnPolicyRunner`."""
+
+    class BestCheckpointRunner(_RslRlRunner):
+        """OnPolicyRunner that also saves `model_best.pt` on every new max mean reward.
+
+        SKELETON: body not yet ported. Source reference:
+        /data/safe_sim2real/src/safe_sim2real/scripts/rsl_rl/best_checkpoint_runner.py
+        """
+
+        def __init__(self, *args, **kwargs):
+            raise NotImplementedError(
+                "BestCheckpointRunner body not yet ported. Source reference: "
+                "/data/safe_sim2real/src/safe_sim2real/scripts/rsl_rl/best_checkpoint_runner.py"
+            )
 else:
     class OnPolicyRunner:
         """rsl_rl not installed — OnPolicyRunner unavailable."""
@@ -23,5 +36,13 @@ else:
                 "rsl_rl is required for openso101.rl.runners.OnPolicyRunner."
             )
 
+    class BestCheckpointRunner:
+        """rsl_rl not installed — BestCheckpointRunner unavailable."""
 
-__all__ = ["OnPolicyRunner"]
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "rsl_rl is required for openso101.rl.runners.BestCheckpointRunner."
+            )
+
+
+__all__ = ["OnPolicyRunner", "BestCheckpointRunner"]
