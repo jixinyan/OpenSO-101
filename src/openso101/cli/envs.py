@@ -54,7 +54,9 @@ def _cmd_random(args: argparse.Namespace) -> int:
 
     app = _launch_isaac_app(headless=False)
     try:
-        env = gym.make(args.task, cameras=args.with_cameras)
+        # `play=True` keeps num_envs small (50) and disables domain
+        # randomization — appropriate for a smoke test.
+        env = gym.make(args.task, cameras=args.with_cameras, play=True)
         env.reset(seed=0)
         for _ in range(args.steps):
             env.step(env.action_space.sample())
@@ -71,7 +73,7 @@ def _cmd_zero(args: argparse.Namespace) -> int:
 
     app = _launch_isaac_app(headless=False)
     try:
-        env = gym.make(args.task, cameras=args.with_cameras)
+        env = gym.make(args.task, cameras=args.with_cameras, play=True)
         env.reset(seed=0)
         zero_action = np.zeros(env.action_space.shape, dtype=env.action_space.dtype)
         for _ in range(args.steps):
@@ -88,7 +90,7 @@ def _cmd_preview(args: argparse.Namespace) -> int:
 
     app = _launch_isaac_app(headless=False)
     try:
-        env = gym.make(args.task, cameras=True)
+        env = gym.make(args.task, cameras=True, play=True)
         env.reset(seed=0)
         for _ in range(args.steps):
             env.step(env.action_space.sample())
