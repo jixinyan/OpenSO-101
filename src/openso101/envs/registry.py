@@ -63,7 +63,12 @@ def register_task(
             cfg.configure_play(play)
             return ManagerBasedRLEnv(cfg=cfg, **kwargs)
 
+        # Expose the cfg class via an `env_cfg_entry_point` string so Isaac
+        # Lab's `parse_env_cfg` / `load_cfg_from_registry` can import-and-load
+        # the cfg by name (the train/play scripts use that path).
+        env_cfg_entry_point = f"{cfg_cls.__module__}:{cfg_cls.__name__}"
         spec_kwargs: dict[str, Any] = {
+            "env_cfg_entry_point": env_cfg_entry_point,
             "action_mode": default_action_mode,
             "cameras": default_cameras,
             "play": default_play,
