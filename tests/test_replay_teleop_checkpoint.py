@@ -9,7 +9,7 @@ from openso101.cli.il import (
     _replay_resolve_episode_path,
     _replay_select_checkpoint_frame,
 )
-from openso101.teleop.hdf5_recorder import SafeSim2RealHDF5TeleopRecorder
+from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder
 
 
 CAMERAS = {
@@ -19,7 +19,7 @@ CAMERAS = {
 
 
 def _write_episode(root, frame_count=4):
-    recorder = SafeSim2RealHDF5TeleopRecorder(root=root, task_name="task", cameras=CAMERAS, fps=30)
+    recorder = OpenSO101HDF5TeleopRecorder(root=root, task_name="task", cameras=CAMERAS, fps=30)
     recorder.start_episode()
     for frame_index in range(frame_count):
         recorder.add_frame(

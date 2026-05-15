@@ -3,7 +3,7 @@ import pytest
 import h5py
 import numpy as np
 
-from openso101.teleop.hdf5_recorder import SafeSim2RealHDF5TeleopRecorder, validate_hdf5_dataset
+from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder, validate_hdf5_dataset
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
 
@@ -14,7 +14,7 @@ CAMERAS = {
 
 
 def test_hdf5_recorder_writes_lerobot_compatible_episode_layout(tmp_path):
-    recorder = SafeSim2RealHDF5TeleopRecorder(
+    recorder = OpenSO101HDF5TeleopRecorder(
         root=tmp_path / "teleop_data" / "safe_sim2real_pickplace_teleop",
         task_name="Pick up the green cube and place it at the goal",
         cameras=CAMERAS,
@@ -54,7 +54,7 @@ def test_hdf5_recorder_uses_next_episode_index(tmp_path):
     episodes.mkdir(parents=True)
     (episodes / "episode_000000.hdf5").write_bytes(b"existing")
 
-    recorder = SafeSim2RealHDF5TeleopRecorder(root=root, task_name="task", cameras=CAMERAS, fps=30)
+    recorder = OpenSO101HDF5TeleopRecorder(root=root, task_name="task", cameras=CAMERAS, fps=30)
 
     assert recorder.next_episode_path() == episodes / "episode_000001.hdf5"
 
@@ -71,7 +71,7 @@ def test_validate_hdf5_dataset_requires_complete_episode_layout(tmp_path):
 
 
 def test_hdf5_recorder_checkpoint_restore_truncates_current_episode(tmp_path):
-    recorder = SafeSim2RealHDF5TeleopRecorder(
+    recorder = OpenSO101HDF5TeleopRecorder(
         root=tmp_path / "teleop_data",
         task_name="task",
         cameras=CAMERAS,
@@ -110,7 +110,7 @@ def test_hdf5_recorder_checkpoint_restore_truncates_current_episode(tmp_path):
 
 
 def test_hdf5_recorder_writes_optional_sim_state_for_checkpoint_replay(tmp_path):
-    recorder = SafeSim2RealHDF5TeleopRecorder(
+    recorder = OpenSO101HDF5TeleopRecorder(
         root=tmp_path / "teleop_data",
         task_name="task",
         cameras=CAMERAS,
@@ -146,7 +146,7 @@ def test_hdf5_recorder_writes_optional_sim_state_for_checkpoint_replay(tmp_path)
 
 
 def test_hdf5_recorder_writes_actual_sim_joint_names(tmp_path):
-    recorder = SafeSim2RealHDF5TeleopRecorder(
+    recorder = OpenSO101HDF5TeleopRecorder(
         root=tmp_path / "teleop_data",
         task_name="task",
         cameras=CAMERAS,

@@ -214,7 +214,7 @@ def _sim_radians_array_to_motor_units(values: Any) -> np.ndarray:
     return motor.numpy().astype(np.float32, copy=False)
 
 
-class SafeSim2RealLeRobotRecorder:
+class OpenSO101LeRobotRecorder:
     """Small LeRobotDataset recorder for interactive teleop episodes."""
 
     def __init__(self, repo_id: str, root: str, task_name: str, cameras: Mapping[str, Mapping[str, int]], fps: int):
