@@ -148,6 +148,13 @@ def _cmd_train(args: argparse.Namespace) -> int:
     def _run(env_cfg, agent_cfg):
         """Train with RSL-RL agent."""
         agent_cfg = _cli_args.update_rsl_rl_cfg(agent_cfg, args)
+
+        # Apply variant hooks. The default is base RL (action_mode="rl",
+        # cameras=False, play=False). --with-cameras adds wrist + overhead
+        # cameras (needed for vision policies).
+        if getattr(args, "with_cameras", False):
+            env_cfg.configure_cameras(True)
+
         env_cfg.scene.num_envs = args.num_envs if args.num_envs is not None else env_cfg.scene.num_envs
         agent_cfg.max_iterations = (
             args.max_iterations if args.max_iterations is not None else agent_cfg.max_iterations
@@ -296,6 +303,14 @@ def _cmd_play(args: argparse.Namespace) -> int:
         train_task_name = task_name.replace("-Play", "")
 
         agent_cfg = _cli_args.update_rsl_rl_cfg(agent_cfg, args)
+
+        # Apply variant hooks: play mode (small env count, no DR), plus cameras
+        # if the user asked. Hydra has already resolved overrides into env_cfg;
+        # the variant hooks layer the play/cameras specialization on top.
+        env_cfg.configure_play(True)
+        if getattr(args, "with_cameras", False):
+            env_cfg.configure_cameras(True)
+
         env_cfg.scene.num_envs = args.num_envs if args.num_envs is not None else env_cfg.scene.num_envs
 
         env_cfg.seed = agent_cfg.seed

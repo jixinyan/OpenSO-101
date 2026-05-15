@@ -511,6 +511,14 @@ def _cmd_record(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             use_fabric=not args.disable_fabric,
         )
+        # Record always runs with teleop action mode + cameras enabled.
+        # parse_env_cfg returns the base RL cfg, so apply the variant hooks
+        # here before constructing the env. The registry factory only auto-
+        # runs the hooks when no explicit cfg is passed; passing cfg=env_cfg
+        # means we own the cfg, including its variant state.
+        env_cfg.configure_action_mode("teleop")
+        env_cfg.configure_cameras(True)
+
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
         try:
@@ -532,10 +540,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
             )
         print(f"[INFO]: Teleop sim joints: {list(sim_joint_names)}")
 
-        # Record always runs with teleop action mode and cameras enabled — the
-        # variant kwargs flow through OpenSO101EnvCfg.configure_action_mode /
-        # configure_cameras on the same task cfg class.
-        env = gym.make(args.task, cfg=env_cfg, action_mode="teleop", cameras=True)
+        env = gym.make(args.task, cfg=env_cfg)
         print(f"[INFO]: Gym observation space: {env.observation_space}")
         print(f"[INFO]: Gym action space: {env.action_space}")
         print("[INFO]: Teleop keys: C checkpoint, R restore checkpoint, Q quit without saving, S save/start.")
@@ -1146,9 +1151,6 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     args.no_camera_viewports = getattr(args, "no_camera_viewports", False)
     if args.task is None:
         args.task = "OpenSO101-PickPlace-v0"
-    # Replay always runs with teleop action mode and cameras enabled — the
-    # registry adapter routes these via gym.make kwargs.
-    args._replay_make_kwargs = {"action_mode": "teleop", "cameras": True}
 
     simulation_app = _launch_isaac_app(args, enable_cameras=True)
 
@@ -1171,10 +1173,14 @@ def _cmd_replay(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             use_fabric=not args.disable_fabric,
         )
+        # Replay always runs with teleop action mode + cameras enabled.
+        env_cfg.configure_action_mode("teleop")
+        env_cfg.configure_cameras(True)
+
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
 
-        env = gym.make(args.task, cfg=env_cfg, **getattr(args, "_replay_make_kwargs", {}))
+        env = gym.make(args.task, cfg=env_cfg)
         scene = env.unwrapped.scene
         unwrapped_env = env.unwrapped
         env.reset()
