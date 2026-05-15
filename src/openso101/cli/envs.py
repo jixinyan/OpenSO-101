@@ -81,4 +81,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_prev = sub.add_parser("preview", help="Open env with cameras, render frames")
     p_prev.add_argument("--task", required=True)
     p_prev.add_argument("--steps", type=int, default=30)
+    p_prev.add_argument("--overhead_pos", type=float, nargs=3, metavar=("X", "Y", "Z"), default=None)
+    p_prev.add_argument("--overhead_rpy", type=float, nargs=3, metavar=("ROLL", "PITCH", "YAW"), default=None)
+    p_prev.add_argument("--wrist_pos", type=float, nargs=3, metavar=("X", "Y", "Z"), default=None)
+    p_prev.add_argument("--wrist_rpy", type=float, nargs=3, metavar=("ROLL", "PITCH", "YAW"), default=None)
     p_prev.set_defaults(func=_cmd_preview)
