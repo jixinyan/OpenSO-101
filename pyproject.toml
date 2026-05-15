@@ -15,6 +15,38 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+dependencies = [
+    # Sim + RL framework
+    "isaaclab[all,isaacsim]==2.3.0",
+    "rsl-rl-lib>=3.0.1",
+
+    # Torch — note: install via requirements-cuda.txt FIRST on Blackwell
+    # GPUs (RTX 50-series / GH200 / B100/B200), otherwise the default
+    # PyPI cu126 wheel lacks sm_120 kernels. Pinned here for non-Blackwell
+    # hosts and for re-resolution by `pip install -e .` after the cu128
+    # wheel is in place.
+    "torch==2.7.0",
+    "torchvision==0.22.0",
+
+    # Teleop / IL boundary
+    "lerobot>=0.4.0",
+    "h5py",
+    "huggingface_hub",
+
+    # Plotting / utilities
+    "numpy",
+    "matplotlib",
+    "tensorboard",
+    "prettytable",
+    "packaging",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7",
+    "pytest-cov",
+]
+wandb = ["wandb"]
 
 [project.scripts]
 openso101 = "openso101.cli.main:main"
