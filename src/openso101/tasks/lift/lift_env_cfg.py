@@ -1,34 +1,416 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Lift task — pick up a cube from the table.
+"""Lift task -- pick up a cube from the table.
 
-SKELETON: the real cfg body will be ported from
-`/data/safe_sim2real/src/safe_sim2real/tasks/composite/lift/`
-(both `lift_env_cfg.py` and `joint_pos_env_cfg.py` collapsed into
-this single class) once the legacy source is finalized.
+Single-class env cfg with variant hooks. Collapses legacy `LiftEnvCfg`,
+`SoArm101LiftCubeEnvCfg`, `_PLAY`, `WithCameras`, and teleop variants from
+`safe_sim2real.tasks.composite.lift.{lift_env_cfg, joint_pos_env_cfg}` into
+a single `OpenSO101EnvCfg` subclass whose `configure_*` hooks mutate the
+cfg in-place per `gym.make()` kwarg.
 """
 
 from __future__ import annotations
 
-from isaaclab.utils import configclass
+from dataclasses import MISSING
 
-from openso101.envs import OpenSO101EnvCfg
+import isaaclab.sim as sim_utils
+from isaaclab.assets import (
+    ArticulationCfg,
+    AssetBaseCfg,
+    DeformableObjectCfg,
+    RigidObjectCfg,
+)
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import TerminationTermCfg as DoneTerm
+from isaaclab.markers.config import FRAME_MARKER_CFG
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
+    FrameTransformerCfg,
+    OffsetCfg,
+)
+from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
+
+import openso101.tasks.lift.mdp as mdp
+from openso101.envs import OpenSO101EnvCfg, TeleopActionsCfg, UnsupportedVariantError
+from openso101.robots import (
+    SO101_ARM_JOINT_NAMES,
+    SO101_GRIPPER_CLOSED_POS,
+    SO101_GRIPPER_JOINT_NAME,
+    SO101_GRIPPER_JOINT_NAMES,
+    SO101_GRIPPER_OPEN_POS,
+)
+from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO_ARM101_TELEOP_CFG
+from openso101.tasks.shared.objects import so101_cube_object_cfg
+from openso101.tasks.shared.rl_defaults import (
+    SO101_ACTION_RATE_WEIGHT,
+    SO101_CLOSE_GRIPPER_CLOSED_STD,
+    SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
+    SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+    SO101_GOAL_TRACKING_FINE_STD,
+    SO101_GOAL_TRACKING_STD,
+    SO101_JOINT_POS_DELTA_WEIGHT,
+    SO101_JOINT_VEL_WEIGHT,
+    SO101_REACH_REWARD_COARSE_STD,
+    SO101_REACH_REWARD_COARSE_WEIGHT,
+    SO101_REACH_REWARD_STD,
+    SO101_SMOOTHNESS_CURRICULUM_STEPS,
+    SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
+)
+
+
+##
+# Scene definition
+##
+
+
+@configclass
+class ObjectTableSceneCfg(InteractiveSceneCfg):
+    """Configuration for the lift scene with a robot and a object."""
+
+    # robots: will be populated by env cfg __post_init__
+    robot: ArticulationCfg = MISSING
+    # end-effector sensor: will be populated by env cfg __post_init__
+    ee_frame: FrameTransformerCfg = MISSING
+    # target object: will be populated by env cfg __post_init__
+    object: RigidObjectCfg | DeformableObjectCfg = MISSING
+
+    # Table
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0], rot=[0.707, 0, 0, 0.707]),
+        spawn=UsdFileCfg(usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd"),
+    )
+
+    # plane
+    plane = AssetBaseCfg(
+        prim_path="/World/GroundPlane",
+        init_state=AssetBaseCfg.InitialStateCfg(pos=[0, 0, -1.05]),
+        spawn=GroundPlaneCfg(),
+    )
+
+    # lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
+    )
+
+
+##
+# MDP settings
+##
+
+
+@configclass
+class CommandsCfg:
+    """Command terms for the MDP."""
+
+    object_pose = mdp.UniformPoseCommandCfg(
+        asset_name="robot",
+        body_name=MISSING,  # will be set by env cfg __post_init__
+        resampling_time_range=(5.0, 5.0),
+        debug_vis=True,
+        ranges=mdp.UniformPoseCommandCfg.Ranges(
+            pos_x=(-0.1, 0.1),
+            pos_y=(-0.3, -0.1),
+            pos_z=(0.2, 0.35),
+            roll=(0.0, 0.0),
+            pitch=(0.0, 0.0),
+            yaw=(0.0, 0.0),
+        ),
+    )
+
+
+@configclass
+class ActionsCfg:
+    """Action specifications for the MDP."""
+
+    arm_action: mdp.JointPositionActionCfg | mdp.DifferentialInverseKinematicsActionCfg = MISSING
+    gripper_action: mdp.BinaryJointPositionActionCfg = MISSING
+
+
+@configclass
+class ObservationsCfg:
+    """Observation specifications for the MDP."""
+
+    @configclass
+    class PolicyCfg(ObsGroup):
+        """Observations for policy group."""
+
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel)
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
+        target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            # No ObsTerm in this group sets a noise=Unoise/Gnoise, so observation
+            # corruption is currently a no-op. Set False to avoid the misleading
+            # "I think I'm noisy" state; re-enable only when per-term noise is
+            # intentionally configured.
+            self.enable_corruption = False
+            self.concatenate_terms = True
+
+    # observation groups
+    policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class EventCfg:
+    """Configuration for events."""
+
+    reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+
+    reset_object_position = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.1, 0.2), "y": (-0.2, 0.2), "z": (0.0, 0.0)},
+            "velocity_range": {},
+            "asset_cfg": SceneEntityCfg("object"),
+        },
+    )
+
+
+@configclass
+class RewardsCfg:
+    """Upstream-pattern reward chain (adapted to SO101 geometry).
+
+    Chain: reach (two-scale) -> close_gripper (shaping) -> lift (height-only)
+    -> goal_track (height-only, two-scale). No triple-AND grasp gate -- the
+    policy bootstraps from "cube briefly airborne" the way upstream does.
+    """
+
+    # Two-scale reach: coarse covers ~35cm starting distance, fine sharpens
+    # at grasp range.
+    reaching_object_coarse = RewTerm(
+        func=mdp.object_ee_distance,
+        params={"std": SO101_REACH_REWARD_COARSE_STD},
+        weight=SO101_REACH_REWARD_COARSE_WEIGHT,
+    )
+    reaching_object_fine = RewTerm(
+        func=mdp.object_ee_distance,
+        params={"std": SO101_REACH_REWARD_STD},
+        weight=1.0,
+    )
+
+    # Bootstraps grasp behavior without GATING anything else on it.
+    close_gripper = RewTerm(
+        func=mdp.close_gripper_near_object,
+        params={
+            "near_threshold": SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
+            "closed_std": SO101_CLOSE_GRIPPER_CLOSED_STD,
+            "gripper_cfg": SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
+        },
+        weight=1.0,
+    )
+
+    # Height-only lift reward. THIS IS THE KEY CHANGE: no AND-conjunction
+    # with gripper-closed or EE-near. Once the cube goes up, this fires.
+    lifting_object = RewTerm(
+        func=mdp.object_is_lifted,
+        params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
+        weight=15.0,
+    )
+
+    # Height-only goal tracking. Same minimal-height gate.
+    object_goal_tracking = RewTerm(
+        func=mdp.object_goal_distance,
+        params={
+            "std": SO101_GOAL_TRACKING_STD,
+            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+            "command_name": "object_pose",
+        },
+        weight=16.0,
+    )
+    object_goal_tracking_fine_grained = RewTerm(
+        func=mdp.object_goal_distance,
+        params={
+            "std": SO101_GOAL_TRACKING_FINE_STD,
+            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+            "command_name": "object_pose",
+        },
+        weight=5.0,
+    )
+
+    # Smoothness (zero-weighted initially; curriculum ramps them in
+    # once lift fires).
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=SO101_ACTION_RATE_WEIGHT)
+    joint_vel = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=SO101_JOINT_VEL_WEIGHT,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    joint_pos_delta = RewTerm(
+        func=mdp.joint_pos_delta_l2,
+        weight=SO101_JOINT_POS_DELTA_WEIGHT,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+
+@configclass
+class TerminationsCfg:
+    """Termination terms for the MDP."""
+
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+
+    object_dropping = DoneTerm(
+        func=mdp.root_height_below_minimum, params={"minimum_height": -0.05, "asset_cfg": SceneEntityCfg("object")}
+    )
+    lift_success = DoneTerm(
+        func=mdp.lift_success_height_only,
+        params={
+            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+            "goal_radius": 0.05,
+            "command_name": "object_pose",
+        },
+    )
+
+
+@configclass
+class CurriculumCfg:
+    """Curriculum terms for the MDP."""
+
+    action_rate = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={
+            "term_name": "action_rate",
+            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
+            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
+        },
+    )
+
+    joint_vel = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={
+            "term_name": "joint_vel",
+            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
+            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
+        },
+    )
+
+
+##
+# Environment configuration
+##
+
+
+def _configure_so101_lift_scene(cfg: "LiftEnvCfg", robot_cfg=None) -> None:
+    """Populate the SO-101 robot, cube, and EE frame on a Lift scene."""
+    if robot_cfg is None:
+        robot_cfg = SO_ARM101_CFG
+    cfg.scene.robot = robot_cfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    cfg.scene.object = so101_cube_object_cfg(
+        prim_path="{ENV_REGEX_NS}/Object",
+        init_pos=[0.2, 0.0, 0.015],
+    )
+
+    marker_cfg = FRAME_MARKER_CFG.copy()
+    marker_cfg.markers["frame"].scale = (0.05, 0.05, 0.05)
+    marker_cfg.prim_path = "/Visuals/FrameTransformer"
+    cfg.scene.ee_frame = FrameTransformerCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base",
+        debug_vis=True,
+        visualizer_cfg=marker_cfg,
+        target_frames=[
+            FrameTransformerCfg.FrameCfg(
+                prim_path="{ENV_REGEX_NS}/Robot/gripper",
+                name="end_effector",
+                offset=OffsetCfg(pos=[0.01, 0.0, -0.09]),
+            ),
+        ],
+    )
 
 
 @configclass
 class LiftEnvCfg(OpenSO101EnvCfg):
-    """Concrete cfg for the Lift task.
+    """Single-class Lift cfg with variant hooks."""
 
-    Variants (cameras / teleop / play) are applied by the framework's env
-    factory via `configure_*` methods inherited from OpenSO101EnvCfg.
-    Currently a SKELETON — `__post_init__` will populate scene,
-    observations, actions, rewards, terminations during the real port.
-    """
+    # Scene settings
+    scene: ObjectTableSceneCfg = ObjectTableSceneCfg(num_envs=4096, env_spacing=2.5)
+    # Basic settings
+    observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
+    commands: CommandsCfg = CommandsCfg()
+    # MDP settings
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
+    events: EventCfg = EventCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        raise NotImplementedError(
-            "LiftEnvCfg not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/tasks/composite/lift/"
+    def __post_init__(self):
+        # Base RL setup (from LiftEnvCfg + SoArm101LiftCubeEnvCfg).
+        self.decimation = 2
+        self.episode_length_s = 5.0
+        self.viewer.eye = (2.5, 2.5, 1.5)
+        self.sim.dt = 0.01  # 100Hz
+        self.sim.render_interval = self.decimation
+
+        self.sim.physx.bounce_threshold_velocity = 0.01
+        self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
+        self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
+        self.sim.physx.friction_correlation_distance = 0.00625
+
+        # SO-101 scene wiring.
+        _configure_so101_lift_scene(self)
+
+        # Actions: arm joint-pos (delta scale) + gripper binary toggle.
+        self.actions.arm_action = mdp.JointPositionActionCfg(
+            asset_name="robot",
+            joint_names=list(SO101_ARM_JOINT_NAMES),
+            scale=0.5,
+            use_default_offset=True,
+        )
+        self.actions.gripper_action = mdp.BinaryJointPositionActionCfg(
+            asset_name="robot",
+            joint_names=list(SO101_GRIPPER_JOINT_NAMES),
+            open_command_expr={SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS},
+            close_command_expr={SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_CLOSED_POS},
+        )
+
+        # Set the body name for the end effector command target.
+        self.commands.object_pose.body_name = ["gripper"]
+
+    # ---------- variant hooks ----------
+
+    def configure_play(self, enabled: bool) -> None:
+        """Eval variant: 50 envs, no observation corruption."""
+        if not enabled:
+            return
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        self.observations.policy.enable_corruption = False
+
+    def configure_action_mode(self, mode: str) -> None:
+        """`'rl'` keeps the trained-policy action setup; `'teleop'` swaps to
+        absolute joint positions on the leader-arm SO_ARM101_TELEOP_CFG and
+        drops RL-only managers (rewards/terminations/curriculum)."""
+        if mode == "rl":
+            return
+        if mode == "teleop":
+            self.actions = TeleopActionsCfg()
+            _configure_so101_lift_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
+            # Restore body_name for the command, otherwise the manager errors.
+            self.commands.object_pose.body_name = ["gripper"]
+            self.rewards = None
+            self.terminations = None
+            self.curriculum = None
+            self.episode_length_s = 3600.0
+            self.scene.num_envs = 1
+            self.scene.env_spacing = 2.5
+            self.observations.policy.enable_corruption = False
+            self.decimation = 2
+            self.sim.dt = 1 / 120
+            self.sim.render_interval = self.decimation
+            return
+        raise UnsupportedVariantError(
+            f"action_mode={mode!r} not supported; expected 'rl' or 'teleop'."
         )
