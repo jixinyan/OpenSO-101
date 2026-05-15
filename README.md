@@ -16,8 +16,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/KevinYan-831/OpenSO-101">
-    <!-- TODO: drop a 320×320 logo at docs/assets/logo.png -->
-    <img src="docs/assets/logo.png" alt="OpenSO-101 logo" width="200" height="200">
+    <img src="docs/assets/logo.png" alt="OpenSO-101 logo" width="420">
   </a>
 
   <h3 align="center">OpenSO-101</h3>
