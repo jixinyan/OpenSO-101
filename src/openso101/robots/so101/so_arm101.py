@@ -52,7 +52,37 @@ SO101_CANONICAL_INIT_JOINT_POS: dict[str, float] = {
     **SO101_DEFAULT_JOINT_POS,
     SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
 }
-"""Canonical SO101 reset posture shared by every task that uses ``SO_ARM101_CFG``."""
+"""Canonical SO101 reset posture shared by every task that uses ``SO_ARM101_CFG``.
+
+This is the *RL* baseline: SO101_DEFAULT_JOINT_POS is the "natural rest"
+pose tuned to put the end-effector ~15 cm from the typical cube spawn
+(0.2, 0, 0.03), giving the dense reach reward a usable gradient at iter
+0. Good for training, *bad* for teleop ergonomics — the leader operator
+has to drag the arm a long way from the side-tilted rest pose to the
+forward-facing pose needed to grasp the cube.
+
+For teleop use ``SO101_TELEOP_INIT_JOINT_POS`` instead, which starts the
+arm upright and facing the cube.
+"""
+
+
+SO101_TELEOP_INIT_JOINT_POS: dict[str, float] = {
+    "Rotation": 0.0,
+    "Pitch": 0.0,
+    "Elbow": 0.0,
+    "Wrist_Pitch": 1.5708,  # π/2 — gripper pointing straight down at table
+    "Wrist_Roll": 0.0,
+    SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
+}
+"""Teleop-optimized SO101 reset posture: arm upright, base rotation = 0,
+gripper pointing straight down at table height. This puts the simulated
+follower in roughly the same physical posture as a real SO101 leader at
+its 'home' calibration, so the operator doesn't see a large lurch when
+teleop starts.
+
+Used by ``SO_ARM101_TELEOP_CFG`` only; RL training continues to use
+``SO101_CANONICAL_INIT_JOINT_POS``.
+"""
 
 
 def spawn_so101_usd_with_safe_collisions(
@@ -254,7 +284,7 @@ SO_ARM101_TELEOP_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, SO101_USD_TABLETOP_ROOT_Z),
-        joint_pos=SO101_CANONICAL_INIT_JOINT_POS,
+        joint_pos=SO101_TELEOP_INIT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),
     actuators={
