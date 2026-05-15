@@ -36,7 +36,6 @@ def test_so101_joint_action_configs_use_robot_constants():
     assert offenders == []
 
 
-@pytest.mark.skip(reason="skeleton mode: asserts on concrete cfg body not yet ported from safe_sim2real")
 def test_so101_canonical_robot_is_fixed_base():
     text = SO101_CFG_SRC.read_text()
 
@@ -59,7 +58,6 @@ def test_so101_tasks_do_not_override_canonical_robot_reset_pose():
     assert offenders == []
 
 
-@pytest.mark.skip(reason="skeleton mode: rl_defaults constants not yet ported from safe_sim2real")
 def test_so101_rl_defaults_are_shared_by_standard_ppo_agents():
     text = SO101_RL_DEFAULTS_SRC.read_text()
     # Two-tanh reach: coarse kernel for long-range + fine for grasp approach
@@ -111,15 +109,12 @@ def test_so101_pick_place_calibrates_canonical_usd_tabletop_pose():
     than a literal so future USD changes propagate automatically.
     """
     pytest.importorskip("isaaclab_tasks")
-    pytest.skip("requires concrete pick_place env cfg implementation (skeleton mode)")
 
     from openso101.robots.so101._usd_bounds import tabletop_root_z
     from openso101.robots.so101.so_arm101 import so101_usd_path
-    from openso101.tasks.pick_place.pick_place_env_cfg import (
-        OpenSO101PickPlaceEnvCfg,
-    )
+    from openso101.tasks.pick_place.pick_place_env_cfg import PickPlaceEnvCfg
 
-    cfg = OpenSO101PickPlaceEnvCfg()
+    cfg = PickPlaceEnvCfg()
     expected_z = tabletop_root_z(so101_usd_path())
 
     assert cfg.scene.robot.init_state.pos[2] == pytest.approx(expected_z, abs=1e-6)
@@ -127,7 +122,6 @@ def test_so101_pick_place_calibrates_canonical_usd_tabletop_pose():
     assert cfg.scene.ee_frame.target_frames[0].offset.pos == pytest.approx((0.01, 0.0, -0.09))
 
 
-@pytest.mark.skip(reason="skeleton mode: pick_place/mdp/__init__.py exports not yet ported")
 def test_pick_place_mdp_exports_close_gripper_proxy_reward():
     text = SO101_PICK_PLACE_MDP_INIT_SRC.read_text()
 

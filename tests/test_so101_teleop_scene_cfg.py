@@ -2,13 +2,6 @@ import pytest
 
 pytest.importorskip("isaaclab_tasks")
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_so101_teleop_scene_cfg.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import gymnasium as gym
 import isaaclab.sim as sim_utils
 

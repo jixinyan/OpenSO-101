@@ -1,12 +1,5 @@
 import pytest
 
-pytest.skip(
-    "ported from safe_sim2real under OpenSO-101 skeleton mode; "
-    "awaits implementation port. See "
-    "/data/safe_sim2real/tests/test_lerobot_so101_interface.py for the legacy assertions.",
-    allow_module_level=True,
-)
-
 import math
 
 from openso101.teleop.so101_mapping import SO101_TELEOP_TARGET_LIMITS_DEG
