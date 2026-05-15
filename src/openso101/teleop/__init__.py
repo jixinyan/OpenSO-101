@@ -1,11 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""SO-101 teleop boundary (leader arm -> simulated follower).
-
-SKELETON: contents are placeholders. See per-module SKELETON notes for
-the source files this will eventually port from.
-"""
+"""Teleoperation adapters for Safe Sim2Real."""
 
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
