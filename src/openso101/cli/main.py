@@ -9,19 +9,6 @@ import argparse
 import sys
 
 
-def _not_implemented_yet(group_name: str, sub_project: str):
-    """Factory: returns an argparse handler that prints a deferral message."""
-
-    def _handler(args: argparse.Namespace) -> int:
-        print(
-            f"openso101 {group_name}: command group not yet implemented "
-            f"in this CLI build (see sub-project {sub_project} in "
-            f"docs/superpowers/specs/2026-05-13-openso101-refactor-design.md § 13).",
-        )
-        return 2
-
-    return _handler
-
 
 def build_parser() -> argparse.ArgumentParser:
     """Construct the `openso101` argparse tree."""
@@ -47,14 +34,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_rl = sub.add_parser("rl", help="RL training, playback, plotting")
     rl_cli.add_subparsers(p_rl)
 
-    # Placeholders for il/data/sim2real groups (wired up in Task 17+).
-    for group, sub_project in (
-        ("il", "C"),
-        ("data", "F"),
-        ("sim2real", "future"),
-    ):
-        p = sub.add_parser(group, help=f"{group} subcommands (not yet wired)")
-        p.set_defaults(func=_not_implemented_yet(group, sub_project))
+    # il/data/sim2real groups — wired up in Task 17.
+    from . import il as il_cli
+    from . import data as data_cli
+    from . import sim2real as sim2real_cli
+
+    p_il = sub.add_parser("il", help="Teleop, datasets, IL training")
+    il_cli.add_subparsers(p_il)
+
+    p_data = sub.add_parser("data", help="Synthetic data generation (sub-project F)")
+    data_cli.add_subparsers(p_data)
+
+    p_sim2real = sub.add_parser("sim2real", help="Sim-to-real / deployment (future)")
+    sim2real_cli.add_subparsers(p_sim2real)
 
     return parser
 
