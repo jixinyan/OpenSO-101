@@ -41,9 +41,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_envs = sub.add_parser("envs", help="Task discovery and sanity checks")
     envs_cli.add_subparsers(p_envs)
 
-    # Placeholders for rl/il/data/sim2real groups (wired up in Tasks 16-17).
+    # rl group — fully implemented in Task 16.
+    from . import rl as rl_cli
+
+    p_rl = sub.add_parser("rl", help="RL training, playback, plotting")
+    rl_cli.add_subparsers(p_rl)
+
+    # Placeholders for il/data/sim2real groups (wired up in Task 17+).
     for group, sub_project in (
-        ("rl", "E for SAC; PPO/runners exist but the CLI surface lands in Task 16"),
         ("il", "C"),
         ("data", "F"),
         ("sim2real", "future"),
