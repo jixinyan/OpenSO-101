@@ -66,10 +66,10 @@ def test_register_task_rejects_non_openso101_cfg():
 def test_register_task_with_agent_cfgs_merges_kwargs():
     @register_task(
         "OpenSO101Test-WithAgents-v0",
-        agent_cfgs={"rsl_rl_ppo_cfg_entry_point": "my_module:MyCfg"},
+        agent_cfgs={"rsl_rl_cfg_entry_point": "my_module:MyCfg"},
     )
     class _AgentsCfg(OpenSO101EnvCfg):
         pass
 
     spec = gym.envs.registry["OpenSO101Test-WithAgents-v0"]
-    assert spec.kwargs.get("rsl_rl_ppo_cfg_entry_point") == "my_module:MyCfg"
+    assert spec.kwargs.get("rsl_rl_cfg_entry_point") == "my_module:MyCfg"

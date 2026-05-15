@@ -10,6 +10,6 @@ from .stack_env_cfg import StackEnvCfg
 register_task(
     "OpenSO101-Stack-v0",
     agent_cfgs={
-        "rsl_rl_ppo_cfg_entry_point": "openso101.tasks.stack.agents.rsl_rl_ppo_cfg:StackPPORunnerCfg",
+        "rsl_rl_cfg_entry_point": "openso101.tasks.stack.agents.rsl_rl_ppo_cfg:StackPPORunnerCfg",
     },
 )(StackEnvCfg)

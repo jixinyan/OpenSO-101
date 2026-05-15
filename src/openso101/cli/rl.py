@@ -119,6 +119,31 @@ def _cmd_train(args: argparse.Namespace) -> int:
     # Hydra needs to consume `agent` to pick the config entry point.
     agent_entry_point = getattr(args, "agent", "rsl_rl_cfg_entry_point")
 
+    # The new CLI argparse for `train` doesn't expose the full rsl_rl arg group
+    # (those flags live in openso101.rl.cli_args.add_rsl_rl_args for callers
+    # who want them). Backfill the attributes that update_rsl_rl_cfg reads so
+    # an `rl train` invocation works without --resume/--load_run/etc.
+    for _attr, _default in (
+        ("resume", False),
+        ("load_run", None),
+        ("checkpoint", None),
+        ("run_name", None),
+        ("logger", "wandb"),
+        ("log_project_name", "openso101"),
+    ):
+        if not hasattr(args, _attr):
+            setattr(args, _attr, _default)
+
+    # Hydra reads sys.argv directly for override-style key=value flags
+    # (e.g. agent.algorithm.gamma=0.95). The new CLI's argparse has already
+    # consumed its own flags (--task/--algo/--headless/...) but they still
+    # live in sys.argv, so Hydra would choke on them. Keep only Hydra-style
+    # overrides for it to parse.
+    import sys as _sys
+    _sys.argv = [_sys.argv[0]] + [
+        a for a in _sys.argv[1:] if "=" in a and not a.startswith("-")
+    ]
+
     @hydra_task_config(args.task, agent_entry_point)
     def _run(env_cfg, agent_cfg):
         """Train with RSL-RL agent."""
@@ -257,6 +282,12 @@ def _cmd_play(args: argparse.Namespace) -> int:
     ):
         if not hasattr(args, _attr):
             setattr(args, _attr, _default)
+
+    # Strip CLI flags from sys.argv so Hydra only sees its own key=value overrides.
+    import sys as _sys
+    _sys.argv = [_sys.argv[0]] + [
+        a for a in _sys.argv[1:] if "=" in a and not a.startswith("-")
+    ]
 
     @hydra_task_config(args.task, agent_entry_point)
     def _run(env_cfg, agent_cfg):
