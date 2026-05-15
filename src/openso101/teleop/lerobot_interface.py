@@ -1,31 +1,34 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Runtime LeRobot wrappers for SO-101 teleoperation.
-
-SKELETON: bodies raise NotImplementedError until the real port from
-`/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py` lands. The
-legacy implementation is under active revision (motor-unit remap,
-streaming HDF5 recording); this skeleton freezes the public surface.
-"""
+"""Runtime LeRobot wrappers for Safe Sim2Real teleoperation."""
 
 from __future__ import annotations
 
-from typing import Any, Mapping, TYPE_CHECKING
+from typing import Any, Mapping
 
-if TYPE_CHECKING:
-    pass
+from .so101_mapping import lerobot_action_to_ordered_targets, transform_ordered_targets
 
 
 class LeRobotDependencyError(RuntimeError):
     """Raised when LeRobot is needed but is not installed in the active env."""
 
 
-class LeRobotSO101Leader:
-    """SO101 leader-arm reader with SO-101 target conversion.
+def _make_so101_leader(port: str, robot_id: str) -> Any:
+    try:
+        from lerobot.robots import make_robot_from_config
+        from lerobot.teleoperators.so101_leader import SO101LeaderConfig
+    except ImportError as exc:
+        raise LeRobotDependencyError(
+            "LeRobot SO101 support is not installed. Install LeRobot in this "
+            "environment before running Safe Sim2Real teleop."
+        ) from exc
 
-    SKELETON — instantiation raises NotImplementedError.
-    """
+    return make_robot_from_config(SO101LeaderConfig(port=port, id=robot_id))
+
+
+class LeRobotSO101Leader:
+    """SO101 leader-arm reader with Safe Sim2Real target conversion."""
 
     def __init__(
         self,
@@ -36,49 +39,39 @@ class LeRobotSO101Leader:
         inverted_joints=(),
         joint_offsets_rad: Mapping[str, float] | None = None,
     ):
-        raise NotImplementedError(
-            "LeRobotSO101Leader not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
-        )
+        self.port = port
+        self.robot_id = robot_id
+        self._robot = robot
+        self.inverted_joints = tuple(inverted_joints)
+        self.joint_offsets_rad = dict(joint_offsets_rad or {})
 
     @property
     def robot(self) -> Any:
-        """Lazily-created LeRobot SO101 leader robot instance."""
-        raise NotImplementedError(
-            "LeRobotSO101Leader.robot not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
-        )
+        if self._robot is None:
+            self._robot = _make_so101_leader(self.port, self.robot_id)
+        return self._robot
 
     def connect(self) -> None:
-        """Connect to the physical SO101 leader arm."""
-        raise NotImplementedError(
-            "LeRobotSO101Leader.connect not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
-        )
+        self.robot.connect()
 
     def read_action(self) -> Mapping[str, float]:
-        """Read the current raw LeRobot action dict from the leader arm."""
-        raise NotImplementedError(
-            "LeRobotSO101Leader.read_action not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
-        )
+        return self.robot.get_action()
 
     def read_ordered_targets(self) -> tuple[Mapping[str, float], tuple[float, ...]]:
-        """Read and convert the leader action to ordered radian targets."""
-        raise NotImplementedError(
-            "LeRobotSO101Leader.read_ordered_targets not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
+        action = self.read_action()
+        targets = lerobot_action_to_ordered_targets(action)
+        targets = transform_ordered_targets(
+            targets,
+            inverted_joints=self.inverted_joints,
+            offsets_rad=self.joint_offsets_rad,
         )
+        return action, targets
 
-    def read_target_tensor(self, device: str) -> tuple[Mapping[str, float], Any]:
-        """Read the leader action as an Isaac-ready torch tensor on ``device``."""
-        raise NotImplementedError(
-            "LeRobotSO101Leader.read_target_tensor not yet ported. Source reference: "
-            "/data/safe_sim2real/src/safe_sim2real/teleop/lerobot_interface.py"
-        )
+    def read_target_tensor(self, device: str):
+        try:
+            import torch
+        except ImportError as exc:
+            raise RuntimeError("PyTorch is required to create Isaac action tensors.") from exc
 
-
-__all__ = [
-    "LeRobotDependencyError",
-    "LeRobotSO101Leader",
-]
+        action, targets = self.read_ordered_targets()
+        return action, torch.tensor(targets, dtype=torch.float32, device=device)
