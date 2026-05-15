@@ -35,10 +35,14 @@ def list_envs() -> list[str]:
 
 
 def _cmd_list(args: argparse.Namespace) -> int:
+    import sys
     app = _launch_isaac_app(headless=True)
     try:
+        # Isaac Sim hijacks stdout buffering, so write directly to fd 1.
+        out = sys.__stdout__ or sys.stdout
         for eid in list_envs():
-            print(eid)
+            out.write(eid + "\n")
+        out.flush()
     finally:
         if app is not None:
             app.close()
