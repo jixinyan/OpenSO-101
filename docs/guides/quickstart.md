@@ -31,7 +31,7 @@ openso101 rl train \
 Watch the W&B dashboard (`Episode/Reward/total`) climb from −2.0 to
 +8.0 over ~1500 iterations.
 
-Output logs land under `logs/rsl_rl/openso101_pickplace/<timestamp>/`.
+Output logs land under `logs/rsl_rl/pick_place/<timestamp>/`.
 The runner saves both `model_<iter>.pt` (every N iters) and
 `model_best.pt` (whenever 100-episode mean reward hits a new high).
 
@@ -40,7 +40,7 @@ The runner saves both `model_<iter>.pt` (every N iters) and
 ```bash
 openso101 rl play \
   --task OpenSO101-PickPlace-v0 \
-  --checkpoint logs/rsl_rl/openso101_pickplace/<run>/model_best.pt
+  --checkpoint logs/rsl_rl/pick_place/<run>/model_best.pt
 ```
 
 Isaac Sim opens and runs the trained policy. You should see the arm

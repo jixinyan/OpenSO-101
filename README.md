@@ -149,7 +149,7 @@ openso101 rl train --task OpenSO101-PickPlace-v0 --algo ppo --headless
 
 ```bash
 openso101 rl play --task OpenSO101-PickPlace-v0 \
-  --checkpoint logs/rsl_rl/openso101_pickplace/2026-05-14_12-30-00/model_best.pt
+  --checkpoint logs/rsl_rl/pick_place/2026-05-14_12-30-00/model_best.pt
 ```
 
 **Record a teleop demonstration** with a real SO-101 leader arm:

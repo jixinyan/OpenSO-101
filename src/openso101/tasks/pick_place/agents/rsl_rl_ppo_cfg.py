@@ -29,7 +29,7 @@ class PickPlacePPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = SO101_PPO_NUM_STEPS_PER_ENV
     max_iterations = 2000
     save_interval = 100
-    experiment_name = "pick_and_place"
+    experiment_name = "pick_place"
     empirical_normalization = True
 
     policy = RslRlPpoActorCriticCfg(
