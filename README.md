@@ -16,7 +16,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/KevinYan-831/OpenSO-101">
-    <img src="media/logo.png" alt="OpenSO-101 logo" width="420">
+    <img src="media/logo.png" alt="OpenSO-101 logo" width="280">
   </a>
 
   <h3 align="center">OpenSO-101</h3>
