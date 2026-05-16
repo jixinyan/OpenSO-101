@@ -44,3 +44,7 @@ docs/development_diary.md
 docs/isaac_sim_learning_guide.md
 docs/reference/
 docs/superpowers/
+
+# Claude Code per-project working notes — auto-loaded into Claude
+# sessions in this directory but kept off the public remote.
+CLAUDE.md
