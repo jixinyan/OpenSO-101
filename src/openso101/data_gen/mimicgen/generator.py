@@ -3,7 +3,11 @@
 
 """MimicGen integration for SO-101 demo augmentation.
 
-SKELETON: see sub-project F for implementation.
+DEFERRED. The CLI surface (`openso101 data generate --backend mimicgen ...`)
+is wired so call sites are stable, but the generator body is intentionally
+not implemented until the RL + IL pipelines are fully validated end-to-end
+on human-collected teleop data. See `docs/guides/il.md` for the current
+data-flow story (teleop HDF5 → LeRobot dataset → ACT/Diffusion training).
 """
 
 from __future__ import annotations
@@ -12,8 +16,8 @@ from __future__ import annotations
 def generate_with_mimicgen(*args, **kwargs):
     """Generate synthetic demos from a small seed set using MimicGen."""
     raise NotImplementedError(
-        "generate_with_mimicgen is part of sub-project F (synthetic data). See "
-        "docs/superpowers/specs/2026-05-13-openso101-refactor-design.md § 13."
+        "MimicGen-based synthetic data generation is deferred. Collect demos "
+        "via `openso101 il record` and train via `openso101 il train` instead."
     )
 
 

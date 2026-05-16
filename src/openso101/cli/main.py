@@ -42,10 +42,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_il = sub.add_parser("il", help="Teleop, datasets, IL training")
     il_cli.add_subparsers(p_il)
 
-    p_data = sub.add_parser("data", help="Synthetic data generation (sub-project F)")
+    p_data = sub.add_parser("data", help="Synthetic data generation (deferred)")
     data_cli.add_subparsers(p_data)
 
-    p_sim2real = sub.add_parser("sim2real", help="Sim-to-real / deployment (future)")
+    p_sim2real = sub.add_parser("sim2real", help="Sim-to-real deployment on a real SO-101")
     sim2real_cli.add_subparsers(p_sim2real)
 
     return parser
