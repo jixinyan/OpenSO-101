@@ -123,12 +123,16 @@ def _cmd_train(args: argparse.Namespace) -> int:
     # (those flags live in openso101.rl.cli_args.add_rsl_rl_args for callers
     # who want them). Backfill the attributes that update_rsl_rl_cfg reads so
     # an `rl train` invocation works without --resume/--load_run/etc.
+    # Default logger is tensorboard — it's the only logger in our base
+    # dependencies (wandb is in [project.optional-dependencies]).
+    # A fresh-env install via scripts/install.sh does NOT pull wandb;
+    # defaulting to wandb here used to crash rsl_rl on `import wandb`.
     for _attr, _default in (
         ("resume", False),
         ("load_run", None),
         ("checkpoint", None),
         ("run_name", None),
-        ("logger", "wandb"),
+        ("logger", "tensorboard"),
         ("log_project_name", "openso101"),
     ):
         if not hasattr(args, _attr):
@@ -151,9 +155,19 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
         # Apply variant hooks. The default is base RL (action_mode="rl",
         # cameras=False, play=False). --with-cameras adds wrist + overhead
-        # cameras (needed for vision policies).
+        # cameras (needed for vision policies). --visual-dr randomizes
+        # light + object color at each reset for sim2real perception
+        # transfer.
         if getattr(args, "with_cameras", False):
             env_cfg.configure_cameras(True)
+        if getattr(args, "visual_dr", False):
+            if hasattr(env_cfg, "configure_visual_dr"):
+                env_cfg.configure_visual_dr(True)
+            else:
+                print(
+                    "[WARN]: --visual-dr requested but this task lacks a "
+                    "configure_visual_dr() hook; skipping."
+                )
 
         env_cfg.scene.num_envs = args.num_envs if args.num_envs is not None else env_cfg.scene.num_envs
         agent_cfg.max_iterations = (
@@ -694,6 +708,15 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_train.add_argument("--video_length", type=int, default=200)
     p_train.add_argument("--video_interval", type=int, default=2400)
     p_train.add_argument("--with-cameras", action="store_true")
+    p_train.add_argument(
+        "--visual-dr",
+        action="store_true",
+        help=(
+            "Randomize dome-light intensity + color and object color at each "
+            "episode reset. Cheap sim2real perception transfer. Requires the "
+            "task to expose a configure_visual_dr() hook."
+        ),
+    )
     p_train.add_argument("--headless", action="store_true")
     p_train.set_defaults(func=_cmd_train)
 

@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from openso101.cli.il import _prompt_save_successful_episode, _success_prompt_response
+from openso101.cli.il import _handle_successful_episode, _success_prompt_response
 
 
 def test_success_prompt_response_accepts_yes_answers():
@@ -29,17 +29,33 @@ class FakeRecorder:
         self.recording = False
 
 
-def test_prompt_save_successful_episode_saves_when_user_accepts():
+def test_interactive_prompt_is_default_on_success():
+    """Default behavior: prompt the user with [y/N]. Save only on yes."""
     recorder = FakeRecorder()
 
-    _prompt_save_successful_episode(recorder, input_fn=lambda _: "y")
+    _handle_successful_episode(recorder, input_fn=lambda _: "y")
 
     assert recorder.calls == [("save", True)]
 
 
-def test_prompt_save_successful_episode_cancels_when_user_declines():
+def test_interactive_prompt_cancels_on_no_answer():
     recorder = FakeRecorder()
 
-    _prompt_save_successful_episode(recorder, input_fn=lambda _: "n")
+    _handle_successful_episode(recorder, input_fn=lambda _: "n")
 
     assert recorder.calls == ["cancel"]
+
+
+def test_auto_save_skips_prompt_when_confirm_is_false():
+    """confirm=False (i.e. --auto-save) skips the prompt and saves."""
+    recorder = FakeRecorder()
+    sentinel = []
+
+    def input_fn(_):
+        sentinel.append("called")
+        return "n"
+
+    _handle_successful_episode(recorder, confirm=False, input_fn=input_fn)
+
+    assert recorder.calls == [("save", True)]
+    assert sentinel == [], "input_fn should not be called in auto-save mode"

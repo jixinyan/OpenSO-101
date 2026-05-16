@@ -101,13 +101,17 @@ their mesh/body layout did not behave reliably with the SO101 gripper.
 
 ## Keyboard Controls
 
-- `C`: checkpoint the current episode in memory.
-- `R`: resume from the most recent checkpoint of the current episode.
-- `Q`: quit and cancel the active episode without saving it.
-- `S`: save the current episode.
+- `S`: mark the current episode SUCCESS, save it, and exit.
+- `Q`: cancel the active episode and exit (data discarded).
+- `C`: checkpoint the current frame (robot pose + env state + recording
+  position).
+- `R`: restore robot pose + env state to the most recent checkpoint.
+  The sim snaps back to the checkpoint pose; the leader takes over on
+  the next frame (no leader-pose sync required — by design).
 
-Checkpoint resume restores simulator state and the recording buffer; it does not
-resync from the current physical leader pose.
+The auto-detected goal-success path (run with `--goal-region`) prompts
+`[y/N]` for save by default; pass `--auto-save` to commit without the
+prompt for unattended batch capture.
 
 ## Export To LeRobot Later
 

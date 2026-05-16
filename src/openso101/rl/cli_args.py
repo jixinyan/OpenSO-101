@@ -26,9 +26,12 @@ def add_rsl_rl_args(parser: argparse.ArgumentParser) -> None:
     arg_group.add_argument(
         "--logger",
         type=str,
-        default="wandb",
+        default="tensorboard",
         choices={"wandb", "tensorboard", "neptune"},
-        help="Logger module to use. Defaults to wandb; pass --logger tensorboard to opt out.",
+        help=(
+            "Logger module to use. Defaults to tensorboard (our only default "
+            "dependency); pass --logger wandb after `pip install wandb`."
+        ),
     )
     arg_group.add_argument(
         "--log_project_name",
