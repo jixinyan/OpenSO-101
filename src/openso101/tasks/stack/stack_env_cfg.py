@@ -375,6 +375,19 @@ class StackEnvCfg(OpenSO101EnvCfg):
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
 
+    def configure_visual_dr(self, enabled: bool = True) -> None:
+        """Attach dome-light + per-cube color randomization at reset.
+
+        Stack has two distinguishable cubes (bottom + top) so each gets
+        its own independent recolor — otherwise the policy could exploit
+        always-paired colors instead of learning to discriminate by
+        position alone.
+        """
+        if not enabled:
+            return
+        from openso101.sim2real.domain_randomization.visual import attach_visual_dr
+        attach_visual_dr(self.events, object_asset_name=("cube_bottom", "cube_top"))
+
     def configure_action_mode(self, mode: str) -> None:
         """`'rl'` keeps the trained-policy action setup; `'teleop'` swaps to
         absolute joint positions on the leader-arm SO_ARM101_TELEOP_CFG and
