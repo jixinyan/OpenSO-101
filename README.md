@@ -56,17 +56,16 @@
 
 OpenSO-101 is a single-package research framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles the four pillars of modern robot learning behind one CLI and one Python API:
 
-1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] with a `BestCheckpointRunner` that snapshots the best mean-reward checkpoint and a `--visual-dr` flag that shares the same lighting / colour randomization the IL pipeline uses.
+1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] with a `BestCheckpointRunner` that snapshots the best mean-reward checkpoint, plus rsl_rl's `Distillation` for teacher → student knowledge transfer (the same checkpoint format is consumed in both directions). A `--visual-dr` flag shares the same lighting / colour randomization the IL pipeline uses.
 2. **Imitation Learning** — leader-arm teleop with async polling, streaming HDF5 recording, [LeRobot dataset][lerobot-url] conversion, and training via the official `lerobot.scripts.train` CLI (ACT, Diffusion, or any policy LeRobot ships). The same checkpoint produced by `openso101 il train` plays back in sim (`openso101 il play`) and deploys on hardware (`openso101 sim2real deploy`). Everything is also exposed as Python functions under `openso101.il` — `load_lerobot_dataset`, `train_il_policy`, `load_policy`, `ACTPolicy`, `DiffusionPolicy` — so notebooks and sweep drivers don't need to shell out.
 3. **Sim-to-Real Robustness** — visual, observation, and physics domain randomization shared across all three built-in tasks; a real-arm deploy bridge that drives the Feetech follower via LeRobot's `SO101Follower` while streaming OpenCV camera frames into the policy.
 4. **Synthetic Data Generation** *(deferred)* — [MimicGen][mimicgen-url] and [Isaac Lab Mimic][isaaclab-mimic-url] CLI surface is wired but the generator bodies are intentionally not implemented until the RL + IL pipelines are fully validated on human teleop data.
 
 The project is organized so that a researcher can clone, install, and reach a working `openso101 envs list` in well under an hour — and so a downstream contributor can register a custom task with one decorator. Each pillar exposes a stable CLI verb and a stable Python entry point; swapping in a custom algorithm or task does not require forking the framework.
 
-Out of scope (lives in the legacy [`safe_sim2real`][safe-sim2real-url] repository):
-- Safe-RL (PPO-Lagrangian, CPO, FOCOPS).
-- SB3 / StableBaselines3 wrappers.
-- Off-policy RL (SAC).
+Out of scope:
+- SB3 / StableBaselines3 wrappers — we ship `rsl_rl` PPO and Distillation.
+- Off-policy RL (SAC) — `rsl_rl` does not ship it; would require a separate library.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -161,6 +160,13 @@ bash scripts/install.sh --quick    # `pip install -e . --no-deps`
 openso101 rl train --task OpenSO101-PickPlace-v0 --algo ppo --headless --visual-dr
 ```
 
+**Distill a PPO teacher into a student** (same task, same checkpoint format):
+
+```bash
+openso101 rl train --task OpenSO101-PickPlace-v0 --algo distillation --headless \
+  --teacher-checkpoint logs/rsl_rl/pick_place/<teacher-run-dir>
+```
+
 **Replay the best checkpoint:**
 
 ```bash
@@ -239,7 +245,7 @@ The full CLI surface:
 |        | `random` | N random-action steps as a smoke test |
 |        | `zero` | N zero-action steps |
 |        | `preview` | Spawn the env with cameras enabled |
-| `rl` | `train` | Train PPO on a task (`--visual-dr` to enable lighting + colour DR) |
+| `rl` | `train` | Train an RL policy on a task (`--algo {ppo,distillation}`; `--visual-dr` for lighting + colour DR) |
 |      | `play` | Replay an RL checkpoint |
 |      | `plot` | Plot training curves from a run dir |
 | `il` | `record` | Record teleop demos to HDF5 + LeRobot, with async leader polling |
@@ -282,7 +288,7 @@ For deep dives:
 
 **Concepts**
 - [Tasks and Environments](docs/concepts/tasks_and_envs.md) — the single-class-per-task pattern and the variant hooks (`configure_play`, `configure_action_mode`, `configure_cameras`, `configure_visual_dr`).
-- [RL Algorithms](docs/concepts/rl_algorithms.md) — PPO, why safe-RL stays in `safe_sim2real`.
+- [RL Algorithms](docs/concepts/rl_algorithms.md) — PPO + Distillation, runner selection, teacher-loading.
 - [Imitation Learning](docs/concepts/imitation_learning.md) — teleop → HDF5 → LeRobot → ACT/Diffusion via `lerobot.scripts.train`.
 - [Sim-to-Real Robustness](docs/concepts/sim2real.md) — DR coverage and the deploy bridge.
 
@@ -307,6 +313,7 @@ Done:
 - [x] Core framework: `OpenSO101EnvCfg`, `register_task`, single-class-per-task pattern
 - [x] Built-in tasks: Lift, PickPlace, Stack (all face the cube spawn at startup)
 - [x] PPO via rsl_rl with `BestCheckpointRunner` (best-mean-reward snapshotting)
+- [x] Distillation via rsl_rl `DistillationRunner` — teacher PPO → student via `--algo distillation --teacher-checkpoint <run-dir>`
 - [x] Teleop boundary: async daemon-polled LeRobot leader arm → simulated follower
 - [x] HDF5 + LeRobot dataset recording with checkpoint/restore + interactive save prompt
 - [x] IL training via `lerobot.scripts.train` (ACT, Diffusion, any LeRobot policy)
@@ -319,7 +326,7 @@ Deferred (intentionally, until RL + IL are fully validated):
 - [ ] Standalone HDF5 → LeRobot batch converter (inline path runs in `il record` today)
 
 Not planned:
-- Off-policy RL (SAC), safe-RL (PPO-Lagrangian/CPO/FOCOPS) — stay in `safe_sim2real`.
+- Off-policy RL (SAC, DDPG, TD3) — `rsl_rl` does not ship off-policy methods; adding any of these is a separate library decision.
 
 See [open issues](https://github.com/KevinYan-831/OpenSO-101/issues) for the live backlog.
 
@@ -370,7 +377,7 @@ Jixin Yan — [@KevinYan-831](https://github.com/KevinYan-831)
 
 Project link: [https://github.com/KevinYan-831/OpenSO-101](https://github.com/KevinYan-831/OpenSO-101)
 
-For research collaborations or the legacy safe-RL extension, see the predecessor repository [`safe_sim2real`][safe-sim2real-url].
+For research collaborations or historical context, see the predecessor repository [`safe_sim2real`][safe-sim2real-url] — most OpenSO-101 components were first prototyped there before the consolidation.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
