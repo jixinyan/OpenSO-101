@@ -284,24 +284,13 @@ class PourTeaCfg(OpenSO101EnvCfg):
         # ... your scene, rewards, terminations ...
 ```
 
-For deep dives:
+For deep dives, see the guides:
 
-**Concepts**
-- [Tasks and Environments](docs/concepts/tasks_and_envs.md) — the single-class-per-task pattern and the variant hooks (`configure_play`, `configure_action_mode`, `configure_cameras`, `configure_visual_dr`).
-- [RL Algorithms](docs/concepts/rl_algorithms.md) — PPO + Distillation, runner selection, teacher-loading.
-- [Imitation Learning](docs/concepts/imitation_learning.md) — teleop → HDF5 → LeRobot → ACT/Diffusion via `lerobot.scripts.train`.
-- [Sim-to-Real Robustness](docs/concepts/sim2real.md) — DR coverage and the deploy bridge.
-
-**Guides**
 - [Installation](docs/guides/install.md) — fresh Ubuntu 22.04 walkthrough; the uv override explanation.
 - [Quickstart](docs/guides/quickstart.md) — install to trained PPO checkpoint in 20 min.
 - [Teleop setup](docs/guides/teleop.md) — leader-arm wiring, calibration, recording, key bindings.
 - [Add a Custom Task](docs/guides/add_a_task.md) — subclass `OpenSO101EnvCfg`, register, configure variants.
 - [Migration from `safe_sim2real`](docs/guides/migration_from_safe_sim2real.md) — naming map, CLI map, common gotchas.
-
-**Operating notes**
-- [Development diary](docs/development_diary.md) — dated decision log.
-- [Isaac Sim learning guide](docs/isaac_sim_learning_guide.md) — Isaac Lab concepts cheat-sheet.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
