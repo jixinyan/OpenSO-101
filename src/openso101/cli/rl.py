@@ -4,8 +4,9 @@
 """`openso101 rl ...` subcommands.
 
 train --algo selects the RL algorithm:
-- ppo: real PPO training via rsl_rl + BestCheckpointRunner.
-- ppo_lag / cpo / focops: NOT supported (safe-RL stays in safe_sim2real).
+- ppo:          on-policy PPO via rsl_rl + BestCheckpointRunner.
+- distillation: teacher → student knowledge transfer via rsl_rl
+                DistillationRunner; requires --teacher-checkpoint.
 """
 
 from __future__ import annotations
@@ -13,23 +14,35 @@ from __future__ import annotations
 import argparse
 
 
-_SAFE_ALGOS = ("ppo_lag", "cpo", "focops")
-_OPENSO101_ALGOS = ("ppo",)
-_ALL_ALGOS = _OPENSO101_ALGOS + _SAFE_ALGOS
+_OPENSO101_ALGOS = ("ppo", "distillation")
+_ALL_ALGOS = _OPENSO101_ALGOS
+
+# Per-algo `gym.make` agent-entry-point key. Tasks register a config
+# class under each key they support; the CLI looks up the right one based
+# on `--algo`.
+_ALGO_TO_ENTRY_POINT = {
+    "ppo": "rsl_rl_cfg_entry_point",
+    "distillation": "rsl_rl_distillation_cfg_entry_point",
+}
 
 
 def _cmd_train(args: argparse.Namespace) -> int:
-    if args.algo in _SAFE_ALGOS:
-        print(
-            f"openso101 rl train: --algo {args.algo} is not available in "
-            "OpenSO-101. Safe-RL stays in the legacy safe_sim2real repository."
-        )
-        return 2
-
-    if args.algo != "ppo":
+    if args.algo not in _OPENSO101_ALGOS:
         # Should be unreachable due to argparse choices.
         print(f"openso101 rl train: unknown algorithm {args.algo!r}")
         return 2
+
+    if args.algo == "distillation":
+        teacher = getattr(args, "teacher_checkpoint", None)
+        if not teacher:
+            print(
+                "openso101 rl train --algo distillation: --teacher-checkpoint "
+                "is required. Point it at a PPO run directory (e.g. "
+                "`logs/rsl_rl/pick_place/2026-05-14_12-30-00`) or a direct "
+                ".pt file. The student is trained to mimic the teacher's "
+                "action distribution."
+            )
+            return 2
 
     # --- PPO training body (ported from
     # /data/safe_sim2real/src/safe_sim2real/scripts/rsl_rl/train.py) ---
@@ -109,7 +122,9 @@ def _cmd_train(args: argparse.Namespace) -> int:
     torch.backends.cudnn.benchmark = False
 
     # Hydra needs to consume `agent` to pick the config entry point.
-    agent_entry_point = getattr(args, "agent", "rsl_rl_cfg_entry_point")
+    # `--algo distillation` flips the lookup to `rsl_rl_distillation_cfg_entry_point`
+    # so we pull the StudentTeacher cfg instead of the PPO actor-critic cfg.
+    agent_entry_point = getattr(args, "agent", None) or _ALGO_TO_ENTRY_POINT[args.algo]
 
     # The new CLI argparse for `train` doesn't expose the full rsl_rl arg group
     # (those flags live in openso101.rl.cli_args.add_rsl_rl_args for callers
@@ -129,6 +144,26 @@ def _cmd_train(args: argparse.Namespace) -> int:
     ):
         if not hasattr(args, _attr):
             setattr(args, _attr, _default)
+
+    # Distillation: the teacher checkpoint flag is the only user-facing
+    # way to point at a teacher. Internally rsl_rl reads it from
+    # `agent_cfg.load_run` + `agent_cfg.load_checkpoint`, which our existing
+    # `update_rsl_rl_cfg` pulls from `args.load_run` / `args.checkpoint`.
+    # Translate `--teacher-checkpoint` into both: if the user gave a directory,
+    # use it as `load_run`; if they gave a file path, split into parent + name.
+    if args.algo == "distillation":
+        from pathlib import Path as _Path
+        teacher = _Path(args.teacher_checkpoint).expanduser().resolve()
+        if not teacher.exists():
+            raise FileNotFoundError(
+                f"--teacher-checkpoint not found: {teacher}"
+            )
+        if teacher.is_dir():
+            args.load_run = str(teacher)
+            args.checkpoint = None
+        else:
+            args.load_run = str(teacher.parent)
+            args.checkpoint = teacher.name
 
     # Hydra reads sys.argv directly for override-style key=value flags
     # (e.g. agent.algorithm.gamma=0.95). The new CLI's argparse has already
@@ -691,7 +726,17 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         "--algo",
         required=True,
         choices=_ALL_ALGOS,
-        help="Algorithm (ppo|sac|ppo_lag|cpo|focops)",
+        help="Algorithm (ppo|distillation)",
+    )
+    p_train.add_argument(
+        "--teacher-checkpoint",
+        default=None,
+        help=(
+            "Teacher policy checkpoint for --algo distillation. Accepts "
+            "either a directory (uses its `model_best.pt` / latest) or a "
+            "direct .pt path. Required when --algo=distillation, ignored "
+            "otherwise."
+        ),
     )
     p_train.add_argument("--num_envs", type=int, default=None)
     p_train.add_argument("--seed", type=int, default=None)

@@ -10,11 +10,10 @@ environment classes per task into one, replaces ad-hoc scripts with a
 single `openso101` CLI, and reorganizes the package around four
 pillars: RL, IL, Synthetic Data Generation, Sim-to-Real Robustness.
 
-**Trade-off**: safe-RL (PPO-Lagrangian, CPO, FOCOPS) and the
-SB3-StableBaselines3 wrappers are **not** ported. They stay in
-`safe_sim2real`. If your research depends on them, keep using
-`safe_sim2real` for those workflows and use OpenSO-101 for everything
-else side-by-side.
+**Trade-off**: the SB3-StableBaselines3 wrappers are **not** ported —
+OpenSO-101 ships PPO and Distillation via `rsl_rl` only. If your
+research depends on SB3 algorithms, keep using `safe_sim2real` for
+those workflows and use OpenSO-101 for everything else side-by-side.
 
 ## Quick Reference: Naming Changes
 
@@ -43,7 +42,7 @@ else side-by-side.
 | `SafeSim2Real-SO-ARM101-PickPlace-Teleop-v0` | `gym.make("OpenSO101-PickPlace-v0", action_mode="teleop")` |
 | `SafeSim2Real-SO-ARM101-Lift-Cube-v0` | `OpenSO101-Lift-v0` |
 | `SafeSim2Real-SO-ARM101-Stack-Cube-v0` | `OpenSO101-Stack-v0` |
-| `SafeSim2Real-SO-ARM101-PickPlace-Safe-PPOLag-v0` and other `-Safe-*` IDs | Not ported — stay in `safe_sim2real`. |
+| `SafeSim2Real-SO-ARM101-PickPlace-Safe-PPOLag-v0` and other `-Safe-*` IDs | Not ported — OpenSO-101 does not include safe-RL. |
 
 ### Cfg Classes
 
@@ -53,7 +52,7 @@ else side-by-side.
 | `SoArm101PickPlaceEnvCfg_PLAY` | `PickPlaceEnvCfg` + `configure_play(True)` |
 | `SoArm101PickPlaceEnvCfgWithCameras` | `PickPlaceEnvCfg` + `configure_cameras(True)` |
 | `SoArm101PickPlaceTeleopEnvCfg` | `PickPlaceEnvCfg` + `configure_action_mode("teleop")` |
-| `SoArm101SafePickPlaceEnvCfg` | Not ported — `safe_sim2real` only |
+| `SoArm101SafePickPlaceEnvCfg` | Not ported — OpenSO-101 does not include safe-RL |
 
 The four legacy classes per task collapse into one class with three
 `configure_*` hooks. See [`tasks_and_envs.md`](../concepts/tasks_and_envs.md).
@@ -72,7 +71,6 @@ The four legacy classes per task collapse into one class with three
 | `python scripts/preview_cameras.py --task <id>` | `openso101 envs preview --task <id>` |
 | `python scripts/random_agent.py --task <id>` | `openso101 envs random --task <id>` |
 | `python scripts/zero_agent.py --task <id>` | `openso101 envs zero --task <id>` |
-| `python scripts/safe_rl/train.py ...` | Not ported — `safe_sim2real` only |
 | `python scripts/sb3/train.py ...` | Not ported — out of scope |
 
 ## Step-by-Step Migration
@@ -128,15 +126,7 @@ LeRobot datasets recorded with `safe_sim2real` are wire-compatible with
 OpenSO-101 — only the embedded `task_name` metadata may differ. No
 re-recording needed.
 
-### 6. Keep safe-RL workflows in `safe_sim2real`
-
-The two repos are siblings, not replacements. If you train both PPO and
-PPO-Lagrangian policies, the recommended setup is:
-
-- PPO + IL + teleop in OpenSO-101.
-- PPO-Lagrangian / CPO / FOCOPS in safe_sim2real (no changes there).
-
-### 7. Update your CI
+### 6. Update your CI
 
 Find:
 ```
@@ -145,8 +135,6 @@ pytest safe_sim2real/tests/
 Replace with:
 ```
 pytest /path/to/OpenSO-101/tests/
-# OR if you've kept safe-RL tests too:
-pytest safe_sim2real/tests/ /path/to/OpenSO-101/tests/
 ```
 
 ## Common Gotchas
@@ -155,10 +143,6 @@ pytest safe_sim2real/tests/ /path/to/OpenSO-101/tests/
 likely had a private task in `safe_sim2real` that you want to port.
 Follow [`add_a_task.md`](add_a_task.md) — the migration boils down to
 collapsing your four legacy classes into one with `configure_*` hooks.
-
-**"My agent cfg `SoArm101SafePickPlaceEnvCfg`-style runner cfg is gone."**
-That class is safe-RL and stays in `safe_sim2real`. Use
-`PickPlacePPORunnerCfg` for the PPO baseline.
 
 **"My old gym ID `...-Vision-v0` raises NameNotFound."** Expected: use
 the kwarg form `gym.make("OpenSO101-PickPlace-v0", cameras=True)`.

@@ -110,7 +110,7 @@ class OpenSO101HDF5TeleopRecorder:
         self.task_name = task_name
         self.cameras = dict(cameras)
         self.fps = fps
-        self.dataset_id = dataset_id or "local/safe_sim2real_pickplace_teleop"
+        self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
         self.sim_joint_names = tuple(sim_joint_names or SO101_SIM_JOINT_NAMES)
         ensure_required_cameras(self.cameras)
         if flush_steps < 1:
