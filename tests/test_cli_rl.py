@@ -36,7 +36,8 @@ def test_safe_rl_algos_rejected_with_clear_message():
         assert "safe_sim2real" in combined, combined
 
 
-def test_sac_says_sub_project_e():
+def test_sac_is_not_a_choice():
+    """OpenSO-101 ships PPO only — SAC is no longer advertised as a future."""
     proc = _run_cli(
         "rl", "train",
         "--task", "OpenSO101-PickPlace-v0",
@@ -44,8 +45,8 @@ def test_sac_says_sub_project_e():
         "--headless",
     )
     combined = proc.stdout + proc.stderr
-    assert proc.returncode == 2, combined
-    assert "sub-project E" in combined, combined
+    assert proc.returncode != 0
+    assert "invalid choice" in combined.lower(), combined
 
 
 def test_unknown_algo_is_argparse_error():

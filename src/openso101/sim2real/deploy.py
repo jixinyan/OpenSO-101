@@ -185,34 +185,15 @@ def _open_cameras(
 
 
 def _load_lerobot_policy(checkpoint_path: str, *, device: str):
-    """Resolve a checkpoint path (or its parent) to a PreTrainedPolicy."""
-    path = Path(checkpoint_path).expanduser().resolve()
-    if not path.exists():
-        raise FileNotFoundError(f"Policy checkpoint not found: {path}")
-    # Match `il play`'s path resolution: support either the top-level
-    # output_dir OR the inner `pretrained_model/` directory.
-    if (path / "checkpoints" / "last" / "pretrained_model").is_dir():
-        path = path / "checkpoints" / "last" / "pretrained_model"
-    elif (path / "pretrained_model").is_dir():
-        path = path / "pretrained_model"
+    """Resolve a checkpoint path (or its parent) to a PreTrainedPolicy.
 
-    try:
-        from lerobot.configs.policies import PreTrainedConfig
-        from lerobot.policies.factory import get_policy_class
-    except ImportError as exc:
-        raise RuntimeError(
-            "LeRobot is required for policy inference."
-        ) from exc
+    Delegates to `openso101.il.policies.load_policy` so sim playback and
+    real deploy use exactly the same loader — same path resolution, same
+    `PreTrainedConfig` → `get_policy_class` dispatch.
+    """
+    from openso101.il.policies import load_policy
 
-    # PreTrainedPolicy is abstract; we must dispatch via the concrete
-    # subclass for the policy type recorded in the config. Same pattern
-    # as `openso101.cli.il._load_lerobot_policy` so the two stay in sync.
-    config = PreTrainedConfig.from_pretrained(str(path))
-    policy_cls = get_policy_class(config.type)
-    policy = policy_cls.from_pretrained(str(path))
-    policy.to(device)
-    policy.eval()
-    return policy
+    return load_policy(checkpoint_path, device=device)
 
 
 def _build_real_observation(follower, cameras: Mapping[str, Any]) -> dict:

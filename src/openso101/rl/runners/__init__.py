@@ -2,6 +2,5 @@
 # SPDX-License-Identifier: MIT
 
 from .on_policy_runner import BestCheckpointRunner, OnPolicyRunner
-from .off_policy_runner import OffPolicyRunner
 
-__all__ = ["BestCheckpointRunner", "OffPolicyRunner", "OnPolicyRunner"]
+__all__ = ["BestCheckpointRunner", "OnPolicyRunner"]
