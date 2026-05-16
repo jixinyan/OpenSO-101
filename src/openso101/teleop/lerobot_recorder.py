@@ -236,7 +236,12 @@ class OpenSO101LeRobotRecorder:
         try:
             from lerobot.datasets.lerobot_dataset import LeRobotDataset
         except ImportError as exc:
-            raise RuntimeError("LeRobot is required for dataset recording. Install with `python -m pip install -e \".[lerobot]\"`.") from exc
+            raise RuntimeError(
+                "LeRobot is required for dataset recording. Install it via "
+                "`bash scripts/install.sh` from the repo root (or, manually, "
+                "`pip install \"lerobot[feetech]==0.4.0\" --no-deps` to bypass "
+                "the isaaclab/lerobot packaging version conflict)."
+            ) from exc
 
         if has_lerobot_metadata(self.root):
             self._dataset = LeRobotDataset(self.repo_id, root=self.root)
@@ -273,7 +278,14 @@ class OpenSO101LeRobotRecorder:
         qpos: np.ndarray | None = None,
         qvel: np.ndarray | None = None,
         timestamp: float | None = None,
+        sim_state: Mapping[str, "np.ndarray"] | None = None,
     ) -> None:
+        # ``sim_state`` is accepted for signature parity with
+        # :class:`OpenSO101HDF5TeleopRecorder.add_frame` but is silently
+        # dropped — the LeRobot dataset schema has no per-frame slot for
+        # arbitrary sim state and recording it inline would invalidate
+        # the upstream feature spec the policy trainer expects.
+        del sim_state  # noqa: F841 — intentionally unused
         if not self._recording:
             return
         if observation is None:
@@ -315,3 +327,29 @@ class OpenSO101LeRobotRecorder:
         if hasattr(self._dataset, "clear_episode_buffer"):
             self._dataset.clear_episode_buffer()
         print("[INFO]: Cancelled LeRobot episode.")
+
+    # ----- Checkpoint API parity with OpenSO101HDF5TeleopRecorder -----
+    #
+    # LeRobotDataset doesn't have a native frame-level checkpoint
+    # facility, so these are intentional no-ops that return ``None`` /
+    # accept ``None``. The teleop checkpoint store still captures the
+    # sim state (robot pose + object pose + command stage), and the R
+    # key still restores from that — the only difference vs. HDF5
+    # recording is that the LeRobot episode itself isn't rewound. If
+    # you need replayable checkpoints, use ``--record-format hdf5``.
+
+    def create_checkpoint(self):
+        """Return a sentinel handle the caller can later pass to
+        :meth:`restore_checkpoint`. The LeRobot recorder has no real
+        rewind concept; this exists purely so the teleop dispatcher's
+        capture path doesn't crash."""
+        if self._recording:
+            return self._frames_in_episode
+        return None
+
+    def restore_checkpoint(self, checkpoint) -> None:
+        """No-op; see :meth:`create_checkpoint`. The sim state restore
+        is handled separately by :class:`_TeleopCheckpointStore` in
+        ``openso101.cli.il``."""
+        del checkpoint  # nothing to do
+        return None

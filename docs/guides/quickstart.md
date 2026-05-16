@@ -59,7 +59,11 @@ openso101 il record \
 ```
 
 - Move the leader arm to teleoperate the simulated follower.
-- Press `s` to save the episode, `c` to cancel, `q` to quit.
+- Press `S` to mark the current episode SUCCESS, save, and exit.
+- Press `Q` to discard the episode and exit.
+- Press `C` to checkpoint the current frame; press `R` to restore
+  robot + env state to the most recent checkpoint (leader takes over
+  from there).
 
 ## 5. (Optional) Push the Dataset
 

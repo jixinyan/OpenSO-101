@@ -49,13 +49,29 @@ def _launch_isaac_app(args: argparse.Namespace, enable_cameras: bool = True):
 
 
 class _TeleopKeyboard:
-    """Best-effort Isaac app-window teleop key handler."""
+    """Best-effort Isaac app-window teleop key handler.
+
+    Each key sets a request flag; the dispatcher
+    :func:`_handle_recording_key_events` consumes flags once per loop
+    iteration. Attribute names match what each key actually does today
+    (see the docstring on :func:`_handle_recording_key_events`):
+
+      * ``take_checkpoint`` — C
+      * ``restore_checkpoint`` — R
+      * ``mark_success`` — S (saves episode as SUCCESS and exits)
+      * ``quit_discard`` — Q (cancels episode and exits)
+
+    Legacy attribute names (``checkpoint_recording``, ``resume_recording``,
+    ``toggle_recording``, ``quit_without_saving``) are aliased via
+    properties so external callers / tests that imported the old names
+    keep working without behavior change.
+    """
 
     def __init__(self):
-        self.checkpoint_recording = False
-        self.resume_recording = False
-        self.toggle_recording = False
-        self.quit_without_saving = False
+        self.take_checkpoint = False
+        self.restore_checkpoint = False
+        self.mark_success = False
+        self.quit_discard = False
         self._sub_keyboard = None
         try:
             import carb
@@ -72,24 +88,46 @@ class _TeleopKeyboard:
             self._keyboard_event_type = None
             print(f"[WARN]: Keyboard controls disabled: {exc}")
 
+    # ----- Legacy aliases for backward-compat with older tests/code -----
+    @property
+    def checkpoint_recording(self) -> bool: return self.take_checkpoint
+    @checkpoint_recording.setter
+    def checkpoint_recording(self, value: bool) -> None: self.take_checkpoint = value
+
+    @property
+    def resume_recording(self) -> bool: return self.restore_checkpoint
+    @resume_recording.setter
+    def resume_recording(self, value: bool) -> None: self.restore_checkpoint = value
+
+    @property
+    def toggle_recording(self) -> bool: return self.mark_success
+    @toggle_recording.setter
+    def toggle_recording(self, value: bool) -> None: self.mark_success = value
+
+    @property
+    def quit_without_saving(self) -> bool: return self.quit_discard
+    @quit_without_saving.setter
+    def quit_without_saving(self, value: bool) -> None: self.quit_discard = value
+
     def _on_keyboard_event(self, event, *args, **kwargs):
         if event.type != self._keyboard_event_type.KEY_PRESS:
             return False
         key_name = event.input.name.upper()
         if key_name == "C":
-            self.checkpoint_recording = True
+            self.take_checkpoint = True
             print("[INFO]: Checkpoint requested.")
             return True
         if key_name == "R":
-            self.resume_recording = True
-            print("[INFO]: Resume requested.")
+            self.restore_checkpoint = True
+            print("[INFO]: Restore-to-checkpoint requested.")
             return True
         if key_name == "Q":
-            self.quit_without_saving = True
-            print("[INFO]: Quit without saving requested.")
+            self.quit_discard = True
+            print("[INFO]: Quit-and-discard requested.")
             return True
         if key_name == "S":
-            self.toggle_recording = True
+            self.mark_success = True
+            print("[INFO]: Mark-success-and-save requested.")
             return True
         return False
 
@@ -169,22 +207,51 @@ class _ResumeHoldState:
 
 
 class _TeleopResumeHold:
-    """Hold restored sim commands until the real leader arm is moved back near them."""
+    """Hold sim commands at a target pose until the real leader arm moves near it.
+
+    Two contexts use this: (1) startup, where the sim is held at the canonical
+    init pose so it stays visibly facing the cube until the user moves the
+    leader to home; (2) checkpoint resume, where the sim is held at the
+    restored pose until the leader is moved back near it.
+    """
 
     def __init__(self, release_threshold: float):
+        self.default_threshold = float(release_threshold)
         self.release_threshold = float(release_threshold)
         self._target = None
+        self._context = "checkpoint"
 
     @property
     def active(self) -> bool:
         return self._target is not None
 
-    def activate(self, target) -> None:
+    def activate(
+        self,
+        target,
+        *,
+        context: str = "checkpoint",
+        release_threshold: float | None = None,
+    ) -> None:
         self._target = _clone_value(target)
-        print(
-            "[INFO]: Holding restored checkpoint pose. "
-            "Move the real leader arm near the checkpoint pose to resume live control."
+        self._context = context
+        # Allow startup vs. checkpoint to use different tolerances. Falls back
+        # to the default when not overridden so a later checkpoint resume does
+        # not inherit a wider startup threshold.
+        self.release_threshold = (
+            float(release_threshold)
+            if release_threshold is not None
+            else self.default_threshold
         )
+        if context == "startup":
+            print(
+                "[INFO]: Holding sim at home pose (cube-facing). "
+                "Move the real leader arm near the home pose to begin live control."
+            )
+        else:
+            print(
+                "[INFO]: Holding restored checkpoint pose. "
+                "Move the real leader arm near the checkpoint pose to resume live control."
+            )
 
     def apply(self, leader_targets) -> _ResumeHoldState:
         if self._target is None:
@@ -194,8 +261,10 @@ class _TeleopResumeHold:
         error = _target_max_abs_error(leader_targets, hold_target)
         if error <= self.release_threshold:
             self._target = None
+            label = "home" if self._context == "startup" else "checkpoint"
             print(
-                f"[INFO]: Leader arm re-synced to checkpoint pose; live control resumed (max error {error:.4f} rad)."
+                f"[INFO]: Leader arm synced to {label} pose; live control "
+                f"engaged (max error {error:.4f} rad)."
             )
             return _ResumeHoldState(targets=leader_targets, holding=False, released=True, error=error)
 
@@ -326,7 +395,21 @@ class _TeleopCheckpointStore:
 
 
 def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_hold=None) -> bool:
-    """Apply pending recording key events and return whether teleop should exit."""
+    """Apply pending recording key events and return whether teleop should exit.
+
+    Key semantics:
+      * **Q** — quit immediately, discarding the current episode.
+      * **S** — mark the current episode a SUCCESS, save it, and exit.
+        (Manual counterpart to the auto-detected ``--goal-region`` path.)
+      * **C** — checkpoint the current frame so **R** can restore later.
+      * **R** — restore the robot pose + env state to the last checkpoint
+        EXACTLY. The leader-sync hold is intentionally NOT engaged here —
+        the sim snaps to checkpoint and the leader takes over on the next
+        frame, so the operator can choose to either jog the leader back
+        to match or just accept the jump. The ``resume_hold`` parameter
+        is preserved for backward compatibility but is no longer used by
+        the R key path.
+    """
 
     should_quit = False
     if keyboard.quit_without_saving:
@@ -352,24 +435,33 @@ def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_ho
     if keyboard.resume_recording:
         keyboard.resume_recording = False
         if recorder is None:
-            print("[WARN]: Resume requested, but --repo-id was not provided.")
+            print("[WARN]: Restore requested, but --repo-id was not provided.")
         elif checkpoints is not None and checkpoints.has_checkpoint:
-            hold_target = checkpoints.restore(recorder)
-            if resume_hold is not None and hold_target is not None:
-                resume_hold.activate(hold_target)
-        elif recorder.recording:
-            print("[WARN]: Resume requested, but no checkpoint has been captured yet.")
+            # Hard restore: snap robot+env back to checkpoint exactly.
+            # We intentionally do NOT activate `resume_hold` — the operator
+            # asked for the sim to match the checkpoint regardless of where
+            # the real leader currently sits.
+            checkpoints.restore(recorder)
+            print("[INFO]: Resumed to checkpoint. Leader takes over next frame.")
         else:
-            recorder.start_episode()
+            # Recording always starts at launch in `_cmd_record`, so any
+            # R press without a checkpoint is just a no-op the user
+            # should be told about.
+            print(
+                "[WARN]: Restore requested, but no checkpoint has been captured "
+                "yet. Press C first to mark a frame, then R to return to it."
+            )
 
     if keyboard.toggle_recording:
         keyboard.toggle_recording = False
         if recorder is None:
-            print("[WARN]: Recording requested, but --repo-id was not provided.")
+            print("[WARN]: Save requested, but --repo-id was not provided.")
         elif recorder.recording:
-            recorder.save_episode()
+            recorder.save_episode(success=True)
+            print("[SUCCESS]: Manual success — episode saved. Exiting.")
+            should_quit = True
         else:
-            recorder.start_episode()
+            print("[WARN]: Save requested, but no episode is currently recording.")
 
     return should_quit
 
@@ -378,8 +470,24 @@ def _success_prompt_response(response: str) -> bool:
     return response.strip().lower() in {"y", "yes"}
 
 
-def _prompt_save_successful_episode(recorder, input_fn: Callable[[str], str] = input) -> None:
+def _handle_successful_episode(
+    recorder,
+    *,
+    confirm: bool = True,
+    input_fn: Callable[[str], str] = input,
+) -> None:
+    """Persist a successful episode.
+
+    Defaults to the interactive ``[y/N]`` prompt — the human gets the last
+    word on whether a "goal-reached" frame really represents a clean
+    demonstration worth keeping. Pass ``confirm=False`` for unattended
+    batch-capture (leisaac-style auto-save).
+    """
     if recorder is None or not recorder.recording:
+        return
+    if not confirm:
+        recorder.save_episode(success=True)
+        print("[SUCCESS]: Goal reached. Episode auto-saved.")
         return
     try:
         response = input_fn("[SUCCESS]: Goal reached. Save this episode? [y/N]: ")
@@ -389,6 +497,11 @@ def _prompt_save_successful_episode(recorder, input_fn: Callable[[str], str] = i
         recorder.save_episode(success=True)
     else:
         recorder.cancel_episode()
+
+
+# Backward-compatible alias retained so external callers / tests that
+# imported the legacy name keep working.
+_prompt_save_successful_episode = _handle_successful_episode
 
 
 def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
@@ -411,6 +524,24 @@ def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
         return bool(command.is_touching_goal(cube_pos_b, final_goal_b)[0].item())
     except Exception:
         return False
+
+
+def _build_home_target_tensor(device):
+    """Return the canonical init pose as an action-ordered tensor (radians).
+
+    The teleop action vector is laid out as
+    ``(Rotation, Pitch, Elbow, Wrist_Pitch, Wrist_Roll, Jaw)`` — see
+    :data:`openso101.robots.SO101_SIM_JOINT_NAMES`. The values come from
+    :data:`SO101_CANONICAL_INIT_JOINT_POS` in the robot module so any future
+    pose tweak there flows through automatically.
+    """
+    import torch
+
+    from openso101.robots import SO101_SIM_JOINT_NAMES
+    from openso101.robots.so101.so_arm101 import SO101_CANONICAL_INIT_JOINT_POS
+
+    values = [SO101_CANONICAL_INIT_JOINT_POS[name] for name in SO101_SIM_JOINT_NAMES]
+    return torch.tensor(values, dtype=torch.float32, device=device)
 
 
 def _copy_targets_to_actions(actions, targets) -> None:
@@ -466,6 +597,14 @@ def _cmd_record(args: argparse.Namespace) -> int:
     args.invert_joints = getattr(args, "invert_joints", "")
     args.joint_offsets_deg = getattr(args, "joint_offsets_deg", "")
     args.resume_sync_threshold = getattr(args, "resume_sync_threshold", 0.08)
+    # Default OFF: startup hold blocks the sim until the leader physically
+    # matches the home pose, which surprises new users (they think teleop is
+    # broken). Use --startup-sync to opt in when you specifically want to see
+    # the home pose before driving the arm.
+    args.startup_sync = getattr(args, "startup_sync", False)
+    args.startup_sync_threshold = getattr(args, "startup_sync_threshold", 0.3)
+    args.leader_async = getattr(args, "leader_async", True)
+    args.auto_save = getattr(args, "auto_save", False)
     args.action_rate_limit = getattr(args, "action_rate_limit", 0.0)
     if args.repo_id is None:
         args.repo_id = "local/openso101_pickplace_teleop"
@@ -503,6 +642,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
     keyboard = _TeleopKeyboard()
     env = None
     recorder = None
+    leader = None
     startup_error = None
     try:
         env_cfg = parse_env_cfg(
@@ -543,7 +683,13 @@ def _cmd_record(args: argparse.Namespace) -> int:
         env = gym.make(args.task, cfg=env_cfg)
         print(f"[INFO]: Gym observation space: {env.observation_space}")
         print(f"[INFO]: Gym action space: {env.action_space}")
-        print("[INFO]: Teleop keys: C checkpoint, R restore checkpoint, Q quit without saving, S save/start.")
+        print(
+            "[INFO]: Teleop keys: "
+            "S=mark SUCCESS + save + exit, "
+            "Q=cancel + exit (discard), "
+            "C=checkpoint current frame, "
+            "R=restore robot+env to checkpoint."
+        )
 
         scene = env.unwrapped.scene
         unwrapped_env = env.unwrapped
@@ -578,24 +724,65 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 f"[INFO]: Recording is local-only ({args.record_format}). Dataset root: {args.repo_root}"
             )
             print("[INFO]: Recording started automatically. Goal success prompts for save/discard.")
-            print("[INFO]: Recording keys: C checkpoint, R restore checkpoint, Q quit without saving, S save/start.")
+            print(
+                "[INFO]: Recording keys: "
+                "S=mark SUCCESS + save + exit, "
+                "Q=cancel + exit (discard), "
+                "C=checkpoint current frame, "
+                "R=restore robot+env to checkpoint."
+            )
 
         leader = LeRobotSO101Leader(
             port=args.leader_port,
             robot_id=args.leader_id,
             inverted_joints=inverted_joints,
             joint_offsets_rad=joint_offsets_rad,
+            async_read=bool(getattr(args, "leader_async", True)),
         )
         leader.connect()
-        print(f"[INFO]: Connected SO101 leader '{args.leader_id}' on {args.leader_port}.")
+        mode = "async (daemon thread)" if leader.async_read else "sync"
+        print(
+            f"[INFO]: Connected SO101 leader '{args.leader_id}' on "
+            f"{args.leader_port} ({mode} read)."
+        )
 
         env.reset()
         if not args.no_camera_viewports:
             open_teleop_viewports(scene)
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+
+        # Print the canonical home pose in degrees so the user can verify the
+        # sim init pose matches what they expect, AND understand what pose the
+        # leader needs to reach if --startup-sync is enabled.
+        import math as _math
+        home_target_rad = _build_home_target_tensor(env.unwrapped.device)
+        home_target_deg = [round(_math.degrees(float(v)), 1) for v in home_target_rad.tolist()]
+        os.write(
+            1,
+            (
+                f"[INFO]: Sim home pose (deg, action order "
+                f"{list(SO101_TELEOP_CONTROL_JOINT_NAMES)}): {home_target_deg}\n"
+            ).encode(),
+        )
+
         resume_hold = _TeleopResumeHold(args.resume_sync_threshold)
+        if args.startup_sync:
+            # Hold the sim at the canonical home pose (cube-facing) until the
+            # real leader is moved near it — otherwise the leader's first read
+            # overrides env.reset() on frame 1 and the home pose never becomes
+            # visible. Threshold defaults wider than the checkpoint-resume
+            # threshold because the user has to physically pose the leader.
+            resume_hold.activate(
+                _build_home_target_tensor(env.unwrapped.device),
+                context="startup",
+                release_threshold=float(args.startup_sync_threshold),
+            )
         target_limiter = _TeleopTargetRateLimiter(args.action_rate_limit)
         control_step = 0
+        # Track the worker's read count between profile prints so we can show
+        # whether the async daemon is actually polling. In sync mode this
+        # stays at 0 and the profile line will report leader_mode=sync.
+        prev_async_polls = leader.async_read_count if leader.async_read else 0
 
         while simulation_app.is_running():
             with torch.inference_mode():
@@ -634,11 +821,21 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 if args.profile_teleop and control_step % max(args.profile_interval, 1) == 0:
                     joint_error = abs(qpos - target_np)
                     loop_ms = (time.perf_counter() - loop_start) * 1000.0
+                    if leader.async_read:
+                        cur_polls = leader.async_read_count
+                        polls_delta = cur_polls - prev_async_polls
+                        prev_async_polls = cur_polls
+                        leader_state = (
+                            f"leader_mode=async polls_this_interval={polls_delta} "
+                            f"total_polls={cur_polls}"
+                        )
+                    else:
+                        leader_state = "leader_mode=sync"
                     print(
                         "[PROFILE]: "
                         f"read={read_ms:.1f}ms step={step_ms:.1f}ms record={record_ms:.1f}ms "
                         f"loop={loop_ms:.1f}ms joint_error_mean={joint_error.mean():.4f}rad "
-                        f"joint_error_max={joint_error.max():.4f}rad"
+                        f"joint_error_max={joint_error.max():.4f}rad {leader_state}"
                     )
                     if hold_state.holding and hold_state.error is not None:
                         print(
@@ -665,7 +862,11 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 control_step += 1
 
                 if args.goal_region and _teleop_goal_success(unwrapped_env):
-                    _prompt_save_successful_episode(recorder)
+                    # Default is the interactive [y/N] prompt; --auto-save
+                    # flips to non-interactive auto-save for batch capture.
+                    _handle_successful_episode(
+                        recorder, confirm=not bool(getattr(args, "auto_save", False))
+                    )
                     break
                 if _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold):
                     break
@@ -676,6 +877,12 @@ def _cmd_record(args: argparse.Namespace) -> int:
     finally:
         if recorder is not None and recorder.recording:
             recorder.save_episode()
+        if leader is not None:
+            # Joins the async-read worker (no-op when async_read=False).
+            try:
+                leader.close()
+            except Exception as exc:  # noqa: BLE001 — best-effort cleanup
+                print(f"[WARN]: Leader cleanup failed: {exc}")
         keyboard.cleanup()
         if env is not None:
             env.close()
@@ -812,14 +1019,37 @@ def _push_validate_local_dataset(root: Path, input_format: str = "auto") -> list
     return episode_files
 
 
+# HDF5 export filter defaults. These mirror leisaac's `isaaclab2lerobot.py`
+# behavior: the first frames of a teleop episode are dominated by env.reset()
+# transients and any startup-hold zero-action lead-in, and very short
+# episodes are almost always failed attempts rather than useful demos.
+# Filtering both out keeps the IL training signal clean. Set via the
+# `--skip-leading-frames` and `--min-episode-frames` CLI flags.
+_DEFAULT_SKIP_LEADING_FRAMES = 5
+_DEFAULT_MIN_EPISODE_FRAMES = 10
+
+
 def _push_convert_hdf5_to_lerobot(
     hdf5_root: Path,
     lerobot_root: Path,
     repo_id: str,
     overwrite_export: bool = False,
+    skip_leading_frames: int = _DEFAULT_SKIP_LEADING_FRAMES,
+    min_episode_frames: int = _DEFAULT_MIN_EPISODE_FRAMES,
+    async_flush: bool = True,
 ) -> Path:
+    """Convert HDF5 teleop episodes to a local LeRobot dataset.
+
+    ``async_flush=True`` (default) overlaps the next episode's HDF5 read
+    + frame iteration with the previous episode's video encoding. On
+    multi-episode pushes this typically halves wall-clock time because
+    LeRobot's ``save_episode`` blocks on ffmpeg/torchcodec encode.
+    """
     import h5py
     import numpy as np
+    import queue
+    import threading
+    import time
 
     from openso101.teleop.hdf5_recorder import validate_hdf5_dataset
 
@@ -848,11 +1078,75 @@ def _push_convert_hdf5_to_lerobot(
         robot_type="so101_follower",
     )
 
+    skipped_short: list[str] = []
+    exported = 0
+
+    def _flush_episode_sync(name: str) -> None:
+        dataset.save_episode()
+        print(f"[INFO]: Exported {name} to local LeRobot dataset.")
+
+    # When async_flush is on, we put a sentinel-tagged "save now" job on
+    # the queue after the producer finishes adding frames for an
+    # episode. The worker drains the queue and calls save_episode() for
+    # each tag. Because LeRobotDataset.add_frame() is NOT thread-safe,
+    # the producer must wait for the worker to finish the previous save
+    # before starting frames for the next episode — i.e., depth-1
+    # pipeline (one episode being encoded + one being read). That's
+    # still enough to fully overlap read and encode wall-clock.
+    worker_thread = None
+    flush_queue: "queue.Queue[str | None]" = queue.Queue(maxsize=1)
+    worker_error: list[BaseException] = []
+
+    def _flush_worker() -> None:
+        while True:
+            name = flush_queue.get()
+            if name is None:
+                flush_queue.task_done()
+                return
+            try:
+                _flush_episode_sync(name)
+            except BaseException as exc:  # noqa: BLE001 — relay to main
+                worker_error.append(exc)
+                flush_queue.task_done()
+                return
+            flush_queue.task_done()
+
+    if async_flush:
+        worker_thread = threading.Thread(
+            target=_flush_worker, name="lerobot-flush", daemon=True,
+        )
+        worker_thread.start()
+
+    def _enqueue_flush(name: str) -> None:
+        """Either pipeline the save off-thread (async) or run inline."""
+        if worker_thread is None:
+            _flush_episode_sync(name)
+            return
+        # Block briefly if the previous episode is still encoding —
+        # depth-1 queue avoids unbounded RAM growth on huge datasets.
+        flush_queue.put(name)
+        # Surface any worker exception on the producer thread.
+        if worker_error:
+            raise worker_error[0]
+
     for episode_file in episode_files:
         with h5py.File(episode_file, "r") as h5:
             task = h5.attrs.get("task", "OpenSO-101 teleoperation")
-            frame_count = h5["action"].shape[0]
-            for frame_idx in range(frame_count):
+            frame_count = int(h5["action"].shape[0])
+            effective_count = frame_count - skip_leading_frames
+            if effective_count < min_episode_frames:
+                skipped_short.append(
+                    f"{episode_file.name} ({effective_count} usable frames < "
+                    f"min {min_episode_frames})"
+                )
+                continue
+            # Wait for any in-flight save to finish before mutating the
+            # shared dataset buffer with add_frame() for the next episode.
+            if worker_thread is not None:
+                flush_queue.join()
+                if worker_error:
+                    raise worker_error[0]
+            for frame_idx in range(skip_leading_frames, frame_count):
                 action_rad = np.asarray(h5["action"][frame_idx], dtype=np.float32)
                 qpos_rad = np.asarray(h5["observations/qpos"][frame_idx], dtype=np.float32)
                 frame = {
@@ -866,8 +1160,28 @@ def _push_convert_hdf5_to_lerobot(
                         dtype=np.uint8,
                     )
                 dataset.add_frame(frame)
-            dataset.save_episode()
-            print(f"[INFO]: Exported {episode_file.name} to local LeRobot dataset.")
+            _enqueue_flush(episode_file.name)
+            exported += 1
+
+    # Drain the worker before we let the function return.
+    if worker_thread is not None:
+        flush_queue.join()
+        flush_queue.put(None)
+        worker_thread.join(timeout=60.0)
+        if worker_error:
+            raise worker_error[0]
+
+    if skipped_short:
+        print(
+            f"[INFO]: Skipped {len(skipped_short)} short episode(s): "
+            + ", ".join(skipped_short)
+        )
+    if exported == 0:
+        raise SystemExit(
+            f"No episodes met the minimum length threshold "
+            f"(skip_leading={skip_leading_frames}, min_frames={min_episode_frames}). "
+            "Lower --min-episode-frames or capture longer demos."
+        )
     return lerobot_root
 
 
@@ -905,6 +1219,11 @@ def _cmd_push(args: argparse.Namespace) -> int:
             lerobot_root=export_root.expanduser().resolve(),
             repo_id=args.repo_id,
             overwrite_export=args.overwrite_export,
+            skip_leading_frames=int(getattr(args, "skip_leading_frames",
+                                            _DEFAULT_SKIP_LEADING_FRAMES)),
+            min_episode_frames=int(getattr(args, "min_episode_frames",
+                                           _DEFAULT_MIN_EPISODE_FRAMES)),
+            async_flush=not bool(getattr(args, "no_async_flush", False)),
         )
 
     dataset = LeRobotDataset(args.repo_id, root=repo_root)
@@ -1245,20 +1564,257 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# il train  (thin wrapper around `lerobot.scripts.train`)
+# ---------------------------------------------------------------------------
+
+
 def _cmd_train(args: argparse.Namespace) -> int:
-    print(
-        "openso101 il train: not implemented in this refactor. "
-        "See sub-project C (docs/superpowers/specs/2026-05-13-openso101-refactor-design.md § 13)."
-    )
-    return 2
+    """Train an IL policy via LeRobot's training CLI.
+
+    We don't roll our own trainer — LeRobot already ships a maintained
+    ACT/Diffusion/VQ-BeT pipeline tuned for SO101-style data. We just
+    translate our flags into LeRobot's expected form and shell out so
+    the user inherits every upstream improvement automatically.
+    """
+    import shlex
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    dataset = args.dataset
+    # Allow both a Hugging Face Hub repo_id (``user/repo``) and a local
+    # LeRobot dataset directory. LeRobot's CLI distinguishes via the
+    # ``dataset.root`` arg when the path is local.
+    dataset_path = Path(dataset).expanduser()
+    is_local = dataset_path.exists() and dataset_path.is_dir()
+
+    output_dir = getattr(args, "output_dir", None) or _default_il_train_output_dir(args.policy)
+    output_dir = Path(output_dir).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        sys.executable, "-m", "lerobot.scripts.train",
+        f"--policy.type={args.policy}",
+        f"--output_dir={output_dir}",
+    ]
+    if is_local:
+        # Local LeRobot dataset — repo_id is still required by the
+        # trainer but `dataset.root` overrides where files are read from.
+        repo_id = getattr(args, "repo_id", None) or f"local/{dataset_path.name}"
+        cmd.append(f"--dataset.repo_id={repo_id}")
+        cmd.append(f"--dataset.root={dataset_path}")
+    else:
+        cmd.append(f"--dataset.repo_id={dataset}")
+    if getattr(args, "steps", None) is not None:
+        cmd.append(f"--steps={int(args.steps)}")
+    if getattr(args, "batch_size", None) is not None:
+        cmd.append(f"--batch_size={int(args.batch_size)}")
+    if getattr(args, "wandb", False):
+        cmd.append("--wandb.enable=true")
+    # Forward anything the user passed after `--` so power users can
+    # tweak any LeRobot flag we don't surface explicitly.
+    cmd.extend(getattr(args, "extra_args", []) or [])
+
+    print(f"[INFO]: Launching LeRobot trainer: {' '.join(shlex.quote(c) for c in cmd)}")
+    print(f"[INFO]: Output directory: {output_dir}")
+    completed = subprocess.run(cmd)
+    if completed.returncode != 0:
+        print(
+            f"[ERROR]: LeRobot trainer exited with code {completed.returncode}. "
+            "If the error mentions a missing LeRobot install, run "
+            "`bash scripts/install.sh` from the repo root."
+        )
+    return int(completed.returncode)
+
+
+def _default_il_train_output_dir(policy: str) -> str:
+    """Mirror RL's logs/ convention for trained IL checkpoints."""
+    import time
+    stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+    return f"logs/lerobot/openso101_{policy}/{stamp}"
+
+
+# ---------------------------------------------------------------------------
+# il play  (deploy a trained policy in sim)
+# ---------------------------------------------------------------------------
 
 
 def _cmd_play(args: argparse.Namespace) -> int:
-    print(
-        "openso101 il play: not implemented in this refactor. "
-        "See sub-project C."
+    """Roll out a LeRobot checkpoint inside the OpenSO-101 sim env.
+
+    Architecturally identical to ``_cmd_record`` but with the leader
+    replaced by ``policy.select_action(observation)``. Cameras are
+    forced on because every IL policy in scope (ACT, Diffusion) expects
+    visual inputs.
+    """
+    import os
+    import time
+    import traceback
+
+    args.no_camera_viewports = getattr(args, "no_camera_viewports", False)
+    args.num_envs = getattr(args, "num_envs", None)
+    args.steps = getattr(args, "steps", None)
+
+    simulation_app = _launch_isaac_app(args, enable_cameras=True)
+
+    import gymnasium as gym
+    import torch
+
+    import isaaclab_tasks  # noqa: F401
+    from isaaclab_tasks.utils import parse_env_cfg
+
+    import openso101.tasks  # noqa: F401
+    from openso101.teleop.camera_viewports import open_teleop_viewports
+
+    env = None
+    policy = None
+    startup_error = None
+    try:
+        env_cfg = parse_env_cfg(
+            args.task,
+            device=args.device,
+            num_envs=args.num_envs,
+            use_fabric=not args.disable_fabric,
+        )
+        # Default to the RL action mode for IL play so episode rewards +
+        # terminations stay active — that lets the operator read success
+        # signals off the env. Pass --action-mode teleop only when you
+        # want the long single-episode behavior teleop uses.
+        env_cfg.configure_action_mode(getattr(args, "action_mode", "rl"))
+        env_cfg.configure_cameras(True)
+        if args.num_envs is None and hasattr(env_cfg, "scene"):
+            env_cfg.scene.num_envs = 1
+
+        env = gym.make(args.task, cfg=env_cfg)
+        scene = env.unwrapped.scene
+        unwrapped_env = env.unwrapped
+
+        policy = _load_lerobot_policy(args.policy_path, device=env.unwrapped.device)
+        print(f"[INFO]: Loaded LeRobot policy from {args.policy_path}.")
+        if hasattr(policy, "reset"):
+            policy.reset()
+
+        env.reset()
+        if not args.no_camera_viewports:
+            open_teleop_viewports(scene)
+
+        actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+        step = 0
+        max_steps = int(args.steps) if args.steps is not None else None
+        while simulation_app.is_running():
+            with torch.inference_mode():
+                obs = _build_il_policy_observation(unwrapped_env, scene)
+                action = policy.select_action(obs)
+                # Policy returns shape (1, action_dim) on most LeRobot
+                # checkpoints. Squeeze to the action-space shape that
+                # ``env.step`` expects.
+                action = action.to(env.unwrapped.device).reshape(actions.shape)
+                actions.copy_(action)
+                env.step(actions)
+            step += 1
+            if max_steps is not None and step >= max_steps:
+                break
+        print(f"[INFO]: IL play loop exited after {step} steps.")
+    except Exception as exc:
+        startup_error = exc
+        print("[ERROR]: IL play failed before clean shutdown:", flush=True)
+        traceback.print_exception(type(exc), exc, exc.__traceback__)
+    finally:
+        if env is not None:
+            env.close()
+        if startup_error is None:
+            simulation_app.close()
+
+    if startup_error is not None:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(1)
+    return 0
+
+
+def _load_lerobot_policy(checkpoint_path: str, *, device):
+    """Load a LeRobot policy checkpoint as a runnable policy module.
+
+    Accepts either (a) the directory ``output_dir`` that ``il train``
+    writes — LeRobot ships a ``pretrained_model/`` sub-directory inside
+    — or (b) a direct path to that pretrained directory. Both work.
+    """
+    from pathlib import Path
+
+    path = Path(checkpoint_path).expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"Policy checkpoint not found: {path}")
+    # `lerobot train` writes its checkpoints to ``output_dir/checkpoints/
+    # <step>/pretrained_model`` and the most recent symlink is
+    # ``output_dir/checkpoints/last/pretrained_model``. We prefer the
+    # explicit ``pretrained_model`` directory if the user passed the
+    # parent.
+    if (path / "checkpoints" / "last" / "pretrained_model").is_dir():
+        path = path / "checkpoints" / "last" / "pretrained_model"
+    elif (path / "pretrained_model").is_dir():
+        path = path / "pretrained_model"
+
+    try:
+        from lerobot.configs.policies import PreTrainedConfig
+        from lerobot.policies.factory import get_policy_class
+    except ImportError as exc:
+        raise RuntimeError(
+            "LeRobot is required to load IL policies. Install it via "
+            "`bash scripts/install.sh` or `pip install \"lerobot[feetech]==0.4.0\"`."
+        ) from exc
+
+    # Two-step load: the abstract PreTrainedPolicy can't be instantiated
+    # directly, so we read the saved config to learn the concrete policy
+    # class (act, diffusion, vqbet, ...) and then dispatch from_pretrained
+    # on that subclass. Mirrors `lerobot.policies.factory.make_policy`'s
+    # branching but without the dataset-metadata round-trip that path
+    # requires for fresh policies.
+    config = PreTrainedConfig.from_pretrained(str(path))
+    policy_cls = get_policy_class(config.type)
+    policy = policy_cls.from_pretrained(str(path))
+    policy.to(device)
+    policy.eval()
+    return policy
+
+
+def _build_il_policy_observation(unwrapped_env, scene) -> dict:
+    """Translate the sim's env state into LeRobot's expected obs schema.
+
+    LeRobot policies trained on the dataset our `il push` produces want:
+      * ``observation.state`` — joint positions in motor units.
+      * ``observation.images.<camera>`` — uint8 RGB (H, W, 3) per camera.
+
+    The camera names must match what the dataset was recorded with —
+    the same ``wrist_camera`` / ``overhead_camera`` keys used by
+    :class:`OpenSO101HDF5TeleopRecorder`.
+    """
+    import numpy as np
+    import torch
+
+    from openso101.teleop.lerobot_recorder import collect_camera_buffers, read_robot_proprio
+    from openso101.teleop.so101_mapping import (
+        batched_action_to_motor_units,
+        get_sim_joint_names,
     )
-    return 2
+
+    sim_joint_names = get_sim_joint_names()
+    qpos_rad, _ = read_robot_proprio(scene["robot"], sim_joint_names=sim_joint_names)
+    qpos_motor = batched_action_to_motor_units(
+        torch.as_tensor(qpos_rad, dtype=torch.float32)
+    ).numpy().astype(np.float32, copy=False)
+
+    obs: dict = {
+        "observation.state": torch.from_numpy(qpos_motor).unsqueeze(0),
+    }
+    for cam_name, frame in collect_camera_buffers(scene).items():
+        # LeRobot expects images as float tensors in [0, 1] with shape
+        # (1, 3, H, W) by default; the policy's normalize step handles
+        # the actual standardization. We just match shape + dtype.
+        arr = np.asarray(frame, dtype=np.uint8)
+        tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).float() / 255.0
+        obs[f"observation.images.{cam_name}"] = tensor
+    return obs
 
 
 # ---------------------------------------------------------------------------
@@ -1281,6 +1837,48 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_rec.add_argument("--no-record", action="store_true")
     p_rec.add_argument("--profile-teleop", action="store_true")
     p_rec.add_argument("--no-camera-viewports", action="store_true")
+    # Startup home-pose hold: keeps sim at the cube-facing init pose until the
+    # real leader is moved near home. Off by default — if the user's leader
+    # isn't near our home pose at launch, the hold blocks teleop entirely and
+    # looks like a dead-leader bug. Enable only when you specifically want the
+    # home pose to be visible before live control engages.
+    p_rec.add_argument(
+        "--startup-sync",
+        dest="startup_sync",
+        action="store_true",
+        default=False,
+        help="Hold sim at home pose until the real leader is moved near it.",
+    )
+    p_rec.add_argument(
+        "--startup-sync-threshold",
+        type=float,
+        default=0.3,
+        help="Max per-joint radian error to release startup hold (default 0.3 rad ≈ 17°).",
+    )
+    p_rec.add_argument(
+        "--auto-save",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip the [y/N] prompt on goal success and persist every "
+            "auto-detected successful episode. Default is the interactive "
+            "prompt — pass this only for unattended batch capture sessions."
+        ),
+    )
+    # Async leader read: a daemon thread continuously polls the Feetech bus
+    # and caches the latest reading, so the sim step doesn't block on serial
+    # I/O. Restores the latency feature lost during the safe_sim2real port.
+    p_rec.add_argument(
+        "--no-leader-async",
+        dest="leader_async",
+        action="store_false",
+        default=True,
+        help=(
+            "Disable the leader-read worker thread; fall back to a "
+            "synchronous Feetech bus read on every sim step. Use if the "
+            "worker thread misbehaves on your hardware."
+        ),
+    )
     p_rec.set_defaults(func=_cmd_record)
 
     p_push = sub.add_parser("push", help="Push HDF5 dataset to LeRobot Hub")
@@ -1293,18 +1891,102 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_push.add_argument("--no-videos", action="store_true")
     p_push.add_argument("--dry-run", action="store_true")
     p_push.add_argument("--overwrite-export", action="store_true")
+    p_push.add_argument(
+        "--skip-leading-frames",
+        type=int,
+        default=_DEFAULT_SKIP_LEADING_FRAMES,
+        help=(
+            "Drop the first N frames of each episode before LeRobot export. "
+            "These are dominated by env.reset() transients and startup-hold "
+            "zero-action frames that pollute IL training signal. "
+            f"Default: {_DEFAULT_SKIP_LEADING_FRAMES}. Use 0 to keep all frames."
+        ),
+    )
+    p_push.add_argument(
+        "--min-episode-frames",
+        type=int,
+        default=_DEFAULT_MIN_EPISODE_FRAMES,
+        help=(
+            "Drop episodes whose post-skip frame count is below this threshold. "
+            "Short episodes are almost always failed attempts. "
+            f"Default: {_DEFAULT_MIN_EPISODE_FRAMES}."
+        ),
+    )
+    p_push.add_argument(
+        "--no-async-flush",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable the per-episode video-encode worker thread (default ON). "
+            "With async flush, the next episode's HDF5 read overlaps the "
+            "previous episode's LeRobot save_episode() encode. Useful to "
+            "disable when debugging or on memory-constrained machines."
+        ),
+    )
     p_push.set_defaults(func=_cmd_push)
 
-    p_train = sub.add_parser("train", help="Train an IL policy")
-    p_train.add_argument(
-        "--policy", required=True, choices=["act", "diffusion"]
+    p_train = sub.add_parser(
+        "train",
+        help="Train an IL policy via LeRobot's trainer (ACT or Diffusion).",
     )
-    p_train.add_argument("--dataset", required=True)
+    p_train.add_argument(
+        "--policy",
+        required=True,
+        choices=["act", "diffusion"],
+        help="LeRobot policy class to train. ACT (action chunking transformer) "
+             "and Diffusion are both supported.",
+    )
+    p_train.add_argument(
+        "--dataset",
+        required=True,
+        help="LeRobot dataset: either a Hub repo_id (e.g. 'user/openso101_pick') "
+             "or a local directory produced by 'openso101 il push'.",
+    )
+    p_train.add_argument(
+        "--repo-id",
+        default=None,
+        help="Override the repo_id passed to LeRobot when --dataset is a local path. "
+             "Defaults to 'local/<dataset-dir-name>'.",
+    )
+    p_train.add_argument(
+        "--output-dir",
+        default=None,
+        help="Where to write checkpoints + logs. Defaults to "
+             "logs/lerobot/openso101_<policy>/<timestamp>/.",
+    )
+    p_train.add_argument("--steps", type=int, default=None, help="Override LeRobot's default training steps.")
+    p_train.add_argument("--batch-size", type=int, default=None)
+    p_train.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
+    p_train.add_argument(
+        "extra_args",
+        nargs=argparse.REMAINDER,
+        help="Extra args passed verbatim to `lerobot.scripts.train` after `--`.",
+    )
     p_train.set_defaults(func=_cmd_train)
 
-    p_play = sub.add_parser("play", help="Replay a trained IL policy")
+    p_play = sub.add_parser(
+        "play",
+        help="Roll out a trained IL policy in the OpenSO-101 sim env.",
+    )
     p_play.add_argument("--task", required=True)
-    p_play.add_argument("--policy-path", required=True)
+    p_play.add_argument(
+        "--policy-path",
+        required=True,
+        help="Path to the LeRobot pretrained-model dir (or its parent output_dir).",
+    )
+    p_play.add_argument("--num-envs", type=int, default=None)
+    p_play.add_argument("--steps", type=int, default=None, help="Max sim steps; defaults to run until window closed.")
+    p_play.add_argument("--no-camera-viewports", action="store_true")
+    p_play.add_argument(
+        "--action-mode",
+        default="rl",
+        choices=("rl", "teleop"),
+        help=(
+            "Env variant. 'rl' (default) keeps rewards + terminations so the "
+            "operator can read success signals from the env; 'teleop' uses the "
+            "long-episode no-rewards variant matching `il record`."
+        ),
+    )
     p_play.set_defaults(func=_cmd_play)
 
     p_replay = sub.add_parser(
