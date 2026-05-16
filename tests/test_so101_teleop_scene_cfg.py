@@ -69,7 +69,17 @@ def test_so101_teleop_scene_uses_canonical_usd_without_manual_fingertip_pads():
     env.close()
 
     assert cfg.scene.robot.spawn.usd_path.endswith("SO-ARM101-USD.usd")
-    assert cfg.scene.robot.spawn.func is spawn_so101_usd_with_safe_collisions
+    # Teleop trusts the USD's authored colliders verbatim (Lior-style:
+    # liorbenhorin/lerobot_so101_teleop). Earlier custom-spawn attempts
+    # silently disabled gripper collision by adding standalone CollisionAPI
+    # on merge children — pin the absence of the custom func as the fix.
+    assert cfg.scene.robot.spawn.func is not spawn_so101_usd_with_safe_collisions
+    assert cfg.scene.robot.spawn.activate_contact_sensors is False
+    # Contact sensors must be stripped: the teleop robot has no contact
+    # reporter API on its bodies, and no teleop reward consumes the signal.
+    # Leaving them wired causes InteractiveScene to fail at init.
+    assert cfg.scene.gripper_jaw_contact is None
+    assert cfg.scene.moving_jaw_contact is None
     assert cfg.actions.joint_positions.joint_names == ["Rotation", "Pitch", "Elbow", "Wrist_Pitch", "Wrist_Roll", "Jaw"]
     assert cfg.scene.fixed_fingertip_pad is None
     assert cfg.scene.moving_fingertip_pad is None
@@ -79,32 +89,36 @@ def test_so101_teleop_scene_uses_canonical_usd_without_manual_fingertip_pads():
     assert cfg.sim.render_interval == cfg.decimation
 
 
-def test_so101_teleop_uses_soft_contact_robot_response():
-    """Teleop config has its own actuator gains, independent of the RL canonical.
+def test_so101_teleop_uses_compliant_lior_style_actuators():
+    """Teleop adopts liorbenhorin/lerobot_so101_teleop's compliant gains.
 
-    Effort/velocity caps are tuned for tracking a human leader arm; self-
-    collisions are disabled so the follower doesn't bind when the user drives
-    the leader into awkward configurations.
+    Low stiffness with effort_limit_sim=30 across all joints matches real
+    SO-101 servo bandwidth; lets the gripper pinch rather than hammer. Our
+    earlier high-stiffness config (k=60, d=20 on the gripper) caused the
+    jaws to slam shut and bounce small objects out before contact engaged.
     """
     env = gym.make("OpenSO101-PickPlace-v0", action_mode="teleop")
     cfg = env.unwrapped.cfg
     env.close()
 
-    assert cfg.scene.robot.spawn.rigid_props.max_depenetration_velocity == pytest.approx(1.0)
+    assert cfg.scene.robot.spawn.rigid_props.max_depenetration_velocity == pytest.approx(5.0)
     assert cfg.scene.robot.spawn.articulation_props.enabled_self_collisions is False
     assert cfg.scene.robot.spawn.articulation_props.solver_position_iteration_count == 32
-    assert cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count == 4
+    assert cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count == 1
 
-    for name in ("rotation", "pitch", "elbow"):
+    expected = {
+        "rotation": (55, 0.7),
+        "pitch": (30, 0.8),
+        "elbow": (25, 0.7),
+        "wrist_pitch": (12, 0.5),
+        "wrist_roll": (7, 0.5),
+        "gripper": (4, 0.3),
+    }
+    for name, (stiffness, damping) in expected.items():
         actuator = cfg.scene.robot.actuators[name]
-        assert actuator.effort_limit_sim == pytest.approx(8.0), name
-        assert actuator.velocity_limit_sim == pytest.approx(3.5), name
-    for name in ("wrist_pitch", "wrist_roll"):
-        actuator = cfg.scene.robot.actuators[name]
-        assert actuator.effort_limit_sim == pytest.approx(4.0), name
-        assert actuator.velocity_limit_sim == pytest.approx(2.0), name
-    assert cfg.scene.robot.actuators["gripper"].effort_limit_sim == pytest.approx(4.0)
-    assert cfg.scene.robot.actuators["gripper"].velocity_limit_sim == pytest.approx(2.0)
+        assert actuator.effort_limit_sim == 30, name
+        assert actuator.stiffness == pytest.approx(stiffness), name
+        assert actuator.damping == pytest.approx(damping), name
 
 
 def test_so101_cameras_use_upstream_model_wrist_mount_and_overhead_camera():
