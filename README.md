@@ -21,11 +21,9 @@
   <p align="center">
     Open-source robot learning framework for the LeRobot SO-101 in Isaac Lab.
     <br />
-    <a href="docs/"><strong>Explore the docs »</strong></a>
+    <a href="docs/guides/"><strong>Explore the guides »</strong></a>
     <br />
     <br />
-    <a href="examples/">View examples</a>
-    &middot;
     <a href="https://github.com/KevinYan-831/OpenSO-101/issues/new?labels=bug">Report bug</a>
     &middot;
     <a href="https://github.com/KevinYan-831/OpenSO-101/issues/new?labels=enhancement">Request feature</a>
@@ -44,28 +42,21 @@
   - [Installation](#installation)
   - [Quickstart](#quickstart)
 - [Usage](#usage)
-- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
-- [Contact](#contact)
 - [Acknowledgements](#acknowledgements)
 
 
 <!-- ABOUT THE PROJECT -->
 ## About the Project
 
-OpenSO-101 is a single-package research framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles the four pillars of modern robot learning behind one CLI and one Python API:
+OpenSO-101 is a single-package research framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles three pillars of modern robot learning behind one CLI and one Python API:
 
-1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] with a `BestCheckpointRunner` that snapshots the best mean-reward checkpoint, plus rsl_rl's `Distillation` for teacher → student knowledge transfer (the same checkpoint format is consumed in both directions). A `--visual-dr` flag shares the same lighting / colour randomization the IL pipeline uses.
+1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] with a `BestCheckpointRunner` that snapshots the best mean-reward checkpoint, plus rsl_rl's `Distillation` for teacher → student knowledge transfer (the same checkpoint format is consumed in both directions). A `--visual-dr` flag enables shared lighting / colour randomization with the IL pipeline.
 2. **Imitation Learning** — leader-arm teleop with async polling, streaming HDF5 recording, [LeRobot dataset][lerobot-url] conversion, and training via the official `lerobot.scripts.train` CLI (ACT, Diffusion, or any policy LeRobot ships). The same checkpoint produced by `openso101 il train` plays back in sim (`openso101 il play`) and deploys on hardware (`openso101 sim2real deploy`). Everything is also exposed as Python functions under `openso101.il` — `load_lerobot_dataset`, `train_il_policy`, `load_policy`, `ACTPolicy`, `DiffusionPolicy` — so notebooks and sweep drivers don't need to shell out.
 3. **Sim-to-Real Robustness** — visual, observation, and physics domain randomization shared across all three built-in tasks; a real-arm deploy bridge that drives the Feetech follower via LeRobot's `SO101Follower` while streaming OpenCV camera frames into the policy.
-4. **Synthetic Data Generation** *(deferred)* — [MimicGen][mimicgen-url] and [Isaac Lab Mimic][isaaclab-mimic-url] CLI surface is wired but the generator bodies are intentionally not implemented until the RL + IL pipelines are fully validated on human teleop data.
 
-The project is organized so that a researcher can clone, install, and reach a working `openso101 envs list` in well under an hour — and so a downstream contributor can register a custom task with one decorator. Each pillar exposes a stable CLI verb and a stable Python entry point; swapping in a custom algorithm or task does not require forking the framework.
-
-Out of scope:
-- SB3 / StableBaselines3 wrappers — we ship `rsl_rl` PPO and Distillation.
-- Off-policy RL (SAC) — `rsl_rl` does not ship it; would require a separate library.
+The project is organized so a researcher can clone, install, and reach a working `openso101 envs list` in well under an hour — and so a downstream contributor can register a custom task with one decorator. Each pillar exposes a stable CLI verb and a stable Python entry point; swapping in a custom algorithm or task does not require forking the framework.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -83,25 +74,23 @@ Out of scope:
 ```
 OpenSO-101/
 ├── src/openso101/
-│   ├── cli/                  # `openso101 {envs,rl,il,data,sim2real}` dispatch
+│   ├── cli/                  # `openso101 {envs,rl,il,sim2real}` dispatch
 │   ├── envs/                 # OpenSO101EnvCfg base + register_task decorator
 │   ├── robots/so101/         # SO-101 ArticulationCfg, USD spawn, cameras, pose constants
 │   ├── tasks/                # Built-in tasks: lift, pick_place, stack (+ shared/)
 │   ├── teleop/               # LeRobot leader-arm → simulated follower (async daemon poll)
-│   ├── rl/                   # rsl_rl-backed PPO + BestCheckpointRunner
+│   ├── rl/                   # rsl_rl-backed PPO + BestCheckpointRunner; Distillation cfgs
 │   ├── il/
 │   │   ├── policies/         # ACTPolicy, DiffusionPolicy, load_policy (LeRobot wrappers)
 │   │   ├── runners/          # train_il_policy() — programmatic LeRobot trainer
 │   │   └── datasets/         # load_lerobot_dataset() — Hub id OR local recorder dir
-│   ├── data_gen/             # Synthetic data CLI surface (generator bodies deferred)
 │   └── sim2real/
-│       ├── domain_randomization/  # visual / observation / physics DR (shared across tasks)
+│       ├── domain_randomization/  # visual / observation / physics DR (all three tasks)
 │       └── deploy.py              # real-arm deploy bridge (LeRobot SO101Follower)
 ├── scripts/
 │   └── install.sh            # uv-based installer (resolves isaaclab/lerobot conflict)
-├── docs/                     # Concepts, guides, dev diary, this README's siblings
-├── examples/                 # End-to-end recipe scripts
-├── tests/                    # pytest suite (43 tests, runs without Isaac Sim)
+├── docs/guides/              # User-facing guides (install, quickstart, teleop, add_a_task)
+├── tests/                    # pytest suite (~80 tests; runs without Isaac Sim)
 ├── constraints.txt           # `setuptools<81` for flatdict's legacy sdist
 ├── requirements-cuda.txt     # torch cu128 wheels (Blackwell-compatible)
 └── pyproject.toml            # `openso101` console_scripts + [tool.uv] resolver overrides
@@ -254,8 +243,6 @@ The full CLI surface:
 |      | `play` | Load a LeRobot checkpoint and roll it out in sim |
 |      | `replay` | Replay a recorded teleop episode |
 | `sim2real` | `deploy` | Drive the real SO-101 from a LeRobot checkpoint |
-| `data` | `generate` | Synthetic data CLI surface — generator bodies deferred |
-|        | `inspect` | Dataset inspection — deferred |
 
 Variants live behind `gym.make` kwargs — one gym ID per task:
 
@@ -290,34 +277,6 @@ For deep dives, see the guides:
 - [Quickstart](docs/guides/quickstart.md) — install to trained PPO checkpoint in 20 min.
 - [Teleop setup](docs/guides/teleop.md) — leader-arm wiring, calibration, recording, key bindings.
 - [Add a Custom Task](docs/guides/add_a_task.md) — subclass `OpenSO101EnvCfg`, register, configure variants.
-- [Migration from `safe_sim2real`](docs/guides/migration_from_safe_sim2real.md) — naming map, CLI map, common gotchas.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-Done:
-- [x] Core framework: `OpenSO101EnvCfg`, `register_task`, single-class-per-task pattern
-- [x] Built-in tasks: Lift, PickPlace, Stack (all face the cube spawn at startup)
-- [x] PPO via rsl_rl with `BestCheckpointRunner` (best-mean-reward snapshotting)
-- [x] Distillation via rsl_rl `DistillationRunner` — teacher PPO → student via `--algo distillation --teacher-checkpoint <run-dir>`
-- [x] Teleop boundary: async daemon-polled LeRobot leader arm → simulated follower
-- [x] HDF5 + LeRobot dataset recording with checkpoint/restore + interactive save prompt
-- [x] IL training via `lerobot.scripts.train` (ACT, Diffusion, any LeRobot policy)
-- [x] Same-checkpoint sim playback (`il play`) and real deploy (`sim2real deploy`)
-- [x] Visual + observation + physics domain randomization on all three tasks
-- [x] uv-based installer that resolves the isaaclab/lerobot packaging conflict cleanly
-
-Deferred (intentionally, until RL + IL are fully validated):
-- [ ] Synthetic data generation — MimicGen + Isaac Lab Mimic generator bodies
-- [ ] Standalone HDF5 → LeRobot batch converter (inline path runs in `il record` today)
-
-Not planned:
-- Off-policy RL (SAC, DDPG, TD3) — `rsl_rl` does not ship off-policy methods; adding any of these is a separate library decision.
-
-See [open issues](https://github.com/KevinYan-831/OpenSO-101/issues) for the live backlog.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -359,18 +318,6 @@ Portions of the code (`src/openso101/robots/so101/`) derive from Isaac Lab's BSD
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-<!-- CONTACT -->
-## Contact
-
-Jixin Yan — [@KevinYan-831](https://github.com/KevinYan-831)
-
-Project link: [https://github.com/KevinYan-831/OpenSO-101](https://github.com/KevinYan-831/OpenSO-101)
-
-For research collaborations or historical context, see the predecessor repository [`safe_sim2real`][safe-sim2real-url] — most OpenSO-101 components were first prototyped there before the consolidation.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 <!-- ACKNOWLEDGEMENTS -->
 ## Acknowledgements
 
@@ -379,11 +326,9 @@ OpenSO-101 stands on the shoulders of a community of open-source projects:
 - [NVIDIA Isaac Lab][isaaclab-url] — the simulation and `ManagerBasedRLEnvCfg` substrate.
 - [TheRobotStudio SO-ARM100/SO-ARM101][so101-hardware-url] — the open-hardware arm we target.
 - [LeRobot][lerobot-url] — teleop drivers, dataset format, ACT/Diffusion training.
-- [rsl_rl][rsl-rl-url] — the lean RL library that powers our PPO trainer.
+- [rsl_rl][rsl-rl-url] — the lean RL library that powers our PPO trainer and Distillation runner.
 - [`uv`](https://github.com/astral-sh/uv) — the Astral package installer whose `override-dependencies` escape hatch is the only honest way to resolve the isaaclab/lerobot conflict in one pass.
-- [MimicGen][mimicgen-url] and [Isaac Lab Mimic][isaaclab-mimic-url] — synthetic data generation (CLI surface wired, bodies deferred).
 - [othneildrew/Best-README-Template](https://github.com/othneildrew/Best-README-Template) — the structure of this README.
-- The predecessor [`safe_sim2real`][safe-sim2real-url] repository, where most of the implementations were first prototyped.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -410,11 +355,8 @@ OpenSO-101 stands on the shoulders of a community of open-source projects:
 [lerobot-url]: https://github.com/huggingface/lerobot
 [rsl-rl-shield]: https://img.shields.io/badge/rsl__rl-2C3E50?style=for-the-badge
 [rsl-rl-url]: https://github.com/leggedrobotics/rsl_rl
-[gymnasium-shield]: https://img.shields.io/badge/Gymnasium-0078D4?style=for-the-badge
+[gymnasium-shield]: https://img.shields.io/badge/Gymnasium-0078D4?style=for-the-badge&logo=gymnasium&logoColor=white
 [gymnasium-url]: https://gymnasium.farama.org/
 
 [so101-url]: https://github.com/huggingface/lerobot/blob/main/docs/source/so101.mdx
 [so101-hardware-url]: https://github.com/TheRobotStudio/SO-ARM100
-[mimicgen-url]: https://github.com/NVlabs/mimicgen
-[isaaclab-mimic-url]: https://github.com/isaac-sim/IsaacLab/tree/main/source/isaaclab_mimic
-[safe-sim2real-url]: https://github.com/KevinYan-831/safe_sim2real

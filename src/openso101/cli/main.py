@@ -34,16 +34,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_rl = sub.add_parser("rl", help="RL training, playback, plotting")
     rl_cli.add_subparsers(p_rl)
 
-    # il/data/sim2real groups — wired up in Task 17.
+    # il + sim2real groups.
     from . import il as il_cli
-    from . import data as data_cli
     from . import sim2real as sim2real_cli
 
     p_il = sub.add_parser("il", help="Teleop, datasets, IL training")
     il_cli.add_subparsers(p_il)
-
-    p_data = sub.add_parser("data", help="Synthetic data generation (deferred)")
-    data_cli.add_subparsers(p_data)
 
     p_sim2real = sub.add_parser("sim2real", help="Sim-to-real deployment on a real SO-101")
     sim2real_cli.add_subparsers(p_sim2real)
