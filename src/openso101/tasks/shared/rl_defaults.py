@@ -44,6 +44,24 @@ of std >= 0.0"."""
 SO101_PPO_ENTROPY_COEF = 0.005
 SO101_PPO_GAMMA = 0.98
 
+# ---------------------------------------------------------------------------
+# Distillation defaults (rsl_rl.algorithms.Distillation)
+# ---------------------------------------------------------------------------
+# Same hidden-dim shape as PPO so a freshly-trained PPO checkpoint can be
+# loaded as the teacher without architecture mismatch. Student is a copy of
+# the teacher architecture by default; users who want a smaller, faster
+# student can override `student_hidden_dims` at the task-config level.
+SO101_DISTILL_HIDDEN_DIMS = [256, 128, 64]
+SO101_DISTILL_ACTIVATION = "elu"
+SO101_DISTILL_INIT_NOISE_STD = SO101_PPO_INIT_NOISE_STD
+SO101_DISTILL_NOISE_STD_TYPE: str = SO101_PPO_NOISE_STD_TYPE
+SO101_DISTILL_NUM_STEPS_PER_ENV = SO101_PPO_NUM_STEPS_PER_ENV
+SO101_DISTILL_LEARNING_RATE = 1.0e-4
+SO101_DISTILL_NUM_LEARNING_EPOCHS = 5
+SO101_DISTILL_GRADIENT_LENGTH = 32
+SO101_DISTILL_MAX_GRAD_NORM = 1.0
+SO101_DISTILL_LOSS_TYPE: str = "mse"
+
 
 __all__ = [
     "SO101_REACH_REWARD_COARSE_STD",
@@ -66,4 +84,14 @@ __all__ = [
     "SO101_PPO_NOISE_STD_TYPE",
     "SO101_PPO_ENTROPY_COEF",
     "SO101_PPO_GAMMA",
+    "SO101_DISTILL_HIDDEN_DIMS",
+    "SO101_DISTILL_ACTIVATION",
+    "SO101_DISTILL_INIT_NOISE_STD",
+    "SO101_DISTILL_NOISE_STD_TYPE",
+    "SO101_DISTILL_NUM_STEPS_PER_ENV",
+    "SO101_DISTILL_LEARNING_RATE",
+    "SO101_DISTILL_NUM_LEARNING_EPOCHS",
+    "SO101_DISTILL_GRADIENT_LENGTH",
+    "SO101_DISTILL_MAX_GRAD_NORM",
+    "SO101_DISTILL_LOSS_TYPE",
 ]
