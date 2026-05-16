@@ -28,10 +28,12 @@ dependencies = [
     "torch==2.7.0",
     "torchvision==0.22.0",
 
-    # Teleop / IL boundary
-    "lerobot>=0.4.0",
+    # Teleop / IL boundary.
+    "lerobot[feetech]==0.4.0",
     "h5py",
-    "huggingface_hub",
+    # hf_transfer speeds up the Isaac Sim / LeRobot asset downloads that
+    # otherwise stall on consumer connections.
+    "huggingface_hub[hf_transfer]",
 
     # Plotting / utilities
     "numpy",
@@ -50,6 +52,36 @@ wandb = ["wandb"]
 
 [project.scripts]
 openso101 = "openso101.cli.main:main"
+
+# ---------------------------------------------------------------------------
+# uv resolver overrides
+# ---------------------------------------------------------------------------
+#
+# Why this section exists:
+#
+# `isaaclab_rl/setup.py` (pulled in by `isaaclab[all,isaacsim]==2.3.0`)
+# declares `packaging<24`. `lerobot==0.4.0` declares `packaging>=24.2,<26`.
+# These ranges DON'T INTERSECT, so pip's resolver cannot derive a combined
+# dependency set — it errors out with `ResolutionImpossible`.
+#
+# The cap in `isaaclab_rl` is an erroneous upper bound: the only API in
+# `packaging` that either package uses is `packaging.version.Version`,
+# which has been API-stable since v21.x. The breaking change in
+# `packaging` happened at v22.0 (LegacyVersion removal), not v24.0. Both
+# `isaaclab_rl` and `lerobot` run fine against packaging 24.x and 25.x.
+#
+# `uv`'s `override-dependencies` is the documented escape hatch for
+# erroneous upper bounds: at solve time, uv rewrites the conflicting
+# transitive metadata to the range below, so a single `uv pip install -e .`
+# succeeds where pip can't. See
+# https://docs.astral.sh/uv/reference/settings/#override-dependencies.
+#
+# When upstream isaaclab_rl relaxes its cap (tracked at
+# https://github.com/isaac-sim/IsaacLab/issues/5084), this block can go.
+[tool.uv]
+override-dependencies = [
+    "packaging>=24.2,<26",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
