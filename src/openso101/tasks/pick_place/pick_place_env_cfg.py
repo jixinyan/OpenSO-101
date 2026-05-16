@@ -125,15 +125,17 @@ class PickPlaceSceneCfg(InteractiveSceneCfg):
 
     # Contact sensors on the two opposing jaw bodies, filtered to the cube prim.
     # Used by the grasp-confirmation reward gate; force_matrix_w fires only
-    # when the corresponding jaw is pressing against the cube.
-    gripper_jaw_contact: ContactSensorCfg = ContactSensorCfg(
+    # when the corresponding jaw is pressing against the cube. Set to None in
+    # teleop mode (no rewards consume them, and the teleop robot config does
+    # not enable contact reporting on its bodies).
+    gripper_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/gripper",
         update_period=0.0,
         history_length=1,
         debug_vis=False,
         filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
     )
-    moving_jaw_contact: ContactSensorCfg = ContactSensorCfg(
+    moving_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/jaw",
         update_period=0.0,
         history_length=1,
@@ -508,9 +510,21 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.actions = TeleopActionsCfg()
             # Re-spawn the scene with the teleop robot articulation.
             _configure_so101_pick_place_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
+            # Strip jaw contact sensors: teleop robot config matches Lior
+            # (activate_contact_sensors=False), so the bodies have no contact
+            # reporter API, and no teleop reward consumes the signal anyway.
+            self.scene.gripper_jaw_contact = None
+            self.scene.moving_jaw_contact = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None
+            # Hide RL-only debug markers so the IL recording cameras see a
+            # clean scene: the green goal sphere lives at
+            # /Visuals/Curriculum/goal and the EE coloured-axis triad lives
+            # at /Visuals/FrameTransformer. Both are training aids and would
+            # leak into the wrist + overhead camera observations otherwise.
+            self.commands.object_pose.debug_vis = False
+            self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
             self.scene.num_envs = 1
             self.scene.env_spacing = 2.5
