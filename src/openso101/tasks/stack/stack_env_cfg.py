@@ -400,6 +400,10 @@ class StackEnvCfg(OpenSO101EnvCfg):
             self.rewards = None
             self.terminations = None
             self.curriculum = None
+            # Hide the EE axis triad so the IL recording cameras see a
+            # clean scene. (Stack has no goal-pose command, only an EE
+            # FrameTransformer to hide.)
+            self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
             self.scene.num_envs = 1
             self.scene.env_spacing = 2.5

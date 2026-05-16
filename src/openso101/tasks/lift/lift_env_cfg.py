@@ -422,6 +422,10 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             self.rewards = None
             self.terminations = None
             self.curriculum = None
+            # Hide RL-only debug markers (goal pose triad + EE axis triad)
+            # so the IL recording cameras see a clean scene.
+            self.commands.object_pose.debug_vis = False
+            self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
             self.scene.num_envs = 1
             self.scene.env_spacing = 2.5
