@@ -1,10 +1,11 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Acceptance-criterion tests for the il/data/sim2real CLI groups.
+"""Acceptance-criterion tests for the il + sim2real CLI groups.
 
 Subprocess-based to verify the wired-up entry point end-to-end without
-requiring Isaac Lab.
+requiring Isaac Lab. Also asserts that the historical `data` subcommand
+(synthetic data generation) has been removed.
 """
 
 from __future__ import annotations
@@ -60,29 +61,12 @@ def test_il_play_dispatches_without_isaaclab():
     ), combined
 
 
-def test_data_generate_is_deferred():
-    """Synthetic data gen is deferred but its CLI surface is stable."""
-    proc = _run_cli(
-        "data", "generate",
-        "--task", "OpenSO101-PickPlace-v0",
-        "--backend", "mimicgen",
-        "--seed-dataset", "/tmp/nonexistent",
-        "--num-trials", "10",
-        "--output-dir", "/tmp/out",
-    )
+def test_data_subcommand_is_gone():
+    """Synthetic data gen was removed; the `data` top-level subcommand must not exist."""
+    proc = _run_cli("data", "--help")
     combined = proc.stdout + proc.stderr
-    assert proc.returncode == 2, combined
-    assert "deferred" in combined.lower(), combined
-
-
-def test_data_inspect_is_deferred():
-    proc = _run_cli(
-        "data", "inspect",
-        "--dataset", "/tmp/nonexistent",
-    )
-    combined = proc.stdout + proc.stderr
-    assert proc.returncode == 2, combined
-    assert "deferred" in combined.lower(), combined
+    assert proc.returncode != 0, combined
+    assert "invalid choice" in combined.lower(), combined
 
 
 def test_sim2real_deploy_requires_follower_port_and_id():
