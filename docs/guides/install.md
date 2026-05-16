@@ -11,9 +11,27 @@ straight to [Step 4: install OpenSO-101](#step-4-install-openso-101).
 | OS | Ubuntu 22.04 LTS | Isaac Sim 4.5 / 5.1 official target |
 | NVIDIA driver | ≥ 560 | Required by Isaac Sim 5.1 |
 | GPU | RTX 20-series or newer, 6 GB+ VRAM | Real-time rendering |
+| RAM | 32 GB+ recommended | Isaac Sim's per-env scene replication |
 | Python | 3.11 (exact) | Isaac Lab pinned to 3.11 |
 | Disk | ~30 GB free | Isaac Sim + Lab + assets |
 | Conda / Mambaforge | latest | Isolate Isaac Sim's dep graph |
+
+### Memory budget for RL training
+
+The default `num_envs` for built-in tasks is **4096**, sized for workstation
+GPUs (24 GB+ VRAM, 64 GB+ RAM). On smaller hardware you must pass
+`--num_envs <N>` to fit:
+
+| Configuration | Safe `--num_envs` on 8 GB VRAM / 32 GB RAM | Notes |
+|---|---|---|
+| `rl train` (state-only, default) | up to 2048 | No rendering pipeline |
+| `rl train --visual-dr` | 64 to 128 | RTX pipeline initialized; per-env memory grows ~5x |
+| `rl train --with-cameras` | 16 to 32 | Actual camera rendering per env |
+| `rl train --visual-dr --with-cameras` | 8 to 16 | Both costs combined |
+
+If you see the process die with `Killed` (no traceback), that's the
+Linux OOM killer hitting RAM. Reduce `--num_envs`. If you see a CUDA
+`out of memory` error, that's VRAM; same fix.
 
 ## Step 1: System Prerequisites
 

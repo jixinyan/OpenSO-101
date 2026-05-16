@@ -217,7 +217,14 @@ def _scene_asset_prim(env, asset_name: str):
     stage = _get_stage()
     if stage is None:
         return None
-    asset = env.scene.get(asset_name)
+    # Isaac Lab's InteractiveScene uses bracket subscript (raises KeyError
+    # on miss); it does NOT expose a dict-like `.get()`. Keep the None
+    # fallback behavior the rest of this function depends on by catching
+    # KeyError explicitly.
+    try:
+        asset = env.scene[asset_name]
+    except KeyError:
+        return None
     if asset is None:
         return None
     prim_paths = asset.cfg.prim_path
