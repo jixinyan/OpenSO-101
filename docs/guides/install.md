@@ -160,9 +160,9 @@ export OPENSO101_SO101_USD_PATH=/some/other/location/SO-ARM101-USD.usd
 ```
 
 If you want to rebuild the USD from the URDF in `assets/so101/urdf/`,
-use Isaac Sim's `omni.isaac.urdf_importer` extension — the URDF was
-imported with the convex-decomposition collision settings noted in
-`docs/development_diary.md`.
+use Isaac Sim's `omni.isaac.urdf_importer` extension with
+convex-decomposition collision settings (mesh approximation: convex
+decomposition; max convex hulls: 32; collision filter on the cube).
 
 [lbh]: https://github.com/lbh-rs
 
