@@ -18,8 +18,8 @@ class FakeRecorder:
         self.calls.append("start")
         self.recording = True
 
-    def save_episode(self):
-        self.calls.append("save")
+    def save_episode(self, success=False):
+        self.calls.append(("save", success))
         self.recording = False
 
     def cancel_episode(self):
@@ -81,7 +81,11 @@ def test_resume_key_restores_last_checkpoint_when_available():
     assert keyboard.resume_recording is False
 
 
-def test_resume_key_activates_checkpoint_hold_target():
+def test_resume_key_does_not_activate_leader_sync_hold():
+    """Per the new semantics, R is a HARD restore: snap to checkpoint
+    immediately and let the leader take over next frame. The resume_hold
+    machinery is left untouched so unrelated callers (e.g. startup
+    sync) keep working, but the R key path itself must not activate it."""
     keyboard = SimpleNamespace(checkpoint_recording=False, resume_recording=True, toggle_recording=False, quit_without_saving=False)
     recorder = FakeRecorder(recording=True)
     checkpoints = FakeCheckpointStore(checkpoint=3, hold_target=[0.1, 0.2])
@@ -90,10 +94,8 @@ def test_resume_key_activates_checkpoint_hold_target():
     should_quit = _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold)
 
     assert should_quit is False
-    assert resume_hold.active is True
-    state = resume_hold.apply([0.8, 0.9])
-    assert state.holding is True
-    assert state.targets == [0.1, 0.2]
+    assert resume_hold.active is False
+    assert checkpoints.calls == ["restore"]
 
 
 def test_resume_hold_releases_only_after_leader_returns_near_checkpoint():
@@ -125,7 +127,11 @@ def test_target_rate_limiter_can_be_disabled():
     assert limiter.apply([1.0, -1.0]) == [1.0, -1.0]
 
 
-def test_resume_key_starts_new_episode_when_no_checkpoint_and_paused():
+def test_resume_key_without_checkpoint_warns_does_not_start_episode():
+    """Per the new semantics, R is restore-to-checkpoint only — it no longer
+    auto-starts a fresh episode when none exists. Recording always begins at
+    `il record` launch, so there's no legitimate "paused, no checkpoint"
+    state to recover from with R."""
     keyboard = SimpleNamespace(checkpoint_recording=False, resume_recording=True, toggle_recording=False, quit_without_saving=False)
     recorder = FakeRecorder(recording=False)
     checkpoints = FakeCheckpointStore()
@@ -133,7 +139,7 @@ def test_resume_key_starts_new_episode_when_no_checkpoint_and_paused():
     should_quit = _handle_recording_key_events(keyboard, recorder, checkpoints)
 
     assert should_quit is False
-    assert recorder.calls == ["start"]
+    assert recorder.calls == [], "R with no checkpoint must NOT start a new episode"
     assert keyboard.resume_recording is False
 
 
@@ -160,12 +166,25 @@ def test_quit_key_cancels_active_episode_and_requests_exit():
     assert keyboard.quit_without_saving is False
 
 
-def test_legacy_toggle_still_saves_active_recording():
+def test_s_key_marks_success_saves_and_requests_exit():
+    """S = manual SUCCESS: save with success=True and exit the teleop loop."""
     keyboard = SimpleNamespace(checkpoint_recording=False, resume_recording=False, toggle_recording=True, quit_without_saving=False)
     recorder = FakeRecorder(recording=True)
 
     should_quit = _handle_recording_key_events(keyboard, recorder, FakeCheckpointStore())
 
+    assert should_quit is True
+    assert recorder.calls == [("save", True)]
+    assert keyboard.toggle_recording is False
+
+
+def test_s_key_with_no_active_recording_warns_but_does_not_quit():
+    keyboard = SimpleNamespace(checkpoint_recording=False, resume_recording=False, toggle_recording=True, quit_without_saving=False)
+    recorder = FakeRecorder(recording=False)
+
+    should_quit = _handle_recording_key_events(keyboard, recorder, FakeCheckpointStore())
+
+    # No recording in progress → nothing to save and no quit triggered.
     assert should_quit is False
-    assert recorder.calls == ["save"]
+    assert recorder.calls == []
     assert keyboard.toggle_recording is False

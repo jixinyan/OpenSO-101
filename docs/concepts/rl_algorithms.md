@@ -67,7 +67,7 @@ opens wrist and overhead viewports.
 ```bash
 openso101 rl plot --task pick_place --smooth 30
 # or
-openso101 rl plot --log_dir logs/rsl_rl/openso101_pickplace/<run> --save
+openso101 rl plot --log_dir logs/rsl_rl/pick_place/<run> --save
 ```
 
 The plotter auto-picks the latest run for a given task name, or you can
