@@ -5,7 +5,6 @@
 
 train --algo selects the RL algorithm:
 - ppo: real PPO training via rsl_rl + BestCheckpointRunner.
-- sac: deferred to sub-project E.
 - ppo_lag / cpo / focops: NOT supported (safe-RL stays in safe_sim2real).
 """
 
@@ -15,7 +14,7 @@ import argparse
 
 
 _SAFE_ALGOS = ("ppo_lag", "cpo", "focops")
-_OPENSO101_ALGOS = ("ppo", "sac")
+_OPENSO101_ALGOS = ("ppo",)
 _ALL_ALGOS = _OPENSO101_ALGOS + _SAFE_ALGOS
 
 
@@ -24,13 +23,6 @@ def _cmd_train(args: argparse.Namespace) -> int:
         print(
             f"openso101 rl train: --algo {args.algo} is not available in "
             "OpenSO-101. Safe-RL stays in the legacy safe_sim2real repository."
-        )
-        return 2
-
-    if args.algo == "sac":
-        print(
-            "openso101 rl train: --algo sac is part of sub-project E "
-            "(off-policy RL) and not yet implemented in this refactor."
         )
         return 2
 

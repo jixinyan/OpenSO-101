@@ -1,22 +1,24 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""`openso101 data ...` subcommands — all deferred to sub-project F."""
+"""`openso101 data ...` subcommands — synthetic data generation is deferred.
+
+The CLI surface is stable so callers can wire up against `openso101 data
+generate ...` today. The MimicGen / Isaac Lab Mimic generator bodies under
+`openso101/data_gen/{mimicgen,isaaclab_mimic}/generator.py` will be filled
+in once the RL + IL pipelines are fully validated on human teleop data.
+"""
 
 from __future__ import annotations
 
 import argparse
 
 
-# Synthetic data generation is intentionally deferred until the RL + IL
-# pipelines are fully debugged. The CLI surface here mirrors the
-# documented intent in docs/concepts/data_generation.md so the eventual
-# implementation lands behind a stable argparse contract.
 _NOT_IMPL = (
     "openso101 data {cmd}: synthetic data generation is deferred until the "
     "RL + IL pipelines are fully validated. The CLI surface is stable; the "
-    "generator bodies are planned in openso101/data_gen/{{mimicgen,"
-    "isaaclab_mimic}}/generator.py."
+    "generator bodies are in openso101/data_gen/{{mimicgen,isaaclab_mimic}}"
+    "/generator.py."
 )
 
 

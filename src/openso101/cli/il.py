@@ -1560,11 +1560,6 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
-# train / play (sub-project C; out of scope for this port)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # il train  (thin wrapper around `lerobot.scripts.train`)
 # ---------------------------------------------------------------------------
 
@@ -1572,60 +1567,28 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 def _cmd_train(args: argparse.Namespace) -> int:
     """Train an IL policy via LeRobot's training CLI.
 
-    We don't roll our own trainer — LeRobot already ships a maintained
-    ACT/Diffusion/VQ-BeT pipeline tuned for SO101-style data. We just
-    translate our flags into LeRobot's expected form and shell out so
-    the user inherits every upstream improvement automatically.
+    Thin wrapper that delegates to `openso101.il.runners.train_il_policy`
+    so the CLI and the programmatic Python API behave identically.
     """
-    import shlex
-    import subprocess
-    import sys
-    from pathlib import Path
+    from openso101.il.runners import train_il_policy
 
-    dataset = args.dataset
-    # Allow both a Hugging Face Hub repo_id (``user/repo``) and a local
-    # LeRobot dataset directory. LeRobot's CLI distinguishes via the
-    # ``dataset.root`` arg when the path is local.
-    dataset_path = Path(dataset).expanduser()
-    is_local = dataset_path.exists() and dataset_path.is_dir()
-
-    output_dir = getattr(args, "output_dir", None) or _default_il_train_output_dir(args.policy)
-    output_dir = Path(output_dir).expanduser().resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    cmd = [
-        sys.executable, "-m", "lerobot.scripts.train",
-        f"--policy.type={args.policy}",
-        f"--output_dir={output_dir}",
-    ]
-    if is_local:
-        # Local LeRobot dataset — repo_id is still required by the
-        # trainer but `dataset.root` overrides where files are read from.
-        repo_id = getattr(args, "repo_id", None) or f"local/{dataset_path.name}"
-        cmd.append(f"--dataset.repo_id={repo_id}")
-        cmd.append(f"--dataset.root={dataset_path}")
-    else:
-        cmd.append(f"--dataset.repo_id={dataset}")
-    if getattr(args, "steps", None) is not None:
-        cmd.append(f"--steps={int(args.steps)}")
-    if getattr(args, "batch_size", None) is not None:
-        cmd.append(f"--batch_size={int(args.batch_size)}")
-    if getattr(args, "wandb", False):
-        cmd.append("--wandb.enable=true")
-    # Forward anything the user passed after `--` so power users can
-    # tweak any LeRobot flag we don't surface explicitly.
-    cmd.extend(getattr(args, "extra_args", []) or [])
-
-    print(f"[INFO]: Launching LeRobot trainer: {' '.join(shlex.quote(c) for c in cmd)}")
-    print(f"[INFO]: Output directory: {output_dir}")
-    completed = subprocess.run(cmd)
-    if completed.returncode != 0:
+    result = train_il_policy(
+        policy=args.policy,
+        dataset=args.dataset,
+        output_dir=getattr(args, "output_dir", None) or _default_il_train_output_dir(args.policy),
+        repo_id=getattr(args, "repo_id", None),
+        steps=getattr(args, "steps", None),
+        batch_size=getattr(args, "batch_size", None),
+        wandb=bool(getattr(args, "wandb", False)),
+        extra_args=getattr(args, "extra_args", None),
+    )
+    if not result.succeeded:
         print(
-            f"[ERROR]: LeRobot trainer exited with code {completed.returncode}. "
+            f"[ERROR]: LeRobot trainer exited with code {result.returncode}. "
             "If the error mentions a missing LeRobot install, run "
             "`bash scripts/install.sh` from the repo root."
         )
-    return int(completed.returncode)
+    return int(result.returncode)
 
 
 def _default_il_train_output_dir(policy: str) -> str:
@@ -1734,48 +1697,22 @@ def _cmd_play(args: argparse.Namespace) -> int:
 
 
 def _load_lerobot_policy(checkpoint_path: str, *, device):
-    """Load a LeRobot policy checkpoint as a runnable policy module.
+    """Load a LeRobot policy checkpoint via the shared `il.policies` API.
 
-    Accepts either (a) the directory ``output_dir`` that ``il train``
-    writes — LeRobot ships a ``pretrained_model/`` sub-directory inside
-    — or (b) a direct path to that pretrained directory. Both work.
+    Both `_cmd_play` (sim) and `openso101 sim2real deploy` (real) go
+    through `openso101.il.policies.load_policy` so behaviour stays
+    identical between the two contexts.
     """
-    from pathlib import Path
-
-    path = Path(checkpoint_path).expanduser().resolve()
-    if not path.exists():
-        raise FileNotFoundError(f"Policy checkpoint not found: {path}")
-    # `lerobot train` writes its checkpoints to ``output_dir/checkpoints/
-    # <step>/pretrained_model`` and the most recent symlink is
-    # ``output_dir/checkpoints/last/pretrained_model``. We prefer the
-    # explicit ``pretrained_model`` directory if the user passed the
-    # parent.
-    if (path / "checkpoints" / "last" / "pretrained_model").is_dir():
-        path = path / "checkpoints" / "last" / "pretrained_model"
-    elif (path / "pretrained_model").is_dir():
-        path = path / "pretrained_model"
-
     try:
-        from lerobot.configs.policies import PreTrainedConfig
-        from lerobot.policies.factory import get_policy_class
+        from openso101.il.policies import load_policy
     except ImportError as exc:
         raise RuntimeError(
             "LeRobot is required to load IL policies. Install it via "
             "`bash scripts/install.sh` or `pip install \"lerobot[feetech]==0.4.0\"`."
         ) from exc
 
-    # Two-step load: the abstract PreTrainedPolicy can't be instantiated
-    # directly, so we read the saved config to learn the concrete policy
-    # class (act, diffusion, vqbet, ...) and then dispatch from_pretrained
-    # on that subclass. Mirrors `lerobot.policies.factory.make_policy`'s
-    # branching but without the dataset-metadata round-trip that path
-    # requires for fresh policies.
-    config = PreTrainedConfig.from_pretrained(str(path))
-    policy_cls = get_policy_class(config.type)
-    policy = policy_cls.from_pretrained(str(path))
-    policy.to(device)
-    policy.eval()
-    return policy
+    device_str = str(device) if device is not None else None
+    return load_policy(checkpoint_path, device=device_str)
 
 
 def _build_il_policy_observation(unwrapped_env, scene) -> dict:
