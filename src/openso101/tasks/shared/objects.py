@@ -1,7 +1,14 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Shared SO-101 manipulation object physics."""
+"""Shared SO-101 manipulation object physics.
+
+Verbatim port of safe_sim2real's ``so101_object_cfg.py`` (commit ``37e6089``).
+That config grips the cube reliably on the same USD asset; previous drift to
+higher friction, torsional patch radius, damping, and retain_accelerations
+turned out to be an attempt at fixing the wrong layer — the gripper collision
+issue was in the spawn function, not the cube physics.
+"""
 
 from __future__ import annotations
 
