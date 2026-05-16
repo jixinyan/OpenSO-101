@@ -53,9 +53,20 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
     # Vision tasks instantiate the SO-101 overhead and wrist cameras. State-only
     # tasks can run without the rendering pipeline.
+    #
+    # `--visual-dr` also needs the render pipeline even without cameras:
+    # visual DR writes USD attributes (light intensity / color, object
+    # material) on every reset, and those writes need Fabric to propagate.
+    # Without an initialized RTX pipeline the writes queue up indefinitely
+    # and the very first `env.reset()` hangs silently in the runner. Cost
+    # of the pipeline init is ~0.5-1 GB VRAM, NOT multiplicative with
+    # num_envs (unlike actual camera observation rendering), so this is
+    # safe on small GPUs as long as the user doesn't also pass
+    # `--with-cameras`.
     enable_cameras = bool(
         getattr(args, "video", False)
         or getattr(args, "with_cameras", False)
+        or getattr(args, "visual_dr", False)
         or (args.task is not None and "-Vision" in args.task)
     )
 
@@ -268,6 +279,16 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
     try:
         _run()
+    except BaseException as exc:
+        # Print the traceback to fd 1 BEFORE the finally clause runs.
+        # `simulation_app.close()` can take 30-60s on shutdown and Python
+        # buffers stderr aggressively in that window, so without this the
+        # actual exception message gets eaten if shutdown stalls.
+        import os as _os
+        import traceback as _tb
+        _os.write(1, f"\n[rl train] crashed: {exc!r}\n".encode())
+        _os.write(1, _tb.format_exc().encode())
+        raise
     finally:
         simulation_app.close()
 

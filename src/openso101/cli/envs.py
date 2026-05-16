@@ -12,17 +12,23 @@ import sys
 _PREFIX = "OpenSO101-"
 
 
-def _launch_isaac_app(headless: bool = True):
+def _launch_isaac_app(headless: bool = True, enable_cameras: bool = False):
     """Launch Isaac Sim's SimulationApp and import OpenSO-101 tasks.
 
     Returns the `SimulationApp` handle (caller is responsible for `.close()`).
     Returns None if `isaaclab` is unavailable (skeleton-only test envs).
+
+    `enable_cameras` MUST be True whenever the env config has any camera
+    sensor attached (e.g. `envs preview`, `envs random/zero --with-cameras`).
+    Without it, the RTX render product is not initialized and `env.step()`
+    silently fails after the first call — symptom is the script exiting in
+    under a second regardless of `--steps`.
     """
     try:
         from isaaclab.app import AppLauncher
     except ModuleNotFoundError:
         return None
-    launcher = AppLauncher(headless=headless)
+    launcher = AppLauncher(headless=headless, enable_cameras=enable_cameras)
     # Trigger gym.register calls for the built-in tasks.
     import openso101.tasks  # noqa: F401
     return launcher.app
@@ -79,13 +85,15 @@ def _step_loop(env, action_fn, steps: int) -> None:
     """Step `env` for `steps` iterations using `action_fn(env) -> action`,
     heartbeating progress to fd 1 (Isaac Sim's stdio hijack buffers BOTH
     sys.stdout and sys.__stdout__ after sim boot — but a direct os.write
-    to file descriptor 1 still reaches the terminal)."""
+    to file descriptor 1 still reaches the terminal).
+
+    Caller is responsible for `env.reset()` before invoking — this lets
+    `_run_smoke` interleave viewport setup between reset and stepping.
+    """
     import os
     def emit(msg: str) -> None:
         os.write(1, (msg + "\n").encode())
     emit(f"[envs] Stepping {steps} actions...")
-    env.reset(seed=0)
-    emit("[envs] env.reset() complete; entering step loop")
     for i in range(steps):
         env.step(action_fn(env))
         if (i + 1) % max(1, steps // 5) == 0 or i == 0:
@@ -93,45 +101,73 @@ def _step_loop(env, action_fn, steps: int) -> None:
     emit("[envs] Done.")
 
 
-def _cmd_random(args: argparse.Namespace) -> int:
-    import sys
-    app = _launch_isaac_app(headless=False)
+def _run_smoke(args, *, force_cameras: bool, action_fn) -> int:
+    """Shared body for envs random / zero / preview.
+
+    Threads `enable_cameras` through to the AppLauncher whenever the env
+    config will attach cameras — without this, env.step() exits silently
+    on the first call. When cameras are enabled, also opens the
+    wrist + overhead viewport panes so the user sees those feeds
+    alongside the main viewport (same helper that `il record` uses).
+    Wraps the step loop in try/except so any other failure surfaces to
+    fd 1 instead of being swallowed by Isaac Sim's stdio hijack.
+    """
+    import os
+    cameras = bool(force_cameras or getattr(args, "with_cameras", False))
+    app = _launch_isaac_app(headless=False, enable_cameras=cameras)
     try:
-        env = _build_smoke_env(args)
-        _step_loop(env, lambda e: e.action_space.sample(), args.steps)
+        env = _build_smoke_env(args, force_cameras=force_cameras)
+        env.reset(seed=0)
+        os.write(1, b"[envs] env.reset() complete\n")
+        if cameras:
+            try:
+                from openso101.teleop.camera_viewports import open_teleop_viewports
+                open_teleop_viewports(env.unwrapped.scene)
+                os.write(1, b"[envs] Opened wrist + overhead camera viewports\n")
+            except Exception as exc:
+                os.write(1, f"[envs] Camera viewport open failed: {exc!r}\n".encode())
+        try:
+            _step_loop(env, action_fn, args.steps)
+        except BaseException as exc:
+            # Surface the failure on fd 1 because Isaac Sim's stdio hijack
+            # eats sys.stderr after sim boot.
+            import traceback
+            os.write(1, f"[envs] step loop crashed: {exc!r}\n".encode())
+            os.write(1, traceback.format_exc().encode())
+            raise
         env.close()
     finally:
         if app is not None:
             app.close()
     return 0
+
+
+# Isaac Lab's `ManagerBasedRLEnv.step` calls `action.to(self.device)`, so
+# the smoke commands must hand it a torch.Tensor (not the numpy array that
+# `gym.Space.sample()` returns by default). Helpers below convert at the
+# boundary; Isaac Lab handles the device move itself.
+
+def _random_action(env):
+    import torch
+    sample = env.action_space.sample()
+    return torch.as_tensor(sample, dtype=torch.float32)
+
+
+def _zero_action(env):
+    import torch
+    return torch.zeros(env.action_space.shape, dtype=torch.float32)
+
+
+def _cmd_random(args: argparse.Namespace) -> int:
+    return _run_smoke(args, force_cameras=False, action_fn=_random_action)
 
 
 def _cmd_zero(args: argparse.Namespace) -> int:
-    import numpy as np
-    import sys
-    app = _launch_isaac_app(headless=False)
-    try:
-        env = _build_smoke_env(args)
-        zero = np.zeros(env.action_space.shape, dtype=env.action_space.dtype)
-        _step_loop(env, lambda e: zero, args.steps)
-        env.close()
-    finally:
-        if app is not None:
-            app.close()
-    return 0
+    return _run_smoke(args, force_cameras=False, action_fn=_zero_action)
 
 
 def _cmd_preview(args: argparse.Namespace) -> int:
-    import sys
-    app = _launch_isaac_app(headless=False)
-    try:
-        env = _build_smoke_env(args, force_cameras=True)
-        _step_loop(env, lambda e: e.action_space.sample(), args.steps)
-        env.close()
-    finally:
-        if app is not None:
-            app.close()
-    return 0
+    return _run_smoke(args, force_cameras=True, action_fn=_random_action)
 
 
 def add_subparsers(parser: argparse.ArgumentParser) -> None:

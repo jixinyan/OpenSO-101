@@ -28,6 +28,12 @@ openso101 rl train \
   --max_iterations 1500
 ```
 
+> **Smaller GPU?** Default `num_envs=4096` assumes a workstation GPU. On
+> consumer hardware (≤ 8 GB VRAM or ≤ 32 GB RAM), add `--num_envs 128`
+> (state-only) or `--num_envs 64` (with `--visual-dr`) to avoid getting
+> OOM-killed. See `docs/guides/install.md` for the full memory budget
+> table.
+
 Watch the W&B dashboard (`Episode/Reward/total`) climb from −2.0 to
 +8.0 over ~1500 iterations.
 
