@@ -292,9 +292,11 @@ returns a `torch.Tensor` of shape `(num_envs,)`. Place them in
 `mypkg/tasks/pour_tea/mdp/{rewards.py, terminations.py}` and import them
 inside the `RewardsCfg` / `TerminationsCfg` blocks above.
 
-For reward design guidance and anti-cheat patterns (controlled-lift gating,
-push-to-goal exploit prevention), see
-[`docs/isaac_sim_learning_guide.md`](../isaac_sim_learning_guide.md) §11.
+For reward design guidance and anti-cheat patterns, study the existing
+task implementations under `src/openso101/tasks/{lift,pick_place,stack}/`
+— they cover controlled-lift gating, push-to-goal exploit prevention,
+and the dense-chain reward (reach → grip-near → lift → goal-track) tuned
+for SO-101's joint limits.
 
 ### 5. Configure the PPO runner
 
@@ -397,10 +399,9 @@ openso101 rl play \
 - `openso101.envs.registry` — the `register_task` decorator and env factory.
 - `openso101.tasks.pick_place.pick_place_env_cfg` — a concrete reference for
   a multi-stage manipulation task in this pattern.
-- [`docs/isaac_sim_learning_guide.md`](../isaac_sim_learning_guide.md) — the
-  underlying Isaac Sim / Isaac Lab / RSL-RL concepts.
-- Legacy multi-class pattern (historical):
-  [`safe_sim2real/docs/how_to_design_a_task.md`](https://github.com/jixinyan/safe_sim2real/blob/main/docs/how_to_design_a_task.md).
+- Upstream [Isaac Lab docs](https://isaac-sim.github.io/IsaacLab/main/) —
+  the underlying `ManagerBasedRLEnvCfg`, MDP cfg block, and event-manager
+  concepts.
 
 ---
 

@@ -34,3 +34,13 @@ camera_preview/
 # OS
 .DS_Store
 tea_debug.log
+
+# Internal docs — only docs/guides/ ships on the remote. The other dirs
+# hold contributor-facing concept notes, the dated dev diary, the
+# isaac_sim cheat-sheet, and the superpowers/ planning workspace; all
+# stay local-only.
+docs/concepts/
+docs/development_diary.md
+docs/isaac_sim_learning_guide.md
+docs/reference/
+docs/superpowers/
