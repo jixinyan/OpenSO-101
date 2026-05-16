@@ -3,16 +3,18 @@
 
 """Domain randomization layer.
 
-Phase 1 (physics DR) lives in ``physics.py`` and is the only fully ported
-sub-module today: link masses, joint friction/armature, actuator gains,
-object mass + contact material, and small additive gravity noise.
+Three production modules: ``physics.py`` (link masses, joint
+friction/armature, actuator gains, object mass + contact material,
+gravity), ``visual.py`` (dome-light intensity/color, object diffuse
+color), and ``observation.py`` (joint-position + joint-velocity noise).
 
-Phase 2 (action/observation DR) and Phase 3 (visual DR) are tracked by the
-``action.py`` / ``observation.py`` / ``visual.py`` skeletons; those modules
-remain stubbed pending sub-project B.
+``action.py`` is an intentional stub — wrapping action terms config-
+time requires a custom ``ActionTerm`` subclass that Isaac Lab 2.3.0
+doesn't expose. It raises ``NotImplementedError`` if called, but is
+not part of the public ``__all__`` so ``import *`` doesn't surface
+it.
 """
 
-from .action import attach_action_dr
 from .observation import attach_observation_dr
 from .physics import (
     GRAVITY_DISTRIBUTION,
@@ -34,7 +36,7 @@ from .physics import (
 from .visual import attach_visual_dr
 
 __all__ = [
-    # Phase 1 physics DR — constants
+    # Physics DR — constants
     "ROBOT_LINK_MASS_SCALE",
     "ROBOT_JOINT_FRICTION_SCALE",
     "ROBOT_JOINT_ARMATURE_SCALE",
@@ -46,13 +48,13 @@ __all__ = [
     "OBJECT_RESTITUTION_RANGE",
     "OBJECT_NUM_MATERIAL_BUCKETS",
     "GRAVITY_DISTRIBUTION",
-    # Phase 1 physics DR — functions
+    # Physics DR — functions
     "attach_robot_physics_dr",
     "attach_object_physics_dr",
     "attach_gravity_dr",
     "attach_all_physics_dr",
-    # Phase 2/3 stubs (raise NotImplementedError)
-    "attach_action_dr",
-    "attach_observation_dr",
+    # Visual DR
     "attach_visual_dr",
+    # Observation DR
+    "attach_observation_dr",
 ]

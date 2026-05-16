@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import os
 
 import isaaclab.sim as sim_utils
@@ -49,27 +50,39 @@ back to a baked constant; see ``_usd_bounds._BAKED_BASE_PRIM_LOCAL_Z_MIN``.
 """
 
 SO101_CANONICAL_INIT_JOINT_POS: dict[str, float] = {
-    "Rotation": 1.5708,    # +π/2 — base yawed LEFT 90° so the arm faces the
-                           # cube spawn (at +X in the world; with the SO-101
-                           # base zero pointing along +Y, +π/2 rotates the
-                           # arm's front to +X).
+    # All horizontal rotation is expressed on the base (SO101_BASE_INIT_ROT)
+    # so we don't fight the Rotation joint's ±110° hard limit on reset.
+    # Joint stays at zero — base yaw alone determines where the arm points.
+    "Rotation": 0.0,
     "Pitch": 0.0,
     "Elbow": 0.0,
-    "Wrist_Pitch": 1.5708,  # π/2 — gripper pointing straight down at table
+    "Wrist_Pitch": 1.5708,  # π/2 — gripper pointing straight down at table.
     "Wrist_Roll": 0.0,
     SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
 }
 """Canonical SO101 reset posture used by both RL training and teleop.
 
-The arm starts upright with the base yawed +π/2 so the gripper points
-straight at the cube spawn (0.3, 0, 0.015), and the gripper is pointed
-straight down so it can descend onto the cube. Used by both
-``SO_ARM101_CFG`` (RL) and ``SO_ARM101_TELEOP_CFG`` (teleop) — the same
-"face the cube" pose is the right default for both pillars (a trained
-policy moves away from any init pose within a few timesteps; teleop
-operators want minimal lurch from their leader's home calibration; both
-favor a forward-facing rest).
+Identity base orientation; arm joints at zero except Wrist_Pitch (π/2)
+which points the gripper straight down at the table. The Rotation joint
+is intentionally zero — the base sits in its USD-canonical orientation
+with the arm extending along the base's natural front. RL policies move
+away from this pose within a few timesteps; teleop operators see the
+arm at its mechanically neutral pose with the gripper ready to descend.
 """
+
+
+# 90° yaw about +Z, expressed in Isaac Lab's (w, x, y, z) quaternion order.
+# This is the math-clean equivalent of "base 270° + Rotation joint 180°"
+# (270° + 180° = 450° = 90°) collapsed onto the base alone, so we don't
+# exceed the Rotation joint's ±110° hard limit.
+#   w = cos(π/4) ≈ 0.7071068
+#   z = sin(π/4) ≈ 0.7071068
+SO101_BASE_INIT_ROT: tuple[float, float, float, float] = (
+    math.cos(math.pi / 4),
+    0.0,
+    0.0,
+    math.sin(math.pi / 4),
+)
 
 
 # Backwards-compatible alias: legacy code referenced SO101_TELEOP_INIT_JOINT_POS
@@ -188,6 +201,7 @@ SO_ARM101_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, SO101_USD_TABLETOP_ROOT_Z),
+        rot=SO101_BASE_INIT_ROT,
         joint_pos=SO101_CANONICAL_INIT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),
@@ -276,6 +290,7 @@ SO_ARM101_TELEOP_CFG = ArticulationCfg(
     ),
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, SO101_USD_TABLETOP_ROOT_Z),
+        rot=SO101_BASE_INIT_ROT,
         joint_pos=SO101_TELEOP_INIT_JOINT_POS,
         joint_vel={".*": 0.0},
     ),

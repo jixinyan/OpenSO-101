@@ -462,6 +462,18 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         self.rewards.stage_0_lift_goal.params["minimal_height"] += SO101_USD_TABLETOP_BASE_OFFSET
         self.rewards.stage_1_carry_goal.params["minimal_height"] += SO101_USD_TABLETOP_BASE_OFFSET
 
+        # Physics DR (robot link mass + joint friction/armature + actuator
+        # gains + cube mass/material + gravity). Same call Stack already
+        # makes — having parity across all three RL tasks is the documented
+        # sim2real default in docs/concepts/sim2real.md.
+        from openso101.sim2real.domain_randomization.physics import attach_all_physics_dr
+        attach_all_physics_dr(
+            self.events,
+            robot_asset_name="robot",
+            object_asset_names=("object",),
+            include_gravity=True,
+        )
+
     # ---------- variant hooks ----------
 
     def configure_play(self, enabled: bool) -> None:
@@ -471,6 +483,19 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
+
+    def configure_visual_dr(self, enabled: bool = True) -> None:
+        """Attach visual DR (light intensity/color + object color) at reset.
+
+        Cheap perception sim2real win — defaults match the leisaac +
+        lerobot_so101_teleop recommendations. Pass ``enabled=False`` to
+        ablate, which is useful when comparing trained-policy transfer
+        with vs. without visual DR.
+        """
+        if not enabled:
+            return
+        from openso101.sim2real.domain_randomization.visual import attach_visual_dr
+        attach_visual_dr(self.events, object_asset_name="object")
 
     def configure_action_mode(self, mode: str) -> None:
         """`'rl'` keeps the trained-policy action setup; `'teleop'` swaps to
