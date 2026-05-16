@@ -99,10 +99,21 @@ def spawn_so101_usd_with_safe_collisions(
 ):
     """Spawn SO101 USD while avoiding GPU-SDF gripper contacts.
 
-    The source asset authors the gripper and jaw collision groups as SDF meshes.
-    That path is fragile for GPU PhysX on this small grasp task, so those two
-    contact groups are de-instanced, cooked as convex hulls, and assigned
-    explicit contact offsets plus high-friction contact material at spawn time.
+    Verbatim port of the safe_sim2real ``bd18fe5`` implementation. The source
+    asset (byte-identical to the safe_sim2real one — same md5) authors the
+    gripper and jaw collision groups as SDF meshes. That path is fragile for
+    GPU PhysX on this small grasp task, so those two contact groups are
+    de-instanced, cooked as convex hulls, and assigned explicit contact
+    offsets plus high-friction contact material at spawn time.
+
+    Notes on the conservative scope:
+    - Only configures prims under ``/gripper/collisions`` and
+      ``/jaw/collisions`` (the authored collision subtrees).
+    - Only configures prims that ALREADY carry ``UsdPhysics.CollisionAPI``
+      — we never add the API ourselves. Adding standalone CollisionAPI on
+      merge children conflicts with ``PhysxMeshMergeCollisionAPI`` on the
+      parent body and silently disables collision (this was a regression
+      we hit by trying to be clever).
     """
 
     from pxr import PhysxSchema, Sdf, Usd, UsdPhysics, UsdShade
@@ -263,29 +274,32 @@ SO_ARM101_CFG = ArticulationCfg(
 # Teleop variant
 ##
 
-# Independent robot config for hand-teleoperation scenes. Compared to the RL
-# canonical, teleop needs:
-# - Higher actuator effort + velocity caps so the follower tracks a human leader
-#   arm responsively (RL caps are deliberately tame for safe exploration).
-# - enabled_self_collisions=False because human teleop can drive the leader
-#   into awkward configurations; without this the follower binds up.
-# - Higher solver iterations + lower depenetration velocity for stable
-#   hand-tracking contacts during fast user motion.
-# Stiffness and damping match the RL canonical (URDF-era proven values).
+# Independent robot config for hand-teleoperation scenes. Verbatim port of
+# liorbenhorin/lerobot_so101_teleop's SO101_CFG approach (assets/so101.py)
+# with our scene-specific bits (init_pos on the table top, fix_root_link)
+# preserved. Key differences from the RL canonical:
+# - No custom collision spawn function. Trust the USD's authored colliders.
+#   Earlier attempts to add standalone CollisionAPI on merge children
+#   silently disabled gripper collision; Lior trusts the USD and it grips.
+# - activate_contact_sensors=False. Teleop has no contact-gated rewards;
+#   contact sensors only add cost.
+# - Compliant low-stiffness PD gains (e.g. gripper k=4, d=0.3 vs RL's
+#   k=60, d=20). Matches real SO-101 servo bandwidth; lets the jaws pinch
+#   rather than hammer. effort_limit_sim=30 across all joints provides
+#   headroom for the compliant gains to actually reach the target.
 SO_ARM101_TELEOP_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        func=spawn_so101_usd_with_safe_collisions,
         usd_path=str(so101_usd_path()),
-        activate_contact_sensors=True,
+        activate_contact_sensors=False,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
-            max_depenetration_velocity=1.0,
+            max_depenetration_velocity=5.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
             fix_root_link=True,
             solver_position_iteration_count=32,
-            solver_velocity_iteration_count=4,
+            solver_velocity_iteration_count=1,
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
@@ -295,47 +309,47 @@ SO_ARM101_TELEOP_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
     actuators={
+        # ROTATION (Gear: 1/191, Torque: 34.4 N-m)
         "rotation": ImplicitActuatorCfg(
             joint_names_expr=["Rotation"],
-            effort_limit_sim=8.0,
-            velocity_limit_sim=3.5,
-            stiffness=200.0,
-            damping=80.0,
+            effort_limit_sim=30,
+            stiffness=55,
+            damping=0.7,
         ),
+        # PITCH (Gear: 1/345, Torque: 62.1 N-m - HIGHEST)
         "pitch": ImplicitActuatorCfg(
             joint_names_expr=["Pitch"],
-            effort_limit_sim=8.0,
-            velocity_limit_sim=3.5,
-            stiffness=170.0,
-            damping=65.0,
+            effort_limit_sim=30,
+            stiffness=30,
+            damping=0.8,
         ),
+        # ELBOW (Gear: 1/191, Torque: 34.4 N-m)
         "elbow": ImplicitActuatorCfg(
             joint_names_expr=["Elbow"],
-            effort_limit_sim=8.0,
-            velocity_limit_sim=3.5,
-            stiffness=120.0,
-            damping=45.0,
+            effort_limit_sim=30,
+            stiffness=25,
+            damping=0.7,
         ),
+        # WRIST PITCH (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_pitch": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Pitch"],
-            effort_limit_sim=4.0,
-            velocity_limit_sim=2.0,
-            stiffness=80.0,
-            damping=30.0,
+            effort_limit_sim=30,
+            stiffness=12,
+            damping=0.5,
         ),
+        # WRIST ROLL (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_roll": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Roll"],
-            effort_limit_sim=4.0,
-            velocity_limit_sim=2.0,
-            stiffness=50.0,
-            damping=20.0,
+            effort_limit_sim=30,
+            stiffness=7,
+            damping=0.5,
         ),
+        # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
-            effort_limit_sim=4.0,
-            velocity_limit_sim=2.0,
-            stiffness=60.0,
-            damping=20.0,
+            effort_limit_sim=30,
+            stiffness=4,
+            damping=0.3,
         ),
     },
     soft_joint_pos_limit_factor=0.9,
