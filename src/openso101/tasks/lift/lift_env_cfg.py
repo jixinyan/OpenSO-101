@@ -379,6 +379,18 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         # Set the body name for the end effector command target.
         self.commands.object_pose.body_name = ["gripper"]
 
+        # Physics DR (robot link mass + joint friction/armature + actuator
+        # gains + cube mass/material + gravity). Parity with PickPlace +
+        # Stack — the docs claim all three built-in tasks have DR enabled
+        # by default.
+        from openso101.sim2real.domain_randomization.physics import attach_all_physics_dr
+        attach_all_physics_dr(
+            self.events,
+            robot_asset_name="robot",
+            object_asset_names=("object",),
+            include_gravity=True,
+        )
+
     # ---------- variant hooks ----------
 
     def configure_play(self, enabled: bool) -> None:
@@ -388,6 +400,13 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
+
+    def configure_visual_dr(self, enabled: bool = True) -> None:
+        """Attach dome-light + object-color randomization at episode reset."""
+        if not enabled:
+            return
+        from openso101.sim2real.domain_randomization.visual import attach_visual_dr
+        attach_visual_dr(self.events, object_asset_name="object")
 
     def configure_action_mode(self, mode: str) -> None:
         """`'rl'` keeps the trained-policy action setup; `'teleop'` swaps to
