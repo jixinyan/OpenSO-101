@@ -5,9 +5,6 @@
 
 <a id="readme-top"></a>
 
-<!-- PROJECT SHIELDS -->
-[![Stargazers][stars-shield]][stars-url]
-[![MIT License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
@@ -24,9 +21,6 @@
     <a href="docs/guides/"><strong>Explore the guides »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/KevinYan-831/OpenSO-101/issues/new?labels=bug">Report bug</a>
-    &middot;
-    <a href="https://github.com/KevinYan-831/OpenSO-101/issues/new?labels=enhancement">Request feature</a>
   </p>
 </div>
 
@@ -50,24 +44,16 @@
 <!-- ABOUT THE PROJECT -->
 ## About the Project
 
-OpenSO-101 is a single-package research framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles three pillars of modern robot learning behind one CLI and one Python API:
+OpenSO-101 is an end-to-end unified robot learning framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles three pillars of modern robot learning behind one CLI and one Python API:
 
-1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] with a `BestCheckpointRunner` that snapshots the best mean-reward checkpoint, plus rsl_rl's `Distillation` for teacher → student knowledge transfer (the same checkpoint format is consumed in both directions). A `--visual-dr` flag enables shared lighting / colour randomization with the IL pipeline.
-2. **Imitation Learning** — leader-arm teleop with async polling, streaming HDF5 recording, [LeRobot dataset][lerobot-url] conversion, and training via the official `lerobot.scripts.train` CLI (ACT, Diffusion, or any policy LeRobot ships). The same checkpoint produced by `openso101 il train` plays back in sim (`openso101 il play`) and deploys on hardware (`openso101 sim2real deploy`). Everything is also exposed as Python functions under `openso101.il` — `load_lerobot_dataset`, `train_il_policy`, `load_policy`, `ACTPolicy`, `DiffusionPolicy` — so notebooks and sweep drivers don't need to shell out.
+1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] plus rsl_rl's `Distillation` for teacher → student knowledge transfer.
+2. **Imitation Learning** — leader-arm teleop and record data with [LeRobot dataset][lerobot-url] compatible format, and training via the official `lerobot.scripts.train` CLI (ACT, Diffusion).
 3. **Sim-to-Real Robustness** — visual, observation, and physics domain randomization shared across all three built-in tasks; a real-arm deploy bridge that drives the Feetech follower via LeRobot's `SO101Follower` while streaming OpenCV camera frames into the policy.
 
 The project is organized so a researcher can clone, install, and reach a working `openso101 envs list` in well under an hour — and so a downstream contributor can register a custom task with one decorator. Each pillar exposes a stable CLI verb and a stable Python entry point; swapping in a custom algorithm or task does not require forking the framework.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### Built With
-
-[![Python][python-shield]][python-url]
-[![PyTorch][pytorch-shield]][pytorch-url]
-[![Isaac Lab][isaaclab-shield]][isaaclab-url]
-[![LeRobot][lerobot-shield]][lerobot-url]
-[![rsl_rl][rsl-rl-shield]][rsl-rl-url]
-[![Gymnasium][gymnasium-shield]][gymnasium-url]
 
 ### Repository Layout
 
@@ -133,14 +119,6 @@ openso101 envs list
 # OpenSO101-Stack-v0
 ```
 
-**Why `bash scripts/install.sh` instead of `pip install -e .`?** `isaaclab_rl` (pulled in by `isaaclab[all,isaacsim]==2.3.0`) declares `packaging<24`, while `lerobot==0.4.0` declares `packaging>=24.2`. These ranges do not intersect, so pip's resolver hits `ResolutionImpossible`. The `<24` cap is an erroneous upper bound — both packages only call `packaging.version.Version`, which has been API-stable since v21.x. We solve it the honest way: a `[tool.uv] override-dependencies` block in `pyproject.toml` lets [`uv`](https://github.com/astral-sh/uv) rewrite the conflicting metadata at solve time, and the install succeeds in a single resolver pass — no `--no-deps`, no manual fallback dep list. We track the upstream fix at [isaac-sim/IsaacLab#5084](https://github.com/isaac-sim/IsaacLab/issues/5084). See [`docs/guides/install.md`](docs/guides/install.md) for the long-form rationale and troubleshooting.
-
-After a `git pull` you only need:
-
-```bash
-bash scripts/install.sh --quick    # `pip install -e . --no-deps`
-```
-
 ### Quickstart
 
 **Train PPO on PickPlace** (headless, single GPU, visual DR on):
@@ -200,28 +178,7 @@ openso101 sim2real deploy \
   --wrist-camera-index 0 --overhead-camera-index 2
 ```
 
-The motor-unit action space (`[-100, 100]` per joint) is identical in sim and on hardware, so the LeRobot checkpoint loads unchanged in either context. Both `openso101 il play` and `openso101 sim2real deploy` go through the same `openso101.il.policies.load_policy` loader.
-
-**Or drive everything from Python** (notebooks, sweeps, custom tooling):
-
-```python
-from openso101.il import (
-    load_lerobot_dataset, summarize_lerobot_dataset,
-    train_il_policy, load_policy,
-)
-
-ds = load_lerobot_dataset("teleop_data/openso101_pickplace")
-summarize_lerobot_dataset(ds)
-
-result = train_il_policy(policy="act", dataset=ds.root, steps=200_000)
-assert result.succeeded
-
-policy = load_policy(result.last_checkpoint, device="cuda")
-# policy.select_action(observation) in either sim or real
-```
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 <!-- USAGE -->
 ## Usage
@@ -299,13 +256,6 @@ Before submitting, please:
 - Follow the conventions documented in `docs/guides/add_a_task.md`.
 - Keep changes scoped — one PR per concern.
 
-### Top contributors
-
-<a href="https://github.com/KevinYan-831/OpenSO-101/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=KevinYan-831/OpenSO-101" alt="contrib.rocks image" />
-</a>
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 <!-- LICENSE -->
@@ -327,8 +277,7 @@ OpenSO-101 stands on the shoulders of a community of open-source projects:
 - [TheRobotStudio SO-ARM100/SO-ARM101][so101-hardware-url] — the open-hardware arm we target.
 - [LeRobot][lerobot-url] — teleop drivers, dataset format, ACT/Diffusion training.
 - [rsl_rl][rsl-rl-url] — the lean RL library that powers our PPO trainer and Distillation runner.
-- [`uv`](https://github.com/astral-sh/uv) — the Astral package installer whose `override-dependencies` escape hatch is the only honest way to resolve the isaaclab/lerobot conflict in one pass.
-- [othneildrew/Best-README-Template](https://github.com/othneildrew/Best-README-Template) — the structure of this README.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
