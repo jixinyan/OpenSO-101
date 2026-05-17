@@ -13,8 +13,6 @@ Reuses Isaac Lab's base + lift mdp namespaces and adds:
 from isaaclab.envs.mdp import *  # noqa: F401, F403
 from isaaclab_tasks.manager_based.manipulation.lift.mdp import *  # noqa: F401, F403
 
-from openso101.tasks.shared.rewards import close_gripper_near_object  # noqa: F401
-
 from .curriculum_goal_command import (  # noqa: F401
     CurriculumGoalCommand,
     CurriculumGoalCommandCfg,

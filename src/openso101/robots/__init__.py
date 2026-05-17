@@ -24,7 +24,6 @@ __all__ = [
     "SO_ARM101_CFG",
     "SO_ARM101_TELEOP_CFG",
     "so101_usd_path",
-    "spawn_so101_usd_with_safe_collisions",
     "overhead_camera_cfg",
     "wrist_camera_cfg",
 ]
@@ -35,20 +34,17 @@ def __getattr__(name: str):
         "SO_ARM101_CFG",
         "SO_ARM101_TELEOP_CFG",
         "so101_usd_path",
-        "spawn_so101_usd_with_safe_collisions",
     }:
         from .so101.so_arm101 import (
             SO_ARM101_CFG,
             SO_ARM101_TELEOP_CFG,
             so101_usd_path,
-            spawn_so101_usd_with_safe_collisions,
         )
 
         values = {
             "SO_ARM101_CFG": SO_ARM101_CFG,
             "SO_ARM101_TELEOP_CFG": SO_ARM101_TELEOP_CFG,
             "so101_usd_path": so101_usd_path,
-            "spawn_so101_usd_with_safe_collisions": spawn_so101_usd_with_safe_collisions,
         }
         return values[name]
     if name in {"overhead_camera_cfg", "wrist_camera_cfg"}:

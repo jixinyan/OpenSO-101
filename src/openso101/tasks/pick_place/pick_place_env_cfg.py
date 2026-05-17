@@ -66,8 +66,6 @@ from openso101.robots.so101.so_arm101 import (
 from openso101.tasks.shared.objects import so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
-    SO101_CLOSE_GRIPPER_CLOSED_STD,
-    SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
     SO101_GOAL_TRACKING_STD,
     SO101_JOINT_VEL_WEIGHT,
     SO101_REACH_REWARD_COARSE_STD,
@@ -261,16 +259,9 @@ class RewardsCfg:
         weight=1.0,
     )
 
-    close_gripper_near_object = RewTerm(
-        func=mdp.close_gripper_near_object,
-        params={
-            "near_threshold": SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
-            "closed_std": SO101_CLOSE_GRIPPER_CLOSED_STD,
-        },
-        weight=2.0,
-    )
-
-    # Bonus only -- NOT a gate. Rewards confirmed contact-pinch.
+    # Bonus only -- NOT a gate. Rewards confirmed contact-pinch (the only
+    # signal that distinguishes "jaws closed in air" from "jaws closed on
+    # cube" before the cube lifts).
     grasped = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
