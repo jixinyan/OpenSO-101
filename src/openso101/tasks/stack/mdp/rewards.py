@@ -13,7 +13,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
 
 from openso101.robots import SO101_GRIPPER_JOINT_NAMES
-from openso101.tasks.shared.rewards import gripper_joint_pos, object_controlled_by_gripper, object_is_static
+from openso101.tasks.shared.rewards import gripper_joint_pos, object_is_static
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
@@ -43,24 +43,17 @@ def ee_to_cube_top_distance(
 def cube_top_is_lifted(
     env: ManagerBasedRLEnv,
     minimal_height: float,
-    grasp_distance_threshold: float = 0.07,
-    closed_threshold: float = 0.12,
-    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     cube_top_cfg: SceneEntityCfg = SceneEntityCfg("cube_top"),
-    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
-    gripper_cfg: SceneEntityCfg = SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
 ) -> torch.Tensor:
-    """Binary reward when cube_top is lifted while controlled by the gripper."""
-    lifted = object_controlled_by_gripper(
-        env,
-        minimal_height,
-        grasp_distance_threshold,
-        closed_threshold,
-        robot_cfg,
-        cube_top_cfg,
-        ee_frame_cfg,
-        gripper_cfg,
-    )
+    """Binary reward when cube_top is above ``minimal_height``.
+
+    Height-only gate, matching lift and pick_place. The implicit signal: the
+    only way to elevate the cube is to grasp it, so the policy bootstraps
+    grasping from this reward alone. Also latches the ``was_lifted`` flag
+    consumed by downstream xy-align / stack / release rewards.
+    """
+    cube_top: RigidObject = env.scene[cube_top_cfg.name]
+    lifted = cube_top.data.root_pos_w[:, 2] > minimal_height
     was_lifted = get_cube_top_was_lifted(env)
     was_lifted |= lifted
     env._cube_top_was_lifted = was_lifted
