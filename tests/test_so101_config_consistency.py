@@ -128,10 +128,14 @@ def test_so101_canonical_arm_actuators_use_lior_compliant_gains():
     compliant low-stiffness gains because the high values made the gripper
     hammer rather than pinch. Compliant gains require effort_limit_sim=30 so
     the actuator has headroom to reach targets.
+
+    velocity_limit_sim is set on RL (but not teleop) to cap the arm speed.
+    Without it the compliant actuator slams toward policy-issued targets at
+    ~25 rad/s; teleop's leader-driven targets are naturally bounded.
     """
     pytest.importorskip("isaaclab.sim")
 
-    from openso101.robots.so101.so_arm101 import SO_ARM101_CFG
+    from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO101_RL_VELOCITY_LIMIT
 
     expected = {
         "rotation":    dict(joint="Rotation",    stiffness=55, damping=0.7),
@@ -144,20 +148,22 @@ def test_so101_canonical_arm_actuators_use_lior_compliant_gains():
         act = SO_ARM101_CFG.actuators[name]
         assert act.joint_names_expr == [want["joint"]], (name, act.joint_names_expr)
         assert act.effort_limit_sim == 30, name
+        assert act.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT), name
         assert act.stiffness == pytest.approx(want["stiffness"]), name
         assert act.damping == pytest.approx(want["damping"]), name
 
 
 def test_so101_canonical_gripper_actuator_uses_lior_compliant_gains():
     """The canonical gripper uses Lior's compliant gains (k=4, d=0.3) so the
-    jaws pinch rather than hammer."""
+    jaws pinch rather than hammer. Velocity capped on RL (not teleop)."""
     pytest.importorskip("isaaclab.sim")
 
-    from openso101.robots.so101.so_arm101 import SO_ARM101_CFG
+    from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO101_RL_VELOCITY_LIMIT
 
     act = SO_ARM101_CFG.actuators["gripper"]
     assert act.joint_names_expr == ["Jaw"]
     assert act.effort_limit_sim == 30
+    assert act.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT)
     assert act.stiffness == pytest.approx(4)
     assert act.damping == pytest.approx(0.3)
 
@@ -189,26 +195,37 @@ def test_so101_ppo_uses_log_noise_std_parameterization():
 def test_so101_rl_and_teleop_share_lior_compliant_config():
     """RL and teleop both adopt Lior's compliant gains and solver settings.
 
-    Differ only by activate_contact_sensors (True for RL because pick_place's
-    grasped_reward consumes /Robot/gripper and /Robot/jaw contact signals).
-    Identical actuator gains, solver iterations, and self-collision setting
-    keep sim behavior consistent between IL recording and trained-policy
-    rollouts.
+    Two intentional divergences:
+    - activate_contact_sensors: RL=True (pick_place's grasped_reward needs
+      contact signals on /Robot/gripper and /Robot/jaw); teleop=False.
+    - velocity_limit_sim: RL caps every joint at SO101_RL_VELOCITY_LIMIT;
+      teleop leaves it unset (matches Lior verbatim). Without the cap, the
+      RL policy can issue position deltas that whip the arm at ~25 rad/s
+      because the compliant actuator has 30 N-m of effort headroom and only
+      ~0.7 damping. Teleop doesn't need the cap because the leader-arm-
+      driven targets are naturally bounded by human motion.
+
+    Everything else (stiffness, damping, effort cap, solver, self-collisions)
+    is identical so sim behavior stays consistent between IL and RL.
     """
     pytest.importorskip("isaaclab.sim")
 
     from openso101.robots.so101.so_arm101 import (
         SO_ARM101_CFG,
         SO_ARM101_TELEOP_CFG,
+        SO101_RL_VELOCITY_LIMIT,
     )
 
-    # Actuator parity: Lior's compliant gains on both, effort=30.
+    # Actuator parity: Lior's compliant gains on both, effort=30, but
+    # velocity capped on RL only.
     for name in ("rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll", "gripper"):
         rl_act = SO_ARM101_CFG.actuators[name]
         tp_act = SO_ARM101_TELEOP_CFG.actuators[name]
         assert rl_act.effort_limit_sim == tp_act.effort_limit_sim == 30, name
         assert rl_act.stiffness == pytest.approx(tp_act.stiffness), name
         assert rl_act.damping == pytest.approx(tp_act.damping), name
+        assert rl_act.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT), name
+        assert tp_act.velocity_limit_sim is None, name
 
     # Articulation parity, except the contact-sensor flag.
     for cfg in (SO_ARM101_CFG, SO_ARM101_TELEOP_CFG):
