@@ -16,11 +16,6 @@ from openso101.robots.so101._usd_bounds import tabletop_root_z
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
-SO101_GRIPPER_CONTACT_STATIC_FRICTION = 1.2
-SO101_GRIPPER_CONTACT_DYNAMIC_FRICTION = 1.0
-SO101_GRIPPER_CONTACT_OFFSET = 0.002
-SO101_GRIPPER_REST_OFFSET = 0.0
-
 
 def so101_usd_path() -> Path:
     """Return the local SO101 USD asset path.
@@ -90,124 +85,34 @@ SO101_BASE_INIT_ROT: tuple[float, float, float, float] = (
 SO101_TELEOP_INIT_JOINT_POS = SO101_CANONICAL_INIT_JOINT_POS
 
 
-def spawn_so101_usd_with_safe_collisions(
-    prim_path: str,
-    cfg: sim_utils.UsdFileCfg,
-    translation: tuple[float, float, float] | None = None,
-    orientation: tuple[float, float, float, float] | None = None,
-    **kwargs,
-):
-    """Spawn SO101 USD while avoiding GPU-SDF gripper contacts.
-
-    Verbatim port of the safe_sim2real ``bd18fe5`` implementation. The source
-    asset (byte-identical to the safe_sim2real one — same md5) authors the
-    gripper and jaw collision groups as SDF meshes. That path is fragile for
-    GPU PhysX on this small grasp task, so those two contact groups are
-    de-instanced, cooked as convex hulls, and assigned explicit contact
-    offsets plus high-friction contact material at spawn time.
-
-    Notes on the conservative scope:
-    - Only configures prims under ``/gripper/collisions`` and
-      ``/jaw/collisions`` (the authored collision subtrees).
-    - Only configures prims that ALREADY carry ``UsdPhysics.CollisionAPI``
-      — we never add the API ourselves. Adding standalone CollisionAPI on
-      merge children conflicts with ``PhysxMeshMergeCollisionAPI`` on the
-      parent body and silently disables collision (this was a regression
-      we hit by trying to be clever).
-    """
-
-    from pxr import PhysxSchema, Sdf, Usd, UsdPhysics, UsdShade
-
-    from isaaclab.sim.spawners.from_files import from_files
-
-    prim = from_files.spawn_from_usd(prim_path, cfg, translation, orientation, **kwargs)
-    stage = prim.GetStage()
-    root_path = str(prim.GetPath())
-    contact_groups = (f"{root_path}/gripper/collisions", f"{root_path}/jaw/collisions")
-    contact_material_cfg = sim_utils.RigidBodyMaterialCfg(
-        static_friction=SO101_GRIPPER_CONTACT_STATIC_FRICTION,
-        dynamic_friction=SO101_GRIPPER_CONTACT_DYNAMIC_FRICTION,
-        restitution=0.0,
-        friction_combine_mode="max",
-        restitution_combine_mode="min",
-    )
-    contact_material_path = f"{root_path}/gripper_contact_material"
-    contact_material_cfg.func(contact_material_path, contact_material_cfg)
-    contact_material = UsdShade.Material(stage.GetPrimAtPath(contact_material_path))
-    configured_paths: set[str] = set()
-
-    def make_collision_tree_editable(group_prim):
-        if group_prim.IsInstance():
-            group_prim.SetInstanceable(False)
-        for descendant in Usd.PrimRange(group_prim):
-            if descendant.IsInstance():
-                descendant.SetInstanceable(False)
-
-    def configure_contact_prim(contact_prim):
-        contact_path = str(contact_prim.GetPath())
-        if contact_path in configured_paths or not contact_prim.HasAPI(UsdPhysics.CollisionAPI):
-            return
-        configured_paths.add(contact_path)
-
-        approx_attr = contact_prim.GetAttribute("physics:approximation")
-        if not approx_attr:
-            approx_attr = contact_prim.CreateAttribute("physics:approximation", Sdf.ValueTypeNames.Token)
-        approx_attr.Set("convexHull")
-
-        physx_collision = PhysxSchema.PhysxCollisionAPI.Apply(contact_prim)
-        physx_collision.CreateContactOffsetAttr().Set(SO101_GRIPPER_CONTACT_OFFSET)
-        physx_collision.CreateRestOffsetAttr().Set(SO101_GRIPPER_REST_OFFSET)
-        binding_api = UsdShade.MaterialBindingAPI.Apply(contact_prim)
-        binding_api.Bind(
-            contact_material,
-            bindingStrength=UsdShade.Tokens.strongerThanDescendants,
-            materialPurpose="physics",
-        )
-
-    for group in contact_groups:
-        group_prim = stage.GetPrimAtPath(group)
-        if group_prim:
-            make_collision_tree_editable(group_prim)
-
-    for child in Usd.PrimRange(prim):
-        child_path = str(child.GetPath())
-        if not any(child_path == group or child_path.startswith(f"{group}/") for group in contact_groups):
-            continue
-        configure_contact_prim(child)
-
-    # Direct paths are the authored collision API prims in the upstream asset.
-    # Keep this explicit fallback so a future USD hierarchy change is obvious.
-    for group in contact_groups:
-        group_prim = stage.GetPrimAtPath(group)
-        if group_prim:
-            configure_contact_prim(group_prim)
-
-    return prim
-
 ##
 # Configuration
 ##
 
+# Aggressive Lior-style RL config. Mirrors SO_ARM101_TELEOP_CFG below in every
+# way except activate_contact_sensors=True, which is required for the
+# grasped_reward term in pick_place. The earlier high-stiffness URDF-era gains
+# (e.g. gripper k=60, d=20) caused the jaws to hammer rather than pinch; the
+# earlier custom collision spawn function silently disabled gripper colliders
+# by adding standalone CollisionAPI on PhysxMeshMergeCollisionAPI children.
+# Both removed. Trust the USD's authored colliders and use compliant gains
+# that match real SO-101 servo bandwidth.
 SO_ARM101_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        func=spawn_so101_usd_with_safe_collisions,
         usd_path=str(so101_usd_path()),
+        # Required by pick_place's grasped_reward: the contact sensors on
+        # /Robot/gripper and /Robot/jaw need the PhysX contact reporter API
+        # applied at spawn. Teleop sets this False since it has no rewards.
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             max_depenetration_velocity=5.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            # URDF-era settings restored. enabled_self_collisions=True is more
-            # physically accurate; solver iter 8/0 matches the URDF cfg and is
-            # cheaper than 32/1; fix_root_link=True was added in a prior commit
-            # so the base sits on the table top (URDF had fix_base=True on the
-            # spawner). soft_joint_pos_limit_factor lives on ArticulationCfg
-            # itself, not here.
-            enabled_self_collisions=True,
+            enabled_self_collisions=False,
             fix_root_link=True,
-            solver_position_iteration_count=8,
-            solver_velocity_iteration_count=0,
+            solver_position_iteration_count=32,
+            solver_velocity_iteration_count=1,
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(
@@ -217,53 +122,47 @@ SO_ARM101_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
     actuators={
-        # URDF-era gains restored to the USD canonical (2026-05-13 swap regressed
-        # these to overly-weak hand-tuned values that prevented the gripper from
-        # closing and let the arm whip around unbounded). Joint names map:
-        # shoulder_pan -> Rotation, shoulder_lift -> Pitch, elbow_flex -> Elbow,
-        # wrist_flex -> Wrist_Pitch, wrist_roll -> Wrist_Roll, gripper -> Jaw.
-        # Source: commit 5d01353^:src/safe_sim2real/robots/trs_so101/so_arm101.py.
+        # ROTATION (Gear: 1/191, Torque: 34.4 N-m)
         "rotation": ImplicitActuatorCfg(
             joint_names_expr=["Rotation"],
-            effort_limit_sim=1.9,
-            velocity_limit_sim=1.5,
-            stiffness=200.0,
-            damping=80.0,
+            effort_limit_sim=30,
+            stiffness=55,
+            damping=0.7,
         ),
+        # PITCH (Gear: 1/345, Torque: 62.1 N-m - HIGHEST)
         "pitch": ImplicitActuatorCfg(
             joint_names_expr=["Pitch"],
-            effort_limit_sim=1.9,
-            velocity_limit_sim=1.5,
-            stiffness=170.0,
-            damping=65.0,
+            effort_limit_sim=30,
+            stiffness=30,
+            damping=0.8,
         ),
+        # ELBOW (Gear: 1/191, Torque: 34.4 N-m)
         "elbow": ImplicitActuatorCfg(
             joint_names_expr=["Elbow"],
-            effort_limit_sim=1.9,
-            velocity_limit_sim=1.5,
-            stiffness=120.0,
-            damping=45.0,
+            effort_limit_sim=30,
+            stiffness=25,
+            damping=0.7,
         ),
+        # WRIST PITCH (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_pitch": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Pitch"],
-            effort_limit_sim=1.9,
-            velocity_limit_sim=1.5,
-            stiffness=80.0,
-            damping=30.0,
+            effort_limit_sim=30,
+            stiffness=12,
+            damping=0.5,
         ),
+        # WRIST ROLL (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_roll": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Roll"],
-            effort_limit_sim=1.9,
-            velocity_limit_sim=1.5,
-            stiffness=50.0,
-            damping=20.0,
+            effort_limit_sim=30,
+            stiffness=7,
+            damping=0.5,
         ),
+        # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
-            effort_limit_sim=2.5,
-            velocity_limit_sim=1.5,
-            stiffness=60.0,
-            damping=20.0,
+            effort_limit_sim=30,
+            stiffness=4,
+            damping=0.3,
         ),
     },
     soft_joint_pos_limit_factor=0.9,

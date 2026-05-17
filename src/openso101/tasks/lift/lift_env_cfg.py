@@ -51,8 +51,6 @@ from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO_ARM101_TELEOP_CFG
 from openso101.tasks.shared.objects import so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
-    SO101_CLOSE_GRIPPER_CLOSED_STD,
-    SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
     SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
     SO101_GOAL_TRACKING_FINE_STD,
     SO101_GOAL_TRACKING_STD,
@@ -181,11 +179,13 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Upstream-pattern reward chain (adapted to SO101 geometry).
+    """Minimal three-signal reward chain: reach -> lift -> goal-track-in-air.
 
-    Chain: reach (two-scale) -> close_gripper (shaping) -> lift (height-only)
-    -> goal_track (height-only, two-scale). No triple-AND grasp gate -- the
-    policy bootstraps from "cube briefly airborne" the way upstream does.
+    No close_gripper shaping, no "controlled" gates. The lift reward (height-
+    only) implicitly rewards grasping because lifting the cube requires
+    closing the gripper. Goal-tracking is height-gated so it only fires once
+    the cube is airborne. Smoothness penalties start at 0 and curriculum-ramp
+    in once lift fires.
     """
 
     # Two-scale reach: coarse covers ~35cm starting distance, fine sharpens
@@ -201,19 +201,8 @@ class RewardsCfg:
         weight=1.0,
     )
 
-    # Bootstraps grasp behavior without GATING anything else on it.
-    close_gripper = RewTerm(
-        func=mdp.close_gripper_near_object,
-        params={
-            "near_threshold": SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
-            "closed_std": SO101_CLOSE_GRIPPER_CLOSED_STD,
-            "gripper_cfg": SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
-        },
-        weight=1.0,
-    )
-
-    # Height-only lift reward. THIS IS THE KEY CHANGE: no AND-conjunction
-    # with gripper-closed or EE-near. Once the cube goes up, this fires.
+    # Height-only lift reward. No AND-conjunction with gripper-closed or
+    # EE-near. Once the cube goes up, this fires.
     lifting_object = RewTerm(
         func=mdp.object_is_lifted,
         params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},

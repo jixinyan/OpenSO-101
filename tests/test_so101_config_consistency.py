@@ -7,7 +7,6 @@ TASK_SRC = REPO_ROOT / "src" / "openso101" / "tasks"
 SO101_CFG_SRC = REPO_ROOT / "src" / "openso101" / "robots" / "so101" / "so_arm101.py"
 SO101_RL_DEFAULTS_SRC = TASK_SRC / "shared" / "rl_defaults.py"
 SO101_PICK_PLACE_SRC = TASK_SRC / "pick_place" / "pick_place_env_cfg.py"
-SO101_PICK_PLACE_MDP_INIT_SRC = TASK_SRC / "pick_place" / "mdp" / "__init__.py"
 
 
 def _task_python_files() -> list[Path]:
@@ -122,63 +121,58 @@ def test_so101_pick_place_calibrates_canonical_usd_tabletop_pose():
     assert cfg.scene.ee_frame.target_frames[0].offset.pos == pytest.approx((0.01, 0.0, -0.09))
 
 
-def test_pick_place_mdp_exports_close_gripper_proxy_reward():
-    text = SO101_PICK_PLACE_MDP_INIT_SRC.read_text()
+def test_so101_canonical_arm_actuators_use_lior_compliant_gains():
+    """The canonical arm actuators match liorbenhorin/lerobot_so101_teleop.
 
-    assert "close_gripper_near_object" in text
-
-
-def test_so101_canonical_arm_actuators_use_urdf_era_gains():
-    """The canonical arm actuators must match the proven URDF-era gains.
-
-    These values trained atomic_lift to 999 iters on 2026-05-09. Commit 5d01353
-    swapped the canonical spawn from URDF to USD but kept the weak hand-tuned
-    USD values; this test pins the restored URDF-era values.
+    Switched from URDF-era high-stiffness (k=200, d=80 on rotation) to Lior's
+    compliant low-stiffness gains because the high values made the gripper
+    hammer rather than pinch. Compliant gains require effort_limit_sim=30 so
+    the actuator has headroom to reach targets.
     """
     pytest.importorskip("isaaclab.sim")
 
     from openso101.robots.so101.so_arm101 import SO_ARM101_CFG
 
     expected = {
-        "rotation":    dict(joint="Rotation",    stiffness=200.0, damping=80.0),
-        "pitch":       dict(joint="Pitch",       stiffness=170.0, damping=65.0),
-        "elbow":       dict(joint="Elbow",       stiffness=120.0, damping=45.0),
-        "wrist_pitch": dict(joint="Wrist_Pitch", stiffness=80.0,  damping=30.0),
-        "wrist_roll":  dict(joint="Wrist_Roll", stiffness=50.0,  damping=20.0),
+        "rotation":    dict(joint="Rotation",    stiffness=55, damping=0.7),
+        "pitch":       dict(joint="Pitch",       stiffness=30, damping=0.8),
+        "elbow":       dict(joint="Elbow",       stiffness=25, damping=0.7),
+        "wrist_pitch": dict(joint="Wrist_Pitch", stiffness=12, damping=0.5),
+        "wrist_roll":  dict(joint="Wrist_Roll", stiffness=7,  damping=0.5),
     }
     for name, want in expected.items():
         act = SO_ARM101_CFG.actuators[name]
         assert act.joint_names_expr == [want["joint"]], (name, act.joint_names_expr)
-        assert act.effort_limit_sim == pytest.approx(1.9), name
-        assert act.velocity_limit_sim == pytest.approx(1.5), name
+        assert act.effort_limit_sim == 30, name
         assert act.stiffness == pytest.approx(want["stiffness"]), name
         assert act.damping == pytest.approx(want["damping"]), name
 
 
-def test_so101_canonical_gripper_actuator_uses_urdf_era_gains():
-    """The canonical gripper must have the URDF-era gains so it can actually close."""
+def test_so101_canonical_gripper_actuator_uses_lior_compliant_gains():
+    """The canonical gripper uses Lior's compliant gains (k=4, d=0.3) so the
+    jaws pinch rather than hammer."""
     pytest.importorskip("isaaclab.sim")
 
     from openso101.robots.so101.so_arm101 import SO_ARM101_CFG
 
     act = SO_ARM101_CFG.actuators["gripper"]
     assert act.joint_names_expr == ["Jaw"]
-    assert act.effort_limit_sim == pytest.approx(2.5)
-    assert act.velocity_limit_sim == pytest.approx(1.5)
-    assert act.stiffness == pytest.approx(60.0)
-    assert act.damping == pytest.approx(20.0)
+    assert act.effort_limit_sim == 30
+    assert act.stiffness == pytest.approx(4)
+    assert act.damping == pytest.approx(0.3)
 
 
-def test_so101_canonical_articulation_props_match_urdf_era():
-    """The canonical articulation properties must match the URDF-era settings."""
+def test_so101_canonical_articulation_props_match_lior():
+    """The canonical articulation props match Lior's compliant config: solver
+    32/1 and self-collisions disabled so the arm doesn't bind."""
     pytest.importorskip("isaaclab.sim")
 
     from openso101.robots.so101.so_arm101 import SO_ARM101_CFG
 
     props = SO_ARM101_CFG.spawn.articulation_props
-    assert props.enabled_self_collisions is True
-    assert props.solver_position_iteration_count == 8
-    assert props.solver_velocity_iteration_count == 0
+    assert props.enabled_self_collisions is False
+    assert props.solver_position_iteration_count == 32
+    assert props.solver_velocity_iteration_count == 1
     assert props.fix_root_link is True
     assert SO_ARM101_CFG.soft_joint_pos_limit_factor == pytest.approx(0.9)
 
@@ -192,11 +186,14 @@ def test_so101_ppo_uses_log_noise_std_parameterization():
     assert 'SO101_PPO_NOISE_STD_TYPE: str = "log"' in text
 
 
-def test_so101_rl_canonical_independent_of_teleop_cfg():
-    """The RL canonical must stay at URDF-era gains after introducing the teleop cfg.
+def test_so101_rl_and_teleop_share_lior_compliant_config():
+    """RL and teleop both adopt Lior's compliant gains and solver settings.
 
-    Pins that adding SO_ARM101_TELEOP_CFG did not accidentally drift the RL
-    canonical's actuator values or articulation properties.
+    Differ only by activate_contact_sensors (True for RL because pick_place's
+    grasped_reward consumes /Robot/gripper and /Robot/jaw contact signals).
+    Identical actuator gains, solver iterations, and self-collision setting
+    keep sim behavior consistent between IL recording and trained-policy
+    rollouts.
     """
     pytest.importorskip("isaaclab.sim")
 
@@ -205,23 +202,21 @@ def test_so101_rl_canonical_independent_of_teleop_cfg():
         SO_ARM101_TELEOP_CFG,
     )
 
-    # RL canonical: 1.9 / 1.5 effort/velocity on the arm.
-    rl_rotation = SO_ARM101_CFG.actuators["rotation"]
-    assert rl_rotation.effort_limit_sim == pytest.approx(1.9)
-    assert rl_rotation.velocity_limit_sim == pytest.approx(1.5)
-    # Self-collisions on, solver iters 8/0.
-    assert SO_ARM101_CFG.spawn.articulation_props.enabled_self_collisions is True
-    assert SO_ARM101_CFG.spawn.articulation_props.solver_position_iteration_count == 8
-    assert SO_ARM101_CFG.spawn.articulation_props.solver_velocity_iteration_count == 0
+    # Actuator parity: Lior's compliant gains on both, effort=30.
+    for name in ("rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll", "gripper"):
+        rl_act = SO_ARM101_CFG.actuators[name]
+        tp_act = SO_ARM101_TELEOP_CFG.actuators[name]
+        assert rl_act.effort_limit_sim == tp_act.effort_limit_sim == 30, name
+        assert rl_act.stiffness == pytest.approx(tp_act.stiffness), name
+        assert rl_act.damping == pytest.approx(tp_act.damping), name
 
-    # Teleop cfg: 8.0 / 3.5 effort/velocity on the arm.
-    teleop_rotation = SO_ARM101_TELEOP_CFG.actuators["rotation"]
-    assert teleop_rotation.effort_limit_sim == pytest.approx(8.0)
-    assert teleop_rotation.velocity_limit_sim == pytest.approx(3.5)
-    # Self-collisions off, solver iters 32/4.
-    assert SO_ARM101_TELEOP_CFG.spawn.articulation_props.enabled_self_collisions is False
-    assert SO_ARM101_TELEOP_CFG.spawn.articulation_props.solver_position_iteration_count == 32
-    assert SO_ARM101_TELEOP_CFG.spawn.articulation_props.solver_velocity_iteration_count == 4
+    # Articulation parity, except the contact-sensor flag.
+    for cfg in (SO_ARM101_CFG, SO_ARM101_TELEOP_CFG):
+        assert cfg.spawn.articulation_props.enabled_self_collisions is False
+        assert cfg.spawn.articulation_props.solver_position_iteration_count == 32
+        assert cfg.spawn.articulation_props.solver_velocity_iteration_count == 1
+    assert SO_ARM101_CFG.spawn.activate_contact_sensors is True
+    assert SO_ARM101_TELEOP_CFG.spawn.activate_contact_sensors is False
 
     # The two cfgs must be different ArticulationCfg objects (no shared identity).
     assert SO_ARM101_CFG is not SO_ARM101_TELEOP_CFG
