@@ -706,6 +706,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     fps=args.fps,
                     dataset_id=args.repo_id,
                     sim_joint_names=sim_joint_names,
+                    env_id=args.task,
                 )
             else:
                 recorder = OpenSO101LeRobotRecorder(
@@ -1469,7 +1470,21 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     args.hold_steps = getattr(args, "hold_steps", 30)
     args.no_camera_viewports = getattr(args, "no_camera_viewports", False)
     if args.task is None:
-        args.task = "OpenSO101-PickPlace-v0"
+        # Recover the gym env ID from the HDF5 attrs written at record time.
+        # Without this, replay would silently default to PickPlace even for
+        # episodes recorded in Lift or Stack and render the wrong scene.
+        import h5py
+
+        with h5py.File(episode_path, "r") as h5:
+            env_id = h5.attrs.get("env_id")
+        if env_id is None:
+            raise SystemExit(
+                f"Episode {episode_path} does not record an env_id "
+                "(recorded before 2026-05-16 schema bump). Pass "
+                "--task explicitly, e.g. --task OpenSO101-Stack-v0."
+            )
+        args.task = env_id.decode() if isinstance(env_id, bytes) else str(env_id)
+        print(f"[INFO]: Replay env auto-selected from episode attrs: {args.task}")
 
     simulation_app = _launch_isaac_app(args, enable_cameras=True)
 

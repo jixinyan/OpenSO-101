@@ -105,9 +105,15 @@ class OpenSO101HDF5TeleopRecorder:
         flush_steps: int = 100,
         chunks_length: int = 100,
         compression: str | None = "lzf",
+        env_id: str | None = None,
     ):
         self.root = Path(root)
         self.task_name = task_name
+        # The gym env ID (e.g. "OpenSO101-Stack-v0") that recorded this
+        # episode. Replay reads it from the HDF5 attrs to spawn the same
+        # scene; without it, replay can only guess and may render the
+        # wrong task (default PickPlace).
+        self.env_id = env_id
         self.cameras = dict(cameras)
         self.fps = fps
         self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
@@ -184,6 +190,8 @@ class OpenSO101HDF5TeleopRecorder:
         h5.attrs["format"] = "openso101_teleop_hdf5_v1"
         h5.attrs["dataset_id"] = self.dataset_id
         h5.attrs["task"] = self.task_name
+        if self.env_id is not None:
+            h5.attrs["env_id"] = self.env_id
         h5.attrs["fps"] = int(self.fps)
         h5.attrs["success"] = bool(success)
         h5.attrs["joint_names"] = np.asarray(SO101_TELEOP_CONTROL_JOINT_NAMES, dtype=h5py.string_dtype())
