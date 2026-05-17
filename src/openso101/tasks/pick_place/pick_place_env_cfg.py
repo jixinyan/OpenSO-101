@@ -306,6 +306,22 @@ class RewardsCfg:
         weight=16.0,
     )
 
+    # Sparse per-step bonus while the cube is inside the current goal sphere
+    # AND still in the air. Naturally only fires in stages 0/1 (lift/carry
+    # targets are above the table); stage 2's goal is on the table so the
+    # cube must be below 0.04 m to be at the place target, which the height
+    # gate kills. Complements the stage_*_complete_bonus one-shot transitions
+    # by providing a continuous "you're holding it at the target" signal.
+    goal_touch_in_air = RewTerm(
+        func=mdp.object_reached_goal_in_air,
+        params={
+            "minimal_height": 0.04,
+            "goal_radius": 0.05,
+            "command_name": "object_pose",
+        },
+        weight=8.0,
+    )
+
     success_bonus = RewTerm(
         func=mdp.is_terminated_term,
         params={"term_keys": ["success"]},
