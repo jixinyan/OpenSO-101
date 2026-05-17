@@ -424,6 +424,9 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+        # See lift_env_cfg for rationale: Lior-style 32-iteration solver
+        # overflows the default ~64 MB GPU contact buffer at high num_envs.
+        self.sim.physx.gpu_collision_stack_size = 512 * 1024 * 1024
 
         # SO-101 scene wiring.
         _configure_so101_pick_place_scene(self)
