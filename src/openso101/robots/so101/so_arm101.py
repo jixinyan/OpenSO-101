@@ -89,20 +89,22 @@ SO101_TELEOP_INIT_JOINT_POS = SO101_CANONICAL_INIT_JOINT_POS
 # Configuration
 ##
 
-# Aggressive Lior-style RL config. Mirrors SO_ARM101_TELEOP_CFG below in every
-# way except activate_contact_sensors=True, which is required for the
-# grasped_reward term in pick_place. The earlier high-stiffness URDF-era gains
-# (e.g. gripper k=60, d=20) caused the jaws to hammer rather than pinch; the
-# earlier custom collision spawn function silently disabled gripper colliders
-# by adding standalone CollisionAPI on PhysxMeshMergeCollisionAPI children.
-# Both removed. Trust the USD's authored colliders and use compliant gains
-# that match real SO-101 servo bandwidth.
+# Aggressive Lior-style RL config. Mirrors SO_ARM101_TELEOP_CFG below in PD
+# gains, solver settings, and effort caps. Two intentional divergences:
+#
+#   1. activate_contact_sensors=True (teleop is False). Required for
+#      pick_place's grasped_reward, which reads /Robot/gripper and
+#      /Robot/jaw contact signals.
+#   2. velocity_limit_sim=SO101_RL_VELOCITY_LIMIT on every actuator (teleop
+#      leaves it unset, matching Lior verbatim). Without this cap, the
+#      compliant high-effort actuator slams toward any policy-issued
+#      position target — observed symptom was the arm whipping at
+#      ~25 rad/s during RL. Teleop doesn't need the cap because the
+#      leader-arm-driven targets are naturally bounded by human motion.
+SO101_RL_VELOCITY_LIMIT = 2.0
 SO_ARM101_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=str(so101_usd_path()),
-        # Required by pick_place's grasped_reward: the contact sensors on
-        # /Robot/gripper and /Robot/jaw need the PhysX contact reporter API
-        # applied at spawn. Teleop sets this False since it has no rewards.
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
@@ -126,6 +128,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "rotation": ImplicitActuatorCfg(
             joint_names_expr=["Rotation"],
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=55,
             damping=0.7,
         ),
@@ -133,6 +136,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "pitch": ImplicitActuatorCfg(
             joint_names_expr=["Pitch"],
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=30,
             damping=0.8,
         ),
@@ -140,6 +144,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "elbow": ImplicitActuatorCfg(
             joint_names_expr=["Elbow"],
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=25,
             damping=0.7,
         ),
@@ -147,6 +152,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "wrist_pitch": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Pitch"],
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=12,
             damping=0.5,
         ),
@@ -154,6 +160,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "wrist_roll": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Roll"],
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=7,
             damping=0.5,
         ),
@@ -161,6 +168,7 @@ SO_ARM101_CFG = ArticulationCfg(
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
             effort_limit_sim=30,
+            velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
             stiffness=4,
             damping=0.3,
         ),
