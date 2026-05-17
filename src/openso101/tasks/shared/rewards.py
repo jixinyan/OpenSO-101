@@ -11,6 +11,7 @@ import torch
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
+from isaaclab.utils.math import combine_frame_transforms
 
 from openso101.robots import SO101_GRIPPER_JOINT_NAMES
 
@@ -154,6 +155,39 @@ def object_controlled_by_gripper_reward(
     ).float()
 
 
+def object_reached_goal_in_air(
+    env: ManagerBasedRLEnv,
+    minimal_height: float,
+    goal_radius: float,
+    command_name: str = "object_pose",
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Sparse 0/1 reward fired per-step while the object is in the goal region
+    AND above ``minimal_height``.
+
+    Condition: ``||goal - object|| < goal_radius`` AND ``object.z > minimal_height``.
+    Goal is interpreted in the robot-root frame (matches the lift_success
+    termination's transform), so the same minimal_height / goal_radius values
+    behave consistently between reward and termination.
+
+    Unlike ``is_terminated_term``, this fires every step the cube stays in
+    the goal region, which gives a stronger learning signal than a one-shot
+    end-of-episode reward.
+    """
+    robot: RigidObject = env.scene[robot_cfg.name]
+    object: RigidObject = env.scene[object_cfg.name]
+    command = env.command_manager.get_command(command_name)
+    des_pos_b = command[:, :3]
+    des_pos_w, _ = combine_frame_transforms(
+        robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], des_pos_b
+    )
+    distance = torch.norm(des_pos_w - object.data.root_pos_w[:, :3], dim=1)
+    in_goal = distance < goal_radius
+    in_air = object.data.root_pos_w[:, 2] > minimal_height
+    return (in_goal & in_air).float()
+
+
 __all__ = [
     "joint_pos_delta_l2",
     "gripper_joint_pos",
@@ -162,4 +196,5 @@ __all__ = [
     "close_gripper_near_object",
     "object_controlled_by_gripper",
     "object_controlled_by_gripper_reward",
+    "object_reached_goal_in_air",
 ]

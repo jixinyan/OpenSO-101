@@ -229,6 +229,19 @@ class RewardsCfg:
         weight=5.0,
     )
 
+    # Sparse per-step bonus when the cube enters the goal region while
+    # still in the air. goal_radius matches the lift_success termination
+    # (0.05 m) so the reward fires for every step inside the success ball.
+    success_bonus_in_air = RewTerm(
+        func=mdp.object_reached_goal_in_air,
+        params={
+            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+            "goal_radius": 0.05,
+            "command_name": "object_pose",
+        },
+        weight=10.0,
+    )
+
     # Smoothness (zero-weighted initially; curriculum ramps them in
     # once lift fires).
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=SO101_ACTION_RATE_WEIGHT)
