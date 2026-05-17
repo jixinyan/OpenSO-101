@@ -347,6 +347,11 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+        # 4096-env training with the Lior-style 32-iteration solver generates
+        # ~340 MB of contact pairs per step; the default ~64 MB buffer
+        # overflows and PhysX silently drops contacts. Sized at 512 MB for
+        # headroom; drop to 256 MB if running with num_envs <= 1024.
+        self.sim.physx.gpu_collision_stack_size = 512 * 1024 * 1024
 
         # SO-101 scene wiring.
         _configure_so101_lift_scene(self)
