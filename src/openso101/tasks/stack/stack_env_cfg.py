@@ -221,18 +221,17 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
+    """Smoothness ramp after early stack behavior can emerge.
+
+    NOTE: joint_vel is NOT here — it's active from step 0 (see
+    SO101_JOINT_VEL_WEIGHT). The arm jittering at iter 0 would slap the cube
+    off the table before the policy learns to reach.
+    """
+
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
         params={
             "term_name": "action_rate",
-            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
-            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
-        },
-    )
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "joint_vel",
             "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
             "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
         },

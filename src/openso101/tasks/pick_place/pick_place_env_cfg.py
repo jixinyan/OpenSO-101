@@ -360,21 +360,17 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Gentle smoothness ramp after early lift/carry behavior can emerge."""
+    """Gentle smoothness ramp after early lift/carry behavior can emerge.
+
+    NOTE: joint_vel is NOT here — it's active from step 0 (see
+    SO101_JOINT_VEL_WEIGHT) so the arm doesn't jitter the cube off the table
+    before the policy learns to reach.
+    """
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
         params={
             "term_name": "action_rate",
-            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
-            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
-        },
-    )
-
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "joint_vel",
             "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
             "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
         },
