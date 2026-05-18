@@ -165,12 +165,18 @@ SO_ARM101_CFG = ArticulationCfg(
             damping=0.5,
         ),
         # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
+        # Stiffness bumped from Lior's k=4 to k=15 for RL only. With k=4, the
+        # jaws close too slowly to pin a moving cube during policy exploration:
+        # the policy can never assign credit to "close gripper" because by the
+        # time the jaws close, the cube has already moved. Teleop stays at k=4
+        # because human-driven targets give enough lead time. k=15 is still
+        # well below the URDF-era 60 that "hammered" the cube.
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
             effort_limit_sim=30,
             velocity_limit_sim=SO101_RL_VELOCITY_LIMIT,
-            stiffness=4,
-            damping=0.3,
+            stiffness=15,
+            damping=0.5,
         ),
     },
     soft_joint_pos_limit_factor=0.9,

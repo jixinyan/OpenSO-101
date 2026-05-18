@@ -30,6 +30,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
     FrameTransformerCfg,
     OffsetCfg,
@@ -79,6 +80,25 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     ee_frame: FrameTransformerCfg = MISSING
     # target object: will be populated by env cfg __post_init__
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
+
+    # Contact sensors on the two opposing jaw bodies, filtered to the cube prim.
+    # Feed the ``grasped`` reward (contact-confirmed pinch). Optional because
+    # teleop strips them — the teleop robot config sets activate_contact_sensors
+    # to False and the bodies have no contact reporter API.
+    gripper_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/gripper",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+    )
+    moving_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/jaw",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+    )
 
     # Table
     table = AssetBaseCfg(
@@ -199,6 +219,17 @@ class RewardsCfg:
         func=mdp.object_ee_distance,
         params={"std": SO101_REACH_REWARD_STD},
         weight=1.0,
+    )
+
+    # Contact-confirmed grasp bonus — dense signal that the jaws are actually
+    # pinching the cube (both ContactSensors register force > threshold).
+    # Provides the gradient the policy needs to discover the close-then-lift
+    # sequence; without it the policy gets stuck on "just reach" and entropy
+    # collapses before it tries closing the gripper at the right moment.
+    grasped = RewTerm(
+        func=mdp.grasped_reward,
+        params={"force_threshold": 0.5},
+        weight=3.0,
     )
 
     # Height-only lift reward. No AND-conjunction with gripper-closed or
@@ -426,6 +457,11 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             _configure_so101_lift_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
             # Restore body_name for the command, otherwise the manager errors.
             self.commands.object_pose.body_name = ["gripper"]
+            # Strip jaw contact sensors: teleop robot config disables contact
+            # reporting, and no teleop reward consumes the signal. Same
+            # pattern as pick_place's configure_action_mode("teleop").
+            self.scene.gripper_jaw_contact = None
+            self.scene.moving_jaw_contact = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None
