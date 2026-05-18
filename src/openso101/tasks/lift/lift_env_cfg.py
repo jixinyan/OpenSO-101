@@ -334,21 +334,18 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Curriculum terms for the MDP."""
+    """Curriculum terms for the MDP.
+
+    NOTE: joint_vel is NOT in the curriculum because it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only the exploration-suppressing penalties
+    that we want delayed until lift fires (action_rate, joint_pos_delta if
+    you add one) belong here.
+    """
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
         params={
             "term_name": "action_rate",
-            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
-            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
-        },
-    )
-
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "joint_vel",
             "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
             "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
         },
