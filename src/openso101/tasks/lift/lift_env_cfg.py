@@ -130,9 +130,17 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command terms for the MDP."""
 
-    object_pose = mdp.UniformPoseCommandCfg(
+    object_pose = mdp.CubeAbovePoseCommandCfg(
         asset_name="robot",
         body_name=MISSING,  # will be set by env cfg __post_init__
+        object_name="object",
+        # Per-env sampled lift height above the cube's current position.
+        # The cube center sits at world z = 0.015 on the table; with this
+        # range the goal sphere sits 15-20 cm above the cube's top face.
+        lift_height_range=(0.15, 0.20),
+        # resampling_time_range == episode_length_s -> resample fires once
+        # per episode, immediately after the cube-reset event. Goal is
+        # therefore locked to the *initial* cube xy of each episode.
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
         # Visible green sphere marker at the goal pose, radius = 5 cm to
@@ -149,10 +157,13 @@ class CommandsCfg:
                 ),
             },
         ),
+        # Position ranges are ignored by CubeAbovePoseCommand (cube-relative).
+        # Only roll/pitch/yaw are read for orientation sampling; defaults
+        # produce identity quat.
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(-0.1, 0.1),
-            pos_y=(-0.3, -0.1),
-            pos_z=(0.2, 0.35),
+            pos_x=(0.0, 0.0),
+            pos_y=(0.0, 0.0),
+            pos_z=(0.0, 0.0),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
             yaw=(0.0, 0.0),
