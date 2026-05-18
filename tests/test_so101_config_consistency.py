@@ -153,9 +153,16 @@ def test_so101_canonical_arm_actuators_use_lior_compliant_gains():
         assert act.damping == pytest.approx(want["damping"]), name
 
 
-def test_so101_canonical_gripper_actuator_uses_lior_compliant_gains():
-    """The canonical gripper uses Lior's compliant gains (k=4, d=0.3) so the
-    jaws pinch rather than hammer. Velocity capped on RL (not teleop)."""
+def test_so101_canonical_gripper_actuator_uses_rl_tuned_gains():
+    """RL gripper stiffness is bumped from Lior's k=4 to k=15.
+
+    Lior's k=4 is great for teleop (human leads, gripper follows), but for
+    RL the slow gripper closure means the policy can't reliably pin a moving
+    cube during exploration; entropy collapses before the policy ever
+    discovers "close gripper at the right moment". k=15 closes fast enough
+    for RL while still being well below the URDF-era 60 that hammered the
+    cube and bounced it out.
+    """
     pytest.importorskip("isaaclab.sim")
 
     from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO101_RL_VELOCITY_LIMIT
@@ -164,8 +171,8 @@ def test_so101_canonical_gripper_actuator_uses_lior_compliant_gains():
     assert act.joint_names_expr == ["Jaw"]
     assert act.effort_limit_sim == 30
     assert act.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT)
-    assert act.stiffness == pytest.approx(4)
-    assert act.damping == pytest.approx(0.3)
+    assert act.stiffness == pytest.approx(15)
+    assert act.damping == pytest.approx(0.5)
 
 
 def test_so101_canonical_articulation_props_match_lior():
@@ -216,9 +223,9 @@ def test_so101_rl_and_teleop_share_lior_compliant_config():
         SO101_RL_VELOCITY_LIMIT,
     )
 
-    # Actuator parity: Lior's compliant gains on both, effort=30, but
-    # velocity capped on RL only.
-    for name in ("rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll", "gripper"):
+    # Actuator parity on the arm joints: Lior's compliant gains on both,
+    # effort=30. Velocity capped on RL only. Gripper diverges (see below).
+    for name in ("rotation", "pitch", "elbow", "wrist_pitch", "wrist_roll"):
         rl_act = SO_ARM101_CFG.actuators[name]
         tp_act = SO_ARM101_TELEOP_CFG.actuators[name]
         assert rl_act.effort_limit_sim == tp_act.effort_limit_sim == 30, name
@@ -226,6 +233,16 @@ def test_so101_rl_and_teleop_share_lior_compliant_config():
         assert rl_act.damping == pytest.approx(tp_act.damping), name
         assert rl_act.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT), name
         assert tp_act.velocity_limit_sim is None, name
+
+    # Gripper diverges: teleop keeps Lior's k=4 (works for human-led grip);
+    # RL bumps to k=15 (fast enough to pin a moving cube during exploration).
+    rl_grip = SO_ARM101_CFG.actuators["gripper"]
+    tp_grip = SO_ARM101_TELEOP_CFG.actuators["gripper"]
+    assert rl_grip.effort_limit_sim == tp_grip.effort_limit_sim == 30
+    assert rl_grip.stiffness == pytest.approx(15)
+    assert tp_grip.stiffness == pytest.approx(4)
+    assert rl_grip.damping == pytest.approx(0.5)
+    assert tp_grip.damping == pytest.approx(0.3)
 
     # Articulation parity, except the contact-sensor flag.
     for cfg in (SO_ARM101_CFG, SO_ARM101_TELEOP_CFG):
