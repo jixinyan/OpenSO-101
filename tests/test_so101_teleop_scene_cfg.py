@@ -16,9 +16,11 @@ def test_so101_training_scene_uses_canonical_usd_robot_backend():
     env.close()
 
     assert cfg.scene.robot.spawn.usd_path.endswith("SO-ARM101-USD.usd")
-    # RL trusts the USD's authored colliders verbatim (Lior-style). Earlier
-    # custom-spawn attempts silently disabled gripper collision; the function
-    # has been deleted entirely from this module.
+    # RL spawn binds a high-friction material on the gripper colliders
+    # (spawn_so101_usd_with_grip_friction). The aggressive variant that
+    # mutated CollisionAPI was deleted; the current func is minimal.
+    from openso101.robots.so101.so_arm101 import spawn_so101_usd_with_grip_friction
+    assert cfg.scene.robot.spawn.func is spawn_so101_usd_with_grip_friction
     assert cfg.scene.robot.spawn.activate_contact_sensors is True
     assert cfg.scene.robot.spawn.articulation_props.fix_root_link is True
     assert cfg.scene.robot.init_state.pos == pytest.approx((0.0, 0.0, SO101_USD_TABLETOP_ROOT_Z))
@@ -71,10 +73,13 @@ def test_so101_teleop_scene_uses_canonical_usd_without_manual_fingertip_pads():
     env.close()
 
     assert cfg.scene.robot.spawn.usd_path.endswith("SO-ARM101-USD.usd")
-    # Teleop trusts the USD's authored colliders verbatim (Lior-style:
-    # liorbenhorin/lerobot_so101_teleop). Earlier custom-spawn attempts
-    # silently disabled gripper collision by adding standalone CollisionAPI
-    # on merge children — the custom function has been deleted entirely.
+    # Teleop trusts the USD's authored colliders + friction verbatim
+    # (Lior-style: liorbenhorin/lerobot_so101_teleop). The RL-only friction
+    # binding spawn function (spawn_so101_usd_with_grip_friction) must NOT
+    # be wired here — human-led teleop has its own friction compensation
+    # via the leader-arm control loop.
+    from openso101.robots.so101.so_arm101 import spawn_so101_usd_with_grip_friction
+    assert cfg.scene.robot.spawn.func is not spawn_so101_usd_with_grip_friction
     assert cfg.scene.robot.spawn.activate_contact_sensors is False
     # Contact sensors must be stripped: the teleop robot has no contact
     # reporter API on its bodies, and no teleop reward consumes the signal.

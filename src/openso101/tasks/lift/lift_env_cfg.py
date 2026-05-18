@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import MISSING
 
 import isaaclab.sim as sim_utils
+from isaaclab.markers import VisualizationMarkersCfg
 from isaaclab.assets import (
     ArticulationCfg,
     AssetBaseCfg,
@@ -53,7 +54,6 @@ from openso101.tasks.shared.objects import so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
     SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
-    SO101_GOAL_TRACKING_FINE_STD,
     SO101_GOAL_TRACKING_STD,
     SO101_JOINT_POS_DELTA_WEIGHT,
     SO101_JOINT_VEL_WEIGHT,
@@ -135,6 +135,20 @@ class CommandsCfg:
         body_name=MISSING,  # will be set by env cfg __post_init__
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
+        # Visible green sphere marker at the goal pose, radius = 5 cm to
+        # match the lift_success goal_radius. Replaces the default RGB
+        # axis triad (FRAME_MARKER_CFG) which is hard to spot in saved
+        # training videos. Teleop's debug_vis=False suppresses both
+        # markers, so this is RL-only.
+        goal_pose_visualizer_cfg=VisualizationMarkersCfg(
+            prim_path="/Visuals/Command/goal_pose",
+            markers={
+                "goal": sim_utils.SphereCfg(
+                    radius=0.05,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.2)),
+                ),
+            },
+        ),
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(-0.1, 0.1),
             pos_y=(-0.3, -0.1),
@@ -234,26 +248,23 @@ class RewardsCfg:
 
     # Height-only lift reward. No AND-conjunction with gripper-closed or
     # EE-near. Once the cube goes up, this fires.
+    # Weight reduced 15 -> 3 because the previous magnitude dominated the
+    # return distribution (lift airborne 200 steps = 3000 of an ~5000 max
+    # return) and made PPO's value function unable to fit the variance.
     lifting_object = RewTerm(
         func=mdp.object_is_lifted,
         params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
-        weight=15.0,
+        weight=3.0,
     )
 
     # Height-only goal tracking. Same minimal-height gate.
+    # Weight reduced 16 -> 5. The fine-grained duplicate was redundant
+    # (same condition, sharper std) and added another spiky term to the
+    # return, so it was dropped entirely.
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
         params={
             "std": SO101_GOAL_TRACKING_STD,
-            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
-            "command_name": "object_pose",
-        },
-        weight=16.0,
-    )
-    object_goal_tracking_fine_grained = RewTerm(
-        func=mdp.object_goal_distance,
-        params={
-            "std": SO101_GOAL_TRACKING_FINE_STD,
             "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
             "command_name": "object_pose",
         },
@@ -263,6 +274,9 @@ class RewardsCfg:
     # Sparse per-step bonus when the cube enters the goal region while
     # still in the air. goal_radius matches the lift_success termination
     # (0.05 m) so the reward fires for every step inside the success ball.
+    # Weight reduced 10 -> 3 — termination ends the episode almost
+    # immediately on entry, so this term only fires for ~1 step regardless
+    # of weight, but the smaller magnitude makes value targets more uniform.
     success_bonus_in_air = RewTerm(
         func=mdp.object_reached_goal_in_air,
         params={
@@ -270,7 +284,7 @@ class RewardsCfg:
             "goal_radius": 0.05,
             "command_name": "object_pose",
         },
-        weight=10.0,
+        weight=3.0,
     )
 
     # Smoothness (zero-weighted initially; curriculum ramps them in
