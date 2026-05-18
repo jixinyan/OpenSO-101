@@ -85,12 +85,97 @@ SO101_BASE_INIT_ROT: tuple[float, float, float, float] = (
 SO101_TELEOP_INIT_JOINT_POS = SO101_CANONICAL_INIT_JOINT_POS
 
 
+# RL-only: a high-friction physics material bound to the gripper / jaw
+# collision prims at spawn. The USD's default friction (~0.5) plus the
+# cube's friction (1.0) gives an effective grip coefficient too low for the
+# RL policy to hold a small cube during exploration. Teleop doesn't use
+# this binding — a human operator compensates for slippery jaws by careful
+# positioning.
+SO101_RL_GRIPPER_STATIC_FRICTION = 1.5
+SO101_RL_GRIPPER_DYNAMIC_FRICTION = 1.2
+
+
+def spawn_so101_usd_with_grip_friction(
+    prim_path: str,
+    cfg: sim_utils.UsdFileCfg,
+    translation: tuple[float, float, float] | None = None,
+    orientation: tuple[float, float, float, float] | None = None,
+    **kwargs,
+):
+    """Spawn the USD as-authored, then bind a high-friction material on
+    every authored collider under ``/gripper/collisions`` and
+    ``/jaw/collisions``.
+
+    Minimal scope (does NOT touch the authored colliders):
+    - No ``CollisionAPI`` applications (previous rewrite did this and
+      conflicted with the USD's ``PhysxMeshMergeCollisionAPI``).
+    - No merge-API stripping.
+    - No collision approximation changes.
+    - Only de-instances the collision subtree and binds the friction
+      material via ``UsdShade.MaterialBindingAPI`` with
+      ``strongerThanDescendants`` so the cube-on-gripper friction uses
+      the bound value via ``friction_combine_mode="max"``.
+
+    Used by ``SO_ARM101_CFG`` (RL) only. ``SO_ARM101_TELEOP_CFG`` keeps
+    the default ``spawn_from_usd`` (no friction binding) because the
+    human-led teleop control loop compensates for slippery jaws and the
+    Lior reference config does the same.
+    """
+
+    from pxr import Usd, UsdPhysics, UsdShade
+
+    from isaaclab.sim.spawners.from_files import from_files
+
+    prim = from_files.spawn_from_usd(prim_path, cfg, translation, orientation, **kwargs)
+    stage = prim.GetStage()
+    root_path = str(prim.GetPath())
+    contact_groups = (f"{root_path}/gripper/collisions", f"{root_path}/jaw/collisions")
+
+    material_cfg = sim_utils.RigidBodyMaterialCfg(
+        static_friction=SO101_RL_GRIPPER_STATIC_FRICTION,
+        dynamic_friction=SO101_RL_GRIPPER_DYNAMIC_FRICTION,
+        restitution=0.0,
+        friction_combine_mode="max",
+        restitution_combine_mode="min",
+    )
+    material_path = f"{root_path}/gripper_contact_material"
+    material_cfg.func(material_path, material_cfg)
+    material = UsdShade.Material(stage.GetPrimAtPath(material_path))
+
+    def _make_editable(group_prim):
+        if group_prim.IsInstance():
+            group_prim.SetInstanceable(False)
+        for descendant in Usd.PrimRange(group_prim):
+            if descendant.IsInstance():
+                descendant.SetInstanceable(False)
+
+    bound: set[str] = set()
+    for group in contact_groups:
+        group_prim = stage.GetPrimAtPath(group)
+        if not group_prim or not group_prim.IsValid():
+            continue
+        _make_editable(group_prim)
+        for descendant in Usd.PrimRange(group_prim):
+            path = str(descendant.GetPath())
+            if path in bound or not descendant.HasAPI(UsdPhysics.CollisionAPI):
+                continue
+            bound.add(path)
+            binding = UsdShade.MaterialBindingAPI.Apply(descendant)
+            binding.Bind(
+                material,
+                bindingStrength=UsdShade.Tokens.strongerThanDescendants,
+                materialPurpose="physics",
+            )
+
+    return prim
+
+
 ##
 # Configuration
 ##
 
 # Aggressive Lior-style RL config. Mirrors SO_ARM101_TELEOP_CFG below in PD
-# gains, solver settings, and effort caps. Two intentional divergences:
+# gains, solver settings, and effort caps. Three intentional divergences:
 #
 #   1. activate_contact_sensors=True (teleop is False). Required for
 #      pick_place's grasped_reward, which reads /Robot/gripper and
@@ -98,12 +183,15 @@ SO101_TELEOP_INIT_JOINT_POS = SO101_CANONICAL_INIT_JOINT_POS
 #   2. velocity_limit_sim=SO101_RL_VELOCITY_LIMIT on every actuator (teleop
 #      leaves it unset, matching Lior verbatim). Without this cap, the
 #      compliant high-effort actuator slams toward any policy-issued
-#      position target — observed symptom was the arm whipping at
-#      ~25 rad/s during RL. Teleop doesn't need the cap because the
-#      leader-arm-driven targets are naturally bounded by human motion.
+#      position target.
+#   3. Custom spawn func that binds a high-friction material on gripper
+#      collision prims. Teleop's gripper friction comes from the USD
+#      default (~0.5) which is fine for human-led grasping; RL needs the
+#      higher value to grip the cube during exploration.
 SO101_RL_VELOCITY_LIMIT = 2.0
 SO_ARM101_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
+        func=spawn_so101_usd_with_grip_friction,
         usd_path=str(so101_usd_path()),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
