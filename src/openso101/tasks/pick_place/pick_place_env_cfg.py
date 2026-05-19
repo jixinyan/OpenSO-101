@@ -527,9 +527,15 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.rewards = None
             self.terminations = None
             self.curriculum = None
-            # Hide RL-only debug markers (goal sphere + EE axis triad) so the
-            # IL recording cameras see a clean scene.
-            self.commands.object_pose.debug_vis = False
+            # Lock the curriculum goal at the final place sphere — operators
+            # want one explicit "place here" target, not the RL lift / carry /
+            # place chain. With stage pinned at 2, _update_command's
+            # `stage < 2` advancement gate naturally skips. The on-table place
+            # sphere remains visible (cfg-level debug_vis stays True so
+            # programmatic users get the marker; `_cmd_record`'s --goal-region
+            # default also lights it up for CLI users).
+            self.commands.object_pose.lock_stage = 2
+            # Hide the EE axis triad so the IL recording cameras see a clean scene.
             self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
             self.scene.num_envs = 1
