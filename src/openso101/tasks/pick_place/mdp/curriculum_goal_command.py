@@ -258,7 +258,7 @@ class CurriculumGoalCommandCfg(CommandTermCfg):
     """
 
     # --- Stage 2 (place) ---
-    place_goal: tuple[float, float, float] = (0.20, 0.18, 0.02)
+    place_goal: tuple[float, float, float] = (0.28, 0.12, 0.02)
     """Fixed table pose in robot root frame for stage 2 (z ~= cube half-height)."""
 
     advance_threshold: float = 0.03
