@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import MISSING
 
 import isaaclab.sim as sim_utils
+from isaaclab.markers import VisualizationMarkersCfg
 from isaaclab.assets import (
     ArticulationCfg,
     AssetBaseCfg,
@@ -30,6 +31,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
     FrameTransformerCfg,
     OffsetCfg,
@@ -51,10 +53,7 @@ from openso101.robots.so101.so_arm101 import SO_ARM101_CFG, SO_ARM101_TELEOP_CFG
 from openso101.tasks.shared.objects import so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
-    SO101_CLOSE_GRIPPER_CLOSED_STD,
-    SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
     SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
-    SO101_GOAL_TRACKING_FINE_STD,
     SO101_GOAL_TRACKING_STD,
     SO101_JOINT_POS_DELTA_WEIGHT,
     SO101_JOINT_VEL_WEIGHT,
@@ -81,6 +80,25 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     ee_frame: FrameTransformerCfg = MISSING
     # target object: will be populated by env cfg __post_init__
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
+
+    # Contact sensors on the two opposing jaw bodies, filtered to the cube prim.
+    # Feed the ``grasped`` reward (contact-confirmed pinch). Optional because
+    # teleop strips them — the teleop robot config sets activate_contact_sensors
+    # to False and the bodies have no contact reporter API.
+    gripper_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/gripper",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+    )
+    moving_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/jaw",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/Object"],
+    )
 
     # Table
     table = AssetBaseCfg(
@@ -112,15 +130,36 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command terms for the MDP."""
 
-    object_pose = mdp.UniformPoseCommandCfg(
+    object_pose = mdp.CubeAbovePoseCommandCfg(
         asset_name="robot",
         body_name=MISSING,  # will be set by env cfg __post_init__
+        object_name="object",
+        # Per-env lift height above the cube; goal sphere ends up 15-20 cm
+        # above the cube's top face (cube center is at world z = 0.015).
+        lift_height_range=(0.15, 0.20),
+        # resampling_time_range == episode_length_s -> resample fires once per
+        # episode, right after the cube-reset event; goal is locked to the
+        # initial cube xy.
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
+        # Visible green sphere at the goal (radius matches lift_success
+        # goal_radius). Replaces the default RGB axis triad, which is hard
+        # to spot in saved training videos.
+        goal_pose_visualizer_cfg=VisualizationMarkersCfg(
+            prim_path="/Visuals/Command/goal_pose",
+            markers={
+                "goal": sim_utils.SphereCfg(
+                    radius=0.05,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.2)),
+                ),
+            },
+        ),
+        # pos_* ranges are ignored by CubeAbovePoseCommand; only roll/pitch/yaw
+        # are read (defaults -> identity quat).
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(-0.1, 0.1),
-            pos_y=(-0.3, -0.1),
-            pos_z=(0.2, 0.35),
+            pos_x=(0.0, 0.0),
+            pos_y=(0.0, 0.0),
+            pos_z=(0.0, 0.0),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
             yaw=(0.0, 0.0),
@@ -181,11 +220,13 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Upstream-pattern reward chain (adapted to SO101 geometry).
+    """Minimal three-signal reward chain: reach -> lift -> goal-track-in-air.
 
-    Chain: reach (two-scale) -> close_gripper (shaping) -> lift (height-only)
-    -> goal_track (height-only, two-scale). No triple-AND grasp gate -- the
-    policy bootstraps from "cube briefly airborne" the way upstream does.
+    No close_gripper shaping, no "controlled" gates. The lift reward (height-
+    only) implicitly rewards grasping because lifting the cube requires
+    closing the gripper. Goal-tracking is height-gated so it only fires once
+    the cube is airborne. Smoothness penalties start at 0 and curriculum-ramp
+    in once lift fires.
     """
 
     # Two-scale reach: coarse covers ~35cm starting distance, fine sharpens
@@ -201,26 +242,24 @@ class RewardsCfg:
         weight=1.0,
     )
 
-    # Bootstraps grasp behavior without GATING anything else on it.
-    close_gripper = RewTerm(
-        func=mdp.close_gripper_near_object,
-        params={
-            "near_threshold": SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
-            "closed_std": SO101_CLOSE_GRIPPER_CLOSED_STD,
-            "gripper_cfg": SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
-        },
-        weight=1.0,
+    # Contact-confirmed grasp bonus (both jaws register force > threshold).
+    # Dense gradient for the close-then-lift sequence; without it the policy
+    # stalls on "just reach" before entropy collapses.
+    grasped = RewTerm(
+        func=mdp.grasped_reward,
+        params={"force_threshold": 0.5},
+        weight=3.0,
     )
 
-    # Height-only lift reward. THIS IS THE KEY CHANGE: no AND-conjunction
-    # with gripper-closed or EE-near. Once the cube goes up, this fires.
+    # Height-only lift reward. No AND-conjunction with gripper-closed or
+    # EE-near. Once the cube goes up, this fires.
     lifting_object = RewTerm(
         func=mdp.object_is_lifted,
         params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
-        weight=15.0,
+        weight=3.0,
     )
 
-    # Height-only goal tracking. Same minimal-height gate.
+    # Height-only goal tracking, same minimal-height gate as the lift term.
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
         params={
@@ -228,16 +267,20 @@ class RewardsCfg:
             "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
             "command_name": "object_pose",
         },
-        weight=16.0,
+        weight=5.0,
     )
-    object_goal_tracking_fine_grained = RewTerm(
-        func=mdp.object_goal_distance,
+
+    # Sparse per-step bonus when the cube enters the goal region while
+    # still in the air. goal_radius matches the lift_success termination
+    # (0.05 m) so the reward fires inside the same success ball.
+    success_bonus_in_air = RewTerm(
+        func=mdp.object_reached_goal_in_air,
         params={
-            "std": SO101_GOAL_TRACKING_FINE_STD,
             "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
+            "goal_radius": 0.05,
             "command_name": "object_pose",
         },
-        weight=5.0,
+        weight=3.0,
     )
 
     # Smoothness (zero-weighted initially; curriculum ramps them in
@@ -276,21 +319,17 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Curriculum terms for the MDP."""
+    """Curriculum terms for the MDP.
+
+    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
+    we want delayed until lift fires (action_rate) belong here.
+    """
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
         params={
             "term_name": "action_rate",
-            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
-            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
-        },
-    )
-
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "joint_vel",
             "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
             "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
         },
@@ -358,6 +397,11 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+        # 4096-env training with the Lior-style 32-iteration solver generates
+        # ~340 MB of contact pairs per step; the default ~64 MB buffer
+        # overflows and PhysX silently drops contacts. Sized at 512 MB for
+        # headroom; drop to 256 MB if running with num_envs <= 1024.
+        self.sim.physx.gpu_collision_stack_size = 512 * 1024 * 1024
 
         # SO-101 scene wiring.
         _configure_so101_lift_scene(self)
@@ -419,11 +463,16 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             _configure_so101_lift_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
             # Restore body_name for the command, otherwise the manager errors.
             self.commands.object_pose.body_name = ["gripper"]
+            # Strip jaw contact sensors: the teleop robot has
+            # activate_contact_sensors=False (no contact reporter API on its
+            # bodies), and no teleop reward consumes the signal.
+            self.scene.gripper_jaw_contact = None
+            self.scene.moving_jaw_contact = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None
-            # Hide RL-only debug markers (goal pose triad + EE axis triad)
-            # so the IL recording cameras see a clean scene.
+            # Hide RL-only debug markers (goal sphere + EE axis triad) so the
+            # IL recording cameras see a clean scene.
             self.commands.object_pose.debug_vis = False
             self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0

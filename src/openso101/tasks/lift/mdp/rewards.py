@@ -13,9 +13,6 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
 from isaaclab.utils.math import combine_frame_transforms
 
-from openso101.robots import SO101_GRIPPER_JOINT_NAMES
-from openso101.tasks.shared.rewards import object_controlled_by_gripper
-
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
@@ -63,55 +60,8 @@ def object_goal_distance(
     return (object.data.root_pos_w[:, 2] > minimal_height) * (1 - torch.tanh(distance / std))
 
 
-def object_goal_distance_controlled(
-    env: ManagerBasedRLEnv,
-    std: float,
-    minimal_height: float,
-    grasp_distance_threshold: float,
-    closed_threshold: float,
-    command_name: str,
-    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
-    gripper_cfg: SceneEntityCfg = SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
-) -> torch.Tensor:
-    """Reward goal tracking only while the object is controlled by the gripper."""
-    robot: RigidObject = env.scene[robot_cfg.name]
-    object: RigidObject = env.scene[object_cfg.name]
-    command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, :3]
-    des_pos_w, _ = combine_frame_transforms(robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], des_pos_b)
-    distance = torch.norm(des_pos_w - object.data.root_pos_w[:, :3], dim=1)
-    controlled = object_controlled_by_gripper(
-        env,
-        minimal_height,
-        grasp_distance_threshold,
-        closed_threshold,
-        robot_cfg,
-        object_cfg,
-        ee_frame_cfg,
-        gripper_cfg,
-    )
-    return controlled.float() * (1 - torch.tanh(distance / std))
-
-
-def object_ee_distance_and_lifted(
-    env: ManagerBasedRLEnv,
-    std: float,
-    minimal_height: float,
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
-) -> torch.Tensor:
-    """Combined reward for reaching the object AND lifting it."""
-    reach_reward = object_ee_distance(env, std, object_cfg, ee_frame_cfg)
-    lift_reward = object_is_lifted(env, minimal_height, object_cfg)
-    return reach_reward * lift_reward
-
-
 __all__ = [
     "object_is_lifted",
     "object_ee_distance",
     "object_goal_distance",
-    "object_goal_distance_controlled",
-    "object_ee_distance_and_lifted",
 ]
