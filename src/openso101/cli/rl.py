@@ -141,20 +141,37 @@ def _cmd_train(args: argparse.Namespace) -> int:
     # (those flags live in openso101.rl.cli_args.add_rsl_rl_args for callers
     # who want them). Backfill the attributes that update_rsl_rl_cfg reads so
     # an `rl train` invocation works without --resume/--load_run/etc.
-    # Default logger is tensorboard — it's the only logger in our base
-    # dependencies (wandb is in [project.optional-dependencies]).
-    # A fresh-env install via scripts/install.sh does NOT pull wandb;
-    # defaulting to wandb here used to crash rsl_rl on `import wandb`.
     for _attr, _default in (
         ("resume", False),
         ("load_run", None),
         ("checkpoint", None),
         ("run_name", None),
-        ("logger", "tensorboard"),
+        ("logger", "wandb"),
         ("log_project_name", "openso101"),
     ):
         if not hasattr(args, _attr):
             setattr(args, _attr, _default)
+
+    # Auto-fallback when the user picked wandb but it isn't importable in
+    # this env (wandb lives in [project.optional-dependencies] and a fresh
+    # scripts/install.sh does not pull it). Falling through to wandb here
+    # would crash rsl_rl deep in the runner on `import wandb`.
+    if args.logger == "wandb":
+        try:
+            import wandb  # noqa: F401
+        except ImportError:
+            print(
+                "[WARN] --logger wandb requested but wandb is not installed. "
+                "Falling back to tensorboard. Install with `pip install wandb` "
+                "and re-run for browser-based monitoring."
+            )
+            args.logger = "tensorboard"
+        else:
+            print(
+                f"[INFO] Logging to W&B project '{args.log_project_name}'. "
+                "If WANDB_API_KEY is unset, wandb will prompt or fall back to "
+                "anonymous mode."
+            )
 
     # Distillation: the teacher checkpoint flag is the only user-facing
     # way to point at a teacher. Internally rsl_rl reads it from
@@ -762,9 +779,28 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_train.add_argument("--num_envs", type=int, default=None)
     p_train.add_argument("--seed", type=int, default=None)
     p_train.add_argument("--max_iterations", type=int, default=None)
-    p_train.add_argument("--video", action="store_true")
+    # Video defaults to ON so the user can monitor headless training without
+    # opening the simulator. Pass --no-video to disable. Recording a 200-step
+    # clip every 2400 steps adds ~1 GB VRAM (RTX pipeline init) but no
+    # significant CPU/GPU cost during gaps.
+    p_train.add_argument("--video", action=argparse.BooleanOptionalAction, default=True)
     p_train.add_argument("--video_length", type=int, default=200)
     p_train.add_argument("--video_interval", type=int, default=2400)
+    # Default to wandb so live metrics are visible in the browser without
+    # tunneling tensorboard. Falls back to tensorboard if wandb isn't
+    # installed (it's in [project.optional-dependencies] — `pip install
+    # openso101[wandb]` or `pip install wandb`).
+    p_train.add_argument(
+        "--logger",
+        choices=("wandb", "tensorboard", "neptune"),
+        default="wandb",
+        help="Where to log training metrics. Default 'wandb'.",
+    )
+    p_train.add_argument(
+        "--log_project_name",
+        default="openso101",
+        help="W&B/Neptune project name. Ignored for tensorboard.",
+    )
     p_train.add_argument("--with-cameras", action="store_true")
     p_train.add_argument(
         "--visual-dr",

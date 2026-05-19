@@ -7,7 +7,6 @@ import isaaclab.sim as sim_utils
 
 import openso101.robots as robots
 import openso101.tasks.pick_place  # noqa: F401
-from openso101.robots.so101.so_arm101 import spawn_so101_usd_with_safe_collisions
 from openso101.robots.so101.so_arm101 import SO101_USD_TABLETOP_ROOT_Z
 
 
@@ -17,7 +16,12 @@ def test_so101_training_scene_uses_canonical_usd_robot_backend():
     env.close()
 
     assert cfg.scene.robot.spawn.usd_path.endswith("SO-ARM101-USD.usd")
-    assert cfg.scene.robot.spawn.func is spawn_so101_usd_with_safe_collisions
+    # RL spawn binds a high-friction material on the gripper colliders
+    # (spawn_so101_usd_with_grip_friction). The aggressive variant that
+    # mutated CollisionAPI was deleted; the current func is minimal.
+    from openso101.robots.so101.so_arm101 import spawn_so101_usd_with_grip_friction
+    assert cfg.scene.robot.spawn.func is spawn_so101_usd_with_grip_friction
+    assert cfg.scene.robot.spawn.activate_contact_sensors is True
     assert cfg.scene.robot.spawn.articulation_props.fix_root_link is True
     assert cfg.scene.robot.init_state.pos == pytest.approx((0.0, 0.0, SO101_USD_TABLETOP_ROOT_Z))
     assert cfg.scene.robot.init_state.joint_pos["Jaw"] == pytest.approx(1.745)
@@ -69,11 +73,13 @@ def test_so101_teleop_scene_uses_canonical_usd_without_manual_fingertip_pads():
     env.close()
 
     assert cfg.scene.robot.spawn.usd_path.endswith("SO-ARM101-USD.usd")
-    # Teleop trusts the USD's authored colliders verbatim (Lior-style:
-    # liorbenhorin/lerobot_so101_teleop). Earlier custom-spawn attempts
-    # silently disabled gripper collision by adding standalone CollisionAPI
-    # on merge children — pin the absence of the custom func as the fix.
-    assert cfg.scene.robot.spawn.func is not spawn_so101_usd_with_safe_collisions
+    # Teleop trusts the USD's authored colliders + friction verbatim
+    # (Lior-style: liorbenhorin/lerobot_so101_teleop). The RL-only friction
+    # binding spawn function (spawn_so101_usd_with_grip_friction) must NOT
+    # be wired here — human-led teleop has its own friction compensation
+    # via the leader-arm control loop.
+    from openso101.robots.so101.so_arm101 import spawn_so101_usd_with_grip_friction
+    assert cfg.scene.robot.spawn.func is not spawn_so101_usd_with_grip_friction
     assert cfg.scene.robot.spawn.activate_contact_sensors is False
     # Contact sensors must be stripped: the teleop robot has no contact
     # reporter API on its bodies, and no teleop reward consumes the signal.
@@ -119,6 +125,43 @@ def test_so101_teleop_uses_compliant_lior_style_actuators():
         assert actuator.effort_limit_sim == 30, name
         assert actuator.stiffness == pytest.approx(stiffness), name
         assert actuator.damping == pytest.approx(damping), name
+
+
+def test_so101_rl_uses_compliant_lior_style_actuators():
+    """RL config adopts Lior's compliant gains with three pinned divergences.
+
+    See SO_ARM101_CFG in so_arm101.py for the rationale. Divergences from
+    SO_ARM101_TELEOP_CFG: activate_contact_sensors=True (grasped_reward),
+    velocity_limit_sim capped on every actuator (prevents the high-effort
+    actuator from slamming toward policy targets), and RL gripper k=15
+    (k=4 closes too slowly to pin a moving cube during exploration).
+    """
+    from openso101.robots.so101.so_arm101 import SO101_RL_VELOCITY_LIMIT
+
+    env = gym.make("OpenSO101-PickPlace-v0")
+    cfg = env.unwrapped.cfg
+    env.close()
+
+    assert cfg.scene.robot.spawn.activate_contact_sensors is True
+    assert cfg.scene.robot.spawn.rigid_props.max_depenetration_velocity == pytest.approx(5.0)
+    assert cfg.scene.robot.spawn.articulation_props.enabled_self_collisions is False
+    assert cfg.scene.robot.spawn.articulation_props.solver_position_iteration_count == 32
+    assert cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count == 1
+
+    expected = {
+        "rotation": (55, 0.7),
+        "pitch": (30, 0.8),
+        "elbow": (25, 0.7),
+        "wrist_pitch": (12, 0.5),
+        "wrist_roll": (7, 0.5),
+        "gripper": (15, 0.5),
+    }
+    for name, (stiffness, damping) in expected.items():
+        actuator = cfg.scene.robot.actuators[name]
+        assert actuator.effort_limit_sim == 30, name
+        assert actuator.stiffness == pytest.approx(stiffness), name
+        assert actuator.damping == pytest.approx(damping), name
+        assert actuator.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT), name
 
 
 def test_so101_cameras_use_upstream_model_wrist_mount_and_overhead_camera():

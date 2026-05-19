@@ -50,12 +50,8 @@ from openso101.sim2real.domain_randomization.physics import attach_all_physics_d
 from openso101.tasks.shared.objects import SO101_CUBE_SIZE, so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
-    SO101_CLOSE_GRIPPER_CLOSED_STD,
-    SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
-    SO101_CONTROLLED_GRASP_DISTANCE_THRESHOLD,
     SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
     SO101_GOAL_TRACKING_FINE_STD,
-    SO101_GRIPPER_CLOSED_THRESHOLD,
     SO101_JOINT_POS_DELTA_WEIGHT,
     SO101_JOINT_VEL_WEIGHT,
     SO101_REACH_REWARD_STD,
@@ -166,24 +162,9 @@ class RewardsCfg:
     reaching_cube_top = RewTerm(
         func=mdp.ee_to_cube_top_distance, params={"std": SO101_REACH_REWARD_STD}, weight=1.0,
     )
-    close_gripper = RewTerm(
-        func=mdp.close_gripper_near_object,
-        params={
-            "near_threshold": SO101_CLOSE_GRIPPER_NEAR_THRESHOLD,
-            "closed_std": SO101_CLOSE_GRIPPER_CLOSED_STD,
-            "object_cfg": SceneEntityCfg("cube_top"),
-            "gripper_cfg": SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
-        },
-        weight=1.0,
-    )
     lifting_cube_top = RewTerm(
         func=mdp.cube_top_is_lifted,
-        params={
-            "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
-            "grasp_distance_threshold": SO101_CONTROLLED_GRASP_DISTANCE_THRESHOLD,
-            "closed_threshold": SO101_GRIPPER_CLOSED_THRESHOLD,
-            "gripper_cfg": SceneEntityCfg("robot", joint_names=list(SO101_GRIPPER_JOINT_NAMES)),
-        },
+        params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
         weight=10.0,
     )
     aligning_cubes = RewTerm(
@@ -240,18 +221,17 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
+    """Smoothness ramp after early stack behavior can emerge.
+
+    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
+    we want delayed until lift fires (action_rate) belong here.
+    """
+
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
         params={
             "term_name": "action_rate",
-            "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
-            "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
-        },
-    )
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={
-            "term_name": "joint_vel",
             "weight": SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
             "num_steps": SO101_SMOOTHNESS_CURRICULUM_STEPS,
         },
@@ -338,6 +318,10 @@ class StackEnvCfg(OpenSO101EnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 4
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 16 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
+        # See lift_env_cfg for rationale: Lior-style 32-iteration solver
+        # overflows the default ~64 MB GPU contact buffer at high num_envs.
+        # Stack has two cubes which doubles the contact pair count.
+        self.sim.physx.gpu_collision_stack_size = 512 * 1024 * 1024
 
         # SO-101 scene wiring.
         _configure_so101_stack_scene(self)

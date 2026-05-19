@@ -48,6 +48,34 @@ def test_hdf5_recorder_writes_lerobot_compatible_episode_layout(tmp_path):
         assert h5["checkpoints/frame_index"].shape == (0,)
 
 
+def test_hdf5_recorder_persists_env_id_for_replay_scene_selection(tmp_path):
+    """env_id round-trips through HDF5 attrs so replay can spawn the right
+    scene without the user manually passing --task. Without this, replay of a
+    Stack-recorded episode silently rendered PickPlace."""
+    recorder = OpenSO101HDF5TeleopRecorder(
+        root=tmp_path / "teleop_data" / "stack",
+        task_name="Stack the cubes",
+        cameras=CAMERAS,
+        fps=30,
+        env_id="OpenSO101-Stack-v0",
+    )
+    recorder.start_episode()
+    recorder.add_frame(
+        action=np.zeros(6, dtype=np.float32),
+        qpos=np.zeros(6, dtype=np.float32),
+        qvel=np.zeros(6, dtype=np.float32),
+        camera_buffers={
+            "wrist_camera": np.zeros((2, 3, 3), dtype=np.uint8),
+            "overhead_camera": np.zeros((2, 3, 3), dtype=np.uint8),
+        },
+        timestamp=0.0,
+    )
+    episode_path = recorder.save_episode(success=False)
+
+    with h5py.File(episode_path, "r") as h5:
+        assert h5.attrs["env_id"] == "OpenSO101-Stack-v0"
+
+
 def test_hdf5_recorder_uses_next_episode_index(tmp_path):
     root = tmp_path / "teleop_data" / "safe_sim2real_pickplace_teleop"
     episodes = root / "episodes"

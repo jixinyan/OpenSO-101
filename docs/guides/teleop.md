@@ -30,19 +30,14 @@ robot visuals/colliders. The wrist sensor is spawned under:
 {ENV_REGEX_NS}/Robot/gripper/gripper_cam
 ```
 
-The source asset authors the gripper and jaw collision groups as SDF contacts.
-On the current Isaac Sim 5.1 / RTX 5070 Laptop setup, that path caused GPU PhysX
-narrowphase failures when the gripper touched the cube. OpenSO-101 keeps the
-same USD model, but `spawn_so101_usd_with_safe_collisions()` rewrites only:
-
-```text
-/Robot/gripper/collisions
-/Robot/jaw/collisions
-```
-
-from `sdf` to `convexDecomposition` at spawn time. This avoids the failing GPU
-SDF contact path while preserving the robot model and wrist camera
-mount.
+OpenSO-101 uses the USD's authored colliders verbatim (no custom spawn-time
+collision rewrites). The robot config matches
+[liorbenhorin/lerobot_so101_teleop](https://github.com/liorbenhorin/lerobot_so101_teleop)
+in trusting the upstream asset; combined with compliant low-stiffness PD
+gains (e.g. gripper `k=4 / d=0.3`), the jaws pinch the cube reliably without
+silently disabled colliders. Earlier custom collision-spawn functions caused
+PhysX `MeshMergeCollisionAPI`-vs-standalone-`CollisionAPI` conflicts that
+silently dropped gripper collision.
 
 ## Cameras
 

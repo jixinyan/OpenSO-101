@@ -26,9 +26,16 @@ SO101_GRIPPER_CLOSED_THRESHOLD = 0.12
 SO101_GOAL_TRACKING_STD = 0.30
 SO101_GOAL_TRACKING_FINE_STD = 0.05
 
-# Smoothness penalties: disabled at step 0; curriculum ramps in after lift fires
+# Smoothness penalties.
+#
+# joint_vel is a "physical sanity" penalty: ACTIVE from step 0 (not
+# curriculum-ramped). Without it, the arm jitters chaotically and swats
+# the cube off the table before the policy ever learns to reach it.
+#
+# action_rate and joint_pos_delta are pure exploration-suppressors: they
+# stay on the curriculum ramp so they don't kill exploration before lift fires.
 SO101_ACTION_RATE_WEIGHT = 0.0
-SO101_JOINT_VEL_WEIGHT = 0.0
+SO101_JOINT_VEL_WEIGHT = -1.0e-4
 SO101_JOINT_POS_DELTA_WEIGHT = 0.0
 SO101_SMOOTHNESS_CURRICULUM_WEIGHT = -1.0e-4
 SO101_SMOOTHNESS_CURRICULUM_STEPS = 48_000
