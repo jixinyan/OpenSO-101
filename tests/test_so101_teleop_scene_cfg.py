@@ -42,7 +42,7 @@ def test_so101_pick_place_curriculum_heights_follow_lowered_usd_root():
 
     assert cfg.commands.object_pose.lift_height == pytest.approx(0.10 + root_drop)
     assert cfg.commands.object_pose.carry_height == pytest.approx(0.15 + root_drop)
-    assert cfg.commands.object_pose.place_goal == pytest.approx((0.28, 0.12, 0.02 + root_drop))
+    assert cfg.commands.object_pose.place_goal == pytest.approx((0.30, 0.10, 0.02 + root_drop))
     assert cfg.rewards.stage_0_lift_goal.params["minimal_height"] == pytest.approx(0.04 + root_drop)
     assert cfg.rewards.stage_1_carry_goal.params["minimal_height"] == pytest.approx(0.04 + root_drop)
 
