@@ -134,20 +134,17 @@ class CommandsCfg:
         asset_name="robot",
         body_name=MISSING,  # will be set by env cfg __post_init__
         object_name="object",
-        # Per-env sampled lift height above the cube's current position.
-        # The cube center sits at world z = 0.015 on the table; with this
-        # range the goal sphere sits 15-20 cm above the cube's top face.
+        # Per-env lift height above the cube; goal sphere ends up 15-20 cm
+        # above the cube's top face (cube center is at world z = 0.015).
         lift_height_range=(0.15, 0.20),
-        # resampling_time_range == episode_length_s -> resample fires once
-        # per episode, immediately after the cube-reset event. Goal is
-        # therefore locked to the *initial* cube xy of each episode.
+        # resampling_time_range == episode_length_s -> resample fires once per
+        # episode, right after the cube-reset event; goal is locked to the
+        # initial cube xy.
         resampling_time_range=(5.0, 5.0),
         debug_vis=True,
-        # Visible green sphere marker at the goal pose, radius = 5 cm to
-        # match the lift_success goal_radius. Replaces the default RGB
-        # axis triad (FRAME_MARKER_CFG) which is hard to spot in saved
-        # training videos. Teleop's debug_vis=False suppresses both
-        # markers, so this is RL-only.
+        # Visible green sphere at the goal (radius matches lift_success
+        # goal_radius). Replaces the default RGB axis triad, which is hard
+        # to spot in saved training videos.
         goal_pose_visualizer_cfg=VisualizationMarkersCfg(
             prim_path="/Visuals/Command/goal_pose",
             markers={
@@ -157,9 +154,8 @@ class CommandsCfg:
                 ),
             },
         ),
-        # Position ranges are ignored by CubeAbovePoseCommand (cube-relative).
-        # Only roll/pitch/yaw are read for orientation sampling; defaults
-        # produce identity quat.
+        # pos_* ranges are ignored by CubeAbovePoseCommand; only roll/pitch/yaw
+        # are read (defaults -> identity quat).
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.0, 0.0),
             pos_y=(0.0, 0.0),
@@ -246,11 +242,9 @@ class RewardsCfg:
         weight=1.0,
     )
 
-    # Contact-confirmed grasp bonus — dense signal that the jaws are actually
-    # pinching the cube (both ContactSensors register force > threshold).
-    # Provides the gradient the policy needs to discover the close-then-lift
-    # sequence; without it the policy gets stuck on "just reach" and entropy
-    # collapses before it tries closing the gripper at the right moment.
+    # Contact-confirmed grasp bonus (both jaws register force > threshold).
+    # Dense gradient for the close-then-lift sequence; without it the policy
+    # stalls on "just reach" before entropy collapses.
     grasped = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
@@ -259,19 +253,13 @@ class RewardsCfg:
 
     # Height-only lift reward. No AND-conjunction with gripper-closed or
     # EE-near. Once the cube goes up, this fires.
-    # Weight reduced 15 -> 3 because the previous magnitude dominated the
-    # return distribution (lift airborne 200 steps = 3000 of an ~5000 max
-    # return) and made PPO's value function unable to fit the variance.
     lifting_object = RewTerm(
         func=mdp.object_is_lifted,
         params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
         weight=3.0,
     )
 
-    # Height-only goal tracking. Same minimal-height gate.
-    # Weight reduced 16 -> 5. The fine-grained duplicate was redundant
-    # (same condition, sharper std) and added another spiky term to the
-    # return, so it was dropped entirely.
+    # Height-only goal tracking, same minimal-height gate as the lift term.
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
         params={
@@ -284,10 +272,7 @@ class RewardsCfg:
 
     # Sparse per-step bonus when the cube enters the goal region while
     # still in the air. goal_radius matches the lift_success termination
-    # (0.05 m) so the reward fires for every step inside the success ball.
-    # Weight reduced 10 -> 3 — termination ends the episode almost
-    # immediately on entry, so this term only fires for ~1 step regardless
-    # of weight, but the smaller magnitude makes value targets more uniform.
+    # (0.05 m) so the reward fires inside the same success ball.
     success_bonus_in_air = RewTerm(
         func=mdp.object_reached_goal_in_air,
         params={
@@ -336,10 +321,9 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP.
 
-    NOTE: joint_vel is NOT in the curriculum because it's active from step 0
-    (see SO101_JOINT_VEL_WEIGHT). Only the exploration-suppressing penalties
-    that we want delayed until lift fires (action_rate, joint_pos_delta if
-    you add one) belong here.
+    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
+    we want delayed until lift fires (action_rate) belong here.
     """
 
     action_rate = CurrTerm(
@@ -479,16 +463,16 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             _configure_so101_lift_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
             # Restore body_name for the command, otherwise the manager errors.
             self.commands.object_pose.body_name = ["gripper"]
-            # Strip jaw contact sensors: teleop robot config disables contact
-            # reporting, and no teleop reward consumes the signal. Same
-            # pattern as pick_place's configure_action_mode("teleop").
+            # Strip jaw contact sensors: the teleop robot has
+            # activate_contact_sensors=False (no contact reporter API on its
+            # bodies), and no teleop reward consumes the signal.
             self.scene.gripper_jaw_contact = None
             self.scene.moving_jaw_contact = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None
-            # Hide RL-only debug markers (goal pose triad + EE axis triad)
-            # so the IL recording cameras see a clean scene.
+            # Hide RL-only debug markers (goal sphere + EE axis triad) so the
+            # IL recording cameras see a clean scene.
             self.commands.object_pose.debug_vis = False
             self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
