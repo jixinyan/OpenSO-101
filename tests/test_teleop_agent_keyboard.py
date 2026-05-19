@@ -81,11 +81,10 @@ def test_resume_key_restores_last_checkpoint_when_available():
     assert keyboard.resume_recording is False
 
 
-def test_resume_key_does_not_activate_leader_sync_hold():
-    """Per the new semantics, R is a HARD restore: snap to checkpoint
-    immediately and let the leader take over next frame. The resume_hold
-    machinery is left untouched so unrelated callers (e.g. startup
-    sync) keep working, but the R key path itself must not activate it."""
+def test_resume_key_activates_leader_sync_hold_at_checkpoint_pose():
+    """R restores the sim AND pins it at the checkpoint joints via the
+    leader-sync hold. Without the hold, the leader's read on the next
+    frame would overwrite the restored pose and defeat the resume."""
     keyboard = SimpleNamespace(checkpoint_recording=False, resume_recording=True, toggle_recording=False, quit_without_saving=False)
     recorder = FakeRecorder(recording=True)
     checkpoints = FakeCheckpointStore(checkpoint=3, hold_target=[0.1, 0.2])
@@ -94,8 +93,13 @@ def test_resume_key_does_not_activate_leader_sync_hold():
     should_quit = _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold)
 
     assert should_quit is False
-    assert resume_hold.active is False
+    assert resume_hold.active is True
     assert checkpoints.calls == ["restore"]
+    # And the hold target must be the checkpoint joints, so the sim stays
+    # put until the operator moves the real leader near that pose.
+    hold_state = resume_hold.apply([5.0, 5.0])
+    assert hold_state.holding is True
+    assert hold_state.targets == [0.1, 0.2]
 
 
 def test_resume_hold_releases_only_after_leader_returns_near_checkpoint():
