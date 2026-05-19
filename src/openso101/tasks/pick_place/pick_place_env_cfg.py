@@ -178,13 +178,13 @@ class CommandsCfg:
         debug_vis=True,
         lift_height=0.10,
         carry_height=0.15,
-        # Place location, robot root frame. Cube spawns near (0.30, 0.00) so
-        # this is a ~12 cm sideways slide (mostly lateral, 2 cm pull-back) —
-        # clearly distinct from the spawn, but well inside the SO-101's
-        # ~0.30 m comfortable reach. Older (0.20, 0.18, 0.02) put the goal
-        # ~21 cm away with the trajectory passing close to the robot column,
-        # which both teleop and RL struggled with.
-        place_goal=(0.28, 0.12, 0.02),
+        # Place location, robot root frame. x matches the cube's spawn x
+        # (0.30 m) exactly, so the goal sits DIRECTLY BESIDE the cube on the
+        # same forward axis — no pull-back toward the robot base, which
+        # earlier configs ((0.20, 0.18) and (0.28, 0.12)) accidentally
+        # introduced and made the goal visually "behind the cube" from the
+        # operator's perspective. Pure 10 cm lateral slide.
+        place_goal=(0.30, 0.10, 0.02),
         advance_threshold=_GOAL_SPHERE_RADIUS,
         object_contact_radius=_CUBE_CONTACT_RADIUS,
         goal_pose_visualizer_cfg=CURRICULUM_GOAL_MARKER_CFG,
