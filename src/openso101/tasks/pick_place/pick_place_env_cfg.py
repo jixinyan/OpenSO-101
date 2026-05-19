@@ -307,11 +307,10 @@ class RewardsCfg:
     )
 
     # Sparse per-step bonus while the cube is inside the current goal sphere
-    # AND still in the air. Naturally only fires in stages 0/1 (lift/carry
-    # targets are above the table); stage 2's goal is on the table so the
-    # cube must be below 0.04 m to be at the place target, which the height
-    # gate kills. Complements the stage_*_complete_bonus one-shot transitions
-    # by providing a continuous "you're holding it at the target" signal.
+    # AND still in the air. Naturally only fires in stages 0/1 (lift/carry);
+    # stage 2's on-table goal sits below the height gate. Complements the
+    # one-shot stage_*_complete_bonus with a continuous "holding-on-target"
+    # signal.
     goal_touch_in_air = RewTerm(
         func=mdp.object_reached_goal_in_air,
         params={
@@ -362,9 +361,9 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Gentle smoothness ramp after early lift/carry behavior can emerge.
 
-    NOTE: joint_vel is NOT here — it's active from step 0 (see
-    SO101_JOINT_VEL_WEIGHT) so the arm doesn't jitter the cube off the table
-    before the policy learns to reach.
+    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
+    we want delayed until lift fires (action_rate) belong here.
     """
 
     action_rate = CurrTerm(
@@ -516,19 +515,16 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.actions = TeleopActionsCfg()
             # Re-spawn the scene with the teleop robot articulation.
             _configure_so101_pick_place_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
-            # Strip jaw contact sensors: teleop robot config matches Lior
-            # (activate_contact_sensors=False), so the bodies have no contact
-            # reporter API, and no teleop reward consumes the signal anyway.
+            # Strip jaw contact sensors: the teleop robot has
+            # activate_contact_sensors=False (no contact reporter API on its
+            # bodies), and no teleop reward consumes the signal.
             self.scene.gripper_jaw_contact = None
             self.scene.moving_jaw_contact = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None
-            # Hide RL-only debug markers so the IL recording cameras see a
-            # clean scene: the green goal sphere lives at
-            # /Visuals/Curriculum/goal and the EE coloured-axis triad lives
-            # at /Visuals/FrameTransformer. Both are training aids and would
-            # leak into the wrist + overhead camera observations otherwise.
+            # Hide RL-only debug markers (goal sphere + EE axis triad) so the
+            # IL recording cameras see a clean scene.
             self.commands.object_pose.debug_vis = False
             self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0

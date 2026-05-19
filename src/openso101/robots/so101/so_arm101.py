@@ -7,7 +7,6 @@ from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 from openso101.robots.so101.constants import (
-    SO101_DEFAULT_JOINT_POS,
     SO101_GRIPPER_JOINT_NAME,
     SO101_GRIPPER_JOINT_NAMES,
     SO101_GRIPPER_OPEN_POS,
@@ -129,7 +128,6 @@ def spawn_so101_usd_with_grip_friction(
     prim = from_files.spawn_from_usd(prim_path, cfg, translation, orientation, **kwargs)
     stage = prim.GetStage()
     root_path = str(prim.GetPath())
-    contact_groups = (f"{root_path}/gripper/collisions", f"{root_path}/jaw/collisions")
 
     material_cfg = sim_utils.RigidBodyMaterialCfg(
         static_friction=SO101_RL_GRIPPER_STATIC_FRICTION,
@@ -142,19 +140,16 @@ def spawn_so101_usd_with_grip_friction(
     material_cfg.func(material_path, material_cfg)
     material = UsdShade.Material(stage.GetPrimAtPath(material_path))
 
-    def _make_editable(group_prim):
-        if group_prim.IsInstance():
-            group_prim.SetInstanceable(False)
-        for descendant in Usd.PrimRange(group_prim):
-            if descendant.IsInstance():
-                descendant.SetInstanceable(False)
-
     bound: set[str] = set()
-    for group in contact_groups:
+    for group in (f"{root_path}/gripper/collisions", f"{root_path}/jaw/collisions"):
         group_prim = stage.GetPrimAtPath(group)
         if not group_prim or not group_prim.IsValid():
             continue
-        _make_editable(group_prim)
+        # De-instance the subtree so descendant overrides (the material binding
+        # below) are authored, not silently dropped on the instance prototype.
+        for descendant in Usd.PrimRange(group_prim):
+            if descendant.IsInstance():
+                descendant.SetInstanceable(False)
         for descendant in Usd.PrimRange(group_prim):
             path = str(descendant.GetPath())
             if path in bound or not descendant.HasAPI(UsdPhysics.CollisionAPI):
@@ -176,18 +171,12 @@ def spawn_so101_usd_with_grip_friction(
 
 # Aggressive Lior-style RL config. Mirrors SO_ARM101_TELEOP_CFG below in PD
 # gains, solver settings, and effort caps. Three intentional divergences:
-#
-#   1. activate_contact_sensors=True (teleop is False). Required for
-#      pick_place's grasped_reward, which reads /Robot/gripper and
-#      /Robot/jaw contact signals.
-#   2. velocity_limit_sim=SO101_RL_VELOCITY_LIMIT on every actuator (teleop
-#      leaves it unset, matching Lior verbatim). Without this cap, the
-#      compliant high-effort actuator slams toward any policy-issued
-#      position target.
-#   3. Custom spawn func that binds a high-friction material on gripper
-#      collision prims. Teleop's gripper friction comes from the USD
-#      default (~0.5) which is fine for human-led grasping; RL needs the
-#      higher value to grip the cube during exploration.
+#   1. activate_contact_sensors=True — required for grasped_reward.
+#   2. velocity_limit_sim=SO101_RL_VELOCITY_LIMIT — caps the compliant
+#      high-effort actuator from slamming toward policy-issued targets.
+#   3. Custom spawn func binds a high-friction material on gripper colliders
+#      so the policy can grip a small cube during exploration; teleop's
+#      slipperier USD-default friction is fine for human-led grasping.
 SO101_RL_VELOCITY_LIMIT = 2.0
 SO_ARM101_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
@@ -253,12 +242,10 @@ SO_ARM101_CFG = ArticulationCfg(
             damping=0.5,
         ),
         # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
-        # Stiffness bumped from Lior's k=4 to k=15 for RL only. With k=4, the
-        # jaws close too slowly to pin a moving cube during policy exploration:
-        # the policy can never assign credit to "close gripper" because by the
-        # time the jaws close, the cube has already moved. Teleop stays at k=4
-        # because human-driven targets give enough lead time. k=15 is still
-        # well below the URDF-era 60 that "hammered" the cube.
+        # Stiffness bumped from Lior's k=4 (teleop) to k=15 for RL: k=4 closes
+        # too slowly to pin a moving cube during exploration, so the policy
+        # never gets credit for "close gripper". Still well below the URDF-era
+        # k=60 that hammered the cube.
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
             effort_limit_sim=30,
@@ -278,16 +265,10 @@ SO_ARM101_CFG = ArticulationCfg(
 # Independent robot config for hand-teleoperation scenes. Verbatim port of
 # liorbenhorin/lerobot_so101_teleop's SO101_CFG approach (assets/so101.py)
 # with our scene-specific bits (init_pos on the table top, fix_root_link)
-# preserved. Key differences from the RL canonical:
-# - No custom collision spawn function. Trust the USD's authored colliders.
-#   Earlier attempts to add standalone CollisionAPI on merge children
-#   silently disabled gripper collision; Lior trusts the USD and it grips.
-# - activate_contact_sensors=False. Teleop has no contact-gated rewards;
-#   contact sensors only add cost.
-# - Compliant low-stiffness PD gains (e.g. gripper k=4, d=0.3 vs RL's
-#   k=60, d=20). Matches real SO-101 servo bandwidth; lets the jaws pinch
-#   rather than hammer. effort_limit_sim=30 across all joints provides
-#   headroom for the compliant gains to actually reach the target.
+# preserved. See the SO_ARM101_CFG block above for the three intentional
+# divergences (contact sensors, velocity cap, friction-binding spawn);
+# teleop trusts the USD's authored colliders + friction verbatim because
+# human-led control compensates for slippery jaws.
 SO_ARM101_TELEOP_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=str(so101_usd_path()),

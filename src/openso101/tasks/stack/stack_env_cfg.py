@@ -223,9 +223,9 @@ class TerminationsCfg:
 class CurriculumCfg:
     """Smoothness ramp after early stack behavior can emerge.
 
-    NOTE: joint_vel is NOT here — it's active from step 0 (see
-    SO101_JOINT_VEL_WEIGHT). The arm jittering at iter 0 would slap the cube
-    off the table before the policy learns to reach.
+    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
+    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
+    we want delayed until lift fires (action_rate) belong here.
     """
 
     action_rate = CurrTerm(
