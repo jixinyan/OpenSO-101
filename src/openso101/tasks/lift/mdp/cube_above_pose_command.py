@@ -49,21 +49,20 @@ class CubeAbovePoseCommand(UniformPoseCommand):
         self.object: RigidObject = env.scene[cfg.object_name]
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # cube position in world frame (after the reset event has fired)
+        # Goal position: directly above the cube (cube_xy, cube_z + lift_height).
         cube_pos_w = self.object.data.root_pos_w[env_ids]
-        # sample a lift height per env
-        r = torch.empty(len(env_ids), device=self.device)
-        lift_height = r.uniform_(*self.cfg.lift_height_range)
-        # desired goal in world frame: directly above the cube
+        lift_height = torch.empty(len(env_ids), device=self.device).uniform_(*self.cfg.lift_height_range)
         desired_pos_w = cube_pos_w.clone()
-        desired_pos_w[:, 2] = cube_pos_w[:, 2] + lift_height
-        # convert to robot root frame for storage in pose_command_b
-        root_pos_w = self.robot.data.root_pos_w[env_ids]
-        root_quat_w = self.robot.data.root_quat_w[env_ids]
-        desired_pos_b, _ = subtract_frame_transforms(root_pos_w, root_quat_w, desired_pos_w)
+        desired_pos_w[:, 2] += lift_height
+        # Convert to robot root frame for storage in pose_command_b.
+        desired_pos_b, _ = subtract_frame_transforms(
+            self.robot.data.root_pos_w[env_ids],
+            self.robot.data.root_quat_w[env_ids],
+            desired_pos_w,
+        )
         self.pose_command_b[env_ids, :3] = desired_pos_b
-        # orientation: sample from ranges (default zeros -> identity quat)
-        euler_angles = torch.zeros_like(self.pose_command_b[env_ids, :3])
+        # Orientation: sample from ranges (default zeros -> identity quat).
+        euler_angles = torch.zeros_like(desired_pos_b)
         euler_angles[:, 0].uniform_(*self.cfg.ranges.roll)
         euler_angles[:, 1].uniform_(*self.cfg.ranges.pitch)
         euler_angles[:, 2].uniform_(*self.cfg.ranges.yaw)

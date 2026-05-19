@@ -128,13 +128,16 @@ def test_so101_teleop_uses_compliant_lior_style_actuators():
 
 
 def test_so101_rl_uses_compliant_lior_style_actuators():
-    """RL config also adopts Lior's compliant gains (aggressive port).
+    """RL config adopts Lior's compliant gains with three pinned divergences.
 
-    Differs from teleop only in activate_contact_sensors=True (required for
-    the grasped_reward term). PD gains, solver iterations, and self-collision
-    flag all match the teleop config so sim2real behavior stays consistent
-    between IL recording and trained-policy rollouts.
+    See SO_ARM101_CFG in so_arm101.py for the rationale. Divergences from
+    SO_ARM101_TELEOP_CFG: activate_contact_sensors=True (grasped_reward),
+    velocity_limit_sim capped on every actuator (prevents the high-effort
+    actuator from slamming toward policy targets), and RL gripper k=15
+    (k=4 closes too slowly to pin a moving cube during exploration).
     """
+    from openso101.robots.so101.so_arm101 import SO101_RL_VELOCITY_LIMIT
+
     env = gym.make("OpenSO101-PickPlace-v0")
     cfg = env.unwrapped.cfg
     env.close()
@@ -151,13 +154,14 @@ def test_so101_rl_uses_compliant_lior_style_actuators():
         "elbow": (25, 0.7),
         "wrist_pitch": (12, 0.5),
         "wrist_roll": (7, 0.5),
-        "gripper": (4, 0.3),
+        "gripper": (15, 0.5),
     }
     for name, (stiffness, damping) in expected.items():
         actuator = cfg.scene.robot.actuators[name]
         assert actuator.effort_limit_sim == 30, name
         assert actuator.stiffness == pytest.approx(stiffness), name
         assert actuator.damping == pytest.approx(damping), name
+        assert actuator.velocity_limit_sim == pytest.approx(SO101_RL_VELOCITY_LIMIT), name
 
 
 def test_so101_cameras_use_upstream_model_wrist_mount_and_overhead_camera():
