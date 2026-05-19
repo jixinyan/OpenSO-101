@@ -227,7 +227,11 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.04, 0.04), "y": (-0.03, 0.03), "z": (0.0, 0.0)},
+            # Cube reset jitter around init_pos=[0.3, 0.0, 0.015]. Tight so the
+            # cube always lands inside the SO-101's comfortable reach (radius
+            # ~0.30 m); wide enough that the policy / human still sees variety
+            # across episodes and doesn't overfit a single grasp.
+            "pose_range": {"x": (-0.03, 0.03), "y": (-0.025, 0.025), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object"),
         },

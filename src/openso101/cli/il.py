@@ -403,12 +403,12 @@ def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_ho
         (Manual counterpart to the auto-detected ``--goal-region`` path.)
       * **C** — checkpoint the current frame so **R** can restore later.
       * **R** — restore the robot pose + env state to the last checkpoint
-        EXACTLY. The leader-sync hold is intentionally NOT engaged here —
-        the sim snaps to checkpoint and the leader takes over on the next
-        frame, so the operator can choose to either jog the leader back
-        to match or just accept the jump. The ``resume_hold`` parameter
-        is preserved for backward compatibility but is no longer used by
-        the R key path.
+        AND engage the resume hold at the checkpoint pose. The sim freezes
+        at the checkpoint until the operator physically moves the leader
+        arm within ``resume_sync_threshold`` of the checkpoint joints;
+        only then does live control resume. Without the hold, the leader's
+        next read would override the restored pose on frame 1, defeating
+        the resume.
     """
 
     should_quit = False
@@ -437,12 +437,14 @@ def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_ho
         if recorder is None:
             print("[WARN]: Restore requested, but --repo-id was not provided.")
         elif checkpoints is not None and checkpoints.has_checkpoint:
-            # Hard restore: snap robot+env back to checkpoint exactly.
-            # We intentionally do NOT activate `resume_hold` — the operator
-            # asked for the sim to match the checkpoint regardless of where
-            # the real leader currently sits.
-            checkpoints.restore(recorder)
-            print("[INFO]: Resumed to checkpoint. Leader takes over next frame.")
+            # Snap robot+env to checkpoint, then engage the leader-sync hold
+            # at the checkpoint joints. Without the hold, the leader's read
+            # on the very next frame would overwrite the restored pose; the
+            # hold pins the sim at the checkpoint until the operator moves
+            # the real arm into the checkpoint pose.
+            hold_target = checkpoints.restore(recorder)
+            if hold_target is not None and resume_hold is not None:
+                resume_hold.activate(hold_target, context="checkpoint")
         else:
             # Recording always starts at launch in `_cmd_record`, so any
             # R press without a checkpoint is just a no-op the user
@@ -593,7 +595,11 @@ def _cmd_record(args: argparse.Namespace) -> int:
     args.print_actions = getattr(args, "print_actions", False)
     args.profile_interval = getattr(args, "profile_interval", 60)
     args.profile_joints = getattr(args, "profile_joints", False)
-    args.goal_region = getattr(args, "goal_region", False)
+    # Default ON so the user sees the explicit place-target during teleop
+    # (curriculum sphere chain for pick_place; no-op for tasks without an
+    # `object_pose` command term, e.g. stack). Drives both the visualizer
+    # and the cube-touches-final-goal auto-success path below.
+    args.goal_region = getattr(args, "goal_region", True)
     args.invert_joints = getattr(args, "invert_joints", "")
     args.joint_offsets_deg = getattr(args, "joint_offsets_deg", "")
     args.resume_sync_threshold = getattr(args, "resume_sync_threshold", 0.08)

@@ -137,11 +137,17 @@ class ObservationsCfg:
 @configclass
 class EventCfg:
     reset_all = EventTerm(func=mdp.reset_scene_to_default, mode="reset")
+    # Cube reset jitter around their init positions ([0.35, +0.05] bottom,
+    # [0.35, -0.10] top). Tight so both cubes stay inside the SO-101's
+    # comfortable reach (radius ~0.30 m); the old wide range allowed x up to
+    # 0.50 m which is past the workspace edge. The 15 cm y-gap between the two
+    # init positions remains large enough that ±4 cm jitter never makes them
+    # overlap.
     reset_cube_bottom = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.05, 0.15), "y": (-0.1, 0.1), "z": (0.0, 0.0)},
+            "pose_range": {"x": (-0.04, 0.04), "y": (-0.04, 0.04), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("cube_bottom", body_names=".*"),
         },
@@ -150,7 +156,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.05, 0.15), "y": (-0.1, 0.1), "z": (0.0, 0.0)},
+            "pose_range": {"x": (-0.04, 0.04), "y": (-0.04, 0.04), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("cube_top", body_names=".*"),
         },
