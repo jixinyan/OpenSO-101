@@ -657,6 +657,16 @@ def _cmd_record(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             use_fabric=not args.disable_fabric,
         )
+        # Seed the env RNG with a fresh time-derived value per process so the
+        # cube spawn (and any other reset-time random event) actually varies
+        # across `il record` invocations. Without this, Isaac Lab leaves
+        # cfg.seed=None and Isaac Sim's boot path can leave torch in a
+        # deterministic state, producing identical cube spawn positions on
+        # back-to-back recording sessions. Set BEFORE gym.make so
+        # ManagerBasedRLEnv.__init__ picks it up and calls torch_utils.set_seed.
+        import time as _time
+        env_cfg.seed = _time.time_ns() % (2**31 - 1)
+        print(f"[INFO]: Env seed (per-process random): {env_cfg.seed}")
         # Record always runs with teleop action mode + cameras enabled.
         # parse_env_cfg returns the base RL cfg, so apply the variant hooks
         # here before constructing the env. The registry factory only auto-
