@@ -127,6 +127,12 @@ def train_il_policy(
         sys.executable, "-m", "lerobot.scripts.lerobot_train",
         f"--policy.type={policy}",
         f"--output_dir={out}",
+        # LeRobot 0.4.0 defaults push_to_hub=True and then refuses to launch
+        # unless `--policy.repo_id` is set. For local training (smoke + most
+        # server runs) we don't push the model — pushing is a separate step
+        # the user does explicitly. If the user wants to enable Hub push
+        # they can override via `-- --policy.push_to_hub=true --policy.repo_id=...`.
+        "--policy.push_to_hub=false",
     ]
     if is_local:
         effective_repo_id = repo_id or f"local/{dataset_path.name}"
