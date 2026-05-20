@@ -38,6 +38,14 @@ fi
 module purge
 module load mamba/24.3.0
 
+# Quest's mamba module ships a system-wide read-only package cache at
+# /hpc/software/mamba/.../pkgs/cache/cache.lock — libmamba prints noisy
+# "Could not open lockfile" errors when it tries to update that cache.
+# Point the cache at a user-writable location to silence the warnings.
+export CONDA_PKGS_DIRS="${CONDA_PKGS_DIRS:-${HOME}/.conda/pkgs}"
+export MAMBA_PKGS_DIRS="${MAMBA_PKGS_DIRS:-${HOME}/.mamba/pkgs}"
+mkdir -p "${CONDA_PKGS_DIRS}" "${MAMBA_PKGS_DIRS}"
+
 if mamba env list | awk '{print $1}' | grep -qx "${CONDA_ENV_NAME}"; then
     echo "[INFO]: Removing existing env '${CONDA_ENV_NAME}' for a clean rebuild."
     mamba env remove -n "${CONDA_ENV_NAME}" -y
