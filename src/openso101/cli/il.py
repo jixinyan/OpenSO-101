@@ -1,3 +1,4 @@
+
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
@@ -403,12 +404,12 @@ def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_ho
         (Manual counterpart to the auto-detected ``--goal-region`` path.)
       * **C** — checkpoint the current frame so **R** can restore later.
       * **R** — restore the robot pose + env state to the last checkpoint
-        EXACTLY. The leader-sync hold is intentionally NOT engaged here —
-        the sim snaps to checkpoint and the leader takes over on the next
-        frame, so the operator can choose to either jog the leader back
-        to match or just accept the jump. The ``resume_hold`` parameter
-        is preserved for backward compatibility but is no longer used by
-        the R key path.
+        AND engage the resume hold at the checkpoint pose. The sim freezes
+        at the checkpoint until the operator physically moves the leader
+        arm within ``resume_sync_threshold`` of the checkpoint joints;
+        only then does live control resume. Without the hold, the leader's
+        next read would override the restored pose on frame 1, defeating
+        the resume.
     """
 
     should_quit = False
@@ -437,12 +438,14 @@ def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_ho
         if recorder is None:
             print("[WARN]: Restore requested, but --repo-id was not provided.")
         elif checkpoints is not None and checkpoints.has_checkpoint:
-            # Hard restore: snap robot+env back to checkpoint exactly.
-            # We intentionally do NOT activate `resume_hold` — the operator
-            # asked for the sim to match the checkpoint regardless of where
-            # the real leader currently sits.
-            checkpoints.restore(recorder)
-            print("[INFO]: Resumed to checkpoint. Leader takes over next frame.")
+            # Snap robot+env to checkpoint, then engage the leader-sync hold
+            # at the checkpoint joints. Without the hold, the leader's read
+            # on the very next frame would overwrite the restored pose; the
+            # hold pins the sim at the checkpoint until the operator moves
+            # the real arm into the checkpoint pose.
+            hold_target = checkpoints.restore(recorder)
+            if hold_target is not None and resume_hold is not None:
+                resume_hold.activate(hold_target, context="checkpoint")
         else:
             # Recording always starts at launch in `_cmd_record`, so any
             # R press without a checkpoint is just a no-op the user
@@ -593,7 +596,11 @@ def _cmd_record(args: argparse.Namespace) -> int:
     args.print_actions = getattr(args, "print_actions", False)
     args.profile_interval = getattr(args, "profile_interval", 60)
     args.profile_joints = getattr(args, "profile_joints", False)
-    args.goal_region = getattr(args, "goal_region", False)
+    # Default ON so the user sees the explicit place-target during teleop
+    # (curriculum sphere chain for pick_place; no-op for tasks without an
+    # `object_pose` command term, e.g. stack). Drives both the visualizer
+    # and the cube-touches-final-goal auto-success path below.
+    args.goal_region = getattr(args, "goal_region", True)
     args.invert_joints = getattr(args, "invert_joints", "")
     args.joint_offsets_deg = getattr(args, "joint_offsets_deg", "")
     args.resume_sync_threshold = getattr(args, "resume_sync_threshold", 0.08)
@@ -606,10 +613,12 @@ def _cmd_record(args: argparse.Namespace) -> int:
     args.leader_async = getattr(args, "leader_async", True)
     args.auto_save = getattr(args, "auto_save", False)
     args.action_rate_limit = getattr(args, "action_rate_limit", 0.0)
-    if args.repo_id is None:
-        args.repo_id = "local/openso101_pickplace_teleop"
     if args.repo_root is None:
         args.repo_root = "./teleop_data/openso101_pickplace_teleop"
+    # Local-only dataset identifier derived from --repo-root so the HDF5
+    # metadata is meaningful (e.g. teleop_data/pickplace_v1 -> local/pickplace_v1).
+    # The real Hub repo_id is picked at `il push` time.
+    _record_local_dataset_id = f"local/{Path(args.repo_root).name}"
     if args.task_name is None:
         args.task_name = "Pick up the green cube and place it at the goal"
 
@@ -651,6 +660,16 @@ def _cmd_record(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             use_fabric=not args.disable_fabric,
         )
+        # Seed the env RNG with a fresh time-derived value per process so the
+        # cube spawn (and any other reset-time random event) actually varies
+        # across `il record` invocations. Without this, Isaac Lab leaves
+        # cfg.seed=None and Isaac Sim's boot path can leave torch in a
+        # deterministic state, producing identical cube spawn positions on
+        # back-to-back recording sessions. Set BEFORE gym.make so
+        # ManagerBasedRLEnv.__init__ picks it up and calls torch_utils.set_seed.
+        import time as _time
+        env_cfg.seed = _time.time_ns() % (2**31 - 1)
+        print(f"[INFO]: Env seed (per-process random): {env_cfg.seed}")
         # Record always runs with teleop action mode + cameras enabled.
         # parse_env_cfg returns the base RL cfg, so apply the variant hooks
         # here before constructing the env. The registry factory only auto-
@@ -704,13 +723,17 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     task_name=args.task_name,
                     cameras=camera_metadata,
                     fps=args.fps,
-                    dataset_id=args.repo_id,
+                    dataset_id=_record_local_dataset_id,
                     sim_joint_names=sim_joint_names,
                     env_id=args.task,
                 )
             else:
+                # Direct-LeRobot record path (programmatic, not exposed on the
+                # CLI). LeRobotDataset() requires an identifier even for local
+                # datasets — derive it from --repo-root so the Hub upload can
+                # happen later via `il push`.
                 recorder = OpenSO101LeRobotRecorder(
-                    repo_id=args.repo_id,
+                    repo_id=_record_local_dataset_id,
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
@@ -748,6 +771,21 @@ def _cmd_record(args: argparse.Namespace) -> int:
         )
 
         env.reset()
+        # Print the actual post-reset cube position(s) so the operator can
+        # objectively verify the per-process seed is driving fresh randomization
+        # — visual inspection is unreliable because the jitter box is small
+        # (~±3 cm) and the camera angle hides small shifts.
+        try:
+            for cube_key in ("object", "cube_top", "cube_bottom"):
+                if cube_key in scene.keys():
+                    pos = scene[cube_key].data.root_pos_w[0].tolist()
+                    print(
+                        f"[INFO]: After reset, '{cube_key}' world position: "
+                        f"x={pos[0]:.4f} y={pos[1]:.4f} z={pos[2]:.4f}"
+                    )
+        except Exception as exc:
+            print(f"[WARN]: Could not read cube post-reset position: {exc}")
+
         if not args.no_camera_viewports:
             open_teleop_viewports(scene)
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
@@ -1781,7 +1819,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_rec.add_argument("--task", required=True)
     p_rec.add_argument("--leader-port", required=True)
     p_rec.add_argument("--leader-id", required=True)
-    p_rec.add_argument("--repo-id")
+    # NOTE: no `--repo-id` here. Record is local-only — episodes land at
+    # --repo-root as HDF5 files. The Hub identifier is picked at `il push`
+    # time via the push command's own --repo-id.
     p_rec.add_argument("--repo-root")
     p_rec.add_argument("--task-name")
     p_rec.add_argument("--num-envs", type=int, default=None)

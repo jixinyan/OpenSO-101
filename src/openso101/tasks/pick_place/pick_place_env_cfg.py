@@ -178,7 +178,13 @@ class CommandsCfg:
         debug_vis=True,
         lift_height=0.10,
         carry_height=0.15,
-        place_goal=(0.20, 0.18, 0.02),
+        # Place location, robot root frame. x matches the cube's spawn x
+        # (0.30 m) exactly, so the goal sits DIRECTLY BESIDE the cube on the
+        # same forward axis — no pull-back toward the robot base, which
+        # earlier configs ((0.20, 0.18) and (0.28, 0.12)) accidentally
+        # introduced and made the goal visually "behind the cube" from the
+        # operator's perspective. Pure 10 cm lateral slide.
+        place_goal=(0.24, -0.3, 0),
         advance_threshold=_GOAL_SPHERE_RADIUS,
         object_contact_radius=_CUBE_CONTACT_RADIUS,
         goal_pose_visualizer_cfg=CURRICULUM_GOAL_MARKER_CFG,
@@ -227,7 +233,15 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.04, 0.04), "y": (-0.03, 0.03), "z": (0.0, 0.0)},
+            # Cube reset jitter around init_pos=[0.3, 0.0, 0.015]. Widened from
+            # (±0.03, ±0.025) -> (±0.05, ±0.04) so the variation is visually
+            # obvious in the teleop viewport (small shifts of 1-2 cm were below
+            # the operator's perceptual threshold and felt like "no random").
+            # Max radial reach √((0.30+0.05)² + 0.04²) ≈ 0.352 m — slightly
+            # past the SO-101's ~0.30 m comfortable zone at the corner case
+            # but still reachable; teleop will warn the operator if a target
+            # is unreachable.
+            "pose_range": {"x": (-0.05, 0.05), "y": (-0.04, 0.04), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object"),
         },
@@ -523,9 +537,15 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.rewards = None
             self.terminations = None
             self.curriculum = None
-            # Hide RL-only debug markers (goal sphere + EE axis triad) so the
-            # IL recording cameras see a clean scene.
-            self.commands.object_pose.debug_vis = False
+            # Lock the curriculum goal at the final place sphere — operators
+            # want one explicit "place here" target, not the RL lift / carry /
+            # place chain. With stage pinned at 2, _update_command's
+            # `stage < 2` advancement gate naturally skips. The on-table place
+            # sphere remains visible (cfg-level debug_vis stays True so
+            # programmatic users get the marker; `_cmd_record`'s --goal-region
+            # default also lights it up for CLI users).
+            self.commands.object_pose.lock_stage = 2
+            # Hide the EE axis triad so the IL recording cameras see a clean scene.
             self.scene.ee_frame.debug_vis = False
             self.episode_length_s = 3600.0
             self.scene.num_envs = 1

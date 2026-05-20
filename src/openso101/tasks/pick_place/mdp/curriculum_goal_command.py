@@ -143,8 +143,17 @@ class CurriculumGoalCommand(CommandTerm):
         self.metrics["stage"] = self.stage.float()
 
     def _resample_command(self, env_ids: Sequence[int]):
-        """Episode reset for these envs: stage <- 0, record cube spawn xy, set goal."""
-        self.stage[env_ids] = 0
+        """Episode reset for these envs: stage <- 0 (or lock_stage), record
+        cube spawn xy, set goal.
+
+        When ``cfg.lock_stage`` is set (teleop uses ``lock_stage=2`` to show
+        only the final on-table place sphere), the per-env stage tensor is
+        pinned to that value at reset. ``_update_command``'s advancement
+        gate ``stage < 2`` then naturally skips, so no further changes are
+        needed to disable stage chaining.
+        """
+        start_stage = 0 if self.cfg.lock_stage is None else int(self.cfg.lock_stage)
+        self.stage[env_ids] = start_stage
         self.just_completed_stage[env_ids] = -1
         cube_pos_w = self.object.data.root_pos_w[env_ids]
         cube_pos_b, _ = subtract_frame_transforms(
@@ -249,7 +258,7 @@ class CurriculumGoalCommandCfg(CommandTermCfg):
     """
 
     # --- Stage 2 (place) ---
-    place_goal: tuple[float, float, float] = (0.20, 0.18, 0.02)
+    place_goal: tuple[float, float, float] = (0.30, 0.10, 0.02)
     """Fixed table pose in robot root frame for stage 2 (z ~= cube half-height)."""
 
     advance_threshold: float = 0.03
@@ -267,6 +276,12 @@ class CurriculumGoalCommandCfg(CommandTermCfg):
     """Marker config with three sphere variants (one per stage). Indexed by stage.
     Tasks must set this explicitly in the env_cfg so marker styles stay configurable
     per task."""
+
+    lock_stage: int | None = None
+    """If set, freeze the per-env stage at this value (no advancement). Used by
+    teleop to show only the final place sphere — operators want one explicit
+    end goal, not the lift / carry / place chain that drives RL training.
+    ``None`` (the default) keeps the curriculum chain active for RL."""
 
 
 __all__ = [
