@@ -233,11 +233,15 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            # Cube reset jitter around init_pos=[0.3, 0.0, 0.015]. Tight so the
-            # cube always lands inside the SO-101's comfortable reach (radius
-            # ~0.30 m); wide enough that the policy / human still sees variety
-            # across episodes and doesn't overfit a single grasp.
-            "pose_range": {"x": (-0.03, 0.03), "y": (-0.025, 0.025), "z": (0.0, 0.0)},
+            # Cube reset jitter around init_pos=[0.3, 0.0, 0.015]. Widened from
+            # (±0.03, ±0.025) -> (±0.05, ±0.04) so the variation is visually
+            # obvious in the teleop viewport (small shifts of 1-2 cm were below
+            # the operator's perceptual threshold and felt like "no random").
+            # Max radial reach √((0.30+0.05)² + 0.04²) ≈ 0.352 m — slightly
+            # past the SO-101's ~0.30 m comfortable zone at the corner case
+            # but still reachable; teleop will warn the operator if a target
+            # is unreachable.
+            "pose_range": {"x": (-0.05, 0.05), "y": (-0.04, 0.04), "z": (0.0, 0.0)},
             "velocity_range": {},
             "asset_cfg": SceneEntityCfg("object"),
         },
