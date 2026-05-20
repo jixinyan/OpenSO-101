@@ -133,7 +133,16 @@ def train_il_policy(
     if wandb:
         cmd.append("--wandb.enable=true")
     if extra_args:
-        cmd.extend(list(extra_args))
+        # `il train -- <args>` uses argparse.REMAINDER to collect everything
+        # after `--`, and REMAINDER preserves the literal `--` as the first
+        # token. LeRobot's flat argparse doesn't know `--` and treats it as an
+        # unknown arg, so strip the leading separator before forwarding.
+        forwarded = [a for a in extra_args if a != "--"]
+        # Defensive: also drop any duplicate leading "--" if a user manually
+        # double-separated. (e.g. `il train -- -- --policy.chunk_size=50`.)
+        while forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+        cmd.extend(forwarded)
 
     print(f"[openso101.il] launching: {' '.join(shlex.quote(c) for c in cmd)}")
     print(f"[openso101.il] output dir: {out}")
