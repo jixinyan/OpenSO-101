@@ -108,12 +108,31 @@ def train_il_policy(
     is_local = dataset_path.exists() and dataset_path.is_dir()
 
     out = Path(output_dir).expanduser().resolve() if output_dir else _default_output_dir(policy).resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    # LeRobot 0.4.0 refuses to launch into an existing output dir at all
+    # (see lerobot/configs/train.py:validate -> FileExistsError), even if
+    # it's empty. So we (1) never pre-create the dir and (2) auto-suffix
+    # with a timestamp when the user-supplied --output-dir already exists,
+    # so smoke re-runs Just Work without manual rm -rf.
+    if out.exists():
+        suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
+        out = out.with_name(f"{out.name}_{suffix}")
+        print(f"[openso101.il] output dir already exists; re-routing to: {out}")
+    # NOTE: do not mkdir here. Let lerobot_train create it on first write —
+    # otherwise LeRobot's validate() sees our empty dir and aborts.
 
+    # LeRobot 0.4.0 renamed every script to `lerobot_<name>` and dropped the
+    # short module names. The training entry point is now
+    # `lerobot.scripts.lerobot_train` (or the `lerobot-train` console script).
     cmd: list[str] = [
-        sys.executable, "-m", "lerobot.scripts.train",
+        sys.executable, "-m", "lerobot.scripts.lerobot_train",
         f"--policy.type={policy}",
         f"--output_dir={out}",
+        # LeRobot 0.4.0 defaults push_to_hub=True and then refuses to launch
+        # unless `--policy.repo_id` is set. For local training (smoke + most
+        # server runs) we don't push the model — pushing is a separate step
+        # the user does explicitly. If the user wants to enable Hub push
+        # they can override via `-- --policy.push_to_hub=true --policy.repo_id=...`.
+        "--policy.push_to_hub=false",
     ]
     if is_local:
         effective_repo_id = repo_id or f"local/{dataset_path.name}"
@@ -130,7 +149,16 @@ def train_il_policy(
     if wandb:
         cmd.append("--wandb.enable=true")
     if extra_args:
-        cmd.extend(list(extra_args))
+        # `il train -- <args>` uses argparse.REMAINDER to collect everything
+        # after `--`, and REMAINDER preserves the literal `--` as the first
+        # token. LeRobot's flat argparse doesn't know `--` and treats it as an
+        # unknown arg, so strip the leading separator before forwarding.
+        forwarded = [a for a in extra_args if a != "--"]
+        # Defensive: also drop any duplicate leading "--" if a user manually
+        # double-separated. (e.g. `il train -- -- --policy.chunk_size=50`.)
+        while forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+        cmd.extend(forwarded)
 
     print(f"[openso101.il] launching: {' '.join(shlex.quote(c) for c in cmd)}")
     print(f"[openso101.il] output dir: {out}")
