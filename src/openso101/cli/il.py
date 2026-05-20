@@ -1,3 +1,4 @@
+
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
@@ -770,6 +771,21 @@ def _cmd_record(args: argparse.Namespace) -> int:
         )
 
         env.reset()
+        # Print the actual post-reset cube position(s) so the operator can
+        # objectively verify the per-process seed is driving fresh randomization
+        # — visual inspection is unreliable because the jitter box is small
+        # (~±3 cm) and the camera angle hides small shifts.
+        try:
+            for cube_key in ("object", "cube_top", "cube_bottom"):
+                if cube_key in scene.keys():
+                    pos = scene[cube_key].data.root_pos_w[0].tolist()
+                    print(
+                        f"[INFO]: After reset, '{cube_key}' world position: "
+                        f"x={pos[0]:.4f} y={pos[1]:.4f} z={pos[2]:.4f}"
+                    )
+        except Exception as exc:
+            print(f"[WARN]: Could not read cube post-reset position: {exc}")
+
         if not args.no_camera_viewports:
             open_teleop_viewports(scene)
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
