@@ -108,7 +108,17 @@ def train_il_policy(
     is_local = dataset_path.exists() and dataset_path.is_dir()
 
     out = Path(output_dir).expanduser().resolve() if output_dir else _default_output_dir(policy).resolve()
-    out.mkdir(parents=True, exist_ok=True)
+    # LeRobot 0.4.0 refuses to launch into an existing output dir at all
+    # (see lerobot/configs/train.py:validate -> FileExistsError), even if
+    # it's empty. So we (1) never pre-create the dir and (2) auto-suffix
+    # with a timestamp when the user-supplied --output-dir already exists,
+    # so smoke re-runs Just Work without manual rm -rf.
+    if out.exists():
+        suffix = time.strftime("%Y-%m-%d_%H-%M-%S")
+        out = out.with_name(f"{out.name}_{suffix}")
+        print(f"[openso101.il] output dir already exists; re-routing to: {out}")
+    # NOTE: do not mkdir here. Let lerobot_train create it on first write —
+    # otherwise LeRobot's validate() sees our empty dir and aborts.
 
     # LeRobot 0.4.0 renamed every script to `lerobot_<name>` and dropped the
     # short module names. The training entry point is now
