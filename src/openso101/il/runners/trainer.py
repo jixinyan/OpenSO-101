@@ -110,8 +110,11 @@ def train_il_policy(
     out = Path(output_dir).expanduser().resolve() if output_dir else _default_output_dir(policy).resolve()
     out.mkdir(parents=True, exist_ok=True)
 
+    # LeRobot 0.4.0 renamed every script to `lerobot_<name>` and dropped the
+    # short module names. The training entry point is now
+    # `lerobot.scripts.lerobot_train` (or the `lerobot-train` console script).
     cmd: list[str] = [
-        sys.executable, "-m", "lerobot.scripts.train",
+        sys.executable, "-m", "lerobot.scripts.lerobot_train",
         f"--policy.type={policy}",
         f"--output_dir={out}",
     ]
