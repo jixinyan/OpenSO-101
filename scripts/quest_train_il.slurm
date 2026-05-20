@@ -28,13 +28,21 @@
 set -euo pipefail
 
 # --------------------------------------------------------------------------
-# User-configurable paths. Adjust these to match your Quest layout.
+# User-configurable paths. Defaults to $HOME-based paths if no allocation
+# is set; override ALLOCATION_ID="pXXXXX" if you have a project allocation
+# (faster I/O than /home, no quota).
 # --------------------------------------------------------------------------
-# ALLOCATION_ID is your Quest project id (e.g. "p32123"). Used for storage
-# paths under /projects/<ALLOCATION_ID>. Replace before submitting.
-ALLOCATION_ID="${ALLOCATION_ID:-<ALLOCATION_ID>}"
-OPENSO101_ROOT="${OPENSO101_ROOT:-/projects/${ALLOCATION_ID}/OpenSO-101}"
-DATASET_ROOT="${DATASET_ROOT:-${OPENSO101_ROOT}/teleop_data/pickplace_v1/lerobot_dataset}"
+ALLOCATION_ID="${ALLOCATION_ID:-}"
+if [[ -n "${ALLOCATION_ID}" && "${ALLOCATION_ID}" != "<ALLOCATION_ID>" ]]; then
+    BASE_ROOT="/projects/${ALLOCATION_ID}"
+else
+    BASE_ROOT="${HOME}"
+fi
+OPENSO101_ROOT="${OPENSO101_ROOT:-${BASE_ROOT}/OpenSO-101}"
+# DATASET_ROOT can be either a local LeRobot-dataset directory or a HuggingFace
+# Hub repo id (e.g. "kevin831/openso101-pickplace-v1"). When Hub id, LeRobot
+# resolves against HF_HOME, so pre-warm the cache on a login node first.
+DATASET_ROOT="${DATASET_ROOT:-kevin831/openso101-pickplace-v1}"
 DATASET_REPO_ID="${DATASET_REPO_ID:-local/pickplace_v1}"
 CONDA_ENV_NAME="${CONDA_ENV_NAME:-openso101}"
 
@@ -52,9 +60,9 @@ module load mamba/24.3.0
 # mamba's `source activate` works inside SLURM jobs without `mamba init`.
 source activate "${CONDA_ENV_NAME}"
 
-# Keep HuggingFace cache on /projects so a) compute nodes don't need
+# Keep HuggingFace cache under BASE_ROOT so a) compute nodes don't need
 # internet to load models/datasets, and b) it survives across jobs.
-export HF_HOME="/projects/${ALLOCATION_ID}/.hf-cache"
+export HF_HOME="${HF_HOME:-${BASE_ROOT}/.hf-cache}"
 mkdir -p "${HF_HOME}"
 
 # Unbuffered output so slurm_<jobid>.out is live-tailable via `tail -f`.
@@ -71,11 +79,18 @@ python -c "from lerobot.policies.factory import get_policy_class; get_policy_cla
     echo '        Did you run scripts/quest_setup.sh (which strips the broken groot policy)?'
     exit 1
 }
-test -d "${DATASET_ROOT}" || {
-    echo "[ERROR] Dataset not found at ${DATASET_ROOT}"
-    echo "        Did Globus finish transferring teleop_data/?"
-    exit 1
-}
+# DATASET_ROOT is either a local LeRobot directory (validate it exists) or
+# a HF Hub repo id (let LeRobot resolve it against HF_HOME at load time).
+if [[ "${DATASET_ROOT}" == /* || -d "${DATASET_ROOT}" ]]; then
+    test -d "${DATASET_ROOT}" || {
+        echo "[ERROR] Dataset path not found: ${DATASET_ROOT}"
+        echo "        If you meant a Hub id, pass it without a leading slash"
+        echo "        (e.g. DATASET_ROOT=kevin831/openso101-pickplace-v1)."
+        exit 1
+    }
+else
+    echo "[INFO] Dataset is a Hub repo id; will resolve via HF_HOME=${HF_HOME}"
+fi
 
 cd "${OPENSO101_ROOT}"
 echo "[$(date +%H:%M:%S)] Working dir: $(pwd)"
