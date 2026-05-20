@@ -22,7 +22,9 @@
 # Uncomment + fill in for email notifications:
 # #SBATCH --mail-type=END,FAIL
 # #SBATCH --mail-user=<your-netid>@northwestern.edu
-# Uncomment + fill in for project-allocation accounting:
+# IMPORTANT: Quest's cli_filter REQUIRES --account. Either uncomment + fill
+# this in, or pass it on the sbatch command line:
+#   sbatch --account=p32954 scripts/quest_train_il.slurm
 # #SBATCH --account=<ALLOCATION_ID>
 
 set -euo pipefail
