@@ -184,7 +184,7 @@ class CommandsCfg:
         # earlier configs ((0.20, 0.18) and (0.28, 0.12)) accidentally
         # introduced and made the goal visually "behind the cube" from the
         # operator's perspective. Pure 10 cm lateral slide.
-        place_goal=(0.30, 0.10, 0.02),
+        place_goal=(0.24, -0.3, 0),
         advance_threshold=_GOAL_SPHERE_RADIUS,
         object_contact_radius=_CUBE_CONTACT_RADIUS,
         goal_pose_visualizer_cfg=CURRICULUM_GOAL_MARKER_CFG,
