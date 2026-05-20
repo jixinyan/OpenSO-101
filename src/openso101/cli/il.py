@@ -612,10 +612,12 @@ def _cmd_record(args: argparse.Namespace) -> int:
     args.leader_async = getattr(args, "leader_async", True)
     args.auto_save = getattr(args, "auto_save", False)
     args.action_rate_limit = getattr(args, "action_rate_limit", 0.0)
-    if args.repo_id is None:
-        args.repo_id = "local/openso101_pickplace_teleop"
     if args.repo_root is None:
         args.repo_root = "./teleop_data/openso101_pickplace_teleop"
+    # Local-only dataset identifier derived from --repo-root so the HDF5
+    # metadata is meaningful (e.g. teleop_data/pickplace_v1 -> local/pickplace_v1).
+    # The real Hub repo_id is picked at `il push` time.
+    _record_local_dataset_id = f"local/{Path(args.repo_root).name}"
     if args.task_name is None:
         args.task_name = "Pick up the green cube and place it at the goal"
 
@@ -720,13 +722,17 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     task_name=args.task_name,
                     cameras=camera_metadata,
                     fps=args.fps,
-                    dataset_id=args.repo_id,
+                    dataset_id=_record_local_dataset_id,
                     sim_joint_names=sim_joint_names,
                     env_id=args.task,
                 )
             else:
+                # Direct-LeRobot record path (programmatic, not exposed on the
+                # CLI). LeRobotDataset() requires an identifier even for local
+                # datasets — derive it from --repo-root so the Hub upload can
+                # happen later via `il push`.
                 recorder = OpenSO101LeRobotRecorder(
-                    repo_id=args.repo_id,
+                    repo_id=_record_local_dataset_id,
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
@@ -1797,7 +1803,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_rec.add_argument("--task", required=True)
     p_rec.add_argument("--leader-port", required=True)
     p_rec.add_argument("--leader-id", required=True)
-    p_rec.add_argument("--repo-id")
+    # NOTE: no `--repo-id` here. Record is local-only — episodes land at
+    # --repo-root as HDF5 files. The Hub identifier is picked at `il push`
+    # time via the push command's own --repo-id.
     p_rec.add_argument("--repo-root")
     p_rec.add_argument("--task-name")
     p_rec.add_argument("--num-envs", type=int, default=None)
