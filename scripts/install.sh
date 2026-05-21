@@ -116,12 +116,18 @@ _apply_lerobot_post_install_fixes() {
     #    which provides libavutil.so.60 — torchcodec doesn't recognize it and
     #    the dataloader crashes on the first batch. Pin to <8.
     #
-    # 3. torchcodec's wheels are built against ONE specific PyTorch minor:
-    #    0.4 → torch 2.6, 0.5 → torch 2.7, 0.6 → torch 2.8. LeRobot 0.4.0
-    #    declares `torchcodec>=0.2.1,<0.6.0` and pip greedily picks 0.5, but
-    #    our pinned torch is 2.6 — so the C++ symbols don't match and you get
-    #    "undefined symbol: _ZNK3c106Device3strB5cxx11Ev" at import. Force
-    #    torchcodec to the version matching the installed torch.
+    # 3. torchcodec's wheels are built against ONE specific PyTorch minor +
+    #    a specific C++ ABI. Compatibility table:
+    #      torchcodec 0.4 → torch 2.6 (cu124 wheels, _GLIBCXX_USE_CXX11_ABI=0)
+    #      torchcodec 0.5 → torch 2.7 (cu128 wheels, _GLIBCXX_USE_CXX11_ABI=1)
+    #      torchcodec 0.6 → torch 2.8
+    #    LeRobot 0.4.0 declares `torchcodec>=0.2.1,<0.6.0` so pip picks the
+    #    highest matching version. If the torch / torchcodec pair doesn't
+    #    match, you get either a missing-soname error (FFmpeg ABI mismatch)
+    #    or "undefined symbol: _ZNK3c106Device3strB5cxx11Ev" (C++ ABI
+    #    mismatch). The project's requirements-cuda.txt pins torch 2.7+cu128,
+    #    so we expect torchcodec 0.5 here — but we detect at runtime so this
+    #    function survives future torch upgrades.
 
     echo "[install] Post-install: patching LeRobot policy factory + FFmpeg."
 
