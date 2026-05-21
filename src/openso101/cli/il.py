@@ -1702,6 +1702,20 @@ def _cmd_play(args: argparse.Namespace) -> int:
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
 
+        # Hide RL-only debug viz (curriculum goal sphere, EE axis triad) so
+        # the rollout scene matches what the policy saw during teleop +
+        # training (cameras of a clean cube + table, no overlay markers).
+        # Pass --debug-vis to re-enable for diagnostics.
+        if not getattr(args, "debug_vis", False):
+            try:
+                env_cfg.commands.object_pose.debug_vis = False
+            except AttributeError:
+                pass  # task has no `object_pose` command (e.g. stack)
+            try:
+                env_cfg.scene.ee_frame.debug_vis = False
+            except AttributeError:
+                pass
+
         env = gym.make(args.task, cfg=env_cfg)
         scene = env.unwrapped.scene
         unwrapped_env = env.unwrapped
@@ -1989,6 +2003,16 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
             "Env variant. 'rl' (default) keeps rewards + terminations so the "
             "operator can read success signals from the env; 'teleop' uses the "
             "long-episode no-rewards variant matching `il record`."
+        ),
+    )
+    p_play.add_argument(
+        "--debug-vis",
+        action="store_true",
+        default=False,
+        help=(
+            "Show RL-only debug markers (goal sphere + EE axis triad) during "
+            "rollout. Default off so the scene matches what the policy saw "
+            "during teleop + training. Useful for inspecting curriculum stages."
         ),
     )
     p_play.set_defaults(func=_cmd_play)
