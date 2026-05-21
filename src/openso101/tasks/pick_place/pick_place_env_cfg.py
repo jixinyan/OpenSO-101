@@ -554,6 +554,14 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.decimation = 2
             self.sim.dt = 1 / 120
             self.sim.render_interval = self.decimation
+            # __post_init__ sized PhysX GPU buffers for RL training at
+            # num_envs=4096. Teleop uses num_envs=1, so revert to PhysX
+            # defaults to free up ~400+ MB of VRAM for IL play's policy
+            # inference (especially diffusion, which is ~1 GB + denoising
+            # intermediates that push the 8 GB laptop GPU into OOM).
+            self.sim.physx.gpu_collision_stack_size = 64 * 1024 * 1024  # default 64 MB
+            self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024
+            self.sim.physx.gpu_total_aggregate_pairs_capacity = 1024
             return
         raise UnsupportedVariantError(
             f"action_mode={mode!r} not supported; expected 'rl' or 'teleop'."
