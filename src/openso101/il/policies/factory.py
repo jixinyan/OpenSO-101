@@ -107,6 +107,15 @@ def load_policy(path: str | Path, *, device: str | None = None) -> Any:
     # path-resolution logic without LeRobot installed).
     ckpt_dir = _resolve_checkpoint_dir(path)
 
+    # Importing `lerobot.policies` triggers the @register_subclass calls in
+    # each policy's configuration module, which is what populates the draccus
+    # choice registry that PreTrainedConfig.from_pretrained reads. Without
+    # this, `from_pretrained` raises
+    # `DecodingError: Couldn't find a choice class for 'act'` because the
+    # subclass was never imported. LeRobot's own train script does this
+    # transitively; our `il play` doesn't, so we need to be explicit.
+    import lerobot.policies  # noqa: F401 — for side-effect registration
+
     from lerobot.configs.policies import PreTrainedConfig
 
     cfg = PreTrainedConfig.from_pretrained(ckpt_dir)
