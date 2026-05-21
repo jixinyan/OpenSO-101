@@ -1697,7 +1697,13 @@ def _cmd_play(args: argparse.Namespace) -> int:
         # terminations stay active — that lets the operator read success
         # signals off the env. Pass --action-mode teleop only when you
         # want the long single-episode behavior teleop uses.
-        env_cfg.configure_action_mode(getattr(args, "action_mode", "rl"))
+        # Default to the teleop variant for IL play: matches the env the
+        # policy was trained from (same action space - 6-dim absolute joint
+        # positions, same scene without rewards/terminations/curriculum, same
+        # ~1-hour episode length so the env doesn't auto-reset out from under
+        # the rollout). Pass --action-mode rl only when you want to evaluate
+        # against the RL reward chain (rare; mostly for diagnostics).
+        env_cfg.configure_action_mode(getattr(args, "action_mode", "teleop"))
         env_cfg.configure_cameras(True)
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
@@ -1997,12 +2003,15 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_play.add_argument("--no-camera-viewports", action="store_true")
     p_play.add_argument(
         "--action-mode",
-        default="rl",
+        default="teleop",
         choices=("rl", "teleop"),
         help=(
-            "Env variant. 'rl' (default) keeps rewards + terminations so the "
-            "operator can read success signals from the env; 'teleop' uses the "
-            "long-episode no-rewards variant matching `il record`."
+            "Env variant. 'teleop' (default) matches the env the policy was "
+            "trained from — 6-dim absolute joint positions, no rewards / "
+            "terminations / curriculum chain, ~1-hour episode length so the "
+            "env doesn't auto-reset out from under the rollout. Pass 'rl' "
+            "only when you want to evaluate against the RL reward chain "
+            "(rare; mostly diagnostics)."
         ),
     )
     p_play.add_argument(
