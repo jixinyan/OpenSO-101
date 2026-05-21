@@ -1764,14 +1764,6 @@ def _cmd_play(args: argparse.Namespace) -> int:
                 action = action.to(env.unwrapped.device)
                 from openso101.teleop.so101_mapping import batched_motor_units_to_action
                 action_rad = batched_motor_units_to_action(action)
-                if step < 3:
-                    cur_qpos = scene["robot"].data.joint_pos[0].detach().cpu().numpy()
-                    print(
-                        f"[diag step={step}] "
-                        f"policy_motor={action.detach().cpu().numpy().flatten().round(2).tolist()} "
-                        f"-> target_rad={action_rad.detach().cpu().numpy().flatten().round(3).tolist()} "
-                        f"current_rad={cur_qpos.round(3).tolist()}"
-                    )
                 actions.copy_(action_rad.reshape(actions.shape))
                 env.step(actions)
             step += 1
