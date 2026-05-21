@@ -1752,11 +1752,20 @@ def _cmd_play(args: argparse.Namespace) -> int:
                     for k, v in obs.items()
                 }
                 action = policy.select_action(obs)
-                # Policy returns shape (1, action_dim) on most LeRobot
-                # checkpoints. Squeeze to the action-space shape that
-                # ``env.step`` expects.
-                action = action.to(env.unwrapped.device).reshape(actions.shape)
-                actions.copy_(action)
+                # IMPORTANT: the policy was trained on actions in LeRobot
+                # MOTOR UNITS (range ~ ±100), not sim radians. The training
+                # data's action column has values like 89.2, -98.8, 64.3 —
+                # clearly not radians (radians are bounded by ±π). The env's
+                # JointPositionActionCfg expects sim radians, so we must
+                # convert motor units -> radians before env.step.
+                # Without this, the env interprets 90 as "90 radians" and
+                # the arm tries to spin to an impossible pose.
+                action = action.to(env.unwrapped.device)
+                # action shape is (1, 6); convert in motor->radian space
+                # per joint, then reshape to env's action buffer shape.
+                from openso101.teleop.so101_mapping import batched_motor_units_to_action
+                action_rad = batched_motor_units_to_action(action)
+                actions.copy_(action_rad.reshape(actions.shape))
                 env.step(actions)
             step += 1
             if max_steps is not None and step >= max_steps:
