@@ -124,6 +124,38 @@ def load_policy(path: str | Path, *, device: str | None = None) -> Any:
     if device is not None:
         policy = policy.to(device)
     policy.eval()
+
+    # LeRobot's `policy.select_action(obs)` returns NORMALIZED actions
+    # (and expects NORMALIZED observations) — the normalization stats live
+    # in separate processor pipelines that the saved checkpoint stores
+    # alongside the model weights. Without applying them, the env sees the
+    # raw model output in N(0, 1) space and the arm barely moves.
+    # Load the pre/post-processor pipelines and stash them on the policy
+    # object so the caller (e.g. `il play`) can apply them.
+    try:
+        from lerobot.policies.factory import make_pre_post_processors
+
+        preprocessor, postprocessor = make_pre_post_processors(
+            policy_cfg=cfg, pretrained_path=str(ckpt_dir),
+        )
+        # Stash on the policy so callers don't need to thread three return
+        # values through their loop. They're discoverable via the attrs.
+        policy.openso101_preprocessor = preprocessor
+        policy.openso101_postprocessor = postprocessor
+    except Exception as exc:
+        # If the processors can't be loaded (very old checkpoint format,
+        # missing files, etc.) we surface the failure but don't crash —
+        # the caller can still attempt inference, just at their own risk.
+        print(
+            f"[WARN]: Could not load pre/post processors from {ckpt_dir}: "
+            f"{type(exc).__name__}: {exc}. Policy actions will be in raw "
+            "(normalized) units, which usually produces near-stationary "
+            "behavior. Verify the checkpoint contains "
+            "policy_preprocessor.json + policy_postprocessor.json."
+        )
+        policy.openso101_preprocessor = None
+        policy.openso101_postprocessor = None
+
     return policy
 
 
