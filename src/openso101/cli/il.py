@@ -1718,9 +1718,21 @@ def _cmd_play(args: argparse.Namespace) -> int:
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
         step = 0
         max_steps = int(args.steps) if args.steps is not None else None
+        policy_device = env.unwrapped.device
         while simulation_app.is_running():
             with torch.inference_mode():
                 obs = _build_il_policy_observation(unwrapped_env, scene)
+                # _build_il_policy_observation produces CPU tensors (numpy ->
+                # torch.from_numpy). The policy lives on `policy_device`
+                # (cuda:0 typically). Without this .to(), ACT's internal
+                # latent_sample (created on batch[OBS_STATE].device) lands
+                # on CPU while the model weights are on CUDA, and the next
+                # nn.Linear call dies with "Expected all tensors to be on
+                # the same device".
+                obs = {
+                    k: v.to(policy_device) if hasattr(v, "to") else v
+                    for k, v in obs.items()
+                }
                 action = policy.select_action(obs)
                 # Policy returns shape (1, action_dim) on most LeRobot
                 # checkpoints. Squeeze to the action-space shape that
