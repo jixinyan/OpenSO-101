@@ -62,13 +62,35 @@ source activate "${CONDA_ENV_NAME}"
 # Install deps. Order matters: torch first (resolves CUDA build), then
 # lerobot (depends on torch), then openso101 (editable; depends on both).
 # --------------------------------------------------------------------------
-echo "[INFO]: Installing PyTorch (CUDA 12.4 wheels, H100 sm_90 compatible)"
+echo "[INFO]: Installing PyTorch 2.7.0 (CUDA 12.8 wheels, H100 + Blackwell compatible)"
+# CRITICAL: use the same wheels as the project's requirements-cuda.txt
+# (torch 2.7.0+cu128). The cu124 wheels are built with the OLD C++ ABI
+# (_GLIBCXX_USE_CXX11_ABI=0), which is incompatible with torchcodec 0.5+,
+# producing 'undefined symbol: _ZNK3c106Device3str...' at import. The cu128
+# wheels use the new ABI and match torchcodec 0.5's expectations.
 pip install --upgrade pip
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+pip install --upgrade \
+    --index-url https://download.pytorch.org/whl/cu128 \
+    --extra-index-url https://pypi.org/simple \
+    "torch==2.7.0" "torchvision==0.22.0"
 
 echo "[INFO]: Installing LeRobot 0.4.0 + dataset deps"
 # Pin to a known-good LeRobot release to match the local dev environment.
 pip install "lerobot==0.4.0" h5py wandb tensorboard
+
+echo "[INFO]: Pinning torchcodec to the version matching torch (0.5 for torch 2.7)"
+# LeRobot pins torchcodec>=0.2.1,<0.6.0 — pip greedily picks the highest match
+# (0.5) which is correct for torch 2.7 but wrong for torch 2.6. Force the
+# right version explicitly so future LeRobot upgrades don't accidentally pull
+# in 0.5 against an older torch.
+pip install --force-reinstall --no-deps "torchcodec==0.5.*"
+
+echo "[INFO]: Installing FFmpeg 7.x (torchcodec needs FFmpeg 4-7, not 8)"
+# torchcodec is compiled against FFmpeg 4-7's ABIs and dlopen()s a hard-coded
+# soname (libavutil.so.56-59). FFmpeg 8 provides .so.60 which torchcodec
+# doesn't know about, so the dataloader crashes on the first batch with
+# "libavutil.so.59: cannot open shared object file". Pin to <8 via conda-forge.
+mamba install -y -n "${CONDA_ENV_NAME}" -c conda-forge 'ffmpeg<8'
 
 echo "[INFO]: Installing openso101 (editable, IL extras only — Isaac Lab is NOT installed)"
 # `pip install -e .` re-uses the pyproject.toml at the repo root. The Isaac
