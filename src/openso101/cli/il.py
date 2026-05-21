@@ -1737,37 +1737,54 @@ def _cmd_play(args: argparse.Namespace) -> int:
         step = 0
         max_steps = int(args.steps) if args.steps is not None else None
         policy_device = env.unwrapped.device
+        preprocessor = getattr(policy, "openso101_preprocessor", None)
+        postprocessor = getattr(policy, "openso101_postprocessor", None)
         while simulation_app.is_running():
             with torch.inference_mode():
                 obs = _build_il_policy_observation(unwrapped_env, scene)
-                # _build_il_policy_observation produces CPU tensors (numpy ->
-                # torch.from_numpy). The policy lives on `policy_device`
-                # (cuda:0 typically). Without this .to(), ACT's internal
-                # latent_sample (created on batch[OBS_STATE].device) lands
-                # on CPU while the model weights are on CUDA, and the next
-                # nn.Linear call dies with "Expected all tensors to be on
-                # the same device".
+                # Move obs to the policy's device so ACT's internal
+                # latent_sample (which lands on batch[OBS_STATE].device)
+                # stays consistent with the model weights.
                 obs = {
                     k: v.to(policy_device) if hasattr(v, "to") else v
                     for k, v in obs.items()
                 }
+                # Apply the preprocessor pipeline (normalization stats from
+                # the training dataset) before feeding to the policy. The
+                # pipeline takes a dict and returns a dict.
+                if preprocessor is not None:
+                    obs = preprocessor(obs)
                 action = policy.select_action(obs)
-                # IMPORTANT: the policy was trained on actions in LeRobot
-                # MOTOR UNITS (range ~ ±100), not sim radians. The training
-                # data's action column has values like 89.2, -98.8, 64.3 —
-                # clearly not radians (radians are bounded by ±π). The env's
-                # JointPositionActionCfg expects sim radians, so we must
-                # convert motor units -> radians before env.step.
-                # Without this, the env interprets 90 as "90 radians" and
-                # the arm tries to spin to an impossible pose.
+                # Apply the postprocessor (unnormalization) — the policy's
+                # raw output is in N(0, 1) space; we need motor units to
+                # convert to radians for env.step.
+                if postprocessor is not None:
+                    action = postprocessor(action)
+                # Convert motor units -> sim radians for the env.
                 action = action.to(env.unwrapped.device)
-                # action shape is (1, 6); convert in motor->radian space
-                # per joint, then reshape to env's action buffer shape.
                 from openso101.teleop.so101_mapping import batched_motor_units_to_action
                 action_rad = batched_motor_units_to_action(action)
+                if step < 3:
+                    cur_qpos = scene["robot"].data.joint_pos[0].detach().cpu().numpy()
+                    print(
+                        f"[diag step={step}] "
+                        f"policy_motor={action.detach().cpu().numpy().flatten().round(2).tolist()} "
+                        f"-> target_rad={action_rad.detach().cpu().numpy().flatten().round(3).tolist()} "
+                        f"current_rad={cur_qpos.round(3).tolist()}"
+                    )
                 actions.copy_(action_rad.reshape(actions.shape))
                 env.step(actions)
             step += 1
+            # Success detection: cube reached the on-table place sphere.
+            # Mirrors the teleop record success path so the rollout ends
+            # the moment the policy actually accomplishes the task,
+            # instead of running forever after success.
+            if _teleop_goal_success(unwrapped_env):
+                print(
+                    f"[SUCCESS]: Cube reached the goal region after {step} "
+                    f"steps. Ending IL play."
+                )
+                break
             if max_steps is not None and step >= max_steps:
                 break
         print(f"[INFO]: IL play loop exited after {step} steps.")
