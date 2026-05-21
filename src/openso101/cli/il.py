@@ -1708,15 +1708,13 @@ def _cmd_play(args: argparse.Namespace) -> int:
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
 
-        # Hide RL-only debug viz (curriculum goal sphere, EE axis triad) so
-        # the rollout scene matches what the policy saw during teleop +
-        # training (cameras of a clean cube + table, no overlay markers).
-        # Pass --debug-vis to re-enable for diagnostics.
+        # Match the teleop record scene exactly:
+        #   - Goal sphere VISIBLE on the table (operator sees where the
+        #     policy is trying to place the cube, same as during `il record`).
+        #   - EE axis triad HIDDEN (purely a debug aid for RL training; it
+        #     was not present in the teleop demos the policy learned from).
+        # Pass --debug-vis to re-show the EE axis triad for diagnostics.
         if not getattr(args, "debug_vis", False):
-            try:
-                env_cfg.commands.object_pose.debug_vis = False
-            except AttributeError:
-                pass  # task has no `object_pose` command (e.g. stack)
             try:
                 env_cfg.scene.ee_frame.debug_vis = False
             except AttributeError:
@@ -2019,9 +2017,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         default=False,
         help=(
-            "Show RL-only debug markers (goal sphere + EE axis triad) during "
-            "rollout. Default off so the scene matches what the policy saw "
-            "during teleop + training. Useful for inspecting curriculum stages."
+            "Show the end-effector axis triad on the robot. Off by default to "
+            "match the teleop record scene. The goal sphere stays visible "
+            "regardless (also matches teleop)."
         ),
     )
     p_play.set_defaults(func=_cmd_play)
