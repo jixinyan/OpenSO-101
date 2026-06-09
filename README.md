@@ -52,20 +52,13 @@
 
 **Imitation learning, sim-to-real** — policies trained *purely from teleoperation demonstrations recorded with OpenSO-101*, running in real time on the physical SO-101. Both use the same teleop → dataset → train → deploy recipe; only the policy class differs.
 
-<table>
-  <tr>
-    <td align="center" width="50%"><strong>ACT policy</strong></td>
-    <td align="center" width="50%"><strong>Diffusion policy</strong></td>
-  </tr>
-  <tr>
-    <td>
-      <video src="https://github.com/user-attachments/assets/49259fa3-cc00-42c0-83a1-7d1bb74e3983" autoplay loop muted playsinline controls width="100%"></video>
-    </td>
-    <td>
-      <video src="https://github.com/user-attachments/assets/1dc78879-a640-4dd1-85a7-d2c9d5862a7f" autoplay loop muted playsinline controls width="100%"></video>
-    </td>
-  </tr>
-</table>
+**ACT policy** — running in real time on the SO-101:
+
+<video src="https://github.com/user-attachments/assets/49259fa3-cc00-42c0-83a1-7d1bb74e3983" autoplay loop muted playsinline controls width="640"></video>
+
+**Diffusion policy** — same teleop → dataset → train → deploy recipe:
+
+<video src="https://github.com/user-attachments/assets/1dc78879-a640-4dd1-85a7-d2c9d5862a7f" autoplay loop muted playsinline controls width="640"></video>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
