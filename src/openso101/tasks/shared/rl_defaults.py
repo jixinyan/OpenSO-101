@@ -30,16 +30,28 @@ SO101_GOAL_TRACKING_FINE_STD = 0.05
 #
 # These are used directly as RewardTerm weights. The RewardManager multiplies
 # every term by `weight * dt` (dt = decimation * sim.dt = 0.02 s), and PPO
-# discounts with gamma = 0.98. That uniform scaling preserves the sentinel
-# balance: the discounted value of holding the cube forever
-# (grasp_w * dt / (1 - gamma) = 1 * 0.02 / 0.02 = 1.0) equals the terminal goal
-# bonus (goal_w * dt = 50 * 0.02 = 1.0). The actual delivery driver is the
-# carry delta-shaping (positive every step the held cube nears the goal), not
-# the terminal bonus.
-SO101_PICK_PREGRASP_COEFF = 1.0  # Delta(eef -> obj) gain, active while not grasping
-SO101_PICK_CARRY_COEFF = 2.0  # Delta(obj -> goal) gain, active while grasping
-SO101_PICK_GRASP_HOLD_WEIGHT = 1.0  # per-step contact-confirmed-grasp reward
+# discounts with gamma = 0.99 (SO101_PPO_GAMMA).
+#
+# AUDIT HYPOTHESIS (needs a training run to validate): the pregrasp/carry/
+# grasp-hold/onset magnitudes below are NOT analytically derived — they come
+# from a reward audit that judged the previous values (pregrasp=1, carry=2,
+# hold=1) too weak relative to the terminal goal bonus to reliably pull the
+# policy through the grasp transition. The previous "sentinel-balance"
+# derivation assumed gamma=0.98 and made the discounted infinite grasp-hold
+# sum (hold_w * dt / (1 - gamma)) exactly equal the terminal bonus
+# (goal_w * dt). With gamma=0.99 and the reweighted terms that exact equality
+# no longer holds and is NOT re-derived here: the balance is now tuned
+# EMPIRICALLY and these numbers are starting hypotheses, not a closed-form
+# optimum. The actual delivery driver remains the carry delta-shaping
+# (positive every step the held cube nears the goal), now boosted so the
+# pull toward the goal out-values lingering in the grasp-hold reward; the
+# one-shot grasp-onset bonus injects a discrete reward at the
+# False->True grasp transition to sharpen the reach->grasp boundary.
+SO101_PICK_PREGRASP_COEFF = 30.0  # Delta(eef -> obj) gain, active while not grasping (audit hypothesis; needs training run)
+SO101_PICK_CARRY_COEFF = 12.0  # Delta(obj -> goal) gain, active while grasping (audit hypothesis; needs training run)
+SO101_PICK_GRASP_HOLD_WEIGHT = 0.2  # per-step contact-confirmed-grasp reward (audit hypothesis; needs training run)
 SO101_PICK_GOAL_BONUS = 50.0  # terminal: reached goal sphere AND still grasped
+SO101_PICK_GRASP_ONSET_BONUS = 5.0  # one-shot reward on the first step a grasp is confirmed (audit hypothesis; needs training run)
 
 # Smoothness penalties.
 #
@@ -64,7 +76,11 @@ gradient noise and crashes torch.distributions.Normal.sample(). Observed crash:
 2026-05-14 lift training, iter 79, RuntimeError "normal expects all elements
 of std >= 0.0"."""
 SO101_PPO_ENTROPY_COEF = 0.005
-SO101_PPO_GAMMA = 0.98
+# gamma 0.98 -> 0.99: a safe horizon fix. 1/(1-0.99) = 100-step effective
+# horizon, enough for the ~400-step pick-and-lift episode's terminal goal
+# bonus to propagate back through a carry without dense early shaping
+# dominating the critic. (0.98 gave only a ~50-step horizon.)
+SO101_PPO_GAMMA = 0.99
 
 # ---------------------------------------------------------------------------
 # Distillation defaults (rsl_rl.algorithms.Distillation)
@@ -100,6 +116,7 @@ __all__ = [
     "SO101_PICK_CARRY_COEFF",
     "SO101_PICK_GRASP_HOLD_WEIGHT",
     "SO101_PICK_GOAL_BONUS",
+    "SO101_PICK_GRASP_ONSET_BONUS",
     "SO101_ACTION_RATE_WEIGHT",
     "SO101_JOINT_VEL_WEIGHT",
     "SO101_JOINT_POS_DELTA_WEIGHT",

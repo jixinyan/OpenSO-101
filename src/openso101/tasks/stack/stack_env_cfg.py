@@ -28,6 +28,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.markers.config import FRAME_MARKER_CFG
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import (
     FrameTransformerCfg,
     OffsetCfg,
@@ -76,6 +77,27 @@ class StackSceneCfg(InteractiveSceneCfg):
     cube_top: RigidObjectCfg = MISSING
     cube_bottom: RigidObjectCfg = MISSING
 
+    # Contact sensors on the two opposing jaw bodies, filtered to the TOP cube
+    # prim (the cube the policy grasps and stacks). Feed the ``grasp_state``
+    # observation (contact-confirmed pinch of cube_top). Optional because teleop
+    # strips them — the teleop robot config sets activate_contact_sensors=False
+    # and its bodies have no contact reporter API. The shared
+    # ``object_grasped_obs`` helper reads these two sensors by name.
+    gripper_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/gripper",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/CubeTop"],
+    )
+    moving_jaw_contact: ContactSensorCfg | None = ContactSensorCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/jaw",
+        update_period=0.0,
+        history_length=1,
+        debug_vis=False,
+        filter_prim_paths_expr=["{ENV_REGEX_NS}/CubeTop"],
+    )
+
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         init_state=AssetBaseCfg.InitialStateCfg(pos=[0.5, 0, 0], rot=[0.707, 0, 0, 0.707]),
@@ -121,14 +143,17 @@ class ObservationsCfg:
             func=mdp.cube_top_to_cube_bottom_offset,
             params={"cube_height": CUBE_SIZE},
         )
+        # Contact-confirmed grasp state ([N,1] float, 1.0 when both jaws pinch
+        # the TOP cube). Lets the policy observe whether it is actually holding
+        # the cube it must lift and stack. Backed by the cube_top-filtered
+        # contact sensors added to StackSceneCfg.
+        grasp_state = ObsTerm(func=mdp.object_grasped_obs, params={"force_threshold": 0.5})
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            # No ObsTerm in this group sets a noise=Unoise/Gnoise, so observation
-            # corruption is currently a no-op. Set False to avoid the misleading
-            # "I think I'm noisy" state; re-enable only when per-term noise is
-            # intentionally configured.
-            self.enable_corruption = False
+            # Observation DR (joint-pos/vel noise) is attached in the env cfg
+            # __post_init__ and corruption is enabled there; the per-term noise
+            # is sampled by the observation manager when enable_corruption=True.
             self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
@@ -212,7 +237,11 @@ class TerminationsCfg:
     cube_bottom_dropped = DoneTerm(
         func=mdp.cube_dropped, params={"minimum_height": -0.05, "cube_cfg": SceneEntityCfg("cube_bottom")},
     )
-    stacked_success = DoneTerm(
+    # Canonical RL success key (shared contract): the DoneTerm attribute is
+    # 'success' uniformly across tasks so downstream tooling keys off
+    # Episode_Termination/success. The predicate FUNCTION name
+    # (cubes_stacked_success) is unchanged.
+    success = DoneTerm(
         func=mdp.cubes_stacked_success,
         params={
             "xy_threshold": 0.015,
@@ -355,6 +384,14 @@ class StackEnvCfg(OpenSO101EnvCfg):
             include_gravity=True,
         )
 
+        # Observation DR: per-step uniform noise on joint_pos/joint_vel obs
+        # terms (Feetech encoder noise model). enable_corruption=True so the
+        # observation manager actually samples and applies the noise.
+        # configure_play() turns this back off for clean eval.
+        from openso101.sim2real.domain_randomization.observation import attach_observation_dr
+        attach_observation_dr(self.observations.policy)
+        self.observations.policy.enable_corruption = True
+
     # ---------- variant hooks ----------
 
     def configure_play(self, enabled: bool) -> None:
@@ -387,6 +424,15 @@ class StackEnvCfg(OpenSO101EnvCfg):
         if mode == "teleop":
             self.actions = TeleopActionsCfg()
             _configure_so101_stack_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
+            # Strip jaw contact sensors: the teleop robot has
+            # activate_contact_sensors=False (no contact reporter API on its
+            # bodies), and no teleop observation/reward consumes the signal.
+            # Leaving them wired causes InteractiveScene to fail at init.
+            self.scene.gripper_jaw_contact = None
+            self.scene.moving_jaw_contact = None
+            # The grasp_state obs term reads those (now-absent) contact sensors,
+            # so drop it for teleop. None terms are skipped by the obs manager.
+            self.observations.policy.grasp_state = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None

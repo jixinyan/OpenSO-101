@@ -65,6 +65,21 @@ def test_so101_pick_place_freezes_goal_at_air_carry_target():
     assert cfg.rewards.success_bonus.weight == pytest.approx(50.0)
     assert not hasattr(cfg.rewards, "stage_0_lift_goal")
 
+    # Reward-audit reweighting (audit hypotheses; need a training run to
+    # validate) — assert the updated magnitudes flow through from rl_defaults.
+    assert cfg.rewards.pregrasp_approach.weight == pytest.approx(30.0)
+    assert cfg.rewards.carry_to_goal.weight == pytest.approx(12.0)
+    assert cfg.rewards.grasp_hold.weight == pytest.approx(0.2)
+
+    # New one-shot grasp-onset reward (fires on the False->True grasp step).
+    assert cfg.rewards.grasp_onset.func is mdp.grasp_onset_bonus
+    assert cfg.rewards.grasp_onset.weight == pytest.approx(5.0)
+
+    # Grasp-state observation term wired into the policy group.
+    assert cfg.observations.policy.grasp_state.func is mdp.object_grasped_obs
+    # Observation DR is enabled for training (turned off only by configure_play).
+    assert cfg.observations.policy.enable_corruption is True
+
     # Success requires reaching the goal AND a confirmed grasp.
     assert cfg.terminations.success.func is mdp.reached_goal_while_grasped
 

@@ -187,14 +187,16 @@ class ObservationsCfg:
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
+        # Contact-confirmed grasp state ([N,1] float, 1.0 when both jaws pinch
+        # the cube). Same signal the ``grasped`` reward uses; lets the policy
+        # observe whether it is actually holding the cube.
+        grasp_state = ObsTerm(func=mdp.object_grasped_obs, params={"force_threshold": 0.5})
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            # No ObsTerm in this group sets a noise=Unoise/Gnoise, so observation
-            # corruption is currently a no-op. Set False to avoid the misleading
-            # "I think I'm noisy" state; re-enable only when per-term noise is
-            # intentionally configured.
-            self.enable_corruption = False
+            # Observation DR (joint-pos/vel noise) is attached in the env cfg
+            # __post_init__ and corruption is enabled there; the per-term noise
+            # is sampled by the observation manager when enable_corruption=True.
             self.concatenate_terms = True
 
     # observation groups
@@ -236,19 +238,29 @@ class RewardsCfg:
         params={"std": SO101_REACH_REWARD_COARSE_STD},
         weight=SO101_REACH_REWARD_COARSE_WEIGHT,
     )
+    # Fine reach attractor, de-weighted to fix the "camp at contact" failure:
+    # the old weight=1.0 fine-reach kernel peaks exactly where the gripper sits
+    # touching the cube, so the policy could maximise it by hovering against the
+    # cube WITHOUT closing the jaws — there was no gradient to cross the grasp
+    # transition. Dropping fine-reach to 0.5 and raising the grasp bonus to 6.0
+    # (below) makes confirming a grasp strictly out-value camping at contact.
+    # NEEDS VALIDATION: this is a weight re-balance, not a derived optimum; a
+    # training run is required to confirm the policy now grasps instead of camps.
     reaching_object_fine = RewTerm(
         func=mdp.object_ee_distance,
         params={"std": SO101_REACH_REWARD_STD},
-        weight=1.0,
+        weight=0.5,
     )
 
     # Contact-confirmed grasp bonus (both jaws register force > threshold).
     # Dense gradient for the close-then-lift sequence; without it the policy
-    # stalls on "just reach" before entropy collapses.
+    # stalls on "just reach" before entropy collapses. Raised 3.0 -> 6.0 so the
+    # grasp transition out-values lingering in the (now de-weighted) fine-reach
+    # camp at the cube surface. NEEDS VALIDATION (see reaching_object_fine).
     grasped = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
-        weight=3.0,
+        weight=6.0,
     )
 
     # Height-only lift reward. No AND-conjunction with gripper-closed or
@@ -307,7 +319,11 @@ class TerminationsCfg:
     object_dropping = DoneTerm(
         func=mdp.root_height_below_minimum, params={"minimum_height": -0.05, "asset_cfg": SceneEntityCfg("object")}
     )
-    lift_success = DoneTerm(
+    # Canonical RL success key (shared contract): the DoneTerm attribute is
+    # 'success' uniformly across tasks so downstream tooling keys off
+    # Episode_Termination/success. The predicate FUNCTION name
+    # (lift_success_height_only) is unchanged.
+    success = DoneTerm(
         func=mdp.lift_success_height_only,
         params={
             "minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT,
@@ -435,6 +451,14 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             include_gravity=True,
         )
 
+        # Observation DR: per-step uniform noise on joint_pos/joint_vel obs
+        # terms (Feetech encoder noise model). enable_corruption=True so the
+        # observation manager actually samples and applies the noise.
+        # configure_play() turns this back off for clean eval.
+        from openso101.sim2real.domain_randomization.observation import attach_observation_dr
+        attach_observation_dr(self.observations.policy)
+        self.observations.policy.enable_corruption = True
+
     # ---------- variant hooks ----------
 
     def configure_play(self, enabled: bool) -> None:
@@ -468,6 +492,9 @@ class LiftEnvCfg(OpenSO101EnvCfg):
             # bodies), and no teleop reward consumes the signal.
             self.scene.gripper_jaw_contact = None
             self.scene.moving_jaw_contact = None
+            # The grasp_state obs term reads those (now-absent) contact sensors,
+            # so drop it for teleop. None terms are skipped by the obs manager.
+            self.observations.policy.grasp_state = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None

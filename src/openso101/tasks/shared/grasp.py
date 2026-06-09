@@ -76,7 +76,23 @@ def grasped_reward(
     return object_grasped_by_jaws(env, force_threshold).float()
 
 
+def object_grasped_obs(
+    env: "ManagerBasedRLEnv",
+    force_threshold: float = 0.5,
+) -> torch.Tensor:
+    """Grasp-state observation: ``[N, 1]`` float, 1.0 iff both jaws pinch the cube.
+
+    Wraps :func:`object_grasped_by_jaws` (per-env bool) into the column shape
+    Isaac Lab's observation manager concatenates: ``.float().unsqueeze(-1)``.
+    Wiring this as a ``grasp_state`` ``ObsTerm`` gives the policy direct access
+    to the contact-confirmed grasp signal that the reward stack already uses,
+    so it doesn't have to infer "am I holding the cube?" from raw proprio.
+    """
+    return object_grasped_by_jaws(env, force_threshold).float().unsqueeze(-1)
+
+
 __all__ = [
     "object_grasped_by_jaws",
     "grasped_reward",
+    "object_grasped_obs",
 ]

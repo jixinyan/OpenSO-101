@@ -50,9 +50,10 @@ class PickPlacePPORunnerCfg(RslRlOnPolicyRunnerCfg):
         num_mini_batches=4,
         learning_rate=1.0e-4,
         schedule="adaptive",
-        # With gamma=0.995 the effective horizon is 1/(1-gamma)=200 steps,
-        # enough for controlled-lift and final-place sparse rewards to propagate
-        # without making early dense guidance dominate the critic.
+        # With gamma=0.99 (SO101_PPO_GAMMA) the effective horizon is
+        # 1/(1-gamma)=~100 steps, enough for the grasp -> carry -> goal sparse
+        # rewards to propagate back across a carry without early dense guidance
+        # dominating the critic. (Raised from 0.98 / ~50-step horizon.)
         gamma=SO101_PPO_GAMMA,
         lam=0.95,
         desired_kl=0.01,

@@ -72,6 +72,7 @@ from openso101.tasks.shared.rl_defaults import (
     SO101_PICK_CARRY_COEFF,
     SO101_PICK_GOAL_BONUS,
     SO101_PICK_GRASP_HOLD_WEIGHT,
+    SO101_PICK_GRASP_ONSET_BONUS,
     SO101_PICK_PREGRASP_COEFF,
     SO101_SMOOTHNESS_CURRICULUM_STEPS,
     SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
@@ -221,12 +222,16 @@ class ObservationsCfg:
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         object_position = ObsTerm(func=mdp.object_position_in_robot_root_frame)
         target_object_position = ObsTerm(func=mdp.generated_commands, params={"command_name": "object_pose"})
+        # Contact-confirmed grasp state ([N,1] float, 1.0 when both jaws pinch
+        # the cube). Gives the policy the same grasp signal the reward stack
+        # gates on, so it doesn't have to infer "am I holding it?" from proprio.
+        grasp_state = ObsTerm(func=mdp.object_grasped_obs, params={"force_threshold": 0.5})
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            # No ObsTerm in this group sets noise=..., so corruption is
-            # currently a no-op. Re-enable only with explicit per-term noise.
-            self.enable_corruption = False
+            # Observation DR (joint-pos/vel noise) is attached in the env cfg
+            # __post_init__ and corruption is enabled there; the per-term noise
+            # is sampled by the observation manager when enable_corruption=True.
             self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
@@ -276,12 +281,23 @@ class RewardsCfg:
     )
 
     # Hold: per-step reward for a contact-confirmed grasp (both jaws pinching
-    # the cube). The dominant dense signal once contact is made; its discounted
-    # infinite sum is balanced against the terminal goal bonus (see rl_defaults).
+    # the cube). A weak steady-state signal once contact is made; the discrete
+    # credit for *achieving* the grasp lives in ``grasp_onset`` below, and the
+    # actual delivery driver is ``carry_to_goal`` (see rl_defaults audit note).
     grasp_hold = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
         weight=SO101_PICK_GRASP_HOLD_WEIGHT,
+    )
+
+    # Grasp onset: one-shot reward on the single step the grasp first confirms
+    # (False->True transition). Sharpens the reach->grasp boundary that the weak
+    # steady-state grasp_hold alone under-rewards. (Audit hypothesis weight;
+    # needs a training run to validate — see rl_defaults.)
+    grasp_onset = RewTerm(
+        func=mdp.grasp_onset_bonus,
+        params={"force_threshold": 0.5},
+        weight=SO101_PICK_GRASP_ONSET_BONUS,
     )
 
     # Carry: reward reducing object->goal distance while grasping. The goal is
@@ -461,6 +477,15 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             include_gravity=True,
         )
 
+        # Observation DR: per-step uniform noise on joint_pos/joint_vel obs
+        # terms (Feetech encoder noise model). enable_corruption=True so the
+        # observation manager actually samples and applies the noise — without
+        # it the per-term noise cfgs are inert. configure_play() turns this back
+        # off for clean eval.
+        from openso101.sim2real.domain_randomization.observation import attach_observation_dr
+        attach_observation_dr(self.observations.policy)
+        self.observations.policy.enable_corruption = True
+
     # ---------- variant hooks ----------
 
     def configure_play(self, enabled: bool) -> None:
@@ -500,6 +525,9 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             # bodies), and no teleop reward consumes the signal.
             self.scene.gripper_jaw_contact = None
             self.scene.moving_jaw_contact = None
+            # The grasp_state obs term reads those (now-absent) contact sensors,
+            # so drop it for teleop. None terms are skipped by the obs manager.
+            self.observations.policy.grasp_state = None
             self.rewards = None
             self.terminations = None
             self.curriculum = None

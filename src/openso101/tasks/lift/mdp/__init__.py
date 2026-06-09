@@ -5,7 +5,11 @@
 
 from isaaclab.envs.mdp import *  # noqa: F401, F403
 
-from openso101.tasks.shared.grasp import grasped_reward, object_grasped_by_jaws  # noqa: F401
+from openso101.tasks.shared.grasp import (  # noqa: F401
+    grasped_reward,
+    object_grasped_by_jaws,
+    object_grasped_obs,
+)
 from openso101.tasks.shared.rewards import *  # noqa: F401, F403
 
 from .cube_above_pose_command import CubeAbovePoseCommand, CubeAbovePoseCommandCfg  # noqa: F401
