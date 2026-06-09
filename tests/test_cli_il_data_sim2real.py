@@ -10,8 +10,12 @@ requiring Isaac Lab. Also asserts that the historical `data` subcommand
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -19,8 +23,13 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
         [sys.executable, "-m", "openso101.cli.main", *args],
         capture_output=True,
         text=True,
-        cwd="/data/OpenSO-101",
-        env={"PYTHONPATH": "/data/OpenSO-101/src", "PATH": "/usr/bin:/bin"},
+        cwd=str(REPO_ROOT),
+        env=dict(
+            os.environ,
+            PYTHONPATH=str(REPO_ROOT / "src")
+            + os.pathsep
+            + os.environ.get("PYTHONPATH", ""),
+        ),
     )
 
 
