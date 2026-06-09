@@ -578,11 +578,11 @@ _STAGE_COLORS = {
     "lifting_object": "#f1c14e",
     "object_goal_tracking": "#a84ef1",
     "object_goal_tracking_fine_grained": "#4ef1a8",
-    "stage_0_lift_goal": "#5fae5f",
-    "stage_0_complete_bonus": "#347d39",
-    "stage_1_carry_goal": "#4e9af1",
-    "stage_1_complete_bonus": "#225ea8",
-    "stage_2_place_goal": "#a84ef1",
+    # pick-and-lift (sentinel delta shaping)
+    "pregrasp_approach": "#5fae5f",
+    "grasp_hold": "#f1c14e",
+    "carry_to_goal": "#4e9af1",
+    "success_bonus": "#a84ef1",
     # smoothness (shared)
     "action_rate": "#aaaaaa",
     "joint_vel": "#cccccc",
@@ -593,11 +593,10 @@ _STAGE_LABELS = {
     "lifting_object": "Lifting (z > 0.04)",
     "object_goal_tracking": "Goal tracking (std=0.3)",
     "object_goal_tracking_fine_grained": "Goal tracking (std=0.05)",
-    "stage_0_lift_goal": "Stage 0: lifted cube -> lift ball",
-    "stage_0_complete_bonus": "Stage 0 touched",
-    "stage_1_carry_goal": "Stage 1: carried cube -> carry ball",
-    "stage_1_complete_bonus": "Stage 1 touched",
-    "stage_2_place_goal": "Stage 2: cube -> place ball",
+    "pregrasp_approach": "Pregrasp approach (delta eef->obj)",
+    "grasp_hold": "Grasp hold (contact-confirmed)",
+    "carry_to_goal": "Carry to goal (delta obj->goal)",
+    "success_bonus": "Success (in goal AND grasped)",
     "action_rate": "Action rate penalty",
     "joint_vel": "Joint vel penalty",
 }
@@ -646,11 +645,10 @@ def _plot_run(log_dir: str, save: bool = False, smooth_window: int = 30) -> None
         "lifting_object",
         "object_goal_tracking",
         "object_goal_tracking_fine_grained",
-        "stage_0_lift_goal",
-        "stage_0_complete_bonus",
-        "stage_1_carry_goal",
-        "stage_1_complete_bonus",
-        "stage_2_place_goal",
+        "pregrasp_approach",
+        "grasp_hold",
+        "carry_to_goal",
+        "success_bonus",
     ]
     all_steps = None
     stage_arrays = {}

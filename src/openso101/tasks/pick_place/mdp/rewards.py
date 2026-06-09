@@ -1,7 +1,28 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Reward functions for the curriculum-driven pick-and-place task."""
+"""Reward functions for pick-and-lift (sentinel-style delta shaping).
+
+This task follows the sentinel ``PickAndLiftReward`` design: a single fixed
+goal in the air and *delta-distance* shaping that rewards progress rather
+than position. Concretely the per-step reward is::
+
+    pregrasp_approach   (active while NOT grasping):  weight * Delta(eef -> obj)
+    grasp_hold          (active while grasping):      grasped_reward (1.0)
+    carry_to_goal       (active while grasping):      weight * Delta(obj -> goal)
+    success_bonus       (terminal):                   reached goal AND grasped
+
+Delta shaping closes the "hover near target and farm reward" exploit that
+absolute tanh-distance shaping permits: holding position yields zero, only
+*reducing* the distance pays. The grasp-mode gating (pregrasp XOR carry) and
+the fresh-reset guard come from the pure, unit-tested core in
+``openso101.shaping``; the functions here only gather the tensors.
+
+The previous 3-stage curriculum reward chain (lift/carry/place with
+height-only gating) was removed in favour of this single-goal design; the
+goal location is frozen by the command term (``lock_stage``), not by a
+per-step reward gate.
+"""
 
 from __future__ import annotations
 
@@ -10,153 +31,124 @@ from typing import TYPE_CHECKING
 import torch
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.utils.math import subtract_frame_transforms
+from isaaclab.sensors import FrameTransformer
+from isaaclab.utils.math import combine_frame_transforms
+
+from openso101.shaping import (
+    delta_progress_reward,
+    resolve_prev,
+    shaping_valid_mask,
+)
+from openso101.tasks.shared.grasp import object_grasped_by_jaws
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def cube_to_curriculum_stage_goal(
+def _eef_to_object_distance(
     env: "ManagerBasedRLEnv",
-    stage: int,
-    std: float,
-    minimal_height: float | None = 0.04,
-    command_name: str = "object_pose",
-    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    object_cfg: SceneEntityCfg,
+    ee_frame_cfg: SceneEntityCfg,
 ) -> torch.Tensor:
-    """Tanh-kernel reward to one stage goal, active only during that stage.
+    """World-frame distance from the end-effector frame to the object, per env."""
+    obj: RigidObject = env.scene[object_cfg.name]
+    ee: FrameTransformer = env.scene[ee_frame_cfg.name]
+    return torch.norm(obj.data.root_pos_w - ee.data.target_pos_w[..., 0, :], dim=1)
 
-    This keeps each phase diagnosable in TensorBoard while still using the same
-    moving green ball for the policy's observation. Stage 0/1 can be height-gated
-    so a cube resting below the ball does not collect the goal-tracking reward.
+
+def _object_to_goal_distance(
+    env: "ManagerBasedRLEnv",
+    command_name: str,
+    robot_cfg: SceneEntityCfg,
+    object_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """World-frame distance from the object to the commanded goal, per env.
+
+    The command exposes the goal in the robot root frame; we transform it to
+    world before differencing against the object's world position (same
+    convention as :func:`shared.rewards.object_reached_goal_in_air`).
     """
     robot: Articulation = env.scene[robot_cfg.name]
     obj: RigidObject = env.scene[object_cfg.name]
-    cmd_term = env.command_manager.get_term(command_name)
-
-    cube_pos_b, _ = subtract_frame_transforms(
-        robot.data.root_pos_w,
-        robot.data.root_quat_w,
-        obj.data.root_pos_w,
+    goal_b = env.command_manager.get_command(command_name)[:, :3]
+    goal_w, _ = combine_frame_transforms(
+        robot.data.root_state_w[:, :3], robot.data.root_state_w[:, 3:7], goal_b
     )
-    goal_b = cmd_term.goal_for_stage(stage)
-    distance = torch.norm(cube_pos_b - goal_b, dim=1)
-    reward = 1.0 - torch.tanh(distance / std)
-
-    active_stage = cmd_term.stage == stage
-    if minimal_height is not None:
-        active_stage = active_stage & (cube_pos_b[:, 2] > minimal_height)
-    return active_stage.float() * reward
+    return torch.norm(goal_w - obj.data.root_pos_w[:, :3], dim=1)
 
 
-def stage_completion_bonus(
+def _shaped_delta(
     env: "ManagerBasedRLEnv",
-    completed_stage: int,
-    command_name: str = "object_pose",
+    state_key: str,
+    cur_dist: torch.Tensor,
+    mode_active: torch.Tensor,
 ) -> torch.Tensor:
-    """One-step sparse reward when touching a stage goal advances the command."""
-    cmd_term = env.command_manager.get_term(command_name)
-    return (cmd_term.just_completed_stage == completed_stage).float()
+    """Per-env delta-progress reward with grasp-mode + reset gating.
 
-
-def object_is_lifted_when_grasped(
-    env: "ManagerBasedRLEnv",
-    minimal_height: float,
-    force_threshold: float = 0.5,
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-) -> torch.Tensor:
-    """``object_is_lifted`` gated on contact-confirmed grasp.
-
-    Returns 1.0 only when the cube is above ``minimal_height`` (world frame) AND
-    both SO-101 jaws are in contact with it. Defeats the failure mode where a
-    policy knocks the cube off the table to satisfy a pure-height check.
+    Maintains the previous distance and previous mode flag in ``env.extras``
+    (the same persistent-state pattern as ``shared.rewards.joint_pos_delta_l2``)
+    under ``state_key``-prefixed entries so multiple shaping terms never stomp
+    each other. Returns the *unweighted* delta; the ``RewardTerm`` weight is
+    the shaping coefficient.
     """
-    from openso101.tasks.pick_place.mdp.grasp import object_grasped_by_jaws
+    dist_key = f"{state_key}_dist"
+    mode_key = f"{state_key}_mode"
 
-    obj: RigidObject = env.scene[object_cfg.name]
-    height_ok = obj.data.root_pos_w[:, 2] > minimal_height
-    grasped = object_grasped_by_jaws(env, force_threshold)
-    return (height_ok & grasped).float()
+    prev_dist = resolve_prev(env.extras.get(dist_key), cur_dist)
+    prev_mode = env.extras.get(mode_key)
+    if prev_mode is None or prev_mode.shape != mode_active.shape:
+        prev_mode = mode_active.clone()
+
+    # episode_length_buf is incremented before reward computation, so a value
+    # of <=1 marks the first reward step of a fresh episode, where prev_dist is
+    # stale from the previous episode and must not be differenced.
+    fresh_reset = env.episode_length_buf <= 1
+    valid = shaping_valid_mask(mode_active, prev_mode, fresh_reset)
+    reward = delta_progress_reward(prev_dist, cur_dist, coeff=1.0, valid_mask=valid)
+
+    env.extras[dist_key] = cur_dist.detach().clone()
+    env.extras[mode_key] = mode_active.detach().clone()
+    return reward
 
 
-def cube_to_curriculum_stage_goal_when_grasped(
+def pregrasp_approach_shaping(
     env: "ManagerBasedRLEnv",
-    stage: int,
-    std: float,
-    minimal_height: float | None = 0.04,
     force_threshold: float = 0.5,
+    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame"),
+) -> torch.Tensor:
+    """Delta-shaping on (eef -> object) distance, active only while NOT grasping.
+
+    Drives the gripper toward the cube before contact. Once a contact-confirmed
+    grasp is achieved the term goes silent (mode flips to carry); the grasp
+    onset step yields zero (mode-transition guard) so there's no spurious
+    reward from the eef "snapping" onto the cube.
+    """
+    grasping = object_grasped_by_jaws(env, force_threshold)
+    cur = _eef_to_object_distance(env, object_cfg, ee_frame_cfg)
+    return _shaped_delta(env, "_pp_pregrasp", cur, ~grasping)
+
+
+def carry_to_goal_shaping(
+    env: "ManagerBasedRLEnv",
     command_name: str = "object_pose",
+    force_threshold: float = 0.5,
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
 ) -> torch.Tensor:
-    """:func:`cube_to_curriculum_stage_goal` multiplicatively gated on grasp.
+    """Delta-shaping on (object -> goal) distance, active only while grasping.
 
-    Stage 0 (lift) and stage 1 (carry) require the cube to be held to count;
-    stage 2 (place) does NOT gate on grasp -- the policy must release the cube
-    to win, so requiring continuous grasp at placement would be wrong.
-    Callers should still use the un-gated ``cube_to_curriculum_stage_goal`` for
-    stage 2; this function returns the un-gated value if called with stage=2.
-
-    Retained for backward compatibility; the active reward chain uses
-    :func:`cube_to_curriculum_stage_goal_height_gated` instead so the policy
-    can bootstrap before contact sensors fire.
+    Because the goal is fixed in the air, reducing this distance *requires*
+    lifting and carrying the held cube — there is no on-table drag shortcut.
+    Silent while not grasping; the grasp-release step yields zero.
     """
-    from openso101.tasks.pick_place.mdp.grasp import object_grasped_by_jaws
-
-    base = cube_to_curriculum_stage_goal(
-        env, stage, std, minimal_height, command_name, robot_cfg, object_cfg,
-    )
-    if stage == 2:
-        return base
-    grasped = object_grasped_by_jaws(env, force_threshold).float()
-    return base * grasped
-
-
-def cube_to_curriculum_stage_goal_height_gated(
-    env: "ManagerBasedRLEnv",
-    stage: int,
-    std: float,
-    minimal_height: float,
-    command_name: str = "object_pose",
-    robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-) -> torch.Tensor:
-    """Stage-specific goal-distance reward, gated only on object height.
-
-    Replaces the contact-confirmed grasp gate in
-    :func:`cube_to_curriculum_stage_goal_when_grasped` with a height-only gate
-    matching the upstream lift task's pattern. Once the cube rises above
-    ``minimal_height``, the tanh-shaped goal-tracking reward is awarded.
-    Only fires for envs whose current curriculum stage equals ``stage``; all
-    other envs/stages get zero, preserving the staged learning structure.
-
-    Mirrors the frame computation of :func:`cube_to_curriculum_stage_goal`
-    exactly (robot-root-frame distance, ``cmd_term.goal_for_stage``); the
-    only difference is the gate uses object height instead of jaw contact.
-    """
-    robot: Articulation = env.scene[robot_cfg.name]
-    obj: RigidObject = env.scene[object_cfg.name]
-    cmd_term = env.command_manager.get_term(command_name)
-
-    cube_pos_b, _ = subtract_frame_transforms(
-        robot.data.root_pos_w,
-        robot.data.root_quat_w,
-        obj.data.root_pos_w,
-    )
-    goal_b = cmd_term.goal_for_stage(stage)
-    distance = torch.norm(cube_pos_b - goal_b, dim=1)
-    reward = 1.0 - torch.tanh(distance / std)
-
-    active_stage = cmd_term.stage == stage
-    lifted = obj.data.root_pos_w[:, 2] > minimal_height
-    return (active_stage & lifted).float() * reward
+    grasping = object_grasped_by_jaws(env, force_threshold)
+    cur = _object_to_goal_distance(env, command_name, robot_cfg, object_cfg)
+    return _shaped_delta(env, "_pp_carry", cur, grasping)
 
 
 __all__ = [
-    "cube_to_curriculum_stage_goal",
-    "stage_completion_bonus",
-    "object_is_lifted_when_grasped",
-    "cube_to_curriculum_stage_goal_when_grasped",
-    "cube_to_curriculum_stage_goal_height_gated",
+    "pregrasp_approach_shaping",
+    "carry_to_goal_shaping",
 ]

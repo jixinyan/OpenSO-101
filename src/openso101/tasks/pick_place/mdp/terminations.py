@@ -12,25 +12,33 @@ from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.math import subtract_frame_transforms
 
+from openso101.tasks.shared.grasp import object_grasped_by_jaws
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
-def curriculum_complete(
+def reached_goal_while_grasped(
     env: "ManagerBasedRLEnv",
     command_name: str = "object_pose",
     threshold: float = 0.03,
+    force_threshold: float = 0.5,
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
 ) -> torch.Tensor:
-    """Episode succeeds when final-stage cube surface touches the goal sphere.
+    """Sentinel ``InGoalRegion`` success: cube in the goal sphere AND held.
 
-    Reads the per-env stage tensor from the curriculum command term, so it cannot
-    fire on stage 0 or stage 1 successes (those just advance the stage and the
-    episode continues).
+    Success requires BOTH the cube surface touching the (air) goal sphere and
+    a contact-confirmed grasp. The grasp gate is what makes this a genuine
+    pick-and-lift success rather than a launch-and-fly exploit: a cube that
+    drifts through the goal region after being swatted is not held, so it does
+    not count.
+
+    The goal location is whatever the command term currently exposes (frozen
+    by ``lock_stage`` for this task), so this predicate is independent of any
+    curriculum staging.
     """
     cmd_term = env.command_manager.get_term(command_name)
-    at_final = cmd_term.stage == 2
 
     robot: Articulation = env.scene[robot_cfg.name]
     obj: RigidObject = env.scene[object_cfg.name]
@@ -39,7 +47,9 @@ def curriculum_complete(
         robot.data.root_quat_w,
         obj.data.root_pos_w,
     )
-    return at_final & cmd_term.is_touching_goal(cube_pos_b, threshold=threshold)
+    in_goal = cmd_term.is_touching_goal(cube_pos_b, threshold=threshold)
+    grasped = object_grasped_by_jaws(env, force_threshold)
+    return in_goal & grasped
 
 
-__all__ = ["curriculum_complete"]
+__all__ = ["reached_goal_while_grasped"]

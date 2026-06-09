@@ -34,17 +34,39 @@ def test_so101_training_scene_uses_canonical_usd_robot_backend():
     assert cfg.scene.moving_fingertip_pad is None
 
 
-def test_so101_pick_place_curriculum_heights_follow_lowered_usd_root():
-    env = gym.make("OpenSO101-PickPlace-v0")
-    cfg = env.unwrapped.cfg
-    env.close()
+def test_so101_pick_place_freezes_goal_at_air_carry_target():
+    """RL pick-and-lift uses a single frozen air goal (sentinel design).
+
+    The command is frozen at ``lock_stage=1`` so the goal is the carry target
+    ``(place_goal.x, place_goal.y, carry_height)`` in the air — teleop's X/Y at
+    carry height. ``__post_init__`` lowers the heights/place-z by the canonical
+    USD tabletop root drop so they land at the intended world height.
+    """
+    import openso101.tasks.pick_place.mdp as mdp
+    from openso101.tasks.pick_place import PickPlaceEnvCfg
+
+    # Instantiate the cfg directly (no gym.make) so we don't allocate the
+    # 4096-env scene just to inspect config fields. __post_init__ applies the
+    # tabletop-root height offsets.
+    cfg = PickPlaceEnvCfg()
     root_drop = -SO101_USD_TABLETOP_ROOT_Z
 
-    assert cfg.commands.object_pose.lift_height == pytest.approx(0.10 + root_drop)
+    # Single frozen goal at the air carry target.
+    assert cfg.commands.object_pose.lock_stage == 1
     assert cfg.commands.object_pose.carry_height == pytest.approx(0.15 + root_drop)
-    assert cfg.commands.object_pose.place_goal == pytest.approx((0.30, 0.10, 0.02 + root_drop))
-    assert cfg.rewards.stage_0_lift_goal.params["minimal_height"] == pytest.approx(0.04 + root_drop)
-    assert cfg.rewards.stage_1_carry_goal.params["minimal_height"] == pytest.approx(0.04 + root_drop)
+    # lift_height + place_goal.z are kept consistent for teleop's lock_stage=2.
+    assert cfg.commands.object_pose.lift_height == pytest.approx(0.10 + root_drop)
+    assert cfg.commands.object_pose.place_goal == pytest.approx((0.24, -0.3, 0.0 + root_drop))
+
+    # Sentinel delta-shaping reward terms replace the old 3-stage chain.
+    assert cfg.rewards.pregrasp_approach.func is mdp.pregrasp_approach_shaping
+    assert cfg.rewards.carry_to_goal.func is mdp.carry_to_goal_shaping
+    assert cfg.rewards.grasp_hold.func is mdp.grasped_reward
+    assert cfg.rewards.success_bonus.weight == pytest.approx(50.0)
+    assert not hasattr(cfg.rewards, "stage_0_lift_goal")
+
+    # Success requires reaching the goal AND a confirmed grasp.
+    assert cfg.terminations.success.func is mdp.reached_goal_while_grasped
 
 
 def test_so101_robot_public_exports_only_canonical_config():
@@ -54,7 +76,7 @@ def test_so101_robot_public_exports_only_canonical_config():
 
 
 def test_pick_place_registry_has_no_separate_usd_ab_task_ids():
-    assert gym.spec("OpenSO101-PickPlace-v0").kwargs["env_cfg_entry_point"].endswith(":OpenSO101PickPlaceEnvCfg")
+    assert gym.spec("OpenSO101-PickPlace-v0").kwargs["env_cfg_entry_point"].endswith(":PickPlaceEnvCfg")
     with pytest.raises(gym.error.NameNotFound):
         gym.spec("OpenSO101-USD-PickPlace-v0")
 

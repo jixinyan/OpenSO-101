@@ -1,27 +1,29 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Pick-and-place env -- 3-stage curriculum (lift -> carry -> place).
+"""Pick-and-lift env -- sentinel-style single-goal delta shaping.
 
-This task is **distinct** from the atomic Lift skill, which uses Isaac Lab's
-official lift reward design with a single random air-pose goal. Pick-and-place
-here is a true sequence: the cube must be lifted, carried laterally, and
-placed back on the table.
+The task: grasp the cube and carry it to a single fixed goal sphere held in
+the air above the place location. There is exactly one goal (no stage chain);
+success is reaching that goal *while still grasping the cube*. This follows the
+sentinel ``PickAndLiftReward`` design.
 
-The mechanism is "curriculum via goal placement". One green ball is shown in
-the scene; its location is chosen by a custom :class:`CurriculumGoalCommand`
-based on a per-env stage:
+Reward (per step), all delta-distance shaped (progress, not position):
 
-- Stage 0: ball above cube spawn xy at z = 0.10  (teaches lifting)
-- Stage 1: ball above final place xy at z = 0.15 (teaches carrying)
-- Stage 2: ball on table at the same final xy     (teaches placing)
+- ``pregrasp_approach``  : weight * Delta(eef -> obj), active while NOT grasping
+- ``grasp_hold``         : per-step reward for a contact-confirmed grasp
+- ``carry_to_goal``      : weight * Delta(obj -> goal), active while grasping
+- ``success_bonus``      : terminal, cube in goal sphere AND grasped
 
-The cube touching a stage's ball advances the stage; only stage 2's success
-terminates the episode. The reward layout intentionally stays close to atomic
-Lift: reach, lift, staged object-goal tracking, sparse stage completion, and
-smoothness. The goal command moves the green ball after each stage transition;
-the reward terms stay split by stage so the task remains diagnosable and each
-phase can use the right gate.
+Why an *air* goal: the goal sits at carry height (not on the table), so
+reducing ``Delta(obj -> goal)`` necessarily lifts the cube. A table-level goal
+would let the policy drag the cube along the surface to "win" without lifting.
+
+The green sphere is rendered by :class:`CurriculumGoalCommand` frozen with
+``lock_stage=1`` (its carry goal = ``(place_goal.x, place_goal.y,
+carry_height)``). Teleop reuses the same command with ``lock_stage=2`` to show
+the on-table place goal for the human operator, who performs the full
+lower-and-release that this RL task intentionally does not train.
 """
 
 from __future__ import annotations
@@ -66,11 +68,11 @@ from openso101.robots.so101.so_arm101 import (
 from openso101.tasks.shared.objects import so101_cube_object_cfg
 from openso101.tasks.shared.rl_defaults import (
     SO101_ACTION_RATE_WEIGHT,
-    SO101_GOAL_TRACKING_STD,
     SO101_JOINT_VEL_WEIGHT,
-    SO101_REACH_REWARD_COARSE_STD,
-    SO101_REACH_REWARD_COARSE_WEIGHT,
-    SO101_REACH_REWARD_STD,
+    SO101_PICK_CARRY_COEFF,
+    SO101_PICK_GOAL_BONUS,
+    SO101_PICK_GRASP_HOLD_WEIGHT,
+    SO101_PICK_PREGRASP_COEFF,
     SO101_SMOOTHNESS_CURRICULUM_STEPS,
     SO101_SMOOTHNESS_CURRICULUM_WEIGHT,
 )
@@ -79,7 +81,6 @@ SO101_USD_TABLETOP_BASE_OFFSET = -SO101_USD_TABLETOP_ROOT_Z
 
 _GOAL_SPHERE_RADIUS = 0.03
 _CUBE_CONTACT_RADIUS = 0.015
-_SUCCESS_REWARD = 25.0
 
 # Green goal sphere marker, with one mesh per stage so the command can still
 # index by stage. The geometry/color stays the same; only the position changes.
@@ -166,24 +167,30 @@ class PickPlaceSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class CommandsCfg:
-    """3-stage curriculum goal (lift -> carry -> place)."""
+    """Single frozen goal sphere (sentinel pick-and-lift).
+
+    The command term supports a 3-stage curriculum, but this RL task freezes it
+    at ``lock_stage=1`` so the goal is a single fixed point: the carry goal
+    ``(place_goal.x, place_goal.y, carry_height)`` = ``(0.24, -0.3, 0.15)`` in
+    robot-root frame — teleop's X/Y at an airborne carry height. Teleop swaps to
+    ``lock_stage=2`` (table place goal) in ``configure_action_mode``.
+    """
 
     object_pose = mdp.CurriculumGoalCommandCfg(
         asset_name="robot",
         object_name="object",
-        # `resampling_time_range` set to a value larger than any episode so the
-        # curriculum command's `_resample_command` only fires at episode reset.
-        # Stage transitions happen via `_update_command`, not by resampling.
+        # `resampling_time_range` larger than any episode so `_resample_command`
+        # only fires at episode reset. With `lock_stage` set, the stage never
+        # advances mid-episode either, so the goal is genuinely fixed.
         resampling_time_range=(1e9, 1e9),
         debug_vis=True,
-        lift_height=0.10,
+        # Freeze at the carry (air) goal for RL. See class docstring.
+        lock_stage=1,
+        lift_height=0.10,  # unused while frozen at stage 1; kept for teleop parity
         carry_height=0.15,
-        # Place location, robot root frame. x matches the cube's spawn x
-        # (0.30 m) exactly, so the goal sits DIRECTLY BESIDE the cube on the
-        # same forward axis — no pull-back toward the robot base, which
-        # earlier configs ((0.20, 0.18) and (0.28, 0.12)) accidentally
-        # introduced and made the goal visually "behind the cube" from the
-        # operator's perspective. Pure 10 cm lateral slide.
+        # Place location, robot root frame (teleop's on-table goal). The frozen
+        # carry goal reuses this x/y at carry_height. (0.24, -0.3) is a lateral
+        # carry target offset from the cube's spawn (0.30, 0.0).
         place_goal=(0.24, -0.3, 0),
         advance_threshold=_GOAL_SPHERE_RADIUS,
         object_contact_radius=_CUBE_CONTACT_RADIUS,
@@ -250,97 +257,50 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Upstream-pattern stage chain with height-only gating (not grasp-AND).
+    """Sentinel-style delta-distance shaping (pregrasp / hold / carry / goal).
 
-    The 3-stage curriculum command (lift/carry/place) advances on cube-goal
-    proximity, not on grasp state. Stage rewards gate on object height >=
-    minimal_height only; the policy must lift the cube to unlock stage_0/1
-    rewards, and the cube must be on the table (no height gate) for stage_2.
-
-    The 'grasped' contact-sensor reward survives as a small dense bonus,
-    but is no longer a multiplicative gate on anything.
+    Each term's weight IS the shaping coefficient; the RewardManager applies
+    ``weight * dt``. Delta shaping rewards *progress* (distance reduction), so
+    hovering near a target pays nothing — closing the "touch-and-farm" exploit
+    that absolute tanh-distance rewards permit.
     """
 
-    # Two-scale reach: coarse covers ~35cm starting distance, fine sharpens at grasp range.
-    reaching_object_coarse = RewTerm(
-        func=mdp.object_ee_distance,
-        params={"std": SO101_REACH_REWARD_COARSE_STD},
-        weight=SO101_REACH_REWARD_COARSE_WEIGHT,
-    )
-    reaching_object_fine = RewTerm(
-        func=mdp.object_ee_distance,
-        params={"std": SO101_REACH_REWARD_STD},
-        weight=1.0,
+    # Approach: reward reducing eef->object distance while NOT grasping. The
+    # mode flips off (silent) the moment a contact-confirmed grasp is achieved.
+    pregrasp_approach = RewTerm(
+        func=mdp.pregrasp_approach_shaping,
+        params={"force_threshold": 0.5},
+        weight=SO101_PICK_PREGRASP_COEFF,
     )
 
-    # Bonus only -- NOT a gate. Rewards confirmed contact-pinch (the only
-    # signal that distinguishes "jaws closed in air" from "jaws closed on
-    # cube" before the cube lifts).
-    grasped = RewTerm(
+    # Hold: per-step reward for a contact-confirmed grasp (both jaws pinching
+    # the cube). The dominant dense signal once contact is made; its discounted
+    # infinite sum is balanced against the terminal goal bonus (see rl_defaults).
+    grasp_hold = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
-        weight=3.0,
+        weight=SO101_PICK_GRASP_HOLD_WEIGHT,
     )
 
-    # Height-only lift (no contact gate).
-    lifting_object = RewTerm(
-        func=mdp.object_is_lifted,
-        params={"minimal_height": 0.04},
-        weight=15.0,
+    # Carry: reward reducing object->goal distance while grasping. The goal is
+    # airborne, so this necessarily drives a lift-and-carry (no drag shortcut).
+    carry_to_goal = RewTerm(
+        func=mdp.carry_to_goal_shaping,
+        params={"command_name": "object_pose", "force_threshold": 0.5},
+        weight=SO101_PICK_CARRY_COEFF,
     )
 
-    stage_0_lift_goal = RewTerm(
-        func=mdp.cube_to_curriculum_stage_goal_height_gated,
-        params={"stage": 0, "std": SO101_GOAL_TRACKING_STD, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=12.0,
-    )
-
-    stage_0_complete_bonus = RewTerm(
-        func=mdp.stage_completion_bonus,
-        params={"completed_stage": 0, "command_name": "object_pose"},
-        weight=10.0,
-    )
-
-    stage_1_carry_goal = RewTerm(
-        func=mdp.cube_to_curriculum_stage_goal_height_gated,
-        params={"stage": 1, "std": SO101_GOAL_TRACKING_STD, "minimal_height": 0.04, "command_name": "object_pose"},
-        weight=16.0,
-    )
-
-    stage_1_complete_bonus = RewTerm(
-        func=mdp.stage_completion_bonus,
-        params={"completed_stage": 1, "command_name": "object_pose"},
-        weight=10.0,
-    )
-
-    # Stage 2: place -- NO height gate, since the policy must release the cube.
-    stage_2_place_goal = RewTerm(
-        func=mdp.cube_to_curriculum_stage_goal,
-        params={"stage": 2, "std": SO101_GOAL_TRACKING_STD, "minimal_height": None, "command_name": "object_pose"},
-        weight=16.0,
-    )
-
-    # Sparse per-step bonus while the cube is inside the current goal sphere
-    # AND still in the air. Naturally only fires in stages 0/1 (lift/carry);
-    # stage 2's on-table goal sits below the height gate. Complements the
-    # one-shot stage_*_complete_bonus with a continuous "holding-on-target"
-    # signal.
-    goal_touch_in_air = RewTerm(
-        func=mdp.object_reached_goal_in_air,
-        params={
-            "minimal_height": 0.04,
-            "goal_radius": 0.05,
-            "command_name": "object_pose",
-        },
-        weight=8.0,
-    )
-
+    # Terminal: cube reached the goal sphere AND is still grasped.
     success_bonus = RewTerm(
         func=mdp.is_terminated_term,
         params={"term_keys": ["success"]},
-        weight=_SUCCESS_REWARD,
+        weight=SO101_PICK_GOAL_BONUS,
     )
 
+    # Smoothness (physical-sanity infra, orthogonal to the task shaping above):
+    # joint_vel is active from step 0 to stop the arm flailing the cube off the
+    # table; action_rate is curriculum-ramped so it doesn't suppress early
+    # exploration.
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=SO101_ACTION_RATE_WEIGHT)
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
@@ -351,11 +311,11 @@ class RewardsCfg:
 
 @configclass
 class TerminationsCfg:
-    """Episode ends only on time-out, drop, or stage-2 success.
+    """Episode ends on time-out, cube drop, or pick-and-lift success.
 
-    Crucially, advancing through stages 0 and 1 does NOT end the episode --
-    it just moves the goal sphere. Only entering the stage-2 (place) sphere
-    counts as task completion.
+    Success = the cube reached the (air) goal sphere AND is still grasped. The
+    grasp gate makes this a genuine delivery rather than a swat-through-the-
+    region exploit.
     """
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
@@ -366,8 +326,12 @@ class TerminationsCfg:
     )
 
     success = DoneTerm(
-        func=mdp.curriculum_complete,
-        params={"command_name": "object_pose", "threshold": _GOAL_SPHERE_RADIUS},
+        func=mdp.reached_goal_while_grasped,
+        params={
+            "command_name": "object_pose",
+            "threshold": _GOAL_SPHERE_RADIUS,
+            "force_threshold": 0.5,
+        },
     )
 
 
@@ -472,6 +436,8 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
 
         # Adjust curriculum goal heights to compensate for the canonical SO101 USD
         # being placed at z=SO101_USD_TABLETOP_ROOT_Z (table-top mounted layout).
+        # carry_height matters for RL (the frozen stage-1 air goal); lift_height
+        # and place_goal.z are kept consistent for teleop's lock_stage=2 goal.
         self.commands.object_pose.lift_height += SO101_USD_TABLETOP_BASE_OFFSET
         self.commands.object_pose.carry_height += SO101_USD_TABLETOP_BASE_OFFSET
         place_x, place_y, place_z = self.commands.object_pose.place_goal
@@ -480,8 +446,6 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             place_y,
             place_z + SO101_USD_TABLETOP_BASE_OFFSET,
         )
-        self.rewards.stage_0_lift_goal.params["minimal_height"] += SO101_USD_TABLETOP_BASE_OFFSET
-        self.rewards.stage_1_carry_goal.params["minimal_height"] += SO101_USD_TABLETOP_BASE_OFFSET
 
         # Physics DR (robot link mass + joint friction/armature + actuator
         # gains + cube mass/material + gravity). Same call Stack already

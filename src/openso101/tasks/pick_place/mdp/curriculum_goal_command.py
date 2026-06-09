@@ -165,20 +165,30 @@ class CurriculumGoalCommand(CommandTerm):
         self._refresh_goals(torch.as_tensor(env_ids, device=self.device, dtype=torch.long))
 
     def _update_command(self):
-        """Each step: advance stage for envs whose cube reached the current goal."""
+        """Each step: advance stage for envs whose cube reached the current goal.
+
+        When ``cfg.lock_stage`` is set the stage is frozen at that value for the
+        whole episode (single fixed goal), so stage advancement is skipped
+        entirely. This is what the RL pick-and-lift task (``lock_stage=1`` ->
+        air carry goal) and teleop (``lock_stage=2`` -> on-table place goal)
+        rely on. Without this guard ``lock_stage=1`` would still advance to
+        stage 2 the moment the cube touched the goal, defeating the freeze.
+        """
         self.just_completed_stage.fill_(-1)
-        cube_pos_b, _ = subtract_frame_transforms(
-            self.robot.data.root_pos_w,
-            self.robot.data.root_quat_w,
-            self.object.data.root_pos_w,
-        )
-        # Advance only envs that are not yet at the final stage.
-        reached = self.is_touching_goal(cube_pos_b) & (self.stage < 2)
-        if reached.any():
-            advance_ids = reached.nonzero(as_tuple=False).flatten()
-            self.just_completed_stage[advance_ids] = self.stage[advance_ids]
-            self.stage[advance_ids] += 1
-            self._refresh_goals(advance_ids)
+
+        if self.cfg.lock_stage is None:
+            cube_pos_b, _ = subtract_frame_transforms(
+                self.robot.data.root_pos_w,
+                self.robot.data.root_quat_w,
+                self.object.data.root_pos_w,
+            )
+            # Advance only envs that are not yet at the final stage.
+            reached = self.is_touching_goal(cube_pos_b) & (self.stage < 2)
+            if reached.any():
+                advance_ids = reached.nonzero(as_tuple=False).flatten()
+                self.just_completed_stage[advance_ids] = self.stage[advance_ids]
+                self.stage[advance_ids] += 1
+                self._refresh_goals(advance_ids)
 
         # Refresh world-frame goal each step (robot root may move; for fixed-base it's constant).
         self.goal_pos_w, _ = combine_frame_transforms(
