@@ -65,13 +65,47 @@ LEROBOT_LEADER_LIMITS_DEG: dict[str, JointLimitsDeg] = {
 }
 
 # Canonical target limits for the local SO101 USD follower.
+#
+# CALIBRATION DISCREPANCY (sim-harmless, real-arm-skewing): the leader-deg ->
+# rad ranges below DISAGREE with the rad -> motor-unit ranges in
+# ``JOINT_LIMITS_RAD`` for two joints — ``elbow_flex`` and ``wrist_roll``:
+#
+#   joint        SO101_TELEOP_TARGET_LIMITS_DEG   JOINT_LIMITS_RAD (in deg)
+#   elbow_flex   (-100.0, 90.0)                   (-96.8, 96.8)
+#   wrist_roll   (-160.0, 160.0)                  (-157.2, 162.8)
+#
+# In SIM this is HARMLESS: teleop maps leader-deg -> rad with this table and
+# the IL export maps rad -> motor-units with JOINT_LIMITS_RAD, but a sim
+# round-trip stays self-consistent (the policy learns whatever interval the
+# data was recorded in). On the REAL ARM the two tables drive different
+# absolute joint angles for the same normalized command, so the elbow and
+# wrist-roll end up skewed relative to the cube.
+#
+# DO NOT "fix" the numbers here without the real follower calibration: the
+# REAL FOLLOWER CALIBRATION JSON is the TRUE SOURCE of joint ranges on
+# hardware (LeRobot writes it during ``lerobot-calibrate``). Reconcile both
+# tables against that JSON, not against each other. Until then this mismatch
+# is documented and made greppable via :func:`teleop_target_vs_motor_limit_mismatches`.
 SO101_TELEOP_TARGET_LIMITS_DEG: dict[str, JointLimitsDeg] = {
     "shoulder_pan": JointLimitsDeg(-110.0, 110.0),
     "shoulder_lift": JointLimitsDeg(-100.0, 100.0),
-    "elbow_flex": JointLimitsDeg(-100.0, 90.0),
+    "elbow_flex": JointLimitsDeg(-100.0, 90.0),   # CALIB-DISCREPANCY vs JOINT_LIMITS_RAD['Elbow']
     "wrist_flex": JointLimitsDeg(-95.0, 95.0),
-    "wrist_roll": JointLimitsDeg(-160.0, 160.0),
+    "wrist_roll": JointLimitsDeg(-160.0, 160.0),  # CALIB-DISCREPANCY vs JOINT_LIMITS_RAD['Wrist_Roll']
     "gripper": JointLimitsDeg(-10.0, 100.0),
+}
+
+# Control-joint-name -> sim-USD-joint-name map, so the two limit tables (one
+# keyed by control names, one by sim names) can be cross-checked. Mirrors the
+# ordering relationship between SO101_TELEOP_CONTROL_JOINT_NAMES and
+# JOINT_ORDER (defined later in this module).
+SO101_CONTROL_TO_SIM_JOINT: dict[str, str] = {
+    "shoulder_pan": "Rotation",
+    "shoulder_lift": "Pitch",
+    "elbow_flex": "Elbow",
+    "wrist_flex": "Wrist_Pitch",
+    "wrist_roll": "Wrist_Roll",
+    "gripper": "Jaw",
 }
 
 
@@ -279,3 +313,60 @@ def batched_motor_units_to_action(motors: "torch.Tensor") -> "torch.Tensor":
     for i, name in enumerate(JOINT_ORDER):
         out[..., i] = motor_units_to_sim_radians(motors[..., i], name)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Calibration cross-check (sim/real limit discrepancy).
+#
+# The two per-joint limit tables in this module are derived from different
+# sources and DISAGREE for ``elbow_flex`` and ``wrist_roll`` (see the long
+# note on SO101_TELEOP_TARGET_LIMITS_DEG). This is harmless in sim but skews
+# real-arm angles. The helper below makes the mismatch programmatically
+# discoverable (and assertion-friendly for tests) WITHOUT changing any
+# numeric value — fixing the numbers requires the real follower calibration
+# JSON, which is the true source on hardware.
+# ---------------------------------------------------------------------------
+
+# Joints whose two limit tables are known to disagree. Documented + greppable
+# so a future calibration pass against the real follower JSON can target them.
+KNOWN_CALIBRATION_LIMIT_DISCREPANCIES: tuple[str, ...] = ("elbow_flex", "wrist_roll")
+
+
+def teleop_target_vs_motor_limit_mismatches(
+    tolerance_deg: float = 0.5,
+) -> dict[str, dict[str, tuple[float, float]]]:
+    """Return joints where the two limit tables disagree beyond ``tolerance_deg``.
+
+    Cross-checks :data:`SO101_TELEOP_TARGET_LIMITS_DEG` (leader-deg -> rad map,
+    keyed by control-joint name) against :data:`JOINT_LIMITS_RAD` (rad ->
+    motor-unit map, keyed by sim-USD-joint name), converting the latter to
+    degrees via :data:`SO101_CONTROL_TO_SIM_JOINT`.
+
+    Returns a dict ``{control_joint: {"target_deg": (lo, hi),
+    "motor_rad_deg": (lo, hi)}}`` for every joint whose lower or upper bound
+    differs by more than ``tolerance_deg`` degrees. An EMPTY dict means the
+    tables agree (e.g. after a real-calibration reconciliation).
+
+    This is pure logic (no torch / Isaac) so a test can simply assert::
+
+        mism = teleop_target_vs_motor_limit_mismatches()
+        assert set(mism) == set(KNOWN_CALIBRATION_LIMIT_DISCREPANCIES)
+
+    and will start FAILING the moment someone reconciles or further skews the
+    tables — surfacing the discrepancy instead of letting it silently rot.
+    """
+    mismatches: dict[str, dict[str, tuple[float, float]]] = {}
+    for control_name, sim_name in SO101_CONTROL_TO_SIM_JOINT.items():
+        target = SO101_TELEOP_TARGET_LIMITS_DEG[control_name]
+        rad_lo, rad_hi = JOINT_LIMITS_RAD[sim_name]
+        motor_lo_deg = math.degrees(rad_lo)
+        motor_hi_deg = math.degrees(rad_hi)
+        if (
+            abs(target.lower - motor_lo_deg) > tolerance_deg
+            or abs(target.upper - motor_hi_deg) > tolerance_deg
+        ):
+            mismatches[control_name] = {
+                "target_deg": (target.lower, target.upper),
+                "motor_rad_deg": (round(motor_lo_deg, 3), round(motor_hi_deg, 3)),
+            }
+    return mismatches
