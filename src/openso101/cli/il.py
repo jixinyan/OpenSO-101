@@ -529,6 +529,35 @@ def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
         return False
 
 
+def _teleop_goal_success_vec(env, command_name: str = "object_pose"):
+    """Vectorized counterpart of :func:`_teleop_goal_success`.
+
+    Returns a per-env boolean tensor ``[N]`` that is true where the object has
+    reached the final (stage-2) pick/place goal — the same teleop-mode place
+    goal used to latch success during ``il record``. Used by ``il eval`` to
+    latch success independently for every parallel env. Returns ``None`` if the
+    env has no ``object_pose`` command term (e.g. the stack task), so callers
+    can fall back gracefully.
+    """
+    try:
+        import torch
+
+        from isaaclab.utils.math import subtract_frame_transforms
+
+        command = env.command_manager.get_term(command_name)
+        cube_pos_b, _ = subtract_frame_transforms(
+            command.robot.data.root_pos_w,
+            command.robot.data.root_quat_w,
+            command.object.data.root_pos_w,
+        )
+        final_goal_b = command.goal_for_stage(2)
+        touching = command.is_touching_goal(cube_pos_b, final_goal_b)
+        stage_ready = command.stage >= 2
+        return torch.logical_and(touching, stage_ready)
+    except Exception:
+        return None
+
+
 def _build_home_target_tensor(device):
     """Return the canonical init pose as an action-ordered tensor (radians).
 
@@ -588,6 +617,61 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
     except Exception:
         pass
     return sim_state
+
+
+def _env_control_rate_fps(unwrapped_env) -> int | None:
+    """Return the env's true control rate in Hz, or None if unavailable.
+
+    Teleop steps the env once per control step, so the dataset FPS must match
+    the env's control rate ``1 / (sim.dt * decimation)`` — 60 Hz for the SO101
+    tasks (sim.dt=1/120, decimation=2). The recorder previously stamped a
+    hard-coded 30 Hz, which mislabels playback/training time. Read the values
+    off the constructed env cfg so any future dt/decimation tweak flows through
+    automatically.
+    """
+    try:
+        cfg = unwrapped_env.cfg
+        sim_dt = float(cfg.sim.dt)
+        decimation = int(cfg.decimation)
+        control_dt = sim_dt * decimation
+        if control_dt <= 0.0:
+            return None
+        return int(round(1.0 / control_dt))
+    except Exception as exc:  # pragma: no cover - depends on Isaac cfg shape
+        print(f"[WARN]: Could not derive env control rate for FPS: {exc}")
+        return None
+
+
+def _resolve_record_fps(unwrapped_env, requested_fps: int | None) -> int:
+    """Pick the dataset FPS, preferring the env's true control rate.
+
+    ``requested_fps`` is the user-supplied ``--fps`` override (``None`` when not
+    passed). If the true control rate is known we use it; when the user also
+    passed ``--fps`` and it disagrees we emit a loud ``[WARN]`` and still prefer
+    the true rate so the dataset metadata never lies about playback speed. When
+    the true rate cannot be derived we honor ``--fps`` (or fall back to 30 Hz).
+    """
+    true_fps = _env_control_rate_fps(unwrapped_env)
+    if true_fps is not None:
+        if requested_fps is not None and int(requested_fps) != true_fps:
+            print(
+                "[WARN]: --fps "
+                f"{int(requested_fps)} disagrees with the env's true control "
+                f"rate {true_fps} Hz (sim.dt * decimation). Preferring the "
+                f"true control rate {true_fps} Hz so the dataset FPS matches "
+                "the actual teleop step rate. Pass --fps to override only if "
+                "you know what you are doing."
+            )
+        else:
+            print(f"[INFO]: Recording FPS from env control rate: {true_fps} Hz.")
+        return true_fps
+    # True rate unavailable: honor the override or fall back to the legacy 30.
+    fallback = int(requested_fps) if requested_fps is not None else 30
+    print(
+        "[WARN]: Could not derive env control rate; using "
+        f"FPS={fallback} ({'--fps override' if requested_fps is not None else 'default'})."
+    )
+    return fallback
 
 
 def _cmd_record(args: argparse.Namespace) -> int:
@@ -715,6 +799,12 @@ def _cmd_record(args: argparse.Namespace) -> int:
         camera_metadata = discover_camera_metadata(scene)
         print(f"[INFO]: Recording cameras: {', '.join(camera_metadata)}")
 
+        # Stamp the dataset with the env's TRUE control rate (1/(sim.dt*
+        # decimation)) instead of the hard-coded --fps default; --fps stays an
+        # explicit override. record_fps then flows to the recorder AND, via the
+        # HDF5 'fps' attr, into the LeRobot dataset fps at `il push` time.
+        record_fps = _resolve_record_fps(unwrapped_env, args.fps)
+
         checkpoints = None
         if not args.no_record:
             if args.record_format == "hdf5":
@@ -722,7 +812,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
-                    fps=args.fps,
+                    fps=record_fps,
                     dataset_id=_record_local_dataset_id,
                     sim_joint_names=sim_joint_names,
                     env_id=args.task,
@@ -737,7 +827,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
-                    fps=args.fps,
+                    fps=record_fps,
                 )
             recorder.init_dataset()
             recorder.start_episode()
@@ -914,8 +1004,17 @@ def _cmd_record(args: argparse.Namespace) -> int:
         print("[ERROR]: Teleop agent failed before clean shutdown:", flush=True)
         traceback.print_exception(type(exc), exc, exc.__traceback__)
     finally:
+        # Reaching the finally block with the recorder still recording means
+        # an abnormal / early exit (exception, window closed, or the operator
+        # killed the process) — NOT a deliberate save. The deliberate save
+        # paths (S key -> save_episode(success=True); goal-region ->
+        # _handle_successful_episode) all flip recorder.recording to False
+        # before the loop breaks, so they never land here. Persisting a
+        # default success=False episode here silently pollutes the dataset
+        # with aborted attempts, so cancel the in-progress episode instead.
         if recorder is not None and recorder.recording:
-            recorder.save_episode()
+            print("[INFO]: Abnormal/early exit — discarding the in-progress episode.")
+            recorder.cancel_episode()
         if leader is not None:
             # Joins the async-read worker (no-op when async_read=False).
             try:
@@ -1076,6 +1175,7 @@ def _push_convert_hdf5_to_lerobot(
     skip_leading_frames: int = _DEFAULT_SKIP_LEADING_FRAMES,
     min_episode_frames: int = _DEFAULT_MIN_EPISODE_FRAMES,
     async_flush: bool = True,
+    include_failures: bool = False,
 ) -> Path:
     """Convert HDF5 teleop episodes to a local LeRobot dataset.
 
@@ -1118,6 +1218,11 @@ def _push_convert_hdf5_to_lerobot(
     )
 
     skipped_short: list[str] = []
+    # Episodes the operator never marked a success (h5.attrs['success'] is
+    # False / absent). These are aborted or failed attempts; including them in
+    # the IL dataset teaches the policy to imitate failures. Skip them unless
+    # --include-failures is passed.
+    skipped_failed: list[str] = []
     exported = 0
 
     def _flush_episode_sync(name: str) -> None:
@@ -1171,6 +1276,13 @@ def _push_convert_hdf5_to_lerobot(
     for episode_file in episode_files:
         with h5py.File(episode_file, "r") as h5:
             task = h5.attrs.get("task", "OpenSO-101 teleoperation")
+            # Drop episodes the operator never marked a success unless the
+            # caller explicitly opted into keeping failed demos. A missing
+            # 'success' attr is treated as a failure (conservative default).
+            episode_success = bool(h5.attrs.get("success", False))
+            if not include_failures and not episode_success:
+                skipped_failed.append(episode_file.name)
+                continue
             frame_count = int(h5["action"].shape[0])
             effective_count = frame_count - skip_leading_frames
             if effective_count < min_episode_frames:
@@ -1210,16 +1322,38 @@ def _push_convert_hdf5_to_lerobot(
         if worker_error:
             raise worker_error[0]
 
+    if skipped_failed:
+        print(
+            f"[INFO]: Skipped {len(skipped_failed)} failed episode(s) "
+            "(h5.attrs['success'] is False; pass --include-failures to keep "
+            "them): " + ", ".join(skipped_failed)
+        )
+    # Failed-demo filter summary. ``exported`` is the count that survived BOTH
+    # the success filter and the short-episode filter; ``skipped_failed`` is
+    # the count dropped specifically by the success filter.
+    print(
+        f"[INFO]: Failed-demo filter: kept {exported} / skipped "
+        f"{len(skipped_failed)} failed episodes"
+        + (" (--include-failures set; nothing skipped on success)" if include_failures else "")
+        + "."
+    )
     if skipped_short:
         print(
             f"[INFO]: Skipped {len(skipped_short)} short episode(s): "
             + ", ".join(skipped_short)
         )
     if exported == 0:
+        failed_hint = (
+            f" All {len(skipped_failed)} episode(s) were skipped as failed "
+            "demos (no success attr / success=False); pass --include-failures "
+            "to keep them."
+            if skipped_failed and not include_failures
+            else ""
+        )
         raise SystemExit(
             f"No episodes met the minimum length threshold "
             f"(skip_leading={skip_leading_frames}, min_frames={min_episode_frames}). "
-            "Lower --min-episode-frames or capture longer demos."
+            "Lower --min-episode-frames or capture longer demos." + failed_hint
         )
     return lerobot_root
 
@@ -1263,6 +1397,7 @@ def _cmd_push(args: argparse.Namespace) -> int:
             min_episode_frames=int(getattr(args, "min_episode_frames",
                                            _DEFAULT_MIN_EPISODE_FRAMES)),
             async_flush=not bool(getattr(args, "no_async_flush", False)),
+            include_failures=bool(getattr(args, "include_failures", False)),
         )
 
     dataset = LeRobotDataset(args.repo_id, root=repo_root)
@@ -1856,6 +1991,248 @@ def _build_il_policy_observation(unwrapped_env, scene) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# il eval  (vectorized success-rate evaluation of a trained IL policy)
+# ---------------------------------------------------------------------------
+
+
+def _build_il_policy_observation_batched(scene) -> dict:
+    """Batched (all-env) counterpart of :func:`_build_il_policy_observation`.
+
+    ``_build_il_policy_observation`` reads only env index 0 (via
+    ``read_robot_proprio`` / ``collect_camera_buffers``), which is correct for
+    the single-env ``il play`` rollout. ``il eval`` runs ``num_envs`` parallel
+    rollouts, so it needs the same obs schema batched across every env:
+      * ``observation.state`` — joint positions in motor units, ``[N, 6]``.
+      * ``observation.images.<camera>`` — float RGB in ``[0, 1]``, ``[N, 3, H, W]``.
+
+    The per-joint motor-unit remap and the camera RGBA->RGB / uint8->float
+    normalization match :func:`_build_il_policy_observation` exactly so the
+    policy sees an identically-shaped batch; only the leading env dimension
+    differs.
+    """
+    import torch
+
+    from openso101.teleop.lerobot_recorder import REQUIRED_CAMERA_NAMES, get_scene_entity
+    from openso101.teleop.so101_mapping import (
+        batched_action_to_motor_units,
+        get_sim_joint_names,
+    )
+
+    robot = scene["robot"]
+    sim_joint_names = get_sim_joint_names()
+    joint_names = list(robot.joint_names)
+    indices = [joint_names.index(name) for name in sim_joint_names]
+    # [N, 6] sim radians -> [N, 6] motor units (same remap as the single-env
+    # path, just keeping all env rows instead of slicing [0]).
+    qpos_rad = robot.data.joint_pos[:, indices].to(torch.float32)
+    qpos_motor = batched_action_to_motor_units(qpos_rad)
+
+    obs: dict = {"observation.state": qpos_motor}
+    for cam_name in REQUIRED_CAMERA_NAMES:
+        rgb = get_scene_entity(scene, cam_name).data.output["rgb"]
+        # rgb is [N, H, W, C] (C may be 4 for RGBA). Drop alpha, scale to
+        # [0, 1] float, and move channels first -> [N, 3, H, W].
+        rgb = rgb[..., :3].to(torch.float32)
+        if float(rgb.max().item() if rgb.numel() else 0.0) > 1.0:
+            rgb = rgb / 255.0
+        obs[f"observation.images.{cam_name}"] = rgb.permute(0, 3, 1, 2).contiguous()
+    return obs
+
+
+# Per-episode step budget for `il eval`. Teleop mode uses ~1-hour episodes so
+# the env never truncates on its own; eval overrides episode_length_s to this
+# many seconds (at the 60 Hz control rate) so each parallel env truncates and
+# auto-resets, giving clean episode boundaries to accumulate success over. The
+# value is a generous upper bound on a place demo (the RL variant uses 8 s).
+_IL_EVAL_EPISODE_LENGTH_S = 20.0
+
+
+def _cmd_il_eval(args: argparse.Namespace) -> int:
+    """Vectorized success-rate evaluation of a trained IL policy.
+
+    Runs ``--num-envs`` parallel rollouts of the same ``_cmd_play`` policy
+    pipeline (load_policy + openso101_preprocessor/postprocessor + motor-unit ->
+    radians), latching per-env success via :func:`_teleop_goal_success_vec`
+    (the SAME teleop-mode final place goal used by ``il record`` / ``il play``),
+    auto-resetting each env on episode end, until ``--n-episodes`` episodes have
+    completed. Prints and writes JSON:
+    ``{success_rate, n, mean_steps_to_success}``.
+
+    NOTE: IL success here is defined by the teleop-mode final place goal (the
+    on-table place sphere), NOT an RL success termination — eval runs the
+    teleop env variant the policy was trained from.
+    """
+    import json
+    import os
+    import traceback
+
+    args.no_camera_viewports = getattr(args, "no_camera_viewports", True)
+    num_envs = int(getattr(args, "num_envs", 16) or 16)
+    n_episodes = int(getattr(args, "n_episodes", 50) or 50)
+    seed = getattr(args, "seed", None)
+
+    simulation_app = _launch_isaac_app(args, enable_cameras=True)
+
+    import gymnasium as gym
+    import torch
+
+    import isaaclab_tasks  # noqa: F401
+    from isaaclab_tasks.utils import parse_env_cfg
+
+    import openso101.tasks  # noqa: F401
+
+    env = None
+    policy = None
+    startup_error = None
+    result: dict[str, Any] = {}
+    try:
+        env_cfg = parse_env_cfg(
+            args.task,
+            device=args.device,
+            num_envs=num_envs,
+            use_fabric=not args.disable_fabric,
+        )
+        # Evaluate against the SAME env variant the policy was trained from:
+        # teleop action mode (6-dim absolute joint positions, place sphere
+        # locked at the final goal). configure_action_mode("teleop") forces
+        # num_envs back to 1 and episode_length_s to 3600 s, so re-assert the
+        # requested parallel env count and a modest per-episode budget AFTER it
+        # so eval episodes truncate + auto-reset.
+        env_cfg.configure_action_mode("teleop")
+        env_cfg.configure_cameras(True)
+        env_cfg.scene.num_envs = num_envs
+        env_cfg.episode_length_s = _IL_EVAL_EPISODE_LENGTH_S
+        if seed is not None:
+            env_cfg.seed = int(seed)
+        try:
+            env_cfg.scene.ee_frame.debug_vis = False
+        except AttributeError:
+            pass
+
+        env = gym.make(args.task, cfg=env_cfg)
+        unwrapped_env = env.unwrapped
+        scene = unwrapped_env.scene
+        policy_device = unwrapped_env.device
+
+        # Reuse _cmd_play's exact policy load + processor application path.
+        policy = _load_lerobot_policy(args.policy_path, device=policy_device)
+        print(f"[INFO]: Loaded LeRobot policy from {args.policy_path}.")
+        if hasattr(policy, "reset"):
+            policy.reset()
+        preprocessor = getattr(policy, "openso101_preprocessor", None)
+        postprocessor = getattr(policy, "openso101_postprocessor", None)
+
+        env.reset()
+        actions = torch.zeros(env.action_space.shape, device=policy_device)
+
+        from openso101.teleop.so101_mapping import batched_motor_units_to_action
+
+        n = num_envs
+        # Per-env episode bookkeeping.
+        succeeded = torch.zeros(n, dtype=torch.bool, device=policy_device)
+        steps_in_episode = torch.zeros(n, dtype=torch.long, device=policy_device)
+        success_step = torch.full((n,), -1, dtype=torch.long, device=policy_device)
+
+        episodes_done = 0
+        success_total = 0
+        steps_to_success: list[int] = []
+
+        print(
+            f"[INFO]: il eval — task={args.task} num_envs={n} "
+            f"n_episodes={n_episodes}. Success = teleop final place goal."
+        )
+
+        while simulation_app.is_running() and episodes_done < n_episodes:
+            with torch.inference_mode():
+                obs = _build_il_policy_observation_batched(scene)
+                obs = {
+                    k: v.to(policy_device) if hasattr(v, "to") else v
+                    for k, v in obs.items()
+                }
+                if preprocessor is not None:
+                    obs = preprocessor(obs)
+                action = policy.select_action(obs)
+                if postprocessor is not None:
+                    action = postprocessor(action)
+                action = action.to(policy_device)
+                action_rad = batched_motor_units_to_action(action)
+                actions.copy_(action_rad.reshape(actions.shape))
+                _, _, terminated, truncated, _ = env.step(actions)
+                # ManagerBasedRLEnv returns torch tensors, but a gym wrapper
+                # may hand back numpy — coerce to bool tensors on the policy
+                # device so the boolean indexing below is uniform.
+                terminated = torch.as_tensor(
+                    terminated, dtype=torch.bool, device=policy_device
+                ).reshape(-1)
+                truncated = torch.as_tensor(
+                    truncated, dtype=torch.bool, device=policy_device
+                ).reshape(-1)
+
+                steps_in_episode += 1
+
+                # Latch the first step each env reaches the place goal.
+                success_vec = _teleop_goal_success_vec(unwrapped_env)
+                if success_vec is not None:
+                    success_vec = success_vec.to(policy_device)
+                    newly = success_vec & (~succeeded)
+                    if bool(newly.any().item()):
+                        success_step[newly] = steps_in_episode[newly]
+                    succeeded |= success_vec
+
+                # Episode boundary: the env auto-resets envs flagged
+                # terminated/truncated on the NEXT step, so harvest results
+                # here and clear per-env latches for the fresh episode.
+                done = terminated | truncated
+                if bool(done.any().item()):
+                    done_ids = torch.nonzero(done, as_tuple=False).flatten()
+                    for env_id in done_ids.tolist():
+                        if episodes_done >= n_episodes:
+                            break
+                        episodes_done += 1
+                        if bool(succeeded[env_id].item()):
+                            success_total += 1
+                            step_idx = int(success_step[env_id].item())
+                            if step_idx >= 0:
+                                steps_to_success.append(step_idx)
+                    # Reset bookkeeping for the envs that just ended.
+                    succeeded[done] = False
+                    steps_in_episode[done] = 0
+                    success_step[done] = -1
+
+        success_rate = (success_total / episodes_done) if episodes_done else 0.0
+        mean_steps = (
+            sum(steps_to_success) / len(steps_to_success) if steps_to_success else None
+        )
+        result = {
+            "success_rate": success_rate,
+            "n": episodes_done,
+            "mean_steps_to_success": mean_steps,
+        }
+        print(
+            "[RESULT]: il eval — "
+            f"success_rate={success_rate:.4f} n={episodes_done} "
+            f"mean_steps_to_success="
+            + (f"{mean_steps:.1f}" if mean_steps is not None else "n/a")
+        )
+        print(json.dumps(result))
+    except Exception as exc:
+        startup_error = exc
+        print("[ERROR]: IL eval failed before clean shutdown:", flush=True)
+        traceback.print_exception(type(exc), exc, exc.__traceback__)
+    finally:
+        if env is not None:
+            env.close()
+        if startup_error is None:
+            simulation_app.close()
+
+    if startup_error is not None:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(1)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # subparser registration
 # ---------------------------------------------------------------------------
 
@@ -1873,7 +2250,17 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_rec.add_argument("--repo-root")
     p_rec.add_argument("--task-name")
     p_rec.add_argument("--num-envs", type=int, default=None)
-    p_rec.add_argument("--fps", type=int, default=30)
+    p_rec.add_argument(
+        "--fps",
+        type=int,
+        default=None,
+        help=(
+            "Override the recorded dataset FPS. Defaults to the env's true "
+            "control rate 1/(sim.dt*decimation) (60 Hz for the SO101 tasks). "
+            "If you pass a value that disagrees with the true control rate, a "
+            "[WARN] is printed and the true rate is preferred."
+        ),
+    )
     p_rec.add_argument("--no-record", action="store_true")
     p_rec.add_argument("--profile-teleop", action="store_true")
     p_rec.add_argument("--no-camera-viewports", action="store_true")
@@ -1963,6 +2350,16 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
             "disable when debugging or on memory-constrained machines."
         ),
     )
+    p_push.add_argument(
+        "--include-failures",
+        action="store_true",
+        default=False,
+        help=(
+            "Keep episodes whose h5.attrs['success'] is False / absent. By "
+            "default these failed/aborted demos are skipped so the IL dataset "
+            "does not teach the policy to imitate failures."
+        ),
+    )
     p_push.set_defaults(func=_cmd_push)
 
     p_train = sub.add_parser(
@@ -2041,6 +2438,42 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         ),
     )
     p_play.set_defaults(func=_cmd_play)
+
+    p_eval = sub.add_parser(
+        "eval",
+        help="Vectorized success-rate eval of a trained IL policy in sim.",
+    )
+    p_eval.add_argument("--task", required=True)
+    p_eval.add_argument(
+        "--policy-path",
+        required=True,
+        help="Path to the LeRobot pretrained-model dir (or its parent output_dir).",
+    )
+    p_eval.add_argument(
+        "--num-envs",
+        type=int,
+        default=16,
+        help="Parallel rollout envs (default 16).",
+    )
+    p_eval.add_argument(
+        "--n-episodes",
+        type=int,
+        default=50,
+        help="Total episodes to accumulate before reporting (default 50).",
+    )
+    p_eval.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Optional env seed for reproducible cube spawns.",
+    )
+    p_eval.add_argument(
+        "--headless",
+        action="store_true",
+        default=False,
+        help="Run without the Isaac viewer (faster eval throughput).",
+    )
+    p_eval.set_defaults(func=_cmd_il_eval)
 
     p_replay = sub.add_parser(
         "replay", help="Replay a recorded teleop episode in sim"
