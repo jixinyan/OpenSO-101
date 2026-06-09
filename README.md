@@ -48,9 +48,7 @@
 
 **Reinforcement learning — pick-and-place training in progress** (Isaac Lab, RSL-RL PPO; in-sim rollout captured mid-training):
 
-<video src="https://github.com/jixinyan/OpenSO-101/raw/main/media/rl-pickplace-training.mp4" autoplay loop muted playsinline controls width="640">
-  Your browser does not render embedded video — <a href="https://github.com/jixinyan/OpenSO-101/raw/main/media/rl-pickplace-training.mp4">download the clip</a>.
-</video>
+<video src="https://github.com/user-attachments/assets/9694bdbf-299e-41b7-b273-b5c570ed44c2" autoplay loop muted playsinline controls width="640"></video>
 
 **Imitation learning, sim-to-real** — policies trained *purely from teleoperation demonstrations recorded with OpenSO-101*, running in real time on the physical SO-101. Both use the same teleop → dataset → train → deploy recipe; only the policy class differs.
 
@@ -61,14 +59,10 @@
   </tr>
   <tr>
     <td>
-      <video src="https://github.com/jixinyan/OpenSO-101/raw/main/media/act-policy-realtime.mp4" autoplay loop muted playsinline controls width="100%">
-        <a href="https://github.com/jixinyan/OpenSO-101/raw/main/media/act-policy-realtime.mp4">Download the ACT clip</a>.
-      </video>
+      <video src="https://github.com/user-attachments/assets/49259fa3-cc00-42c0-83a1-7d1bb74e3983" autoplay loop muted playsinline controls width="100%"></video>
     </td>
     <td>
-      <video src="https://github.com/jixinyan/OpenSO-101/raw/main/media/diffusion-policy-realtime.mp4" autoplay loop muted playsinline controls width="100%">
-        <a href="https://github.com/jixinyan/OpenSO-101/raw/main/media/diffusion-policy-realtime.mp4">Download the Diffusion clip</a>.
-      </video>
+      <video src="https://github.com/user-attachments/assets/1dc78879-a640-4dd1-85a7-d2c9d5862a7f" autoplay loop muted playsinline controls width="100%"></video>
     </td>
   </tr>
 </table>
