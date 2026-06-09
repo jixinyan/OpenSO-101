@@ -38,17 +38,43 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Skip the heavy sim deps; install only what the framework code
-          # actually imports without isaaclab in sys.path.
-          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest
+          # actually imports without isaaclab in sys.path. 'pip install torch'
+          # resolves a CPU build on the ubuntu runner, which is all the
+          # torch-pure tests (e.g. the shaping-reward primitives) need.
+          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch
 
       - name: Verify package layout
         run: |
           python -c "import sys; sys.path.insert(0, 'src'); import openso101; print('openso101', openso101.__version__)"
 
-      - name: Verify CLI dispatch (no Isaac Sim)
+      - name: Run CPU-pure test suite (no Isaac Sim, no LeRobot)
         run: |
-          # Tests that exercise the CLI argparse + dispatch tree.
-          python -m pytest tests/test_cli_il_data_sim2real.py tests/test_cli_rl.py -v --no-header
+          # The explicit list below is every test file that PASSES (or skips
+          # cleanly) using ONLY the CI deps + torch — i.e. files that do not
+          # import isaaclab / isaaclab_tasks / lerobot at module load. A bare
+          # 'pytest tests/' is intentionally avoided: the GPU-gated files
+          # would error at collection on a runner without Isaac Sim.
+          #
+          # Excluded because the whole module is gated behind a top-level
+          # 'pytest.importorskip("isaaclab")' (collects zero tests without
+          # Isaac Sim): test_register_task, test_env_base_configure,
+          # test_cli_envs.
+          python -m pytest \
+            tests/test_cli_il_data_sim2real.py \
+            tests/test_cli_rl.py \
+            tests/test_shaping_rewards.py \
+            tests/test_lerobot_so101_mapping.py \
+            tests/test_lerobot_so101_interface.py \
+            tests/test_lerobot_recorder.py \
+            tests/test_hdf5_teleop_recorder.py \
+            tests/test_lerobot_push_dataset.py \
+            tests/test_teleop_agent_keyboard.py \
+            tests/test_teleop_success.py \
+            tests/test_camera_viewports.py \
+            tests/test_so101_object_physics.py \
+            tests/test_il_public_api.py \
+            tests/test_visual_dr.py \
+            -v --no-header
 
       - name: Ruff lint (advisory)
         continue-on-error: true
@@ -68,7 +94,10 @@ jobs:
       - name: Build wheel
         run: |
           python -m pip install --upgrade pip build
-          python -m build --wheel --no-isolation 2>&1 | tail -20 || true
-          # Even without sim deps installed, the wheel should build because
-          # build deps are setuptools + wheel only.
-          ls -la dist/ || true
+          # A failed build must FAIL the job: no '|| true' masking, and the
+          # wheel must actually exist afterwards. The wheel builds from the
+          # pyproject [project] table alone (setup.py was removed); build
+          # deps are setuptools + wheel only, so no sim deps are required.
+          python -m build --wheel --no-isolation
+          ls -la dist/
+          test -n "$(ls dist/*.whl 2>/dev/null)"
