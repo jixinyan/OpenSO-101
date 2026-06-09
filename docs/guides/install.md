@@ -61,7 +61,7 @@ conda init bash    # or zsh
 ## Step 3: Create the conda env
 
 ```bash
-git clone https://github.com/KevinYan-831/OpenSO-101.git
+git clone https://github.com/jixinyan/OpenSO-101.git
 cd OpenSO-101
 
 conda env create -f environment.yml
@@ -155,21 +155,37 @@ wandb login
 
 OpenSO-101 expects the canonical SO-ARM101 USD model at
 `assets/so101/usd/SO-ARM101-USD.usd` (relative to the repo root). The
-asset is a 23 MB third-party binary (authored by [Lior Ben Horin][lbh],
-MIT-licensed) and is **not committed**.
+asset is a 23 MB third-party binary (the LycheeAI SO-ARM101 mesh,
+© 2025 Muammer Bay (LycheeAI) and Louis Le Lay; see `LICENSE-BSD-3-CLAUSE`)
+and is **not committed**.
 
-Three ways to provision it:
+**Primary path — just run the fetch script.** It downloads the asset
+from the project's GitHub Release and drops it at the canonical path:
 
 ```bash
-# Option A: you have a sibling safe_sim2real checkout — easiest path.
 ./scripts/fetch_so101_usd.sh
+```
 
-# Option B: you have the .usd file locally somewhere else.
+The default download URL is
+
+```
+https://github.com/jixinyan/OpenSO-101/releases/download/v0.1.0/SO-ARM101-USD.usd
+```
+
+The same script also accepts overrides if you already have the file or
+host it elsewhere:
+
+```bash
+# You have the .usd file locally — copy it into place.
 OPENSO101_SO101_USD_SRC=/path/to/SO-ARM101-USD.usd ./scripts/fetch_so101_usd.sh
 
-# Option C: download from a URL you control.
+# Download from a different URL (e.g. your own mirror).
 OPENSO101_SO101_USD_URL=https://example.com/SO-ARM101-USD.usd ./scripts/fetch_so101_usd.sh
 ```
+
+If you are a maintainer pointing the default download at a different
+release, the slug and tag are editable env vars
+(`OPENSO101_USD_RELEASE_REPO`, `OPENSO101_USD_RELEASE_TAG`).
 
 Alternative: override the lookup path entirely without copying the file:
 
@@ -177,8 +193,9 @@ Alternative: override the lookup path entirely without copying the file:
 export OPENSO101_SO101_USD_PATH=/some/other/location/SO-ARM101-USD.usd
 ```
 
-If you want to rebuild the USD from the URDF in `assets/so101/urdf/`,
-use Isaac Sim's `omni.isaac.urdf_importer` extension with
+Advanced: the USD can be rebuilt from an SO-ARM101 URDF (not bundled —
+obtain it from the upstream LycheeAI / TheRobotStudio SO-ARM101 source)
+using Isaac Sim's `omni.isaac.urdf_importer` extension with
 convex-decomposition collision settings (mesh approximation: convex
 decomposition; max convex hulls: 32; collision filter on the cube).
 

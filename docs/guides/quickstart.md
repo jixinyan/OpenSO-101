@@ -83,10 +83,12 @@ The dataset will appear at `https://huggingface.co/datasets/<your-hf-username>/m
 
 ## Next Steps
 
-- [Tasks & envs concepts](../concepts/tasks_and_envs.md) — how the framework is organized.
 - [Add a custom task](add_a_task.md) — write your own.
-- [RL algorithms](../concepts/rl_algorithms.md) — what's supported and what's planned.
 - [Teleop guide](teleop.md) — full teleop setup and dataset workflow.
+- Tasks & envs — how the framework is organized: see `OpenSO101EnvCfg` and the
+  `register_task` decorator in `src/openso101/envs/`.
+- RL algorithms — PPO via RSL-RL; see the runner cfgs under
+  `src/openso101/tasks/*/agents/`.
 
 ## CLI Cheat Sheet
 

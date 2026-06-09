@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Fetch the canonical SO-ARM101 USD asset into assets/so101/usd/.
 #
-# The USD is a third-party binary (~23 MB) authored upstream and is
-# intentionally not committed to this repository. This script either
-# copies it from a sibling `safe_sim2real` checkout (the most common
-# path during the OpenSO-101 transition) or, if you set
-# OPENSO101_SO101_USD_URL, downloads from that URL.
+# The USD mesh (assets/so101/usd/SO-ARM101-USD.usd, ~23 MB) is a
+# third-party binary (the LycheeAI SO-ARM101 mesh, (c) 2025 Muammer Bay
+# (LycheeAI) and Louis Le Lay; see LICENSE-BSD-3-CLAUSE) and is NOT
+# committed to this repository.
+# External users fetch it from the project's GitHub Release.
+#
+# Resolution order:
+#   1. OPENSO101_SO101_USD_SRC -- copy from a local file, if set.
+#   2. OPENSO101_SO101_USD_URL -- download from that URL, if set.
+#   3. DEFAULT -- download from the project's GitHub Release.
 #
 # Usage:
 #   ./scripts/fetch_so101_usd.sh
@@ -15,6 +20,16 @@
 #   OPENSO101_SO101_USD_URL=https://.../SO-ARM101-USD.usd ./scripts/fetch_so101_usd.sh
 
 set -euo pipefail
+
+# --- Editable release coordinates -----------------------------------------
+# The GitHub Release the default download pulls from. The repo slug matches
+# the configured git remote (jixinyan/OpenSO-101); the tag matches the
+# pyproject version (v0.1.0). Override via the env vars below if you host
+# the asset elsewhere.
+USD_RELEASE_REPO="${OPENSO101_USD_RELEASE_REPO:-jixinyan/OpenSO-101}"
+USD_RELEASE_TAG="${OPENSO101_USD_RELEASE_TAG:-v0.1.0}"
+USD_RELEASE_URL="https://github.com/${USD_RELEASE_REPO}/releases/download/${USD_RELEASE_TAG}/SO-ARM101-USD.usd"
+# --------------------------------------------------------------------------
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DST_DIR="${REPO_ROOT}/assets/so101/usd"
@@ -27,31 +42,38 @@ if [[ -f "${DST}" ]]; then
     exit 0
 fi
 
+download() {
+    # download <url>
+    local url="$1"
+    echo "[fetch_so101_usd] downloading from ${url}"
+    if ! curl -fSL -o "${DST}" "${url}"; then
+        rm -f "${DST}"
+        cat >&2 <<EOF
+[fetch_so101_usd] ERROR: download failed from
+  ${url}
+
+Check your network connection, or set one of:
+  OPENSO101_SO101_USD_SRC=/path/to/SO-ARM101-USD.usd      # local file copy
+  OPENSO101_SO101_USD_URL=https://.../SO-ARM101-USD.usd   # alternative URL
+
+The asset is the LycheeAI SO-ARM101 mesh ((c) 2025 Muammer Bay (LycheeAI)
+and Louis Le Lay); see LICENSE-BSD-3-CLAUSE for the third-party license
+bundled with this repo.
+EOF
+        exit 1
+    fi
+}
+
 if [[ -n "${OPENSO101_SO101_USD_SRC:-}" ]]; then
+    # (1) Local file copy.
     echo "[fetch_so101_usd] copying from \$OPENSO101_SO101_USD_SRC=${OPENSO101_SO101_USD_SRC}"
     cp "${OPENSO101_SO101_USD_SRC}" "${DST}"
 elif [[ -n "${OPENSO101_SO101_USD_URL:-}" ]]; then
-    echo "[fetch_so101_usd] downloading from ${OPENSO101_SO101_USD_URL}"
-    curl -fsSL -o "${DST}" "${OPENSO101_SO101_USD_URL}"
-elif [[ -f "${REPO_ROOT}/../safe_sim2real/outputs/third_party/so101_usd/SO-ARM101-USD.usd" ]]; then
-    LEGACY="${REPO_ROOT}/../safe_sim2real/outputs/third_party/so101_usd/SO-ARM101-USD.usd"
-    echo "[fetch_so101_usd] copying from sibling safe_sim2real checkout: ${LEGACY}"
-    cp "${LEGACY}" "${DST}"
+    # (2) Explicit remote URL.
+    download "${OPENSO101_SO101_USD_URL}"
 else
-    cat >&2 <<EOF
-[fetch_so101_usd] ERROR: no source for SO-ARM101-USD.usd found.
-
-Set one of:
-  OPENSO101_SO101_USD_SRC=/path/to/SO-ARM101-USD.usd      # local file
-  OPENSO101_SO101_USD_URL=https://.../SO-ARM101-USD.usd   # remote URL
-
-…or place a sibling safe_sim2real checkout at:
-  ${REPO_ROOT}/../safe_sim2real/outputs/third_party/so101_usd/SO-ARM101-USD.usd
-
-The upstream asset is authored by Lior Ben Horin (MIT-licensed); see
-LICENSE-BSD-3-CLAUSE for the third-party license bundled with this repo.
-EOF
-    exit 1
+    # (3) DEFAULT: the project's GitHub Release.
+    download "${USD_RELEASE_URL}"
 fi
 
 echo "[fetch_so101_usd] OK -> ${DST}"

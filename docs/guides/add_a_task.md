@@ -6,13 +6,11 @@ in Isaac Lab using the OpenSO-101 framework. Every task is a single
 (cameras, teleop, play) are selected at `gym.make(...)` time via three
 `configure_*` hooks on the cfg class.
 
-> Legacy note: the Safe Sim2Real codebase used a multi-class-per-task pattern
-> with separate `*EnvCfg`, `*EnvCfgWithCameras`, `*TeleopEnvCfg`, `*_PLAY`
-> classes and a `joint_pos_env_cfg.py` glue module that registered four gym IDs
-> per task. That pattern is documented for historical context in
-> [`safe_sim2real/docs/how_to_design_a_task.md`](https://github.com/jixinyan/safe_sim2real/blob/main/docs/how_to_design_a_task.md).
-> OpenSO-101 collapses those four classes into one and selects variants via
-> kwargs to `gym.make`.
+> Design note: an earlier prototype used a multi-class-per-task pattern with
+> separate `*EnvCfg`, `*EnvCfgWithCameras`, `*TeleopEnvCfg`, `*_PLAY` classes
+> and a `joint_pos_env_cfg.py` glue module that registered four gym IDs per
+> task. OpenSO-101 collapses those four classes into one and selects variants
+> via kwargs to `gym.make`.
 
 ## Philosophy: single class, three variant hooks
 
@@ -352,12 +350,11 @@ Then verify and train:
 
 ```bash
 # Confirm the task is registered. Add `import mypkg.tasks` to your entry point
-# (or set OPENSO101_USER_TASKS=mypkg.tasks if your CLI supports it) so the
-# side-effect runs before `openso101 envs list`.
+# so the registration side-effect runs before `openso101 envs list`.
 openso101 envs list
 
 # Smoke-test scene + action space without training.
-openso101 envs zero --task MyLab-PourTea-v0 --play
+openso101 envs zero --task MyLab-PourTea-v0
 
 # Short training smoke.
 openso101 rl train \
@@ -402,7 +399,3 @@ openso101 rl play \
 - Upstream [Isaac Lab docs](https://isaac-sim.github.io/IsaacLab/main/) —
   the underlying `ManagerBasedRLEnvCfg`, MDP cfg block, and event-manager
   concepts.
-
----
-
-_Merged from `safe_sim2real/docs/how_to_design_a_task.md` (atomic-skills companion `how_to_add_an_atomic_skill.md` was dropped — atomic skills are out of scope for OpenSO-101)._
