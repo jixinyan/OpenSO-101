@@ -26,6 +26,21 @@ SO101_GRIPPER_CLOSED_THRESHOLD = 0.12
 SO101_GOAL_TRACKING_STD = 0.30
 SO101_GOAL_TRACKING_FINE_STD = 0.05
 
+# Pick-and-lift (sentinel PickAndLiftReward) delta-shaping weights.
+#
+# These are used directly as RewardTerm weights. The RewardManager multiplies
+# every term by `weight * dt` (dt = decimation * sim.dt = 0.02 s), and PPO
+# discounts with gamma = 0.98. That uniform scaling preserves the sentinel
+# balance: the discounted value of holding the cube forever
+# (grasp_w * dt / (1 - gamma) = 1 * 0.02 / 0.02 = 1.0) equals the terminal goal
+# bonus (goal_w * dt = 50 * 0.02 = 1.0). The actual delivery driver is the
+# carry delta-shaping (positive every step the held cube nears the goal), not
+# the terminal bonus.
+SO101_PICK_PREGRASP_COEFF = 1.0  # Delta(eef -> obj) gain, active while not grasping
+SO101_PICK_CARRY_COEFF = 2.0  # Delta(obj -> goal) gain, active while grasping
+SO101_PICK_GRASP_HOLD_WEIGHT = 1.0  # per-step contact-confirmed-grasp reward
+SO101_PICK_GOAL_BONUS = 50.0  # terminal: reached goal sphere AND still grasped
+
 # Smoothness penalties.
 #
 # joint_vel is a "physical sanity" penalty: ACTIVE from step 0 (not
@@ -81,6 +96,10 @@ __all__ = [
     "SO101_GRIPPER_CLOSED_THRESHOLD",
     "SO101_GOAL_TRACKING_STD",
     "SO101_GOAL_TRACKING_FINE_STD",
+    "SO101_PICK_PREGRASP_COEFF",
+    "SO101_PICK_CARRY_COEFF",
+    "SO101_PICK_GRASP_HOLD_WEIGHT",
+    "SO101_PICK_GOAL_BONUS",
     "SO101_ACTION_RATE_WEIGHT",
     "SO101_JOINT_VEL_WEIGHT",
     "SO101_JOINT_POS_DELTA_WEIGHT",
