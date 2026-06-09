@@ -47,6 +47,15 @@ def deploy(args: argparse.Namespace) -> int:
     Connects the follower arm + USB cameras, loads the LeRobot
     checkpoint, and runs an inference loop until ``--max-steps`` is
     reached or the user Ctrl+C's.
+
+    The inference loop mirrors ``openso101.cli.il._cmd_play`` EXACTLY for
+    the normalization plumbing: the LeRobot pre-processor is applied to the
+    observation BEFORE ``select_action`` and the post-processor to the
+    action AFTER. Without them the policy sees / emits N(0, 1) normalized
+    values and the arm barely moves. Unlike ``il play`` we do NOT run
+    ``batched_motor_units_to_action`` here — the real follower's
+    ``send_action`` expects motor units, and that inverse (motor -> sim
+    radians) is only for the SIM env.
     """
     follower, cameras, policy = None, None, None
     try:
@@ -69,6 +78,54 @@ def deploy(args: argparse.Namespace) -> int:
 
         policy = _load_lerobot_policy(args.policy_path, device=args.device)
         print(f"[INFO]: Loaded policy from {args.policy_path}.")
+        if hasattr(policy, "reset"):
+            policy.reset()
+
+        # Pull the LeRobot pre/post-processor pipelines the loader stashed on
+        # the policy (see openso101.il.policies.factory.load_policy). These
+        # carry the dataset normalization stats. A real-robot session must
+        # NEVER run unnormalized: unnormalized observations produce a policy
+        # output near the normalized-action mean, which on hardware is a
+        # near-stationary / drifting command — at best the arm sits still, at
+        # worst it lurches to a calibration midpoint. Fail loudly instead.
+        preprocessor = getattr(policy, "openso101_preprocessor", None)
+        postprocessor = getattr(policy, "openso101_postprocessor", None)
+        if preprocessor is None or postprocessor is None:
+            raise RuntimeError(
+                "Refusing to deploy on real hardware without LeRobot "
+                "pre/post-processors (normalization stats). "
+                f"preprocessor={'set' if preprocessor is not None else 'None'}, "
+                f"postprocessor={'set' if postprocessor is not None else 'None'}. "
+                "The checkpoint must contain policy_preprocessor.json + "
+                "policy_postprocessor.json. Re-export the checkpoint or load "
+                "with allow_unnormalized=True ONLY for an unpowered dry run."
+            )
+
+        policy_device = args.device
+
+        # Startup safety: drive the follower to the canonical reset posture
+        # and pause briefly before live control. Starting inference from an
+        # arbitrary power-on pose can command a large first-step jump.
+        reset_action_dict = _reset_posture_action_dict(follower)
+        if reset_action_dict is not None:
+            print(f"[INFO]: Commanding canonical reset posture: {reset_action_dict}")
+            follower.send_action(reset_action_dict)
+            # Let the servos settle at the reset pose before live control.
+            time.sleep(float(getattr(args, "reset_settle_seconds", 1.5)))
+
+        # First-order ease-in: blend the policy command toward the previous
+        # commanded target for the first few steps so the arm does not snap
+        # from the reset pose to the policy's first prediction. alpha rises
+        # from ~0 to 1 over `ease_in_steps` control steps.
+        ease_in_steps = int(getattr(args, "ease_in_steps", 5))
+        prev_command = (
+            np.asarray(
+                [reset_action_dict[k] for k in _LEROBOT_JOINT_KEYS],
+                dtype=np.float32,
+            )
+            if reset_action_dict is not None
+            else None
+        )
 
         target_dt = 1.0 / float(max(1, args.fps))
         step = 0
@@ -78,10 +135,28 @@ def deploy(args: argparse.Namespace) -> int:
             loop_start = time.perf_counter()
 
             obs = _build_real_observation(follower, cameras)
-            action = policy.select_action(obs)
-            # Policy returns shape (1, 6) motor units; squeeze to a
-            # plain list of 6 floats keyed by LeRobot joint names.
-            action_np = action.detach().cpu().numpy().reshape(-1)
+            # Move obs to the policy device, then apply the preprocessor
+            # (normalization) BEFORE select_action — identical to il play.
+            obs = {
+                k: (v.to(policy_device) if hasattr(v, "to") else v)
+                for k, v in obs.items()
+            }
+            action = _run_policy(policy, obs, preprocessor, postprocessor)
+            # Policy + postprocessor return shape (1, 6) MOTOR UNITS (no
+            # motor->radian inverse here — the real follower wants motor
+            # units). Squeeze to a plain 6-vector keyed by LeRobot names.
+            action_np = action.detach().cpu().numpy().reshape(-1).astype(np.float32)
+
+            # First-order ease-in for the opening steps.
+            if prev_command is not None and step < ease_in_steps:
+                alpha = float(step + 1) / float(max(1, ease_in_steps))
+                action_np = (1.0 - alpha) * prev_command + alpha * action_np
+
+            # Clamp every commanded target to the calibrated motor-unit range
+            # before sending so a bad prediction can't drive the servo past
+            # its safe span.
+            action_np = _clamp_motor_units(action_np)
+            prev_command = action_np
             action_dict = _action_array_to_lerobot_dict(action_np)
 
             follower.send_action(action_dict)
@@ -194,6 +269,91 @@ def _load_lerobot_policy(checkpoint_path: str, *, device: str):
     from openso101.il.policies import load_policy
 
     return load_policy(checkpoint_path, device=device)
+
+
+def _run_policy(policy, obs: Mapping[str, Any], preprocessor, postprocessor):
+    """Apply preprocessor -> select_action -> postprocessor.
+
+    Factored out so the application order matches ``il play`` exactly and
+    can be exercised in isolation. ``obs`` is already on the policy device.
+    Both processors are required (the caller raises if either is None) so
+    this function does not silently skip normalization.
+    """
+    import torch
+
+    with torch.inference_mode():
+        obs = preprocessor(obs)
+        action = policy.select_action(obs)
+        action = postprocessor(action)
+    return action
+
+
+def _reset_posture_action_dict(follower) -> dict[str, float] | None:
+    """Return the canonical reset posture as a LeRobot motor-unit action dict.
+
+    Prefers :data:`SO101_CANONICAL_INIT_JOINT_POS` (radians, keyed by sim
+    USD joint names) mapped through the sim-radian -> motor-unit conversion.
+    The sim joint order ``(Rotation, Pitch, Elbow, Wrist_Pitch, Wrist_Roll,
+    Jaw)`` is 1:1 with both :data:`_LEROBOT_JOINT_KEYS` and the mapping's
+    ``JOINT_ORDER``, so a positional remap is exact.
+
+    Falls back to reading the follower's current observation (i.e. "stay
+    where you are") if the canonical pose or the conversion is unavailable,
+    so deploy never hard-fails on a missing optional dependency. Returns
+    ``None`` only if no reset pose can be determined at all.
+    """
+    try:
+        import torch
+
+        from openso101.robots import SO101_SIM_JOINT_NAMES
+        from openso101.robots.so101.so_arm101 import SO101_CANONICAL_INIT_JOINT_POS
+        from openso101.teleop.so101_mapping import batched_action_to_motor_units
+
+        rad = torch.tensor(
+            [float(SO101_CANONICAL_INIT_JOINT_POS[name]) for name in SO101_SIM_JOINT_NAMES],
+            dtype=torch.float32,
+        )
+        motor = batched_action_to_motor_units(rad).cpu().numpy().reshape(-1)
+        motor = _clamp_motor_units(np.asarray(motor, dtype=np.float32))
+        return _action_array_to_lerobot_dict(motor)
+    except Exception as exc:  # noqa: BLE001 — fall back to current pose
+        print(
+            f"[WARN]: Could not build canonical reset posture ({exc}); "
+            "falling back to the follower's current pose as the reset target."
+        )
+        try:
+            raw = follower.get_observation()
+            motor = _clamp_motor_units(_lerobot_joint_dict_to_array(raw))
+            return _action_array_to_lerobot_dict(motor)
+        except Exception as exc2:  # noqa: BLE001
+            print(f"[WARN]: Could not read follower pose for reset: {exc2}.")
+            return None
+
+
+# Calibrated commanded-target range for the real follower, in LeRobot motor
+# units. The Feetech driver normalizes each servo to [-100, 100] (gripper
+# [0, 100]); clamping here guarantees a bad policy prediction can never drive
+# a servo past its safe span. These are the driver-convention endpoints, NOT
+# a per-joint mechanical calibration — the real follower's calibration JSON
+# is the true source on hardware (see so101_mapping.py for the analogous
+# discrepancy note). Tighten per-joint here if a specific arm needs it.
+_MOTOR_UNIT_CLAMP: dict[str, tuple[float, float]] = {
+    "shoulder_pan.pos": (-100.0, 100.0),
+    "shoulder_lift.pos": (-100.0, 100.0),
+    "elbow_flex.pos": (-100.0, 100.0),
+    "wrist_flex.pos": (-100.0, 100.0),
+    "wrist_roll.pos": (-100.0, 100.0),
+    "gripper.pos": (0.0, 100.0),
+}
+
+
+def _clamp_motor_units(action: np.ndarray) -> np.ndarray:
+    """Clamp each commanded motor-unit target to its calibrated safe range."""
+    out = np.asarray(action, dtype=np.float32).copy()
+    for i, key in enumerate(_LEROBOT_JOINT_KEYS):
+        lo, hi = _MOTOR_UNIT_CLAMP[key]
+        out[i] = float(min(max(out[i], lo), hi))
+    return out
 
 
 def _build_real_observation(follower, cameras: Mapping[str, Any]) -> dict:

@@ -13,8 +13,26 @@ common shorthand `outputs/train/<run>` (in which case we walk down to
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
+
+
+# Env-var escape hatch mirroring the ``allow_unnormalized`` kwarg. Set
+# ``OPENSO101_ALLOW_UNNORMALIZED=1`` to downgrade a missing-processor hard
+# error back to a WARN (e.g. for an unpowered dry run or a very old
+# checkpoint). Off by default so play/deploy fail loudly when normalization
+# stats are missing.
+_ALLOW_UNNORMALIZED_ENV = "OPENSO101_ALLOW_UNNORMALIZED"
+
+
+def _env_allows_unnormalized() -> bool:
+    return os.environ.get(_ALLOW_UNNORMALIZED_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _looks_like_hub_repo_id(s: str) -> bool:
@@ -93,7 +111,12 @@ def policy_class(name: str) -> type:
     return get_policy_class(name)
 
 
-def load_policy(path: str | Path, *, device: str | None = None) -> Any:
+def load_policy(
+    path: str | Path,
+    *,
+    device: str | None = None,
+    allow_unnormalized: bool = False,
+) -> Any:
     """Load a LeRobot-trained policy checkpoint into an inference-ready instance.
 
     Two-step pattern (required because `PreTrainedPolicy` is abstract):
@@ -101,6 +124,15 @@ def load_policy(path: str | Path, *, device: str | None = None) -> Any:
            returns the concrete config object (which knows its `type`).
         2. `get_policy_class(cfg.type).from_pretrained(path)` instantiates
            the concrete subclass (ACTPolicy, DiffusionPolicy, ...).
+
+    By default, failing to load the pre/post-processor pipelines (which carry
+    the dataset normalization stats) is a HARD ERROR: a policy without them
+    consumes / emits N(0, 1) normalized values, which on hardware produces
+    near-stationary or drifting behavior — a silent, dangerous failure. Pass
+    ``allow_unnormalized=True`` (or set ``OPENSO101_ALLOW_UNNORMALIZED=1``) to
+    downgrade the error to a WARN and return a policy with
+    ``openso101_preprocessor``/``openso101_postprocessor`` set to ``None`` —
+    only appropriate for an unpowered dry run or a legacy checkpoint.
     """
     # Resolve the path first so callers get a clear FileNotFoundError before
     # we pay the cost of importing LeRobot (and so tests can exercise the
@@ -144,14 +176,28 @@ def load_policy(path: str | Path, *, device: str | None = None) -> Any:
         policy.openso101_postprocessor = postprocessor
     except Exception as exc:
         # If the processors can't be loaded (very old checkpoint format,
-        # missing files, etc.) we surface the failure but don't crash —
-        # the caller can still attempt inference, just at their own risk.
-        print(
-            f"[WARN]: Could not load pre/post processors from {ckpt_dir}: "
-            f"{type(exc).__name__}: {exc}. Policy actions will be in raw "
+        # missing files, etc.) this is a HARD ERROR by default: without the
+        # normalization stats the policy emits N(0, 1) values and the arm
+        # barely moves — a silent failure that is especially dangerous on
+        # real hardware. The opt-in escape hatch (allow_unnormalized kwarg or
+        # OPENSO101_ALLOW_UNNORMALIZED=1) downgrades it to a WARN.
+        message = (
+            f"Could not load pre/post processors from {ckpt_dir}: "
+            f"{type(exc).__name__}: {exc}. Policy actions would be in raw "
             "(normalized) units, which usually produces near-stationary "
             "behavior. Verify the checkpoint contains "
             "policy_preprocessor.json + policy_postprocessor.json."
+        )
+        if not (allow_unnormalized or _env_allows_unnormalized()):
+            raise RuntimeError(
+                f"[ERROR]: {message} Refusing to return an unnormalized "
+                "policy. Pass allow_unnormalized=True or set "
+                f"{_ALLOW_UNNORMALIZED_ENV}=1 to override (dry runs only)."
+            ) from exc
+        print(
+            f"[WARN]: {message} Continuing with an UNNORMALIZED policy "
+            f"because allow_unnormalized was requested ({_ALLOW_UNNORMALIZED_ENV} "
+            "or kwarg)."
         )
         policy.openso101_preprocessor = None
         policy.openso101_postprocessor = None
