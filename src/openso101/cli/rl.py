@@ -141,6 +141,13 @@ def _cmd_train(args: argparse.Namespace) -> int:
     # (those flags live in openso101.rl.cli_args.add_rsl_rl_args for callers
     # who want them). Backfill the attributes that update_rsl_rl_cfg reads so
     # an `rl train` invocation works without --resume/--load_run/etc.
+    #
+    # IMPORTANT: only backfill the default when the attribute is ABSENT. The
+    # train subparser now exposes --resume / --load_run / --checkpoint directly,
+    # so when the user passes them we must honor their values (previously this
+    # block hardcoded resume=False/load_run=None/checkpoint=None even though the
+    # _run closure fully supports resume). `run_name` / `logger` /
+    # `log_project_name` are likewise only filled when the parser didn't.
     for _attr, _default in (
         ("resume", False),
         ("load_run", None),
@@ -151,6 +158,16 @@ def _cmd_train(args: argparse.Namespace) -> int:
     ):
         if not hasattr(args, _attr):
             setattr(args, _attr, _default)
+
+    # Treat an explicit --load_run / --checkpoint as a resume request even if
+    # the user forgot --resume; otherwise update_rsl_rl_cfg would stage the
+    # checkpoint but the _run closure's `if agent_cfg.resume` guard would skip
+    # loading it. (Distillation reuses load_run/checkpoint without resume, so
+    # only flip this on for the on-policy path.)
+    if args.algo == "ppo" and (
+        getattr(args, "load_run", None) or getattr(args, "checkpoint", None)
+    ):
+        args.resume = True
 
     # Auto-fallback when the user picked wandb but it isn't importable in
     # this env (wandb lives in [project.optional-dependencies] and a fresh
@@ -229,6 +246,11 @@ def _cmd_train(args: argparse.Namespace) -> int:
             args.max_iterations if args.max_iterations is not None else agent_cfg.max_iterations
         )
 
+        # Seed threading: update_rsl_rl_cfg() above already copied args.seed
+        # onto agent_cfg.seed (resolving --seed -1 to a fresh random seed and
+        # leaving agent_cfg.seed at its config default when --seed was omitted).
+        # Propagate that single source of truth onto the env so the sim RNG and
+        # the policy RNG agree for reproducible runs.
         env_cfg.seed = agent_cfg.seed
         # The new CLI doesn't expose --device; leave env_cfg.sim.device at its default.
 
@@ -462,6 +484,11 @@ def _cmd_play(args: argparse.Namespace) -> int:
                 ) from e
             raise
 
+        # get_inference_policy() returns policy.act_inference, which evaluates
+        # the actor MLP and returns the action MEAN (no Normal sampling). So
+        # play is deterministic by construction; --deterministic is accepted as
+        # an explicit no-op for parity with `rl eval` and does not change this
+        # code path (there is no fresh sample to suppress).
         policy = runner.get_inference_policy(device=env.unwrapped.device)
 
         try:
@@ -506,6 +533,300 @@ def _cmd_play(args: argparse.Namespace) -> int:
                 sys.__stdout__.write(f"[INFO]: play step {step_count}\n")
                 sys.__stdout__.flush()
                 last_heartbeat = now
+
+        env.close()
+
+    try:
+        _run()
+    finally:
+        simulation_app.close()
+
+    return 0
+
+
+def _cmd_eval(args: argparse.Namespace) -> int:
+    """Quantitative checkpoint eval: success rate + a reach/grasp/lift funnel.
+
+    Mirrors _cmd_play's env-construction and checkpoint-loading path (same
+    configure_play, same task-identity guard, same runner.load), then steps the
+    DETERMINISTIC inference policy (runner.get_inference_policy() returns the
+    actor's act_inference, i.e. the action mean — no fresh Normal sample) under
+    ManagerBasedRLEnv auto-reset until every env has finished its quota of
+    episodes. Per env we latch booleans across each episode by reading the
+    'success' termination term, the contact-confirmed grasp, and the object
+    lift height, then aggregate the completed episodes into a JSON report.
+    """
+    from isaaclab.app import AppLauncher
+
+    enable_cameras = bool(
+        getattr(args, "with_cameras", False)
+        or (args.task is not None and "-Vision" in args.task)
+    )
+    app_launcher = AppLauncher(headless=args.headless, enable_cameras=enable_cameras)
+    simulation_app = app_launcher.app
+
+    import gymnasium as gym
+    import json
+    import math
+    import os
+
+    import torch
+
+    from rsl_rl.runners import DistillationRunner, OnPolicyRunner
+
+    from openso101.rl import cli_args as _cli_args
+    from openso101.tasks.shared.grasp import object_grasped_by_jaws
+
+    from isaaclab.envs import (
+        DirectMARLEnv,
+        ManagerBasedRLEnvCfg,  # noqa: F401
+        multi_agent_to_single_agent,
+    )
+    from isaaclab.utils.assets import retrieve_file_path
+
+    from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+
+    import isaaclab_tasks  # noqa: F401
+    import openso101.tasks  # noqa: F401
+    from isaaclab_tasks.utils.hydra import hydra_task_config
+
+    agent_entry_point = getattr(args, "agent", "rsl_rl_cfg_entry_point")
+
+    # Fixed seed for determinism (sim RNG is seeded via env_cfg.seed below; this
+    # covers any torch-side RNG the policy/normalizer might touch).
+    torch.manual_seed(args.seed)
+
+    # update_rsl_rl_cfg reads these; synthesize the ones the eval parser omits.
+    for _attr, _default in (
+        ("resume", None),
+        ("load_run", None),
+        ("run_name", None),
+        ("logger", None),
+        ("log_project_name", None),
+    ):
+        if not hasattr(args, _attr):
+            setattr(args, _attr, _default)
+
+    import sys as _sys
+    _sys.argv = [_sys.argv[0]] + [
+        a for a in _sys.argv[1:] if "=" in a and not a.startswith("-")
+    ]
+
+    @hydra_task_config(args.task, agent_entry_point)
+    def _run(env_cfg, agent_cfg):
+        task_name = args.task.split(":")[-1]
+
+        agent_cfg = _cli_args.update_rsl_rl_cfg(agent_cfg, args)
+
+        # Same play specialization (small-but-not-tiny env count is fine; we
+        # override num_envs explicitly below) and no domain randomization.
+        env_cfg.configure_play(True)
+        if getattr(args, "with_cameras", False):
+            env_cfg.configure_cameras(True)
+
+        env_cfg.scene.num_envs = args.num_envs
+        env_cfg.seed = args.seed
+
+        # Same task-identity guard play uses: refuse a checkpoint from another
+        # task's experiment dir even if observation/action shapes happen to
+        # match (per-term observation semantics differ across tasks).
+        resume_path = retrieve_file_path(args.checkpoint)
+        expected = f"/rsl_rl/{agent_cfg.experiment_name}/"
+        if expected not in os.path.abspath(resume_path):
+            raise SystemExit(
+                f"\n[ERROR]: Checkpoint is from a different task.\n"
+                f"  --task       : {args.task}  (experiment {agent_cfg.experiment_name!r})\n"
+                f"  --checkpoint : {resume_path}\n"
+                f"OpenSO-101 task policies are NOT cross-task transferable. "
+                f"Use a checkpoint from logs/rsl_rl/{agent_cfg.experiment_name}/...\n"
+            )
+
+        env_cfg.log_dir = os.path.dirname(resume_path)
+        env = gym.make(args.task, cfg=env_cfg, render_mode=None)
+        if isinstance(env.unwrapped, DirectMARLEnv):
+            env = multi_agent_to_single_agent(env)
+        env = RslRlVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
+
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}", flush=True)
+        if agent_cfg.class_name == "OnPolicyRunner":
+            runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        elif agent_cfg.class_name == "DistillationRunner":
+            runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
+        else:
+            raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
+        try:
+            runner.load(resume_path)
+        except RuntimeError as e:
+            if "size mismatch" in str(e):
+                raise SystemExit(
+                    f"\n[ERROR]: Checkpoint shape mismatch — {resume_path} was "
+                    f"trained for a different task than {task_name!r}. "
+                    f"Checkpoints are NOT transferable across OpenSO-101 tasks.\n"
+                ) from e
+            raise
+
+        # Deterministic policy: act_inference == action mean (no sampling).
+        policy = runner.get_inference_policy(device=env.unwrapped.device)
+
+        n_envs = env.num_envs
+        device = env.unwrapped.device
+        unwrapped = env.unwrapped
+        term_mgr = unwrapped.termination_manager
+        has_success_term = "success" in term_mgr.active_terms
+
+        episodes_per_env = math.ceil(args.n_episodes / n_envs)
+        target_total = episodes_per_env * n_envs
+
+        # Per-env latches (reset on each episode boundary).
+        ever_succeeded = torch.zeros(n_envs, dtype=torch.bool, device=device)
+        ever_grasped = torch.zeros(n_envs, dtype=torch.bool, device=device)
+        ever_lifted = torch.zeros(n_envs, dtype=torch.bool, device=device)
+        ever_reached = torch.zeros(n_envs, dtype=torch.bool, device=device)
+        first_success_step = torch.full((n_envs,), -1, dtype=torch.long, device=device)
+        steps_in_episode = torch.zeros(n_envs, dtype=torch.long, device=device)
+
+        # Per-env completed-episode counters and aggregate accumulators.
+        completed = torch.zeros(n_envs, dtype=torch.long, device=device)
+        agg = {
+            "success": 0,
+            "grasped": 0,
+            "lifted": 0,
+            "reached": 0,
+            "dropped": 0,
+            "timeout": 0,
+            "steps_to_success_sum": 0,
+            "steps_to_success_n": 0,
+            "total": 0,
+        }
+
+        has_drop_term = "object_dropping" in term_mgr.active_terms
+        reach_threshold = 0.05  # m, ee->object; optional funnel stage
+        lift_threshold = 0.04   # m above the env origin, "off the table"
+
+        obj = unwrapped.scene["object"]
+        env_origin_z = unwrapped.scene.env_origins[:, 2]
+
+        print(
+            f"[INFO]: Evaluating {agent_cfg.experiment_name} over "
+            f"{target_total} episodes ({n_envs} envs x {episodes_per_env}).",
+            flush=True,
+        )
+
+        obs = env.get_observations()
+        while int(completed.min().item()) < episodes_per_env:
+            with torch.inference_mode():
+                actions = policy(obs)
+                obs, _, dones, extras = env.step(actions)
+
+            steps_in_episode += 1
+
+            # --- Latch funnel signals from THIS step (pre-reset state). ---
+            grasped_now = object_grasped_by_jaws(unwrapped)
+            ever_grasped |= grasped_now
+
+            lifted_now = (obj.data.root_pos_w[:, 2] - env_origin_z) > lift_threshold
+            ever_lifted |= lifted_now
+
+            # Optional reach stage: ee->object distance. Best-effort — if the
+            # observation doesn't expose it cheaply, fall back to the grasp
+            # sensors' parent bodies via the cube being close to a jaw is
+            # already captured by grasp; here we approximate "reached" as
+            # "grasped or lifted or very close" using cube-to-origin proxy is
+            # unreliable, so we tie reach to a small ee->obj distance when the
+            # task exposes an 'ee_frame' transform; otherwise reach == grasped.
+            try:
+                ee_frame = unwrapped.scene["ee_frame"]
+                ee_pos_w = ee_frame.data.target_pos_w[:, 0, :]
+                ee_obj_dist = torch.linalg.vector_norm(
+                    ee_pos_w - obj.data.root_pos_w, dim=-1
+                )
+                ever_reached |= ee_obj_dist < reach_threshold
+            except (KeyError, AttributeError, IndexError):
+                ever_reached |= grasped_now
+
+            if has_success_term:
+                succ_now = term_mgr.get_term("success")
+                newly = succ_now & ~ever_succeeded
+                first_success_step[newly] = steps_in_episode[newly]
+                ever_succeeded |= succ_now
+
+            # --- Record outcomes for envs that ended this step. ---
+            done_mask = dones.to(torch.bool)
+            if bool(done_mask.any()):
+                idx = torch.nonzero(done_mask, as_tuple=False).flatten()
+                # Only count episodes up to the quota per env.
+                for i in idx.tolist():
+                    if completed[i] >= episodes_per_env:
+                        continue
+                    completed[i] += 1
+                    agg["total"] += 1
+                    if bool(ever_succeeded[i]):
+                        agg["success"] += 1
+                        if first_success_step[i] >= 0:
+                            agg["steps_to_success_sum"] += int(first_success_step[i].item())
+                            agg["steps_to_success_n"] += 1
+                    if bool(ever_grasped[i]):
+                        agg["grasped"] += 1
+                    if bool(ever_lifted[i]):
+                        agg["lifted"] += 1
+                    if bool(ever_reached[i]):
+                        agg["reached"] += 1
+                    # Timeout vs drop attribution from termination terms /
+                    # time_outs. A success that coincides with timeout still
+                    # counts as success in the success column above.
+                    is_timeout = bool(extras.get("time_outs", torch.zeros(n_envs, dtype=torch.bool, device=device))[i])
+                    if has_drop_term and bool(term_mgr.get_term("object_dropping")[i]):
+                        agg["dropped"] += 1
+                    elif is_timeout and not bool(ever_succeeded[i]):
+                        agg["timeout"] += 1
+
+                # Clear latches for the envs that just auto-reset.
+                ever_succeeded[done_mask] = False
+                ever_grasped[done_mask] = False
+                ever_lifted[done_mask] = False
+                ever_reached[done_mask] = False
+                first_success_step[done_mask] = -1
+                steps_in_episode[done_mask] = 0
+
+        # --- Aggregate ---
+        total = max(agg["total"], 1)
+        success_rate = agg["success"] / total
+        # Wald 95% CI on the success-rate proportion.
+        ci95 = 1.96 * math.sqrt(max(success_rate * (1 - success_rate), 0.0) / total)
+        mean_steps_to_success = (
+            agg["steps_to_success_sum"] / agg["steps_to_success_n"]
+            if agg["steps_to_success_n"] > 0
+            else None
+        )
+        report = {
+            "task": task_name,
+            "checkpoint": os.path.abspath(resume_path),
+            "n_episodes": agg["total"],
+            "success_rate": success_rate,
+            "success_rate_ci95": ci95,
+            "mean_steps_to_success": mean_steps_to_success,
+            "drop_rate": agg["dropped"] / total,
+            "timeout_rate": agg["timeout"] / total,
+            "frac_reached": agg["reached"] / total,
+            "frac_grasped": agg["grasped"] / total,
+            "frac_lifted": agg["lifted"] / total,
+            "seed": args.seed,
+            "num_envs": n_envs,
+        }
+        if not has_success_term:
+            report["warning"] = (
+                "no 'success' termination term active on this task; "
+                "success_rate is 0 and not meaningful."
+            )
+
+        print("\n===== eval report =====", flush=True)
+        for k, v in report.items():
+            print(f"  {k}: {v}", flush=True)
+
+        out_path = os.path.join(os.path.dirname(resume_path), "eval_report.json")
+        with open(out_path, "w") as fh:
+            json.dump(report, fh, indent=2)
+        print(f"[INFO] Saved -> {out_path}", flush=True)
 
         env.close()
 
@@ -613,10 +934,12 @@ def _plot_run(log_dir: str, save: bool = False, smooth_window: int = 30) -> None
     run_name = os.path.basename(log_dir)
     task_name = os.path.basename(os.path.dirname(log_dir))
 
-    fig = plt.figure(figsize=(18, 14))
+    fig = plt.figure(figsize=(18, 18))
     fig.suptitle(f"Training curves - {task_name}  [{run_name}]", fontsize=13, fontweight="bold")
 
-    gs = gridspec.GridSpec(3, 3, figure=fig, hspace=0.45, wspace=0.35)
+    # 4 rows now: rows 0-2 keep the original panels, row 3 adds the
+    # success-rate-over-training curve and the goal-distance metric panel.
+    gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.45, wspace=0.35)
 
     ax = fig.add_subplot(gs[0, :2])
     if "Train/mean_reward" in data:
@@ -733,7 +1056,68 @@ def _plot_run(log_dir: str, save: bool = False, smooth_window: int = 30) -> None
     ax7.legend(fontsize=8)
     ax7.grid(True, alpha=0.3)
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    # --- Success rate over training (row 3, spans 2 cols) ---
+    # Auto-discover every Episode_Termination/* tag whose name mentions
+    # 'success'. The shared RL contract renames each task's success
+    # termination attr to 'success', so the tag is Episode_Termination/success;
+    # discovering by substring keeps this robust to any legacy aliases
+    # (lift_success / stacked_success) still present in older event files.
+    ax8 = fig.add_subplot(gs[3, :2])
+    success_tags = sorted(
+        tag
+        for tag in data
+        if tag.startswith("Episode_Termination/") and "success" in tag.lower()
+    )
+    _success_palette = ["#2ca25f", "#1b7837", "#66c2a4", "#006d2c"]
+    for i, tag in enumerate(success_tags):
+        steps, vals = data[tag]
+        label = tag.split("/", 1)[1]
+        ax8.plot(
+            steps,
+            _plot_smooth(np.array(vals), smooth_window),
+            color=_success_palette[i % len(_success_palette)],
+            linewidth=2,
+            label=label,
+        )
+    if not success_tags:
+        ax8.text(
+            0.5, 0.5, "no Episode_Termination/*success* scalar logged yet",
+            ha="center", va="center", transform=ax8.transAxes, fontsize=9, color="#999",
+        )
+    ax8.set_title("Success rate over training\n(Episode_Termination/success, fraction of episodes)")
+    ax8.set_xlabel("Iteration")
+    ax8.set_ylabel("Success fraction")
+    ax8.set_ylim(0, 1.05)
+    if success_tags:
+        ax8.legend(fontsize=8, loc="upper left")
+    ax8.grid(True, alpha=0.3)
+
+    # --- Distance-to-goal metric (row 3, last col) ---
+    ax9 = fig.add_subplot(gs[3, 2])
+    dist_tags = [
+        ("Metrics/object_pose/distance_to_goal", "center distance", "#cc5500"),
+        ("Metrics/object_pose/surface_distance_to_goal", "surface distance", "#0077aa"),
+    ]
+    plotted_dist = False
+    for tag, label, color in dist_tags:
+        if tag in data:
+            steps, vals = data[tag]
+            ax9.plot(steps, _plot_smooth(np.array(vals), smooth_window),
+                     label=label, color=color, linewidth=1.5)
+            plotted_dist = True
+    if not plotted_dist:
+        ax9.text(
+            0.5, 0.5, "no Metrics/object_pose/distance_to_goal scalar",
+            ha="center", va="center", transform=ax9.transAxes, fontsize=8, color="#999",
+        )
+    ax9.set_title("Object -> goal distance\n(lower is better)")
+    ax9.set_xlabel("Iteration")
+    ax9.set_ylabel("Distance (m)")
+    if plotted_dist:
+        ax9.legend(fontsize=8)
+    ax9.grid(True, alpha=0.3)
+
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
 
     if save:
         out_path = os.path.join(log_dir, "training_curves.png")
@@ -775,8 +1159,37 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         ),
     )
     p_train.add_argument("--num_envs", type=int, default=None)
-    p_train.add_argument("--seed", type=int, default=None)
+    p_train.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help=(
+            "RNG seed for both the sim and the policy. Pass -1 for a fresh "
+            "random seed each run; omit to use the agent config's default."
+        ),
+    )
     p_train.add_argument("--max_iterations", type=int, default=None)
+    # Resume / fine-tune from an existing run. The _run closure already honors
+    # agent_cfg.resume (it loads the checkpoint before runner.learn); these
+    # flags just stop the namespace backfill from hardcoding resume off.
+    p_train.add_argument(
+        "--resume",
+        action="store_true",
+        default=False,
+        help="Resume training from a checkpoint (uses --load_run / --checkpoint).",
+    )
+    p_train.add_argument(
+        "--load_run",
+        type=str,
+        default=None,
+        help="Run folder (name or path) to resume from. Implies --resume semantics.",
+    )
+    p_train.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Checkpoint file name within the resumed run (e.g. model_best.pt).",
+    )
     # Video defaults to ON so the user can monitor headless training without
     # opening the simulator. Pass --no-video to disable. Recording a 200-step
     # clip every 2400 steps adds ~1 GB VRAM (RTX pipeline init) but no
@@ -817,8 +1230,30 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_play.add_argument("--checkpoint", required=True)
     p_play.add_argument("--num_envs", type=int, default=None)
     p_play.add_argument("--with-cameras", action="store_true")
+    p_play.add_argument(
+        "--deterministic",
+        action="store_true",
+        help=(
+            "Step the deterministic inference policy (action mean) instead of "
+            "sampling. This is already the default behaviour — runner."
+            "get_inference_policy() returns act_inference, the action mean — so "
+            "the flag is provided for explicitness/parity with eval."
+        ),
+    )
     p_play.add_argument("--headless", action="store_true")
     p_play.set_defaults(func=_cmd_play)
+
+    p_eval = sub.add_parser(
+        "eval",
+        help="Quantitatively evaluate a checkpoint (success rate + funnel)",
+    )
+    p_eval.add_argument("--task", required=True, help="Gym ID")
+    p_eval.add_argument("--checkpoint", required=True, help="Checkpoint .pt path")
+    p_eval.add_argument("--num-envs", dest="num_envs", type=int, default=64)
+    p_eval.add_argument("--n-episodes", dest="n_episodes", type=int, default=100)
+    p_eval.add_argument("--seed", type=int, default=0)
+    p_eval.add_argument("--headless", action="store_true")
+    p_eval.set_defaults(func=_cmd_eval)
 
     p_plot = sub.add_parser("plot", help="Plot training curves from a run dir")
     group = p_plot.add_mutually_exclusive_group(required=True)
