@@ -148,7 +148,40 @@ def carry_to_goal_shaping(
     return _shaped_delta(env, "_pp_carry", cur, grasping)
 
 
+def grasp_onset_bonus(
+    env: "ManagerBasedRLEnv",
+    force_threshold: float = 0.5,
+) -> torch.Tensor:
+    """One-shot reward (1.0) on the step a grasp transitions False->True, per env.
+
+    Returns 1.0 exactly on the first step the contact-confirmed grasp predicate
+    flips from not-grasping to grasping, and 0.0 otherwise (including every
+    subsequent step the grasp is held — that steady-state reward is the job of
+    ``grasped_reward``/``grasp_hold``). This injects a discrete reward at the
+    reach->grasp boundary so the policy gets a sharp, unambiguous credit for
+    *achieving* the grasp rather than only for maintaining it.
+
+    Previous grasp state is tracked in ``env.extras`` under a private key,
+    mirroring the ``_shaped_delta`` persistent-state pattern: ``resolve_prev``
+    seeds it on first call, and a fresh-reset guard (``episode_length_buf <= 1``)
+    yields 0 so a grasp held across an episode boundary doesn't fire a spurious
+    onset on the first step of the new episode.
+    """
+    grasping = object_grasped_by_jaws(env, force_threshold)
+    prev = resolve_prev(env.extras.get("_pp_grasp_prev"), grasping.float())
+    prev_grasping = prev > 0.5
+
+    # Onset = not-grasping last step AND grasping this step. Suppressed on a
+    # fresh episode reset where prev is stale from the previous episode.
+    fresh_reset = env.episode_length_buf <= 1
+    onset = grasping & (~prev_grasping) & (~fresh_reset)
+
+    env.extras["_pp_grasp_prev"] = grasping.float().detach().clone()
+    return onset.float()
+
+
 __all__ = [
     "pregrasp_approach_shaping",
     "carry_to_goal_shaping",
+    "grasp_onset_bonus",
 ]

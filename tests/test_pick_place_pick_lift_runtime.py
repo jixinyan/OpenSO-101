@@ -52,8 +52,15 @@ def test_pick_lift_rewards_step_without_error():
         env.close()
 
     # The delta-shaping terms stash per-env previous-distance/mode state in
-    # env.extras; their presence confirms both shaping terms actually ran.
+    # env.extras; their presence confirms both shaping terms actually ran. The
+    # grasp-onset term stashes its previous grasp state under _pp_grasp_prev.
     extras = env.unwrapped.extras
-    for key in ("_pp_pregrasp_dist", "_pp_pregrasp_mode", "_pp_carry_dist", "_pp_carry_mode"):
+    for key in (
+        "_pp_pregrasp_dist",
+        "_pp_pregrasp_mode",
+        "_pp_carry_dist",
+        "_pp_carry_mode",
+        "_pp_grasp_prev",
+    ):
         assert key in extras, f"missing shaping state {key!r} — reward term did not run"
         assert extras[key].shape[0] == 4
