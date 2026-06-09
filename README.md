@@ -9,7 +9,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/KevinYan-831/OpenSO-101">
+  <a href="https://github.com/jixinyan/OpenSO-101">
     <img src="media/logo.png" alt="OpenSO-101 logo" width="280">
   </a>
 
@@ -38,6 +38,7 @@
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
+- [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
 
 
@@ -76,7 +77,7 @@ OpenSO-101/
 ├── scripts/
 │   └── install.sh            # uv-based installer (resolves isaaclab/lerobot conflict)
 ├── docs/guides/              # User-facing guides (install, quickstart, teleop, add_a_task)
-├── tests/                    # pytest suite (~80 tests; runs without Isaac Sim)
+├── tests/                    # pytest suite (~21 test modules; full run needs a CUDA GPU + Isaac Sim, a CPU-only subset runs anywhere)
 ├── constraints.txt           # `setuptools<81` for flatdict's legacy sdist
 ├── requirements-cuda.txt     # torch cu128 wheels (Blackwell-compatible)
 └── pyproject.toml            # `openso101` console_scripts + [tool.uv] resolver overrides
@@ -102,7 +103,7 @@ OpenSO-101 ships a single install wrapper that produces a fully-resolved environ
 
 ```bash
 # 1. Clone
-git clone https://github.com/KevinYan-831/OpenSO-101.git
+git clone https://github.com/jixinyan/OpenSO-101.git
 cd OpenSO-101
 
 # 2. Create the conda env (Python 3.11 only — heavy deps go in next)
@@ -112,12 +113,33 @@ conda activate openso101
 # 3. Run the installer (bootstraps uv, installs cu128 torch, then openso101+isaaclab+lerobot)
 bash scripts/install.sh
 
-# 4. Verify
+# 4. Fetch the SO-101 USD mesh (~23 MB third-party asset; NOT committed to git)
+bash scripts/fetch_so101_usd.sh
+
+# 5. Verify
 openso101 envs list
 # OpenSO101-Lift-v0
 # OpenSO101-PickPlace-v0
 # OpenSO101-Stack-v0
 ```
+
+> **The USD asset is required.** Env construction reads the SO-101 mesh at
+> `assets/so101/usd/SO-ARM101-USD.usd`; without it, `envs list` and any
+> training/play command raise `FileNotFoundError`. `fetch_so101_usd.sh`
+> downloads it from the project's GitHub Release by default. The mesh is a
+> third-party binary (~23 MB) authored by Muammer Bay (LycheeAI) and Louis
+> Le Lay and is licensed under BSD-3-Clause — see
+> [`LICENSE-BSD-3-CLAUSE`](LICENSE-BSD-3-CLAUSE).
+> Override the source if you already have the file or host it elsewhere:
+>
+> ```bash
+> # Download from a custom URL (default: the v0.1.0 GitHub Release):
+> OPENSO101_SO101_USD_URL=https://github.com/jixinyan/OpenSO-101/releases/download/v0.1.0/SO-ARM101-USD.usd \
+>   bash scripts/fetch_so101_usd.sh
+>
+> # …or copy from a local file you already have:
+> OPENSO101_SO101_USD_SRC=/path/to/SO-ARM101-USD.usd bash scripts/fetch_so101_usd.sh
+> ```
 
 ### Quickstart
 
@@ -153,26 +175,34 @@ openso101 il record \
 
 Recording keys: `S` = save success + exit · `Q` = discard + exit · `C` = checkpoint · `R` = hard-restore to checkpoint. The leader is polled by a daemon thread at ~1 kHz; the simulation reads the latest cached value, so teleop stays smooth even when the sim step takes longer than the bus round-trip.
 
+**Convert the recording to a LeRobot dataset** — `il record` writes HDF5 episodes; the trainer needs a LeRobot-format dataset. `il push` does the HDF5 → LeRobot conversion (and uploads to the Hub):
+
+```bash
+openso101 il push \
+  --repo-root teleop_data/openso101_pickplace \
+  --repo-id <your-hf-username>/openso101_pickplace
+```
+
 **Train an IL policy via LeRobot** (delegates to `lerobot.scripts.train`):
 
 ```bash
-openso101 il train --policy act --dataset teleop_data/openso101_pickplace
+openso101 il train --policy act --dataset <your-hf-username>/openso101_pickplace
 # or
-openso101 il train --policy diffusion --dataset teleop_data/openso101_pickplace
+openso101 il train --policy diffusion --dataset <your-hf-username>/openso101_pickplace
 ```
 
-**Play the IL checkpoint in sim:**
+**Play the IL checkpoint in sim** (`il train` writes to `logs/lerobot/openso101_<policy>/<timestamp>/`; the trained weights land under `checkpoints/last/pretrained_model`):
 
 ```bash
 openso101 il play --task OpenSO101-PickPlace-v0 \
-  --policy-path outputs/train/<run-dir>/checkpoints/last/pretrained_model
+  --policy-path logs/lerobot/openso101_act/<timestamp>/checkpoints/last/pretrained_model
 ```
 
 **Deploy the same checkpoint on the real robot:**
 
 ```bash
 openso101 sim2real deploy \
-  --policy-path outputs/train/<run-dir>/checkpoints/last/pretrained_model \
+  --policy-path logs/lerobot/openso101_act/<timestamp>/checkpoints/last/pretrained_model \
   --follower-port /dev/ttyACM1 \
   --follower-id follower_arm_1 \
   --wrist-camera-index 0 --overhead-camera-index 2
@@ -252,7 +282,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 5. Open a Pull Request
 
 Before submitting, please:
-- Run `pytest tests/ -v` and make sure all non-skipped tests pass (the suite runs without Isaac Sim).
+- Run the tests. The full suite (~21 test modules under `tests/`) needs a CUDA GPU and Isaac Sim — a bare `pytest tests/` boots the simulator via `conftest.py`, so it only works on a GPU machine. A CPU-pure subset has no Isaac Sim dependency and runs anywhere (e.g. `pytest tests/test_shaping_rewards.py tests/test_cli_rl.py`); CI runs exactly this CPU-only subset.
 - Follow the conventions documented in `docs/guides/add_a_task.md`.
 - Keep changes scoped — one PR per concern.
 
@@ -263,7 +293,24 @@ Before submitting, please:
 
 Distributed under the MIT License. See [`LICENSE`](LICENSE) for the full text.
 
-Portions of the code (`src/openso101/robots/so101/`) derive from Isaac Lab's BSD-3-Clause licensed assets; see [`LICENSE-BSD-3-CLAUSE`](LICENSE-BSD-3-CLAUSE).
+The bundled SO-ARM101 USD mesh is © 2025 Muammer Bay (LycheeAI) and Louis Le Lay, licensed BSD-3-Clause; see [`LICENSE-BSD-3-CLAUSE`](LICENSE-BSD-3-CLAUSE). The SO-101 robot configuration in `src/openso101/robots/so101/` (actuator / PD gains) adapts the approach from [`liorbenhorin/lerobot_so101_teleop`](https://github.com/liorbenhorin/lerobot_so101_teleop).
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+<!-- CITATION -->
+## Citation
+
+If you use OpenSO-101 in your research, please cite it:
+
+```bibtex
+@software{openso101,
+  title  = {OpenSO-101: An Open-Source Robot Learning Framework for the LeRobot SO-101 in Isaac Lab},
+  author = {Yan, Jixin},
+  year   = {2026},
+  url    = {https://github.com/jixinyan/OpenSO-101}
+}
+```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -275,6 +322,8 @@ OpenSO-101 stands on the shoulders of a community of open-source projects:
 
 - [NVIDIA Isaac Lab][isaaclab-url] — the simulation and `ManagerBasedRLEnvCfg` substrate.
 - [TheRobotStudio SO-ARM100/SO-ARM101][so101-hardware-url] — the open-hardware arm we target.
+- **LycheeAI (Muammer Bay) & Louis Le Lay** — the Isaac-Sim SO-ARM101 USD mesh we redistribute (BSD-3-Clause).
+- [liorbenhorin/lerobot_so101_teleop](https://github.com/liorbenhorin/lerobot_so101_teleop) — the SO-101 teleop + actuator/PD-gain approach our robot config adapts.
 - [LeRobot][lerobot-url] — teleop drivers, dataset format, ACT/Diffusion training.
 - [rsl_rl][rsl-rl-url] — the lean RL library that powers our PPO trainer and Distillation runner.
 
@@ -283,16 +332,16 @@ OpenSO-101 stands on the shoulders of a community of open-source projects:
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/KevinYan-831/OpenSO-101.svg?style=for-the-badge
-[contributors-url]: https://github.com/KevinYan-831/OpenSO-101/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/KevinYan-831/OpenSO-101.svg?style=for-the-badge
-[forks-url]: https://github.com/KevinYan-831/OpenSO-101/network/members
-[stars-shield]: https://img.shields.io/github/stars/KevinYan-831/OpenSO-101.svg?style=for-the-badge
-[stars-url]: https://github.com/KevinYan-831/OpenSO-101/stargazers
-[issues-shield]: https://img.shields.io/github/issues/KevinYan-831/OpenSO-101.svg?style=for-the-badge
-[issues-url]: https://github.com/KevinYan-831/OpenSO-101/issues
-[license-shield]: https://img.shields.io/github/license/KevinYan-831/OpenSO-101.svg?style=for-the-badge
-[license-url]: https://github.com/KevinYan-831/OpenSO-101/blob/main/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/jixinyan/OpenSO-101.svg?style=for-the-badge
+[contributors-url]: https://github.com/jixinyan/OpenSO-101/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/jixinyan/OpenSO-101.svg?style=for-the-badge
+[forks-url]: https://github.com/jixinyan/OpenSO-101/network/members
+[stars-shield]: https://img.shields.io/github/stars/jixinyan/OpenSO-101.svg?style=for-the-badge
+[stars-url]: https://github.com/jixinyan/OpenSO-101/stargazers
+[issues-shield]: https://img.shields.io/github/issues/jixinyan/OpenSO-101.svg?style=for-the-badge
+[issues-url]: https://github.com/jixinyan/OpenSO-101/issues
+[license-shield]: https://img.shields.io/github/license/jixinyan/OpenSO-101.svg?style=for-the-badge
+[license-url]: https://github.com/jixinyan/OpenSO-101/blob/main/LICENSE
 
 [python-shield]: https://img.shields.io/badge/python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white
 [python-url]: https://www.python.org/

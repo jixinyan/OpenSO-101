@@ -1,7 +1,5 @@
 # LeRobot SO101 Teleoperation
 
-> _Ported from `safe_sim2real/docs/lerobot_so101_teleop.md` during the OpenSO-101 v0.1.0 refactor. Code references updated; historical narrative preserved._
-
 This document captures the current working teleoperation setup for OpenSO-101.
 It is the handoff point for real SO101 leader-arm teleop, local HDF5 collection,
 and later LeRobot dataset/policy workflows.
@@ -13,8 +11,8 @@ and later LeRobot dataset/policy workflows.
   repository.
 - LeRobot is used at the boundary: it reads the physical SO101 leader arm and
   later consumes exported demonstration datasets.
-- The simulated follower uses the canonical SO101 USD asset copied under
-  `outputs/third_party/so101_usd/SO-ARM101-USD.usd`.
+- The simulated follower uses the canonical SO101 USD asset at
+  `assets/so101/usd/SO-ARM101-USD.usd`.
 - The canonical robot config is `openso101.robots.SO_ARM101_CFG`.
 - Teleop tasks use absolute six-joint position targets:
   `Rotation`, `Pitch`, `Elbow`, `Wrist_Pitch`, `Wrist_Roll`, `Jaw`.
