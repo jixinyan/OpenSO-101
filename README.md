@@ -77,6 +77,18 @@ The project is organized so a researcher can clone, install, and reach a working
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+### Built With
+
+[![Python][python-shield]][python-url]
+[![PyTorch][pytorch-shield]][pytorch-url]
+[![Isaac Lab][isaaclab-shield]][isaaclab-url]
+[![LeRobot][lerobot-shield]][lerobot-url]
+[![rsl_rl][rsl-rl-shield]][rsl-rl-url]
+[![Gymnasium][gymnasium-shield]][gymnasium-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
 ### Repository Layout
 
 ```
