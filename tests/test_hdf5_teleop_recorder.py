@@ -15,7 +15,7 @@ CAMERAS = {
 
 def test_hdf5_recorder_writes_lerobot_compatible_episode_layout(tmp_path):
     recorder = OpenSO101HDF5TeleopRecorder(
-        root=tmp_path / "teleop_data" / "safe_sim2real_pickplace_teleop",
+        root=tmp_path / "teleop_data" / "openso101_pickplace_teleop",
         task_name="Pick up the green cube and place it at the goal",
         cameras=CAMERAS,
         fps=30,
@@ -33,7 +33,7 @@ def test_hdf5_recorder_writes_lerobot_compatible_episode_layout(tmp_path):
     )
     episode_path = recorder.save_episode(success=True)
 
-    assert episode_path == tmp_path / "teleop_data" / "safe_sim2real_pickplace_teleop" / "episodes" / "episode_000000.hdf5"
+    assert episode_path == tmp_path / "teleop_data" / "openso101_pickplace_teleop" / "episodes" / "episode_000000.hdf5"
     with h5py.File(episode_path, "r") as h5:
         assert h5["action"].shape == (1, 6)
         assert h5["observations/qpos"].shape == (1, 6)
@@ -77,7 +77,7 @@ def test_hdf5_recorder_persists_env_id_for_replay_scene_selection(tmp_path):
 
 
 def test_hdf5_recorder_uses_next_episode_index(tmp_path):
-    root = tmp_path / "teleop_data" / "safe_sim2real_pickplace_teleop"
+    root = tmp_path / "teleop_data" / "openso101_pickplace_teleop"
     episodes = root / "episodes"
     episodes.mkdir(parents=True)
     (episodes / "episode_000000.hdf5").write_bytes(b"existing")

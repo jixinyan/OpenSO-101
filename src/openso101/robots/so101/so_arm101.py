@@ -1,3 +1,14 @@
+# Copyright (c) 2026, Jixin Yan
+# SPDX-License-Identifier: MIT
+
+"""SO-ARM101 robot Isaac Lab articulation config and USD asset resolution."""
+
+# This module resolves and configures the third-party SO-ARM101 USD mesh
+# (authored by Muammer Bay (LycheeAI) and Louis Le Lay; see
+# LICENSE-BSD-3-CLAUSE for the bundled asset's BSD-3-Clause license). The
+# actuator / PD articulation config below is ported "Lior-style" from
+# liorbenhorin/lerobot_so101_teleop.
+
 from pathlib import Path
 import math
 import os

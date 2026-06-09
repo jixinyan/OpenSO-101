@@ -8,11 +8,11 @@ report nonzero filtered contact force against the cube prim simultaneously.
 This is the ground-truth grasp signal: the policy cannot satisfy it by
 closing the gripper in mid-air or by pushing the cube without pinching it.
 
-Used in two places in the reward stack:
+Used in two places in the pick-and-lift reward stack:
 - As its own dense ``RewTerm`` (``grasped_reward``) so the policy gets
   immediate gradient the moment it first achieves a real grasp.
-- As a multiplicative gate inside the lift / stage_0 / stage_1 reward
-  terms so those rewards do not fire while the cube is not actually held.
+- As a success gate so reward and termination only credit progress while
+  the cube is actually held.
 """
 
 from __future__ import annotations

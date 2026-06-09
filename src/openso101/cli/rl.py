@@ -44,8 +44,8 @@ def _cmd_train(args: argparse.Namespace) -> int:
             )
             return 2
 
-    # --- PPO training body (ported from
-    # /data/safe_sim2real/src/safe_sim2real/scripts/rsl_rl/train.py) ---
+    # --- PPO training body (ported from the predecessor safe_sim2real
+    # project's rsl_rl training script) ---
 
     # AppLauncher must launch BEFORE any isaaclab / isaaclab_tasks / isaaclab_rl
     # / rsl_rl Isaac-Sim-bound imports.
@@ -517,8 +517,8 @@ def _cmd_play(args: argparse.Namespace) -> int:
     return 0
 
 
-# --- Plot helpers (ported from
-# /data/safe_sim2real/src/safe_sim2real/scripts/plot_training.py) ---
+# --- Plot helpers (ported from the predecessor safe_sim2real project's
+# training-plot script) ---
 
 
 def _plot_smooth(y, window: int = 20):

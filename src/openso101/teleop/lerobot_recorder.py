@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""LeRobot dataset recording helpers for Safe Sim2Real teleoperation."""
+"""LeRobot dataset recording helpers for OpenSO-101 teleoperation."""
 
 from __future__ import annotations
 

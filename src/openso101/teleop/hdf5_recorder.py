@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Local HDF5 recording for Safe Sim2Real teleoperation episodes.
+"""Local HDF5 recording for OpenSO-101 teleoperation episodes.
 
 The recorder streams chunked, resizable datasets to disk as frames arrive so a
 crash mid-episode does not lose previously captured frames. Frames are
