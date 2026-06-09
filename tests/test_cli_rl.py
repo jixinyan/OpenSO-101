@@ -116,3 +116,19 @@ def test_distillation_algo_routes_to_dedicated_entry_point():
         rl_cli._ALGO_TO_ENTRY_POINT["distillation"]
         == "rsl_rl_distillation_cfg_entry_point"
     )
+
+
+def test_rl_eval_subcommand_is_wired():
+    """`rl eval` exists and prints help without booting Isaac Sim."""
+    proc = _run_cli("rl", "eval", "--help")
+    combined = proc.stdout + proc.stderr
+    assert proc.returncode == 0, combined
+    assert "--checkpoint" in combined, combined
+
+
+def test_rl_eval_requires_task_and_checkpoint():
+    """Missing required args is an argparse error (exit 2) before any sim import."""
+    proc = _run_cli("rl", "eval")
+    combined = proc.stdout + proc.stderr
+    assert proc.returncode == 2, combined
+    assert "the following arguments are required" in combined.lower(), combined

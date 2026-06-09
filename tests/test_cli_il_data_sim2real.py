@@ -159,3 +159,19 @@ def test_il_record_accepts_leader_async_flags():
     )
     combined = proc.stdout + proc.stderr
     assert "unrecognized arguments" not in combined.lower(), combined
+
+
+def test_il_eval_subcommand_is_wired():
+    """`il eval` exists and prints help without booting Isaac Sim."""
+    proc = _run_cli("il", "eval", "--help")
+    combined = proc.stdout + proc.stderr
+    assert proc.returncode == 0, combined
+    assert "--policy-path" in combined, combined
+
+
+def test_il_eval_requires_task_and_policy_path():
+    """Missing required args is an argparse error (exit 2) before any sim import."""
+    proc = _run_cli("il", "eval")
+    combined = proc.stdout + proc.stderr
+    assert proc.returncode == 2, combined
+    assert "the following arguments are required" in combined.lower(), combined
