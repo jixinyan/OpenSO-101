@@ -48,6 +48,11 @@ jobs:
           python -c "import sys; sys.path.insert(0, 'src'); import openso101; print('openso101', openso101.__version__)"
 
       - name: Run CPU-pure test suite (no Isaac Sim, no LeRobot)
+        # The package isn't pip-installed in this minimal job; put src/ on the
+        # path so `import openso101` resolves at test collection (same as the
+        # 'Verify package layout' step above).
+        env:
+          PYTHONPATH: src
         run: |
           # The explicit list below is every test file that PASSES (or skips
           # cleanly) using ONLY the CI deps + torch — i.e. files that do not
@@ -96,8 +101,10 @@ jobs:
           python -m pip install --upgrade pip build
           # A failed build must FAIL the job: no '|| true' masking, and the
           # wheel must actually exist afterwards. The wheel builds from the
-          # pyproject [project] table alone (setup.py was removed); build
-          # deps are setuptools + wheel only, so no sim deps are required.
-          python -m build --wheel --no-isolation
+          # pyproject [project] table alone (setup.py was removed). Build in an
+          # isolated env (the default) so PEP517 provisions the declared
+          # build-system requires (setuptools>=61 + wheel) — the runner's base
+          # env has setuptools but not wheel, so --no-isolation would fail.
+          python -m build --wheel
           ls -la dist/
           test -n "$(ls dist/*.whl 2>/dev/null)"
