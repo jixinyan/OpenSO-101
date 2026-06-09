@@ -4,7 +4,7 @@
 """SO101 leader-arm to simulated follower joint mapping.
 
 LeRobot's SO101 leader reports joint positions in degrees using feature names
-such as ``shoulder_pan.pos``. Safe Sim2Real commands the Isaac articulation in
+such as ``shoulder_pan.pos``. OpenSO-101 commands the Isaac articulation in
 radians using the canonical SO101 USD joint names. The conversion here is
 intentionally pure Python so the sim/real boundary can be tested without Isaac
 Sim or hardware.
@@ -95,7 +95,7 @@ def _map_interval(value: float, source: JointLimitsDeg, target: JointLimitsDeg) 
 
 
 def lerobot_action_to_joint_targets(action: Mapping[str, float]) -> dict[str, float]:
-    """Convert a LeRobot SO101 action dict to Safe Sim2Real radian targets."""
+    """Convert a LeRobot SO101 action dict to OpenSO-101 radian targets."""
 
     missing = [name for name in LEROBOT_SO101_ACTION_NAMES if name not in action]
     if missing:
@@ -115,7 +115,7 @@ def lerobot_action_to_joint_targets(action: Mapping[str, float]) -> dict[str, fl
 
 
 def lerobot_action_to_ordered_targets(action: Mapping[str, float]) -> tuple[float, ...]:
-    """Return targets ordered for the Safe Sim2Real SO-ARM101 action vector."""
+    """Return targets ordered for the OpenSO-101 SO-ARM101 action vector."""
 
     targets = lerobot_action_to_joint_targets(action)
     return tuple(targets[joint_name] for joint_name in SO101_TELEOP_CONTROL_JOINT_NAMES)

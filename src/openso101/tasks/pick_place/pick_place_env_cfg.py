@@ -82,24 +82,26 @@ SO101_USD_TABLETOP_BASE_OFFSET = -SO101_USD_TABLETOP_ROOT_Z
 _GOAL_SPHERE_RADIUS = 0.03
 _CUBE_CONTACT_RADIUS = 0.015
 
-# Green goal sphere marker, with one mesh per stage so the command can still
-# index by stage. The geometry/color stays the same; only the position changes.
+# Green goal sphere marker. The command's visualizer selects a mesh by integer
+# `marker_indices`, so three identical entries are kept in order to cover every
+# index the command may emit; the geometry/color is the same and only the
+# position changes. The key strings are cosmetic and carry no curriculum meaning.
 CURRICULUM_GOAL_MARKER_CFG = VisualizationMarkersCfg(
     prim_path="/Visuals/Curriculum/goal",
     markers={
-        "stage_0_lift": sim_utils.SphereCfg(
+        "goal_a": sim_utils.SphereCfg(
             radius=_GOAL_SPHERE_RADIUS,
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.1, 0.9, 0.1), opacity=0.5,
             ),
         ),
-        "stage_1_carry": sim_utils.SphereCfg(
+        "goal_b": sim_utils.SphereCfg(
             radius=_GOAL_SPHERE_RADIUS,
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.1, 0.9, 0.1), opacity=0.5,
             ),
         ),
-        "stage_2_place": sim_utils.SphereCfg(
+        "goal_c": sim_utils.SphereCfg(
             radius=_GOAL_SPHERE_RADIUS,
             visual_material=sim_utils.PreviewSurfaceCfg(
                 diffuse_color=(0.1, 0.9, 0.1), opacity=0.5,

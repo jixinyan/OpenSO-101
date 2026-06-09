@@ -1,4 +1,4 @@
-# CUDA-correct PyTorch wheels for Safe Sim2Real.
+# CUDA-correct PyTorch wheels for OpenSO-101.
 #
 # Why this file exists:
 #   The project pins `torch==2.7.0` (to match what Isaac Lab 2.3.0 expects).

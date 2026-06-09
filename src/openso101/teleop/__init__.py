@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Teleoperation adapters for Safe Sim2Real."""
+"""Teleoperation adapters for OpenSO-101."""
 
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
