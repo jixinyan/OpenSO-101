@@ -42,8 +42,9 @@ def test__replay_resolve_episode_path_uses_latest_episode_by_default(tmp_path):
     first = _write_episode(root)
     second = _write_episode(root)
 
-    assert _replay_resolve_episode_path(root) == second.resolve()
-    assert _replay_resolve_episode_path(root, episode_index=0) == first.resolve()
+    # episode_path=None -> resolve from the repo root (latest by default).
+    assert _replay_resolve_episode_path(root, None) == second.resolve()
+    assert _replay_resolve_episode_path(root, None, episode_index=0) == first.resolve()
 
 
 def test__replay_select_checkpoint_frame_uses_saved_checkpoint_index(tmp_path):

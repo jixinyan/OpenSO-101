@@ -45,12 +45,18 @@ def test_policies_are_proxies_not_stubs():
     # raise on construction *before* trying to import LeRobot.
     assert hasattr(ACTPolicy, "__new__")
     assert hasattr(DiffusionPolicy, "__new__")
-    # Calling them WILL fail in CI (no LeRobot) but with an ImportError
-    # from the lazy import, not a NotImplementedError from a placeholder.
-    with pytest.raises((ImportError, ModuleNotFoundError)):
-        ACTPolicy()
-    with pytest.raises((ImportError, ModuleNotFoundError)):
-        DiffusionPolicy()
+    # Calling them WILL fail, but the point is *how*: a real deferring proxy,
+    # never a NotImplementedError placeholder. The exact exception is
+    # environment-dependent:
+    #   - no LeRobot installed (CI): ImportError/ModuleNotFoundError from the
+    #     lazy import.
+    #   - LeRobot installed (dev): TypeError — the real LeRobot policy needs a
+    #     `config` argument.
+    # Either proves it is not a stub; a NotImplementedError would.
+    for proxy in (ACTPolicy, DiffusionPolicy):
+        with pytest.raises(Exception) as exc_info:
+            proxy()
+        assert not isinstance(exc_info.value, NotImplementedError)
 
 
 def test_train_result_dataclass_contract():
@@ -73,7 +79,7 @@ def test_train_il_policy_rejects_bad_dataset_dir(tmp_path, capsys):
 
     # We don't actually want to launch a subprocess in CI; the subprocess
     # call will fail when the python interpreter can't find `lerobot.
-    # scripts.train`. We capture the printed command line to assert
+    # scripts.lerobot_train`. We capture the printed command line to assert
     # routing.
     result = train_il_policy(
         policy="act",
@@ -81,7 +87,7 @@ def test_train_il_policy_rejects_bad_dataset_dir(tmp_path, capsys):
         output_dir=str(tmp_path / "out"),
     )
     captured = capsys.readouterr()
-    assert "lerobot.scripts.train" in captured.out
+    assert "lerobot.scripts.lerobot_train" in captured.out
     assert "--policy.type=act" in captured.out
     assert "--dataset.repo_id=user/some-repo-that-does-not-exist" in captured.out
     # Subprocess failed (no lerobot in CI) — that's expected; the routing
