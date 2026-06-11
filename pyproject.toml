@@ -81,6 +81,13 @@ openso101 = "openso101.cli.main:main"
 [tool.uv]
 override-dependencies = [
     "packaging>=24.2,<26",
+    "pywin32==306; sys_platform == 'win32'",
+    "numpy>=1.26,<2",
+]
+
+[tool.uv.extra-build-dependencies]
+flatdict = [
+"setuptools<81"
 ]
 
 [tool.pytest.ini_options]
