@@ -1,0 +1,9 @@
+{
+  "frames": 12,
+  "cameras": [
+    "observation.images.wrist_camera",
+    "observation.images.overhead_camera"
+  ],
+  "scene_sha256": "0038e97e9359a1f9e430e5079c6ed5de74953e0cb76a4b0cde201f110f9be373",
+  "status": "lerobot_read_verified"
+}
