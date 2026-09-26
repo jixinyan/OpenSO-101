@@ -46,17 +46,17 @@ def test_safe_rl_algos_are_not_choices():
         assert "invalid choice" in combined.lower(), (algo, combined)
 
 
-def test_sac_is_not_a_choice():
-    """OpenSO-101 ships PPO only — SAC is no longer advertised as a future."""
+def test_sac_requires_sb3_backend():
     proc = _run_cli(
         "rl", "train",
         "--task", "OpenSO101-PickPlace-v0",
         "--algo", "sac",
+        "--backend", "rsl_rl",
         "--headless",
     )
     combined = proc.stdout + proc.stderr
     assert proc.returncode != 0
-    assert "invalid choice" in combined.lower(), combined
+    assert "SAC 和 TQC 使用 sb3 backend" in combined, combined
 
 
 def test_unknown_algo_is_argparse_error():

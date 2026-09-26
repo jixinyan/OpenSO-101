@@ -41,7 +41,7 @@ jobs:
           # actually imports without isaaclab in sys.path. 'pip install torch'
           # resolves a CPU build on the ubuntu runner, which is all the
           # torch-pure tests (e.g. the shaping-reward primitives) need.
-          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch
+          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch 'pydantic>=2.10,<3'
 
       - name: Verify package layout
         run: |
@@ -108,3 +108,17 @@ jobs:
           python -m build --wheel
           ls -la dist/
           test -n "$(ls dist/*.whl 2>/dev/null)"
+
+  scenes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install scene dependencies
+        run: python -m pip install 'numpy<2' 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' objaverse==0.1.7 'usd-core>=25,<27' pytest torch httpx
+      - name: Verify scenes and USD composition
+        env:
+          PYTHONPATH: src
+        run: python -m pytest --confcutdir=tests/scenes tests/scenes --basetemp=outputs/pytest-scenes -q
