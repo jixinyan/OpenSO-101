@@ -18,7 +18,13 @@ classifiers = [
 dependencies = [
     # Sim + RL framework
     "isaaclab[all,isaacsim]==2.3.0",
-    "rsl-rl-lib>=3.0.1",
+    "rsl-rl-lib==3.0.1",
+    "pydantic>=2.10,<3",
+    "sb3-contrib==2.7.0",
+    "stable-baselines3==2.7.0",
+    "skrl==1.4.3",
+    "rl-games==1.6.5",
+    "gym==0.26.2",
 
     # Torch — note: install via requirements-cuda.txt FIRST on Blackwell
     # GPUs (RTX 50-series / GH200 / B100/B200), otherwise the default
@@ -49,6 +55,15 @@ dev = [
     "pytest-cov",
 ]
 wandb = ["wandb"]
+scenes = [
+    "objaverse==0.1.7",
+    "pydantic>=2.10,<3",
+    "trimesh>=4.5,<5",
+    "scipy>=1.14",
+    "pillow>=10",
+    "httpx>=0.27,<1",
+]
+scene-tests = ["pytest>=7", "usd-core>=25,<27"]
 
 [project.scripts]
 openso101 = "openso101.cli.main:main"

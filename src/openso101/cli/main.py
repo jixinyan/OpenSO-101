@@ -22,9 +22,6 @@ def build_parser() -> argparse.ArgumentParser:
     # Import here to avoid forcing gymnasium-on-import for `--help`.
     from . import envs as envs_cli
 
-    # Trigger built-in task registration on CLI startup so `envs list` works.
-    import openso101  # noqa: F401
-
     p_envs = sub.add_parser("envs", help="Task discovery and sanity checks")
     envs_cli.add_subparsers(p_envs)
 
@@ -43,6 +40,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_sim2real = sub.add_parser("sim2real", help="Sim-to-real deployment on a real SO-101")
     sim2real_cli.add_subparsers(p_sim2real)
+
+    from . import scenes as scenes_cli
+
+    p_scenes = sub.add_parser("scenes", help="Objaverse assets and custom scenes")
+    scenes_cli.add_subparsers(p_scenes)
 
     return parser
 

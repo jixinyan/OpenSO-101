@@ -1,0 +1,2 @@
+# SM 10.3 设备的 NVRTC 编译器版本。
+nvidia-cuda-nvrtc-cu12==12.9.86
