@@ -66,6 +66,10 @@ def _build_smoke_env(args, *, force_cameras: bool = False):
     from isaaclab_tasks.utils import parse_env_cfg
 
     num_envs = max(1, int(getattr(args, "num_envs", 1) or 1))
+    if getattr(args, "scene", None):
+        from openso101.scenes.runtime import register_custom_scene
+
+        register_custom_scene()
     cameras = bool(force_cameras or getattr(args, "with_cameras", False))
 
     # parse_env_cfg returns the base RL cfg; apply variant hooks here so
@@ -77,6 +81,8 @@ def _build_smoke_env(args, *, force_cameras: bool = False):
     # configure_play set num_envs to its play default (50); honor the
     # user's --num-envs by re-applying.
     env_cfg.scene.num_envs = num_envs
+    if getattr(args, "scene", None):
+        env_cfg.configure_scene(args.scene)
 
     return gym.make(args.task, cfg=env_cfg)
 
@@ -179,6 +185,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_random = sub.add_parser("random", help="Run N random-action steps")
     p_random.add_argument("--task", required=True)
+    p_random.add_argument("--scene")
     p_random.add_argument("--with-cameras", action="store_true")
     p_random.add_argument("--steps", type=int, default=100)
     p_random.add_argument("--num-envs", type=int, default=1)
@@ -186,6 +193,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_zero = sub.add_parser("zero", help="Run N zero-action steps")
     p_zero.add_argument("--task", required=True)
+    p_zero.add_argument("--scene")
     p_zero.add_argument("--with-cameras", action="store_true")
     p_zero.add_argument("--steps", type=int, default=100)
     p_zero.add_argument("--num-envs", type=int, default=1)
@@ -202,6 +210,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         ),
     )
     p_prev.add_argument("--task", required=True)
+    p_prev.add_argument("--scene")
     p_prev.add_argument("--steps", type=int, default=30)
     p_prev.add_argument("--num-envs", type=int, default=1)
     p_prev.set_defaults(func=_cmd_preview)

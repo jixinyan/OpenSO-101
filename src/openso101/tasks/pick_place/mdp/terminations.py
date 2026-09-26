@@ -52,4 +52,8 @@ def reached_goal_while_grasped(
     return in_goal & grasped
 
 
-__all__ = ["reached_goal_while_grasped"]
+def released_at_place_goal(env, command_name="object_pose", settle_seconds=0.5):
+    return env.command_manager.get_term(command_name).placement_hold_seconds >= settle_seconds
+
+
+__all__ = ["reached_goal_while_grasped", "released_at_place_goal"]

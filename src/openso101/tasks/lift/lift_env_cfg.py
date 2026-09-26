@@ -466,6 +466,7 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         if not enabled:
             return
         self.scene.num_envs = 50
+        self.action_dr_enabled = False
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
 
@@ -483,6 +484,7 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         if mode == "rl":
             return
         if mode == "teleop":
+            self.action_dr_enabled = False
             self.actions = TeleopActionsCfg()
             _configure_so101_lift_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
             # Restore body_name for the command, otherwise the manager errors.

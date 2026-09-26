@@ -41,6 +41,10 @@ def _launch_isaac_app(args: argparse.Namespace, enable_cameras: bool = True):
     if not hasattr(args, "disable_fabric"):
         args.disable_fabric = False
     app_launcher = AppLauncher(args)
+    if getattr(args, "scene", None):
+        from openso101.scenes.runtime import register_custom_scene
+
+        register_custom_scene()
     return app_launcher.app
 
 
@@ -141,6 +145,7 @@ class _TeleopKeyboard:
 @dataclass
 class _TeleopSimCheckpoint:
     recorder_checkpoint: Any
+    entity_states: Any | None = None
     robot_joint_pos: Any | None = None
     robot_joint_vel: Any | None = None
     hold_joint_target: Any | None = None
@@ -325,6 +330,18 @@ class _TeleopCheckpointStore:
         recorder_checkpoint = recorder.create_checkpoint() if hasattr(recorder, "create_checkpoint") else None
         checkpoint = _TeleopSimCheckpoint(recorder_checkpoint=recorder_checkpoint)
 
+        if self.env is not None and getattr(self.env.cfg, "scene_spec", None) is not None:
+            robot = self.scene["robot"]
+            checkpoint.robot_joint_pos = robot.data.joint_pos.clone()
+            checkpoint.robot_joint_vel = robot.data.joint_vel.clone()
+            checkpoint.hold_joint_target = _checkpoint_joint_target(robot, checkpoint.robot_joint_pos, self.sim_joint_names)
+            checkpoint.entity_states = {
+                entity.entity_id: self.scene[entity.entity_id].data.root_state_w.clone()
+                for entity in self.env.cfg.scene_spec.entities if entity.dynamic
+            }
+            self.checkpoint = checkpoint
+            return
+
         if self.scene is not None:
             try:
                 robot = self.scene["robot"]
@@ -360,6 +377,18 @@ class _TeleopCheckpointStore:
         checkpoint = self.checkpoint
         if checkpoint.recorder_checkpoint is not None and hasattr(recorder, "restore_checkpoint"):
             recorder.restore_checkpoint(checkpoint.recorder_checkpoint)
+
+        if checkpoint.entity_states is not None:
+            robot = self.scene["robot"]
+            robot.write_joint_state_to_sim(checkpoint.robot_joint_pos, checkpoint.robot_joint_vel)
+            robot.set_joint_position_target(checkpoint.robot_joint_pos)
+            for entity_id, state in checkpoint.entity_states.items():
+                self.scene[entity_id].write_root_state_to_sim(state)
+            if hasattr(self.env, "_scene_hold_seconds"):
+                self.env._scene_hold_seconds.zero_()
+                self.env._scene_success.zero_()
+                self.env._scene_success_step = -1
+            return checkpoint.hold_joint_target
 
         if self.scene is not None:
             try:
@@ -510,8 +539,14 @@ _prompt_save_successful_episode = _handle_successful_episode
 def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
     """Return true when the teleop object reaches the final pick/place goal."""
 
+    if getattr(env.cfg, "scene_spec", None) is not None:
+        from openso101.scenes.runtime import task_success
+
+        return bool(task_success(env)[0])
     try:
         command = env.command_manager.get_term(command_name)
+        if hasattr(command, "placement_hold_seconds"):
+            return bool(command.placement_hold_seconds[0] >= 0.5)
         stage = command.stage
         if not bool((stage[0] >= 2).item()):
             return False
@@ -539,12 +574,18 @@ def _teleop_goal_success_vec(env, command_name: str = "object_pose"):
     env has no ``object_pose`` command term (e.g. the stack task), so callers
     can fall back gracefully.
     """
+    if getattr(env.cfg, "scene_spec", None) is not None:
+        from openso101.scenes.runtime import task_success
+
+        return task_success(env)
     try:
         import torch
 
         from isaaclab.utils.math import subtract_frame_transforms
 
         command = env.command_manager.get_term(command_name)
+        if hasattr(command, "placement_hold_seconds"):
+            return command.placement_hold_seconds >= 0.5
         cube_pos_b, _ = subtract_frame_transforms(
             command.robot.data.root_pos_w,
             command.robot.data.root_quat_w,
@@ -604,6 +645,10 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
     """Collect optional simulator state that lets HDF5 teleop frames be replayed from checkpoints."""
 
     sim_state: dict[str, Any] = {}
+    if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
+        from openso101.scenes.runtime import scene_states
+
+        return {"scene_entity_states": _tensor_to_numpy(scene_states(unwrapped_env)[0])}
     try:
         sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
     except Exception:
@@ -675,6 +720,9 @@ def _resolve_record_fps(unwrapped_env, requested_fps: int | None) -> int:
 
 
 def _cmd_record(args: argparse.Namespace) -> int:
+    args.teleop_device = getattr(args, "teleop_device", "leader")
+    if args.teleop_device == "leader" and (not args.leader_port or not args.leader_id):
+        raise ValueError("leader 设备需要 --leader-port 和 --leader-id")
     # Fill in legacy defaults for flags not exposed by the new CLI.
     args.record_format = getattr(args, "record_format", "hdf5")
     args.print_actions = getattr(args, "print_actions", False)
@@ -761,6 +809,8 @@ def _cmd_record(args: argparse.Namespace) -> int:
         # means we own the cfg, including its variant state.
         env_cfg.configure_action_mode("teleop")
         env_cfg.configure_cameras(True)
+        if getattr(args, "scene", None):
+            env_cfg.configure_scene(args.scene)
 
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
@@ -807,6 +857,11 @@ def _cmd_record(args: argparse.Namespace) -> int:
 
         checkpoints = None
         if not args.no_record:
+            scene_metadata = None
+            if getattr(args, "scene", None):
+                from openso101.scenes.recording import store_recording_scene
+
+                scene_metadata = store_recording_scene(Path(args.scene), Path(args.repo_root))
             if args.record_format == "hdf5":
                 recorder = OpenSO101HDF5TeleopRecorder(
                     root=args.repo_root,
@@ -816,6 +871,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
                     dataset_id=_record_local_dataset_id,
                     sim_joint_names=sim_joint_names,
                     env_id=args.task,
+                    scene_metadata=scene_metadata,
                 )
             else:
                 # Direct-LeRobot record path (programmatic, not exposed on the
@@ -846,19 +902,23 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 "R=restore robot+env to checkpoint."
             )
 
-        leader = LeRobotSO101Leader(
-            port=args.leader_port,
-            robot_id=args.leader_id,
-            inverted_joints=inverted_joints,
-            joint_offsets_rad=joint_offsets_rad,
-            async_read=bool(getattr(args, "leader_async", True)),
-        )
+        if args.teleop_device == "keyboard":
+            from openso101.teleop.devices import KeyboardDevice
+
+            leader = KeyboardDevice(unwrapped_env)
+        else:
+            leader = LeRobotSO101Leader(
+                port=args.leader_port,
+                robot_id=args.leader_id,
+                inverted_joints=inverted_joints,
+                joint_offsets_rad=joint_offsets_rad,
+                async_read=bool(getattr(args, "leader_async", True)),
+            )
         leader.connect()
         mode = "async (daemon thread)" if leader.async_read else "sync"
-        print(
-            f"[INFO]: Connected SO101 leader '{args.leader_id}' on "
-            f"{args.leader_port} ({mode} read)."
-        )
+        print(f"[INFO]: 遥操设备：{args.teleop_device}，读取方式：{mode}")
+        if args.teleop_device == "keyboard":
+            print("[INFO]: 方向键控制 xy，PageUp/PageDown 控制 z，A/D 控制 yaw，Space 打开夹爪，Shift 关闭夹爪。")
 
         env.reset()
         # Print the actual post-reset cube position(s) so the operator can
@@ -1202,10 +1262,7 @@ def _push_convert_hdf5_to_lerobot(
         archive = _push_archive_existing_export(lerobot_root)
         print(f"[WARN]: Archived existing LeRobot export root to {archive}")
 
-    try:
-        from lerobot.datasets.lerobot_dataset import LeRobotDataset
-    except ImportError as exc:
-        raise RuntimeError("LeRobot is required to convert HDF5 teleop data.") from exc
+    from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     with h5py.File(episode_files[0], "r") as first_episode:
         fps = int(first_episode.attrs.get("fps", 30))
@@ -1224,6 +1281,7 @@ def _push_convert_hdf5_to_lerobot(
     # --include-failures is passed.
     skipped_failed: list[str] = []
     exported = 0
+    scene_records = []
 
     def _flush_episode_sync(name: str) -> None:
         dataset.save_episode()
@@ -1291,6 +1349,13 @@ def _push_convert_hdf5_to_lerobot(
                     f"min {min_episode_frames})"
                 )
                 continue
+            if "scene_sha256" in h5.attrs:
+                from openso101.scenes.recording import resolve_recording_scene, store_recording_scene
+
+                compiled = resolve_recording_scene(episode_file, h5.attrs)
+                metadata = store_recording_scene(compiled, lerobot_root)
+                scene_records.append({"episode_index": exported, "source_episode": episode_file.name,
+                                      "success": episode_success, **metadata})
             # Wait for any in-flight save to finish before mutating the
             # shared dataset buffer with add_frame() for the next episode.
             if worker_thread is not None:
@@ -1355,6 +1420,11 @@ def _push_convert_hdf5_to_lerobot(
             f"(skip_leading={skip_leading_frames}, min_frames={min_episode_frames}). "
             "Lower --min-episode-frames or capture longer demos." + failed_hint
         )
+    dataset.finalize()
+    if scene_records:
+        import json
+
+        (lerobot_root / "meta" / "scenes.json").write_text(json.dumps(scene_records, indent=2))
     return lerobot_root
 
 
@@ -1551,6 +1621,23 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
         qvel=np.asarray(h5["observations/qvel"][frame_index], dtype=np.float32),
     )
 
+    if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
+        states = h5["sim/scene_entity_states"][frame_index]
+        entities = unwrapped_env.cfg.scene_spec.entities
+        if states.shape != (len(entities), 13) or not np.isfinite(states).all():
+            raise ValueError("采集实体状态格式错误")
+        for index, entity in enumerate(entities):
+            if entity.dynamic:
+                obj = scene[entity.entity_id]
+                state = _replay_to_tensor_like(states[index][None, ...], obj.data.root_state_w)
+                state[:, :3] += scene.env_origins
+                obj.write_root_state_to_sim(state)
+        if hasattr(unwrapped_env, "_scene_hold_seconds"):
+            unwrapped_env._scene_hold_seconds.zero_()
+            unwrapped_env._scene_success.zero_()
+            unwrapped_env._scene_success_step = -1
+        return
+
     object_root_state = _replay_optional_frame(h5, "sim/object_root_state", frame_index)
     if object_root_state is None:
         print(
@@ -1632,6 +1719,14 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     )
     validate_hdf5_episode(episode_path)
 
+    import h5py
+
+    with h5py.File(episode_path, "r") as h5:
+        if "scene_relative_path" in h5.attrs or "scene_sha256" in h5.attrs:
+            from openso101.scenes.recording import resolve_recording_scene
+
+            args.scene = resolve_recording_scene(episode_path, h5.attrs)
+
     if args.list_checkpoints:
         _replay_print_checkpoints(episode_path)
         return 0
@@ -1683,6 +1778,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         # Replay always runs with teleop action mode + cameras enabled.
         env_cfg.configure_action_mode("teleop")
         env_cfg.configure_cameras(True)
+        if getattr(args, "scene", None):
+            env_cfg.configure_scene(args.scene)
 
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
@@ -1743,7 +1840,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     finally:
         if env is not None:
             env.close()
-        simulation_app.close()
+    simulation_app.close()
     return 0
 
 
@@ -2242,8 +2339,10 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_rec = sub.add_parser("record", help="Record teleop demonstrations")
     p_rec.add_argument("--task", required=True)
-    p_rec.add_argument("--leader-port", required=True)
-    p_rec.add_argument("--leader-id", required=True)
+    p_rec.add_argument("--scene", help="Compiled custom scene directory")
+    p_rec.add_argument("--teleop-device", choices=("leader", "keyboard"), default="leader")
+    p_rec.add_argument("--leader-port")
+    p_rec.add_argument("--leader-id")
     # NOTE: no `--repo-id` here. Record is local-only — episodes land at
     # --repo-root as HDF5 files. The Hub identifier is picked at `il push`
     # time via the push command's own --repo-id.
@@ -2486,4 +2585,6 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_replay.add_argument("--max-steps", type=int, default=None)
     p_replay.add_argument("--real-time", action="store_true")
     p_replay.add_argument("--list-checkpoints", action="store_true")
+    p_replay.add_argument("--headless", action="store_true")
+    p_replay.add_argument("--no-camera-viewports", action="store_true")
     p_replay.set_defaults(func=_cmd_replay)

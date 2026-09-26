@@ -12,9 +12,11 @@ train --algo selects the RL algorithm:
 from __future__ import annotations
 
 import argparse
+import os
+from pathlib import Path
 
 
-_OPENSO101_ALGOS = ("ppo", "distillation")
+_OPENSO101_ALGOS = ("ppo", "distillation", "sac", "tqc")
 _ALL_ALGOS = _OPENSO101_ALGOS
 
 # Per-algo `gym.make` agent-entry-point key. Tasks register a config
@@ -27,6 +29,14 @@ _ALGO_TO_ENTRY_POINT = {
 
 
 def _cmd_train(args: argparse.Namespace) -> int:
+    if getattr(args, "backend", None) or getattr(args, "scene", None) or getattr(args, "train_config", None) or args.algo in ("sac", "tqc"):
+        if args.algo == "distillation":
+            raise ValueError("distillation 使用现有 teacher-checkpoint 训练入口")
+        if args.algo in ("sac", "tqc") and args.backend is None:
+            args.backend = "sb3"
+        from openso101.rl.execution import train
+
+        return train(args)
     if args.algo not in _OPENSO101_ALGOS:
         # Should be unreachable due to argparse choices.
         print(f"openso101 rl train: unknown algorithm {args.algo!r}")
@@ -335,6 +345,10 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
 
 def _cmd_play(args: argparse.Namespace) -> int:
+    if (Path(args.checkpoint) / "checkpoint.json").is_file():
+        from openso101.rl.execution import evaluate
+
+        return evaluate(args, play=True)
     # AppLauncher must launch BEFORE any isaaclab / rsl_rl imports.
     from isaaclab.app import AppLauncher
 
@@ -556,6 +570,10 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     'success' termination term, the contact-confirmed grasp, and the object
     lift height, then aggregate the completed episodes into a JSON report.
     """
+    if (Path(args.checkpoint) / "checkpoint.json").is_file():
+        from openso101.rl.execution import evaluate
+
+        return evaluate(args)
     from isaaclab.app import AppLauncher
 
     enable_cameras = bool(
@@ -1140,13 +1158,28 @@ def _cmd_plot(args: argparse.Namespace) -> int:
 def add_subparsers(parser: argparse.ArgumentParser) -> None:
     sub = parser.add_subparsers(dest="rl_cmd", required=True)
 
+    p_distill = sub.add_parser("distill", help="Distill a PPO teacher into a camera and proprioception student")
+    p_distill.add_argument("--teacher-run", required=True)
+    p_distill.add_argument("--output", required=True)
+    p_distill.add_argument("--num-envs", dest="num_envs", type=int, default=16)
+    p_distill.add_argument("--iterations", type=int, default=1500)
+    p_distill.add_argument("--rollout-steps", type=int, default=16)
+    p_distill.add_argument("--headless", action="store_true")
+    p_distill.set_defaults(func=_cmd_distill)
+
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
+    p_train.add_argument("--backend", choices=("rsl_rl", "sb3", "skrl", "rl_games"))
+    p_train.add_argument("--train-config", help="Backend-neutral TrainCfg JSON")
+    p_train.add_argument("--output", help="New run directory")
+    p_train.add_argument("--scene", type=Path, help="Compiled custom scene directory")
+    p_train.add_argument("--source-revision", default=os.environ.get("OPENSO101_SOURCE_REVISION"),
+                         help="Source Git revision for deployments without a .git directory")
     p_train.add_argument(
         "--algo",
         required=True,
         choices=_ALL_ALGOS,
-        help="Algorithm (ppo|distillation)",
+        help="Algorithm (ppo|sac|tqc|distillation)",
     )
     p_train.add_argument(
         "--teacher-checkpoint",
@@ -1204,8 +1237,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_train.add_argument(
         "--logger",
         choices=("wandb", "tensorboard", "neptune"),
-        default="wandb",
-        help="Where to log training metrics. Default 'wandb'.",
+        default=None,
+        help="Log service: unified backends use tensorboard; legacy training defaults to wandb.",
     )
     p_train.add_argument(
         "--log_project_name",
@@ -1263,3 +1296,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_plot.add_argument("--smooth", type=int, default=30)
     p_plot.add_argument("--save", action="store_true")
     p_plot.set_defaults(func=_cmd_plot)
+
+
+def _cmd_distill(args):
+    from openso101.rl.execution import distill
+
+    return distill(args)

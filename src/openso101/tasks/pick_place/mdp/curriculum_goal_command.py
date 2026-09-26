@@ -37,6 +37,8 @@ from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.math import combine_frame_transforms, subtract_frame_transforms
 
+from openso101.tasks.shared.grasp import object_grasped_by_jaws
+
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedEnv
 
@@ -60,6 +62,7 @@ class CurriculumGoalCommand(CommandTerm):
         n = self.num_envs
         # Per-env state.
         self.stage = torch.zeros(n, dtype=torch.long, device=self.device)
+        self.placement_hold_seconds = torch.zeros(n, device=self.device)
         self.cube_spawn_xy_b = torch.zeros(n, 2, device=self.device)
         # Goal in robot root frame (the "command" returned to consumers).
         self.goal_pos_b = torch.zeros(n, 3, device=self.device)
@@ -154,6 +157,7 @@ class CurriculumGoalCommand(CommandTerm):
         """
         start_stage = 0 if self.cfg.lock_stage is None else int(self.cfg.lock_stage)
         self.stage[env_ids] = start_stage
+        self.placement_hold_seconds[env_ids] = 0
         self.just_completed_stage[env_ids] = -1
         cube_pos_w = self.object.data.root_pos_w[env_ids]
         cube_pos_b, _ = subtract_frame_transforms(
@@ -165,30 +169,27 @@ class CurriculumGoalCommand(CommandTerm):
         self._refresh_goals(torch.as_tensor(env_ids, device=self.device, dtype=torch.long))
 
     def _update_command(self):
-        """Each step: advance stage for envs whose cube reached the current goal.
-
-        When ``cfg.lock_stage`` is set the stage is frozen at that value for the
-        whole episode (single fixed goal), so stage advancement is skipped
-        entirely. This is what the RL pick-and-lift task (``lock_stage=1`` ->
-        air carry goal) and teleop (``lock_stage=2`` -> on-table place goal)
-        rely on. Without this guard ``lock_stage=1`` would still advance to
-        stage 2 the moment the cube touched the goal, defeating the freeze.
-        """
+        """检查抓取、搬运和释放后的稳定时间。"""
         self.just_completed_stage.fill_(-1)
+        cube_pos_b, _ = subtract_frame_transforms(
+            self.robot.data.root_pos_w, self.robot.data.root_quat_w, self.object.data.root_pos_w,
+        )
+        grasped = object_grasped_by_jaws(self._env, 0.5)
 
         if self.cfg.lock_stage is None:
-            cube_pos_b, _ = subtract_frame_transforms(
-                self.robot.data.root_pos_w,
-                self.robot.data.root_quat_w,
-                self.object.data.root_pos_w,
-            )
-            # Advance only envs that are not yet at the final stage.
-            reached = self.is_touching_goal(cube_pos_b) & (self.stage < 2)
+            reached = self.is_touching_goal(cube_pos_b) & (self.stage < 2) & grasped
             if reached.any():
                 advance_ids = reached.nonzero(as_tuple=False).flatten()
                 self.just_completed_stage[advance_ids] = self.stage[advance_ids]
                 self.stage[advance_ids] += 1
                 self._refresh_goals(advance_ids)
+
+        jaw = self.robot.data.joint_pos[:, self.robot.joint_names.index("Jaw")]
+        placed = torch.linalg.vector_norm(cube_pos_b - self.goal_for_stage(2), dim=-1) <= 0.03
+        stable = torch.linalg.vector_norm(self.object.data.root_lin_vel_w, dim=-1) <= 0.02
+        stable &= torch.linalg.vector_norm(self.object.data.root_ang_vel_w, dim=-1) <= 0.1
+        released = (self.stage == 2) & placed & stable & ~grasped & (jaw > 0.4)
+        self.placement_hold_seconds = torch.where(released, self.placement_hold_seconds + self._env.step_dt, 0.)
 
         # Refresh world-frame goal each step (robot root may move; for fixed-base it's constant).
         self.goal_pos_w, _ = combine_frame_transforms(

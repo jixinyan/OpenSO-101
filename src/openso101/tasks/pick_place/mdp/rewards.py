@@ -1,29 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Reward functions for pick-and-lift (sentinel-style delta shaping).
-
-This task follows the sentinel ``PickAndLiftReward`` design: a single fixed
-goal in the air and *delta-distance* shaping that rewards progress rather
-than position. Concretely the per-step reward is::
-
-    pregrasp_approach   (active while NOT grasping):  weight * Delta(eef -> obj)
-    grasp_hold          (active while grasping):      grasped_reward (1.0)
-    carry_to_goal       (active while grasping):      weight * Delta(obj -> goal)
-    success_bonus       (terminal):                   reached goal AND grasped
-
-Delta shaping closes the "hover near target and farm reward" exploit that
-absolute tanh-distance shaping permits: holding position yields zero, only
-*reducing* the distance pays. The grasp-mode gating (pregrasp XOR carry) and
-the fresh-reset guard come from the pure, unit-tested core in
-``openso101.shaping``; the functions here only gather the tensors.
-
-The previous 3-stage curriculum reward chain (lift/carry/place with
-height-only gating) was removed in favour of this single-goal design; the
-goal location is frozen by the command term (``lock_stage``), not by a
-per-step reward gate.
-"""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -137,15 +114,12 @@ def carry_to_goal_shaping(
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
 ) -> torch.Tensor:
-    """Delta-shaping on (object -> goal) distance, active only while grasping.
-
-    Because the goal is fixed in the air, reducing this distance *requires*
-    lifting and carrying the held cube — there is no on-table drag shortcut.
-    Silent while not grasping; the grasp-release step yields zero.
-    """
+    """根据抓取状态和阶段目标计算距离变化奖励。"""
     grasping = object_grasped_by_jaws(env, force_threshold)
     cur = _object_to_goal_distance(env, command_name, robot_cfg, object_cfg)
-    return _shaped_delta(env, "_pp_carry", cur, grasping)
+    command = env.command_manager.get_term(command_name)
+    unchanged_goal = command.just_completed_stage < 0
+    return _shaped_delta(env, "_pp_carry", cur, grasping & unchanged_goal)
 
 
 def grasp_onset_bonus(

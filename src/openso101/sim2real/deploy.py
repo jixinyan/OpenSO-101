@@ -57,7 +57,11 @@ def deploy(args: argparse.Namespace) -> int:
     ``send_action`` expects motor units, and that inverse (motor -> sim
     radians) is only for the SIM env.
     """
-    follower, cameras, policy = None, None, None
+    policy = _load_lerobot_policy(args.policy_path, device=args.device)
+    if hasattr(policy, "metadata") and "control_dt" in policy.metadata:
+        if not np.isclose(1.0 / args.fps, policy.metadata["control_dt"], atol=1e-6):
+            raise ValueError("部署 fps 必须与 student 训练控制频率一致")
+    follower, cameras = None, None
     try:
         follower = _connect_so101_follower(
             port=args.follower_port,
@@ -76,7 +80,6 @@ def deploy(args: argparse.Namespace) -> int:
         )
         print(f"[INFO]: Opened cameras: {list(cameras)}.")
 
-        policy = _load_lerobot_policy(args.policy_path, device=args.device)
         print(f"[INFO]: Loaded policy from {args.policy_path}.")
         if hasattr(policy, "reset"):
             policy.reset()
@@ -266,6 +269,13 @@ def _load_lerobot_policy(checkpoint_path: str, *, device: str):
     real deploy use exactly the same loader — same path resolution, same
     `PreTrainedConfig` → `get_policy_class` dispatch.
     """
+    from pathlib import Path
+
+    if (Path(checkpoint_path) / "student.json").is_file():
+        from openso101.rl.student import RLStudentPolicy
+
+        return RLStudentPolicy(Path(checkpoint_path), device)
+
     from openso101.il.policies import load_policy
 
     return load_policy(checkpoint_path, device=device)

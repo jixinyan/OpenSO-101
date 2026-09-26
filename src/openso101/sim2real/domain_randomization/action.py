@@ -22,10 +22,8 @@ Isaac Lab dependency) so they can be unit-tested without booting Isaac Sim:
     ``y += alpha * (u - y)`` with a per-env randomized time constant. This is
     the smooth "the servo eases toward the command" model.
 
-Both are **OPT-IN**. They are deliberately NOT auto-wired into any task: the
-delay magnitude is a hypothesis that needs a real bus-latency measurement and
-a training run to tune (a too-large delay destabilizes PPO). See
-:func:`attach_action_dr` for the recommended wiring.
+ActionDRWrapper 将 ActionDelayBuffer 接入 RL 环境，按环境独立处理 reset。
+遥操和评估配置通过 action_dr_enabled 控制是否应用动作随机变化。
 
 Recommended usage (manual wiring inside an ActionTerm or a post-physics
 callback that owns the commanded targets)::
@@ -73,6 +71,7 @@ class ActionDelayBuffer:
         action_dim: int,
         max_delay: int,
         *,
+        min_delay: int = 0,
         device: "torch.device | str | None" = None,
         seed: int | None = None,
     ) -> None:
@@ -84,10 +83,13 @@ class ActionDelayBuffer:
             raise ValueError(f"action_dim must be positive, got {action_dim}")
         if max_delay < 0:
             raise ValueError(f"max_delay must be >= 0, got {max_delay}")
+        if not 0 <= min_delay <= max_delay:
+            raise ValueError("min_delay 必须位于 0 到 max_delay")
 
         self.num_envs = int(num_envs)
         self.action_dim = int(action_dim)
         self.max_delay = int(max_delay)
+        self.min_delay = int(min_delay)
         self.device = torch.device(device) if device is not None else torch.device("cpu")
         self._generator = None
         if seed is not None:
@@ -104,7 +106,7 @@ class ActionDelayBuffer:
         self._delay_steps = torch.zeros(
             self.num_envs, dtype=torch.long, device=self.device
         )
-        self._initialized = False
+        self._initialized = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     def reset(self, env_ids: "Sequence[int] | torch.Tensor | None" = None) -> None:
         """Re-randomize the per-env delay and clear history for those envs.
@@ -121,7 +123,7 @@ class ActionDelayBuffer:
 
         if self.max_delay > 0:
             new_delays = torch.randint(
-                low=0,
+                low=self.min_delay,
                 high=self.max_delay + 1,
                 size=(idx.numel(),),
                 generator=self._generator,
@@ -133,7 +135,7 @@ class ActionDelayBuffer:
         # Clear history for reset envs so a stale command from a prior episode
         # cannot leak across the reset boundary.
         self._history[idx] = 0.0
-        self._initialized = False
+        self._initialized[idx] = False
 
     def step(self, command: "torch.Tensor") -> "torch.Tensor":
         """Push ``command`` (shape ``[num_envs, action_dim]``) and return the delayed command.
@@ -150,16 +152,11 @@ class ActionDelayBuffer:
                 f"{(self.num_envs, self.action_dim)}"
             )
 
-        if not self._initialized:
-            # Seed all history slots with the first command so the warm-up
-            # period returns sensible values rather than zeros.
-            self._history[:] = command.unsqueeze(1)
-            self._initialized = True
-        else:
-            # Shift history right by one slot (slot k now holds the command
-            # from k steps ago), then write the new command at slot 0.
-            self._history = torch.roll(self._history, shifts=1, dims=1)
-            self._history[:, 0, :] = command
+        self._history = torch.roll(self._history, shifts=1, dims=1)
+        self._history[:, 0, :] = command
+        fresh = ~self._initialized
+        self._history[fresh] = command[fresh].unsqueeze(1)
+        self._initialized[:] = True
 
         # Gather, per env, the command from delay_steps[env] slots back.
         gather_idx = self._delay_steps.view(self.num_envs, 1, 1).expand(
@@ -218,7 +215,7 @@ class FirstOrderActionLag:
 
         self._state = torch.zeros((self.num_envs, self.action_dim), device=self.device)
         self._alpha = torch.full((self.num_envs, 1), self.alpha_max, device=self.device)
-        self._initialized = False
+        self._initialized = torch.zeros(self.num_envs, dtype=torch.bool, device=self.device)
 
     def reset(self, env_ids: "Sequence[int] | torch.Tensor | None" = None) -> None:
         """Re-randomize per-env ``alpha`` and clear lag state for those envs."""
@@ -234,7 +231,7 @@ class FirstOrderActionLag:
         )
         self._alpha[idx] = self.alpha_min + rand * (self.alpha_max - self.alpha_min)
         self._state[idx] = 0.0
-        self._initialized = False
+        self._initialized[idx] = False
 
     def step(self, command: "torch.Tensor") -> "torch.Tensor":
         """Apply the first-order lag and return the lagged command."""
@@ -246,13 +243,10 @@ class FirstOrderActionLag:
                 f"command shape {tuple(command.shape)} != expected "
                 f"{(self.num_envs, self.action_dim)}"
             )
-        if not self._initialized:
-            # Seed the lag state at the first command so the first output is
-            # not pulled toward zero from an arbitrary starting pose.
-            self._state[:] = command
-            self._initialized = True
-        else:
-            self._state = self._state + self._alpha * (command - self._state)
+        fresh = ~self._initialized
+        self._state[fresh] = command[fresh]
+        self._state = self._state + self._alpha * (command - self._state)
+        self._initialized[:] = True
         return self._state.clone()
 
     @property

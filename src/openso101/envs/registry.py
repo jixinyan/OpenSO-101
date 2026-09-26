@@ -68,12 +68,15 @@ def register_task(
                 cfg.configure_play(play)
             # Drop the env_cfg_entry_point / agent_cfgs strings from kwargs;
             # those are spec metadata and not constructor args for the env.
-            for spec_only in (
-                "env_cfg_entry_point",
-                "rsl_rl_cfg_entry_point",
-            ):
-                kwargs.pop(spec_only, None)
-            return ManagerBasedRLEnv(cfg=cfg, **kwargs)
+            for spec_only in tuple(kwargs):
+                if spec_only.endswith("_cfg_entry_point"):
+                    kwargs.pop(spec_only)
+            env = ManagerBasedRLEnv(cfg=cfg, **kwargs)
+            if cfg.action_dr_enabled:
+                from openso101.sim2real.domain_randomization.wrapper import ActionDRWrapper
+
+                return ActionDRWrapper(env)
+            return env
 
         # Expose the cfg class via an `env_cfg_entry_point` string so Isaac
         # Lab's `parse_env_cfg` / `load_cfg_from_registry` can import-and-load

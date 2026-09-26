@@ -36,6 +36,7 @@ REQUIRED_HDF5_DATASETS: tuple[str, ...] = (
 )
 
 SIM_STATE_KEYS: tuple[str, ...] = (
+    "scene_entity_states",
     "object_root_state",
     "command_stage",
     "command_goal_pos_b",
@@ -106,6 +107,7 @@ class OpenSO101HDF5TeleopRecorder:
         chunks_length: int = 100,
         compression: str | None = "lzf",
         env_id: str | None = None,
+        scene_metadata: Mapping[str, str] | None = None,
     ):
         self.root = Path(root)
         self.task_name = task_name
@@ -114,6 +116,9 @@ class OpenSO101HDF5TeleopRecorder:
         # scene; without it, replay can only guess and may render the
         # wrong task (default PickPlace).
         self.env_id = env_id
+        self.scene_metadata = dict(scene_metadata or {})
+        if set(self.scene_metadata) - {"scene_sha256", "scene_relative_path"}:
+            raise ValueError("scene_metadata 包含未知字段")
         self.cameras = dict(cameras)
         self.fps = fps
         self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
@@ -192,6 +197,8 @@ class OpenSO101HDF5TeleopRecorder:
         h5.attrs["task"] = self.task_name
         if self.env_id is not None:
             h5.attrs["env_id"] = self.env_id
+        for key, value in self.scene_metadata.items():
+            h5.attrs[key] = value
         h5.attrs["fps"] = int(self.fps)
         h5.attrs["success"] = bool(success)
         h5.attrs["joint_names"] = np.asarray(SO101_TELEOP_CONTROL_JOINT_NAMES, dtype=h5py.string_dtype())
@@ -330,6 +337,8 @@ class OpenSO101HDF5TeleopRecorder:
                 for key, value in sim_state.items()
                 if key in SIM_STATE_KEYS and value is not None
             }
+        if self.scene_metadata and "scene_entity_states" not in frame_sim:
+            raise ValueError("自定义场景的每个采集帧都必须包含全部实体状态")
         # First frame with sim_state pins the schema; lazily create datasets.
         if frame_sim and self._sim_keys is None:
             self._sim_keys = tuple(key for key in SIM_STATE_KEYS if key in frame_sim)

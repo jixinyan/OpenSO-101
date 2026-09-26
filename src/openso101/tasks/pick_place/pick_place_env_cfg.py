@@ -1,31 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Pick-and-lift env -- sentinel-style single-goal delta shaping.
-
-The task: grasp the cube and carry it to a single fixed goal sphere held in
-the air above the place location. There is exactly one goal (no stage chain);
-success is reaching that goal *while still grasping the cube*. This follows the
-sentinel ``PickAndLiftReward`` design.
-
-Reward (per step), all delta-distance shaped (progress, not position):
-
-- ``pregrasp_approach``  : weight * Delta(eef -> obj), active while NOT grasping
-- ``grasp_hold``         : per-step reward for a contact-confirmed grasp
-- ``carry_to_goal``      : weight * Delta(obj -> goal), active while grasping
-- ``success_bonus``      : terminal, cube in goal sphere AND grasped
-
-Why an *air* goal: the goal sits at carry height (not on the table), so
-reducing ``Delta(obj -> goal)`` necessarily lifts the cube. A table-level goal
-would let the policy drag the cube along the surface to "win" without lifting.
-
-The green sphere is rendered by :class:`CurriculumGoalCommand` frozen with
-``lock_stage=1`` (its carry goal = ``(place_goal.x, place_goal.y,
-carry_height)``). Teleop reuses the same command with ``lock_stage=2`` to show
-the on-table place goal for the human operator, who performs the full
-lower-and-release that this RL task intentionally does not train.
-"""
-
 from __future__ import annotations
 
 from dataclasses import MISSING
@@ -170,31 +145,18 @@ class PickPlaceSceneCfg(InteractiveSceneCfg):
 
 @configclass
 class CommandsCfg:
-    """Single frozen goal sphere (sentinel pick-and-lift).
-
-    The command term supports a 3-stage curriculum, but this RL task freezes it
-    at ``lock_stage=1`` so the goal is a single fixed point: the carry goal
-    ``(place_goal.x, place_goal.y, carry_height)`` = ``(0.24, -0.3, 0.15)`` in
-    robot-root frame — teleop's X/Y at an airborne carry height. Teleop swaps to
-    ``lock_stage=2`` (table place goal) in ``configure_action_mode``.
-    """
+    """抓取后抬升物体，搬运至目标上方，随后放置和释放。"""
 
     object_pose = mdp.CurriculumGoalCommandCfg(
         asset_name="robot",
         object_name="object",
-        # `resampling_time_range` larger than any episode so `_resample_command`
-        # only fires at episode reset. With `lock_stage` set, the stage never
-        # advances mid-episode either, so the goal is genuinely fixed.
+        # 目标重置仅在 episode 开始时执行。
         resampling_time_range=(1e9, 1e9),
         debug_vis=True,
-        # Freeze at the carry (air) goal for RL. See class docstring.
-        lock_stage=1,
-        lift_height=0.10,  # unused while frozen at stage 1; kept for teleop parity
+        lock_stage=None,
+        lift_height=0.10,
         carry_height=0.15,
-        # Place location, robot root frame (teleop's on-table goal). The frozen
-        # carry goal reuses this x/y at carry_height. (0.24, -0.3) is a lateral
-        # carry target offset from the cube's spawn (0.30, 0.0).
-        place_goal=(0.24, -0.3, 0),
+        place_goal=(0.24, -0.15, 0.015),
         advance_threshold=_GOAL_SPHERE_RADIUS,
         object_contact_radius=_CUBE_CONTACT_RADIUS,
         goal_pose_visualizer_cfg=CURRICULUM_GOAL_MARKER_CFG,
@@ -300,15 +262,14 @@ class RewardsCfg:
         weight=SO101_PICK_GRASP_ONSET_BONUS,
     )
 
-    # Carry: reward reducing object->goal distance while grasping. The goal is
-    # airborne, so this necessarily drives a lift-and-carry (no drag shortcut).
+    # 搬运奖励根据当前阶段的目标距离变化计算。
     carry_to_goal = RewTerm(
         func=mdp.carry_to_goal_shaping,
         params={"command_name": "object_pose", "force_threshold": 0.5},
         weight=SO101_PICK_CARRY_COEFF,
     )
 
-    # Terminal: cube reached the goal sphere AND is still grasped.
+    # 物体释放后在放置区域保持稳定，获得完成奖励。
     success_bonus = RewTerm(
         func=mdp.is_terminated_term,
         params={"term_keys": ["success"]},
@@ -329,12 +290,7 @@ class RewardsCfg:
 
 @configclass
 class TerminationsCfg:
-    """Episode ends on time-out, cube drop, or pick-and-lift success.
-
-    Success = the cube reached the (air) goal sphere AND is still grasped. The
-    grasp gate makes this a genuine delivery rather than a swat-through-the-
-    region exploit.
-    """
+    """检查时间限制、物体越过桌面下方和完整放置成功。"""
 
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
 
@@ -344,11 +300,10 @@ class TerminationsCfg:
     )
 
     success = DoneTerm(
-        func=mdp.reached_goal_while_grasped,
+        func=mdp.released_at_place_goal,
         params={
             "command_name": "object_pose",
-            "threshold": _GOAL_SPHERE_RADIUS,
-            "force_threshold": 0.5,
+            "settle_seconds": 0.5,
         },
     )
 
@@ -452,10 +407,7 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             close_command_expr={SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_CLOSED_POS},
         )
 
-        # Adjust curriculum goal heights to compensate for the canonical SO101 USD
-        # being placed at z=SO101_USD_TABLETOP_ROOT_Z (table-top mounted layout).
-        # carry_height matters for RL (the frozen stage-1 air goal); lift_height
-        # and place_goal.z are kept consistent for teleop's lock_stage=2 goal.
+        # 根据 SO-101 基座高度计算 robot frame 中的目标高度。
         self.commands.object_pose.lift_height += SO101_USD_TABLETOP_BASE_OFFSET
         self.commands.object_pose.carry_height += SO101_USD_TABLETOP_BASE_OFFSET
         place_x, place_y, place_z = self.commands.object_pose.place_goal
@@ -493,6 +445,7 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         if not enabled:
             return
         self.scene.num_envs = 50
+        self.action_dr_enabled = False
         self.scene.env_spacing = 2.5
         self.observations.policy.enable_corruption = False
 
@@ -517,6 +470,7 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         if mode == "rl":
             return
         if mode == "teleop":
+            self.action_dr_enabled = False
             self.actions = TeleopActionsCfg()
             # Re-spawn the scene with the teleop robot articulation.
             _configure_so101_pick_place_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)

@@ -48,11 +48,14 @@ _PLAY_NUM_ENVS_CAP = 16
 class OpenSO101EnvCfg(ManagerBasedRLEnvCfg):
     """Base cfg for OpenSO-101 tasks."""
 
+    action_dr_enabled: bool = True
+
     def configure_action_mode(self, mode: str) -> None:
         """`'rl'` is a no-op; `'teleop'` swaps in absolute joint targets."""
         if mode == "rl":
             return
         if mode == "teleop":
+            self.action_dr_enabled = False
             self.actions = TeleopActionsCfg()
             return
         raise UnsupportedVariantError(
@@ -65,11 +68,18 @@ class OpenSO101EnvCfg(ManagerBasedRLEnvCfg):
             return
         self.scene.overhead_camera = overhead_camera_cfg()
         self.scene.wrist_camera = wrist_camera_cfg()
+        if self.action_dr_enabled:
+            from isaaclab.managers import EventTermCfg
+
+            from openso101.sim2real.domain_randomization.camera import randomize_camera_mounts
+
+            self.events.camera_mounts = EventTermCfg(func=randomize_camera_mounts, mode="reset")
 
     def configure_play(self, enabled: bool) -> None:
         """Shrink num_envs and disable observation corruption for eval."""
         if not enabled:
             return
+        self.action_dr_enabled = False
         self.scene.num_envs = min(self.scene.num_envs, _PLAY_NUM_ENVS_CAP)
         policy_obs = getattr(getattr(self, "observations", None), "policy", None)
         if policy_obs is not None and hasattr(policy_obs, "enable_corruption"):
