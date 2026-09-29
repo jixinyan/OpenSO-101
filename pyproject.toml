@@ -46,6 +46,7 @@ dependencies = [
     "matplotlib",
     "tensorboard",
     "prettytable",
+    "prompt_toolkit>=3.0.50,<4",
     "packaging",
 ]
 

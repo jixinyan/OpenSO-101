@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from dataclasses import dataclass
+import math
 from typing import Protocol
 
 import torch
@@ -35,9 +36,11 @@ class KeyboardDevice:
     async_read = False
     async_read_count = 0
 
-    def __init__(self, env, *, translation_speed=0.06, rotation_speed=0.5):
-        if translation_speed <= 0 or rotation_speed <= 0:
+    def __init__(self, env, *, translation_speed=0.06, rotation_speed=0.5, input_mode="window", on_key=None):
+        if any(not math.isfinite(value) or value <= 0 for value in (translation_speed, rotation_speed)):
             raise ValueError("键盘移动速度必须为正数")
+        if input_mode not in ("window", "terminal"):
+            raise ValueError("keyboard input_mode 必须为 window 或 terminal")
         self.env = env
         self.robot = env.scene["robot"]
         self.translation_speed = translation_speed
@@ -48,8 +51,17 @@ class KeyboardDevice:
         self.control_ids = [self.robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
         self.body_id = self.robot.body_names.index("gripper")
         self.subscription = None
+        self.input_mode = input_mode
+        self.on_key = on_key
+        self.terminal = None
 
     def connect(self):
+        if self.input_mode == "terminal":
+            from openso101.teleop.terminal import TerminalKeyboard
+
+            self.terminal = TerminalKeyboard()
+            self.terminal.connect()
+            return
         import carb.input
         import omni.appwindow
 
@@ -68,6 +80,15 @@ class KeyboardDevice:
         return True
 
     def get_command(self):
+        if self.terminal is not None:
+            self.pressed, names = self.terminal.poll()
+            for name in names:
+                if name == "SPACE":
+                    self.gripper = 0.8
+                elif name == "G":
+                    self.gripper = 0.0
+                if self.on_key is not None:
+                    self.on_key(name)
         values = [
             float("UP" in self.pressed) - float("DOWN" in self.pressed),
             float("LEFT" in self.pressed) - float("RIGHT" in self.pressed),
@@ -76,7 +97,7 @@ class KeyboardDevice:
         ]
         if "SPACE" in self.pressed:
             self.gripper = 0.8
-        if "LEFT_SHIFT" in self.pressed or "RIGHT_SHIFT" in self.pressed:
+        if "LEFT_SHIFT" in self.pressed or "RIGHT_SHIFT" in self.pressed or "G" in self.pressed:
             self.gripper = 0.0
         delta = torch.tensor(values, device=self.env.device)
         delta[:3] *= self.translation_speed * self.env.step_dt
@@ -103,6 +124,10 @@ class KeyboardDevice:
         return raw, targets[0]
 
     def disconnect(self):
+        if self.terminal is not None:
+            self.terminal.disconnect()
+            self.terminal = None
+            self.pressed.clear()
         if self.subscription is not None:
             self.input.unsubscribe_to_keyboard_events(self.keyboard, self.subscription)
             self.subscription = None

@@ -12,6 +12,7 @@ import sys
 import time
 import traceback
 from dataclasses import dataclass
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable
 
@@ -54,44 +55,28 @@ def _launch_isaac_app(args: argparse.Namespace, enable_cameras: bool = True):
 
 
 class _TeleopKeyboard:
-    """Best-effort Isaac app-window teleop key handler.
+    """窗口和终端共用的录制按键请求。"""
 
-    Each key sets a request flag; the dispatcher
-    :func:`_handle_recording_key_events` consumes flags once per loop
-    iteration. Attribute names match what each key actually does today
-    (see the docstring on :func:`_handle_recording_key_events`):
-
-      * ``take_checkpoint`` — C
-      * ``restore_checkpoint`` — R
-      * ``mark_success`` — S (saves episode as SUCCESS and exits)
-      * ``quit_discard`` — Q (cancels episode and exits)
-
-    Legacy attribute names (``checkpoint_recording``, ``resume_recording``,
-    ``toggle_recording``, ``quit_without_saving``) are aliased via
-    properties so external callers / tests that imported the old names
-    keep working without behavior change.
-    """
-
-    def __init__(self):
+    def __init__(self, *, subscribe=True):
         self.take_checkpoint = False
         self.restore_checkpoint = False
         self.mark_success = False
         self.quit_discard = False
         self._sub_keyboard = None
-        try:
-            import carb
-            import omni.appwindow
+        if not subscribe:
+            return
+        import carb.input
+        import omni.appwindow
 
-            self._keyboard_event_type = carb.input.KeyboardEventType
-            self._window = omni.appwindow.get_default_app_window()
-            self._input = carb.input.acquire_input_interface()
-            self._keyboard = self._window.get_keyboard()
-            self._sub_keyboard = self._input.subscribe_to_keyboard_events(
-                self._keyboard, self._on_keyboard_event
-            )
-        except Exception as exc:  # pragma: no cover - depends on Isaac UI runtime
-            self._keyboard_event_type = None
-            print(f"[WARN]: Keyboard controls disabled: {exc}")
+        self._keyboard_event_type = carb.input.KeyboardEventType
+        self._window = omni.appwindow.get_default_app_window()
+        if self._window is None:
+            raise RuntimeError("窗口键盘需要 Isaac 图形窗口")
+        self._input = carb.input.acquire_input_interface()
+        self._keyboard = self._window.get_keyboard()
+        self._sub_keyboard = self._input.subscribe_to_keyboard_events(
+            self._keyboard, self._on_keyboard_event
+        )
 
     # ----- Legacy aliases for backward-compat with older tests/code -----
     @property
@@ -118,6 +103,9 @@ class _TeleopKeyboard:
         if event.type != self._keyboard_event_type.KEY_PRESS:
             return False
         key_name = event.input.name.upper()
+        return self.request_key(key_name)
+
+    def request_key(self, key_name):
         if key_name == "C":
             self.take_checkpoint = True
             print("[INFO]: Checkpoint requested.")
@@ -721,6 +709,13 @@ def _resolve_record_fps(unwrapped_env, requested_fps: int | None) -> int:
 
 def _cmd_record(args: argparse.Namespace) -> int:
     args.teleop_device = getattr(args, "teleop_device", "leader")
+    args.headless = getattr(args, "headless", False)
+    keyboard_input = getattr(args, "keyboard_input", None) or ("terminal" if args.headless else "window")
+    if args.teleop_device == "keyboard" and keyboard_input == "terminal":
+        if not sys.stdin.isatty():
+            raise ValueError("终端键盘需要交互终端；SSH 使用 -tt")
+    if args.teleop_device == "keyboard" and keyboard_input == "window" and args.headless:
+        raise ValueError("窗口键盘需要图形界面；headless 使用 --keyboard-input terminal")
     if args.teleop_device == "leader" and (not args.leader_port or not args.leader_id):
         raise ValueError("leader 设备需要 --leader-port 和 --leader-id")
     # Fill in legacy defaults for flags not exposed by the new CLI.
@@ -780,7 +775,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
         parse_joint_offsets_deg,
     )
 
-    keyboard = _TeleopKeyboard()
+    keyboard = _TeleopKeyboard(subscribe=not args.headless and keyboard_input == "window")
     env = None
     recorder = None
     leader = None
@@ -905,7 +900,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
         if args.teleop_device == "keyboard":
             from openso101.teleop.devices import KeyboardDevice
 
-            leader = KeyboardDevice(unwrapped_env)
+            leader = KeyboardDevice(unwrapped_env, input_mode=keyboard_input, on_key=keyboard.request_key)
         else:
             leader = LeRobotSO101Leader(
                 port=args.leader_port,
@@ -918,7 +913,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
         mode = "async (daemon thread)" if leader.async_read else "sync"
         print(f"[INFO]: 遥操设备：{args.teleop_device}，读取方式：{mode}")
         if args.teleop_device == "keyboard":
-            print("[INFO]: 方向键控制 xy，PageUp/PageDown 控制 z，A/D 控制 yaw，Space 打开夹爪，Shift 关闭夹爪。")
+            print("[INFO]: 方向键控制 xy，PageUp/PageDown 控制 z，A/D 控制 yaw，Space 打开夹爪，G 关闭夹爪；窗口支持 Shift 关闭夹爪。")
 
         env.reset()
         # Print the actual post-reset cube position(s) so the operator can
@@ -1053,12 +1048,19 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 if args.goal_region and _teleop_goal_success(unwrapped_env):
                     # Default is the interactive [y/N] prompt; --auto-save
                     # flips to non-interactive auto-save for batch capture.
-                    _handle_successful_episode(
-                        recorder, confirm=not bool(getattr(args, "auto_save", False))
-                    )
+                    terminal = leader.terminal if args.teleop_device == "keyboard" else None
+                    prompt_mode = terminal.input.cooked_mode() if terminal is not None else nullcontext()
+                    with prompt_mode:
+                        _handle_successful_episode(
+                            recorder, confirm=not bool(getattr(args, "auto_save", False))
+                        )
                     break
                 if _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold):
                     break
+                if args.teleop_device == "keyboard":
+                    remaining = unwrapped_env.step_dt - (time.perf_counter() - loop_start)
+                    if remaining > 0:
+                        time.sleep(remaining)
     except Exception as exc:
         startup_error = exc
         print("[ERROR]: Teleop agent failed before clean shutdown:", flush=True)
@@ -2341,6 +2343,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_rec.add_argument("--task", required=True)
     p_rec.add_argument("--scene", help="Compiled custom scene directory")
     p_rec.add_argument("--teleop-device", choices=("leader", "keyboard"), default="leader")
+    p_rec.add_argument("--keyboard-input", choices=("window", "terminal"),
+                       help="键盘输入位置；图形界面默认 window，headless 默认 terminal")
+    p_rec.add_argument("--headless", action="store_true", help="使用无窗口仿真")
     p_rec.add_argument("--leader-port")
     p_rec.add_argument("--leader-id")
     # NOTE: no `--repo-id` here. Record is local-only — episodes land at
