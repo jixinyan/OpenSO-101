@@ -1288,6 +1288,15 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_eval.add_argument("--headless", action="store_true")
     p_eval.set_defaults(func=_cmd_eval)
 
+    p_export = sub.add_parser("export", help="导出共享策略与实际 Isaac 数值诊断")
+    p_export.add_argument("--task", required=True)
+    p_export.add_argument("--checkpoint", required=True)
+    p_export.add_argument("--output", required=True)
+    p_export.add_argument("--num-envs", dest="num_envs", type=int, default=4)
+    p_export.add_argument("--validation-steps", type=int, default=256)
+    p_export.add_argument("--headless", action="store_true")
+    p_export.set_defaults(func=_cmd_export)
+
     p_plot = sub.add_parser("plot", help="Plot training curves from a run dir")
     group = p_plot.add_mutually_exclusive_group(required=True)
     group.add_argument("--run", help="Exact run directory path (alias for --log_dir)")
@@ -1302,3 +1311,9 @@ def _cmd_distill(args):
     from openso101.rl.execution import distill
 
     return distill(args)
+
+
+def _cmd_export(args):
+    from openso101.rl.export import export
+
+    return export(args)
