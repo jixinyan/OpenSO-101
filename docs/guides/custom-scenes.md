@@ -62,7 +62,7 @@ openso101 scenes layout outputs/apple_proposal/scene.json \
 
 模型接口为 OpenAI-compatible Chat Completions，服务地址包含其 API 前缀。默认从 `SCENE_MODEL_API_KEY` 读取密钥；`--api-key-env` 指定其他变量，无鉴权服务使用空字符串。模型名称与地址也可通过 `SCENE_MODEL_NAME` 和 `SCENE_MODEL_BASE_URL` 配置。
 
-`generate` 将当前资产目录和场景 schema 发送给指定服务，校验返回配置并保存 proposal。目录需要预先导入所需资产。外部服务、超时、输出格式和场景校验错误立即终止。当前没有配置实际服务地址和模型，因此在线生成尚未验收；资产、布局、版本保存、编译与仿真检查均可独立调用。
+`generate` 将当前资产目录和场景 schema 发送给指定服务，校验返回配置并保存 proposal。目录需要预先导入所需资产。调用前配置本次使用的模型服务；输出格式和场景校验错误立即终止。资产、布局、版本保存、编译与仿真检查均可独立调用。
 
 ## RGB 视频 real2sim agent loop
 
@@ -133,13 +133,13 @@ openso101 il replay --episode outputs/apple_dataset/episodes/episode_000000.hdf5
 ## 测试
 
 ```bash
-OPENSO101_SKIP_ISAAC=1 PYTHONPATH=src python -m pytest tests/test_cpu_regressions.py \
-  -q
-PYTHONPATH=src python -m pytest --confcutdir=tests/scenes tests/scenes \
+OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
+  python -m pytest tests/scenes tests/test_cpu_regressions.py \
+  -k 'not eagerly and not model_service and not agent_loop_materializes' \
   --basetemp=outputs/pytest-scenes -q
 ```
 
-测试依赖为 `scenes` extra、pytest 与 usd-core。测试使用实际 GLB 文件、OpenUSD 场景和可计算尺寸的几何体，覆盖配置拒绝条件、视频抽帧、生成资产、agent loop 修复路径、文件修改检查、场景包迁移及 USD 属性。在线 Objaverse 下载和目标主机的 Isaac Sim 转换分别执行集成检查。
+测试依赖为 `scenes` extra、pytest、usd-core、Torch 与 h5py。上述检查使用实际 GLB、OpenUSD、HDF5 和编码后的 MP4，覆盖配置拒绝条件、视频抽帧、控制计算、文件修改检查、场景包迁移及 USD 属性。模型服务、agent loop、在线 Objaverse 下载和 Isaac Sim 分别执行实际集成检查。当前结果见 [v2 状态记录](v2-status-2026-09-29.md)。
 
 ## 2026-09-26 运行记录
 
@@ -155,4 +155,4 @@ PYTHONPATH=src python -m pytest --confcutdir=tests/scenes tests/scenes \
 | 几何尺寸 | 指定 0.04 × 0.04 × 0.05 m，加载后包围盒尺寸符合要求 |
 | PhysX 静置 | 1200 步、10 秒；最后 2 秒最大位移 `8.9968e-8 m`，旋转变化 `0°` |
 
-SO-101 自定义场景已执行实际控制步骤；双相机生成了 12 帧 HDF5 数据，并通过 LeRobot 全部帧读取、场景 hash 校验和 Isaac 回放。五个 RoboTwin 模板分别通过四个并行环境、100 次 reset 和 200 个控制步骤检查。上述数据记录为失败 episode，用于检查采集流程。实际模型调用、成功任务示范、人工键盘操作与 leader 设备验收仍需对应运行条件。
+SO-101 自定义场景已执行实际控制步骤；双相机生成了 12 帧 HDF5 数据，并通过 LeRobot 全部帧读取、场景 hash 校验和 Isaac 回放。五个 RoboTwin 模板分别通过四个并行环境、100 次 reset 和 200 个控制步骤检查。上述数据记录为失败 episode，用于检查采集流程。成功任务示范、人工键盘操作与 leader 设备验收仍需对应运行条件。新增 Astra agent loop 的运行信息和验收范围见 [当前状态记录](v2-status-2026-09-29.md)。
