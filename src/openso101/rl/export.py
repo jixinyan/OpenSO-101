@@ -62,6 +62,7 @@ def export(args):
             "files": {"policy.pt": digest(output / "policy.pt")}, "control_dt": unwrapped.step_dt,
             "physics_dt": unwrapped.physics_dt, "joint_names": list(SO101_SIM_JOINT_NAMES),
             "observation_joint_names": robot.joint_names,
+            "physical_joint_limits": robot.data.joint_pos_limits[0, joint_ids].tolist(),
             "default_joint_positions": robot.data.default_joint_pos[0].tolist(),
             "default_joint_velocities": robot.data.default_joint_vel[0].tolist(),
             "observation_terms": observation_terms, "normalization": "embedded_in_policy.pt",
@@ -78,7 +79,8 @@ def export(args):
         maximum_errors = {"observation": 0., "policy_action": 0., "processed_targets": 0.}
         buffers = {name: [] for name in (
             "joint_position", "joint_velocity", "object_position_root", "goal_root", "jaw_forces",
-            "ee_object_distance", "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
+            "ee_object_distance", "gripper_position_root", "gripper_quaternion_root",
+            "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
         )}
         for _ in range(args.validation_steps):
             with torch.inference_mode():
@@ -106,6 +108,12 @@ def export(args):
                         obj.data.root_pos_w - unwrapped.scene["ee_frame"].data.target_pos_w[:, 0], dim=-1),
                     "raw_action": actions, "joint_targets": decoded,
                 }
+                gripper_id = robot.body_names.index("gripper")
+                gripper_position, gripper_quaternion = subtract_frame_transforms(
+                    robot.data.root_pos_w, robot.data.root_quat_w,
+                    robot.data.body_pos_w[:, gripper_id], robot.data.body_quat_w[:, gripper_id],
+                )
+                before_step.update(gripper_position_root=gripper_position, gripper_quaternion_root=gripper_quaternion)
                 for name, value in before_step.items():
                     buffers[name].append(value.detach().cpu().numpy().copy())
                 observation, _, terminated, truncated, _ = env.step(actions)

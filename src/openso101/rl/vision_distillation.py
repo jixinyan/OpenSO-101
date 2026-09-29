@@ -75,7 +75,7 @@ def action_mapping(env):
                 item.update(type="position", scale=float(scale), offset=float(offset))
             elif type(term) is BinaryJointPositionAction:
                 item.update(type="binary", action_index=action_index,
-                            close=float(term._close_command[0, index]), open=float(term._open_command[0, index]))
+                            close=float(term._close_command[index]), open=float(term._open_command[index]))
             else:
                 raise ValueError(f"student 导出不支持 action term：{type(term).__name__}")
             if joint_name in mappings:
