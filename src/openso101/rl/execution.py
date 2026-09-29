@@ -155,11 +155,33 @@ def evaluate(args, *, play=False):
         lengths = torch.zeros_like(returns, dtype=torch.int64)
         latched = torch.zeros_like(returns, dtype=torch.bool)
         records = []
+        quotas = torch.full_like(lengths, episodes_requested // env.unwrapped.num_envs)
+        quotas[:episodes_requested % env.unwrapped.num_envs] += 1
+        completed = torch.zeros_like(lengths)
+        progress = {}
+        if args.task in ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0"):
+            from openso101.tasks.shared.grasp import object_grasped_by_jaws
+            from openso101.tasks.shared.rl_defaults import SO101_CONTROLLED_OBJECT_MIN_HEIGHT
+
+            progress = {name: torch.zeros_like(latched) for name in ("reached", "grasped", "lifted")}
+            if args.task == "OpenSO101-PickPlace-v0":
+                progress.update({name: torch.zeros_like(latched) for name in ("carry_stage", "place_stage")})
         success_terms = [name for name in env.unwrapped.termination_manager.active_terms if "success" in name]
         if not success_terms and not play:
             raise ValueError("任务缺少 success termination，无法计算成功率")
         with torch.inference_mode():
             while len(records) < episodes_requested and app.is_running():
+                if progress:
+                    scene = env.unwrapped.scene
+                    object_position = scene["object"].data.root_pos_w
+                    ee_position = scene["ee_frame"].data.target_pos_w[:, 0, :]
+                    progress["reached"] |= torch.linalg.vector_norm(object_position - ee_position, dim=-1) < 0.08
+                    progress["grasped"] |= object_grasped_by_jaws(env.unwrapped)
+                    progress["lifted"] |= object_position[:, 2] - scene.env_origins[:, 2] > SO101_CONTROLLED_OBJECT_MIN_HEIGHT
+                    if "carry_stage" in progress:
+                        stage = env.unwrapped.command_manager.get_term("object_pose").stage
+                        progress["carry_stage"] |= stage >= 1
+                        progress["place_stage"] |= stage >= 2
                 actions = policy(observation)
                 observation, reward, terminated, truncated, _ = env.step(actions)
                 returns += reward
@@ -167,16 +189,25 @@ def evaluate(args, *, play=False):
                 for name in success_terms:
                     latched |= env.unwrapped.termination_manager.get_term(name)
                 for index in (terminated | truncated).nonzero().flatten().tolist():
-                    if len(records) < episodes_requested:
+                    if completed[index] < quotas[index]:
                         records.append({"success": bool(latched[index]), "return": float(returns[index]),
-                                        "steps": int(lengths[index])})
+                                        "steps": int(lengths[index]), "env_index": index,
+                                        **{name: bool(value[index]) for name, value in progress.items()}})
+                        completed[index] += 1
                     returns[index] = 0
                     lengths[index] = 0
                     latched[index] = False
+                    for value in progress.values():
+                        value[index] = False
         if len(records) != episodes_requested:
             raise RuntimeError("仿真在评估完成之前终止")
         result = {"task": args.task, "backend": meta.config.backend, "seed": args.seed,
-                  "episodes": records, "success_rate": sum(record["success"] for record in records) / len(records)}
+                  "episodes": records, "success_rate": sum(record["success"] for record in records) / len(records),
+                  "checkpoint_sha256": digest(folder / meta.checkpoint), "training_git_sha": meta.git_sha,
+                  "completed_transitions": meta.completed_transitions,
+                  "num_envs": env.unwrapped.num_envs, "episode_allocation": quotas.tolist(),
+                  "progress_sampling": "before_control_step" if progress else None,
+                  "progress_rates": {name: sum(record[name] for record in records) / len(records) for name in progress}}
         report = folder / f"evaluation-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
         report.write_text(json.dumps(result, indent=2))
         print(json.dumps({"report": str(report), "success_rate": result["success_rate"]}))
