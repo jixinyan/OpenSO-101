@@ -25,6 +25,8 @@ class PortablePolicy:
 
     def observation(self, joint_position, joint_velocity, object_position_root, goal_root, grasp_state, last_action):
         joint_position = torch.as_tensor(joint_position, device=self.device, dtype=torch.float32)
+        if joint_position.ndim != 2 or joint_position.shape[1] != len(self.metadata["observation_joint_names"]):
+            raise ValueError("joint_position 形状不匹配")
         defaults = torch.tensor(self.metadata["default_joint_positions"], device=self.device)
         velocity_defaults = torch.tensor(self.metadata["default_joint_velocities"], device=self.device)
         values = {

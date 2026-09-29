@@ -12,8 +12,8 @@ def export(args):
         raise ValueError("policy 导出需要请求任务的 RSL PPO checkpoint")
     if args.task not in ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0"):
         raise ValueError("policy 导出支持 Lift 与 PickPlace")
-    if args.validation_steps <= 0:
-        raise ValueError("validation_steps 必须为正数")
+    if args.validation_steps <= 0 or args.num_envs <= 0:
+        raise ValueError("validation_steps 与 num_envs 必须为正数")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -42,7 +42,7 @@ def export(args):
         config = json.loads((folder / "backend.json").read_text())
         runner = OnPolicyRunner(RslRlVecEnvWrapper(env), config, log_dir=None, device=unwrapped.device)
         runner.load(str(folder / meta.checkpoint), load_optimizer=False)
-        actor = runner.alg.policy
+        actor = runner.alg.policy.eval()
         export_policy_as_jit(actor, actor.actor_obs_normalizer, str(output), filename="policy.pt")
         robot = unwrapped.scene["robot"]
         joint_ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
@@ -109,8 +109,13 @@ def export(args):
                 for name, value in before_step.items():
                     buffers[name].append(value.detach().cpu().numpy().copy())
                 observation, _, terminated, truncated, _ = env.step(actions)
-                processed = torch.cat([unwrapped.action_manager.get_term(name).processed_actions
-                                       for name in unwrapped.action_manager.active_terms], dim=-1)
+                processed_by_joint = {}
+                for name in unwrapped.action_manager.active_terms:
+                    term = unwrapped.action_manager.get_term(name)
+                    ids = list(range(robot.num_joints)) if isinstance(term._joint_ids, slice) else list(term._joint_ids)
+                    processed_by_joint.update({robot.joint_names[joint_id]: term.processed_actions[:, index]
+                                               for index, joint_id in enumerate(ids)})
+                processed = torch.stack([processed_by_joint[name] for name in SO101_SIM_JOINT_NAMES], dim=-1)
                 target_error = float((processed.cpu() - decoded).abs().max())
                 maximum_errors["processed_targets"] = max(maximum_errors["processed_targets"], target_error)
                 if target_error > 1e-5:
