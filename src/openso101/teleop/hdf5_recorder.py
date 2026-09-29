@@ -14,6 +14,7 @@ preserved.
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -49,7 +50,14 @@ def _episode_files(root: str | Path) -> list[Path]:
     episodes_dir = Path(root) / "episodes"
     if not episodes_dir.is_dir():
         return []
-    return sorted(episodes_dir.glob(HDF5_EPISODE_GLOB))
+    # Ignore temporary/foreign files that happen to share the glob.  The
+    # recorder's numbering contract is ``episode_<integer>.hdf5``; accepting
+    # a malformed name here would make ``next_episode_path`` fail before a
+    # user can recover the valid recordings.
+    return sorted(
+        path for path in episodes_dir.glob(HDF5_EPISODE_GLOB)
+        if path.stem.rsplit("_", 1)[-1].isdigit()
+    )
 
 
 def validate_hdf5_episode(path: str | Path) -> None:
@@ -59,21 +67,64 @@ def validate_hdf5_episode(path: str | Path) -> None:
         for dataset_name in REQUIRED_HDF5_DATASETS:
             if dataset_name not in h5:
                 raise ValueError(f"{path} is missing required dataset: {dataset_name}")
-        frame_count = h5["action"].shape[0]
+        action = h5["action"]
+        if action.ndim != 2:
+            raise ValueError(f"{path} action must be a rank-2 dataset (T, joints)")
+        frame_count = action.shape[0]
+        if frame_count <= 0:
+            raise ValueError(f"{path} contains no frames")
         for dataset_name in REQUIRED_HDF5_DATASETS:
             if h5[dataset_name].shape[0] != frame_count:
                 raise ValueError(
                     f"{path} has inconsistent frame count for {dataset_name}: "
                     f"{h5[dataset_name].shape[0]} != {frame_count}"
                 )
-        if h5["action"].shape[1:] != (len(SO101_TELEOP_CONTROL_JOINT_NAMES),):
+        joint_shape = (len(SO101_TELEOP_CONTROL_JOINT_NAMES),)
+        if action.shape[1:] != joint_shape:
             raise ValueError(f"{path} action shape must be (T, {len(SO101_TELEOP_CONTROL_JOINT_NAMES)})")
-        if h5["observations/qpos"].shape[1:] != (len(SO101_TELEOP_CONTROL_JOINT_NAMES),):
-            raise ValueError(f"{path} observations/qpos shape must be (T, {len(SO101_TELEOP_CONTROL_JOINT_NAMES)})")
-        if h5["observations/qvel"].shape[1:] != (len(SO101_TELEOP_CONTROL_JOINT_NAMES),):
-            raise ValueError(f"{path} observations/qvel shape must be (T, {len(SO101_TELEOP_CONTROL_JOINT_NAMES)})")
-
-
+        for dataset_name in ("observations/qpos", "observations/qvel"):
+            dataset = h5[dataset_name]
+            if dataset.ndim != 2 or dataset.shape[1:] != joint_shape:
+                raise ValueError(
+                    f"{path} {dataset_name} shape must be (T, {len(SO101_TELEOP_CONTROL_JOINT_NAMES)})"
+                )
+            values = np.asarray(dataset[:], dtype=np.float64)
+            if not np.isfinite(values).all():
+                raise ValueError(f"{path} {dataset_name} contains non-finite values")
+        action_values = np.asarray(action[:], dtype=np.float64)
+        if not np.isfinite(action_values).all():
+            raise ValueError(f"{path} action contains non-finite values")
+        timestamps = h5["timestamps"]
+        if timestamps.ndim != 1:
+            raise ValueError(f"{path} timestamps must be a rank-1 dataset")
+        timestamp_values = np.asarray(timestamps[:], dtype=np.float64)
+        if not np.isfinite(timestamp_values).all():
+            raise ValueError(f"{path} timestamps contains non-finite values")
+        if "fps" in h5.attrs:
+            fps = float(h5.attrs["fps"])
+            if not math.isfinite(fps) or fps <= 0:
+                raise ValueError(f"{path} fps must be a positive finite number")
+        for camera_name in REQUIRED_CAMERA_NAMES:
+            dataset = h5[f"observations/images/{camera_name}"]
+            if dataset.ndim != 4 or dataset.shape[1] <= 0 or dataset.shape[2] <= 0 or dataset.shape[3] != 3:
+                raise ValueError(
+                    f"{path} observations/images/{camera_name} must have shape (T, H, W, 3)"
+                )
+            if dataset.dtype.kind not in "uif":
+                raise ValueError(f"{path} camera dataset {camera_name} must contain numeric pixels")
+            if dataset.dtype.kind == "f" and not np.isfinite(dataset[:]).all():
+                raise ValueError(f"{path} camera dataset {camera_name} contains non-finite pixels")
+        if "sim" in h5:
+            for name, dataset in h5["sim"].items():
+                if dataset.shape[0] != frame_count:
+                    raise ValueError(
+                        f"{path} sim/{name} has inconsistent frame count: "
+                        f"{dataset.shape[0]} != {frame_count}"
+                    )
+                if dataset.dtype.kind not in "biuf":
+                    raise ValueError(f"{path} sim/{name} must contain numeric values")
+                if dataset.dtype.kind == "f" and not np.isfinite(dataset[:]).all():
+                    raise ValueError(f"{path} sim/{name} contains non-finite values")
 def validate_hdf5_dataset(root: str | Path) -> list[Path]:
     """Return valid HDF5 episode files, or raise a useful validation error."""
 
@@ -124,6 +175,21 @@ class OpenSO101HDF5TeleopRecorder:
         self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
         self.sim_joint_names = tuple(sim_joint_names or SO101_SIM_JOINT_NAMES)
         ensure_required_cameras(self.cameras)
+        if int(fps) <= 0:
+            raise ValueError(f"fps must be positive, got {fps}")
+        if len(self.sim_joint_names) != len(SO101_TELEOP_CONTROL_JOINT_NAMES):
+            raise ValueError(
+                "sim_joint_names must contain exactly "
+                f"{len(SO101_TELEOP_CONTROL_JOINT_NAMES)} joints"
+            )
+        for camera_name in REQUIRED_CAMERA_NAMES:
+            camera = self.cameras[camera_name]
+            try:
+                height, width = int(camera["height"]), int(camera["width"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(f"camera {camera_name!r} needs integer height and width") from exc
+            if height <= 0 or width <= 0:
+                raise ValueError(f"camera {camera_name!r} dimensions must be positive")
         if flush_steps < 1:
             raise ValueError(f"flush_steps must be >= 1, got {flush_steps}")
         if chunks_length < 1:
@@ -278,7 +344,13 @@ class OpenSO101HDF5TeleopRecorder:
     def restore_checkpoint(self, checkpoint: int) -> None:
         """Truncate buffered and on-disk frames back to ``checkpoint``."""
 
-        target = max(int(checkpoint), 0)
+        if int(checkpoint) != checkpoint:
+            raise ValueError(f"checkpoint must be an integer, got {checkpoint!r}")
+        target = int(checkpoint)
+        if target < 0 or target > self.total_frames:
+            raise ValueError(
+                f"checkpoint {target} is outside the current episode range [0, {self.total_frames}]"
+            )
         # First drop buffered frames beyond the target.
         if target <= self._flushed_frames:
             # Need to truncate the on-disk datasets as well.
@@ -330,6 +402,30 @@ class OpenSO101HDF5TeleopRecorder:
         if not self._recording:
             return
         ensure_required_cameras(camera_buffers)
+        joint_shape = (len(SO101_TELEOP_CONTROL_JOINT_NAMES),)
+        frame_arrays = {
+            "action": np.asarray(action),
+            "qpos": np.asarray(qpos),
+            "qvel": np.asarray(qvel),
+        }
+        for name, value in frame_arrays.items():
+            if value.shape != joint_shape:
+                raise ValueError(f"{name} must have shape {joint_shape}, got {value.shape}")
+            if not np.issubdtype(value.dtype, np.number) or not np.isfinite(value).all():
+                raise ValueError(f"{name} must contain finite numeric values")
+        if not math.isfinite(float(timestamp)):
+            raise ValueError("timestamp must be finite")
+        for camera_name in REQUIRED_CAMERA_NAMES:
+            image = np.asarray(camera_buffers[camera_name])
+            expected = (
+                int(self.cameras[camera_name]["height"]),
+                int(self.cameras[camera_name]["width"]),
+                3,
+            )
+            if image.shape != expected:
+                raise ValueError(f"camera {camera_name!r} must have shape {expected}, got {image.shape}")
+            if image.dtype.kind not in "uif" or (image.dtype.kind == "f" and not np.isfinite(image).all()):
+                raise ValueError(f"camera {camera_name!r} must contain finite numeric pixels")
         frame_sim: dict[str, np.ndarray] = {}
         if sim_state:
             frame_sim = {
@@ -337,6 +433,18 @@ class OpenSO101HDF5TeleopRecorder:
                 for key, value in sim_state.items()
                 if key in SIM_STATE_KEYS and value is not None
             }
+            for key, value in frame_sim.items():
+                if value.dtype.kind not in "biuf" or not np.isfinite(value).all():
+                    raise ValueError(f"sim state {key!r} must contain finite numeric values")
+            if self._sim_keys is not None:
+                for key in self._sim_keys:
+                    if key in frame_sim:
+                        expected_shape = self._sim_shape(key)
+                        if frame_sim[key].shape != expected_shape:
+                            raise ValueError(
+                                f"sim state {key!r} shape changed from {expected_shape} "
+                                f"to {frame_sim[key].shape}"
+                            )
         if self.scene_metadata and "scene_entity_states" not in frame_sim:
             raise ValueError("自定义场景的每个采集帧都必须包含全部实体状态")
         # First frame with sim_state pins the schema; lazily create datasets.
@@ -367,6 +475,11 @@ class OpenSO101HDF5TeleopRecorder:
         )
         if len(self._buffer) >= self.flush_steps:
             self.flush()
+
+    def _sim_shape(self, key: str) -> tuple[int, ...]:
+        if self._h5 is None or "sim" not in self._h5 or key not in self._h5["sim"]:
+            raise KeyError(key)
+        return tuple(self._h5["sim"][key].shape[1:])
 
     def _create_sim_datasets(self, first_sim_state: Mapping[str, np.ndarray]) -> None:
         assert self._h5 is not None

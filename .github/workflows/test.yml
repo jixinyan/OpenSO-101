@@ -41,7 +41,7 @@ jobs:
           # actually imports without isaaclab in sys.path. 'pip install torch'
           # resolves a CPU build on the ubuntu runner, which is all the
           # torch-pure tests (e.g. the shaping-reward primitives) need.
-          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch 'pydantic>=2.10,<3'
+          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' 'av>=12,<15' httpx objaverse==0.1.7
 
       - name: Verify package layout
         run: |
@@ -53,6 +53,7 @@ jobs:
         # 'Verify package layout' step above).
         env:
           PYTHONPATH: src
+          OPENSO101_SKIP_ISAAC: "1"
         run: |
           # The explicit list below is every test file that PASSES (or skips
           # cleanly) using ONLY the CI deps + torch — i.e. files that do not
@@ -65,6 +66,7 @@ jobs:
           # Isaac Sim): test_register_task, test_env_base_configure,
           # test_cli_envs.
           python -m pytest \
+            tests/test_cpu_regressions.py \
             tests/test_cli_il_data_sim2real.py \
             tests/test_cli_rl.py \
             tests/test_shaping_rewards.py \
@@ -117,7 +119,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install scene dependencies
-        run: python -m pip install 'numpy<2' 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' objaverse==0.1.7 'usd-core>=25,<27' pytest torch httpx
+        run: python -m pip install 'numpy<2' 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' 'av>=12,<15' objaverse==0.1.7 'usd-core>=25,<27' pytest torch httpx
       - name: Verify scenes and USD composition
         env:
           PYTHONPATH: src

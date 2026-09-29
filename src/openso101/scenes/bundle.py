@@ -78,15 +78,37 @@ def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path) -> 
 
 def verify_bundle(root: Path) -> SceneSpec:
     root = root.resolve()
-    manifest = json.loads((root / "manifest.json").read_text())
-    if manifest["schema_version"] != 1:
+    manifest_path = root / "manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError("bundle 缺少 manifest.json")
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("bundle manifest.json 无法读取") from exc
+    if not isinstance(manifest, dict) or manifest.get("schema_version") != 1:
         raise ValueError("不支持的 bundle schema_version")
-    for relative, expected in manifest["files"].items():
+    files = manifest.get("files")
+    if not isinstance(files, dict):
+        raise ValueError("bundle manifest 缺少 files 清单")
+    for relative, expected in files.items():
+        if not isinstance(relative, str) or not isinstance(expected, str):
+            raise ValueError("bundle manifest files 必须是 path -> sha256 映射")
         path = (root / relative).resolve()
-        if not path.is_relative_to(root) or file_digest(path) != expected:
+        if not path.is_relative_to(root) or not path.is_file():
+            raise ValueError(f"bundle 文件不存在或路径越界：{relative}")
+        if file_digest(path) != expected:
             raise ValueError(f"bundle 文件校验失败：{relative}")
-    spec = SceneSpec.read(root / "scene.json")
-    if scene_document_digest(root / "scene.json") != manifest["scene_sha256"]:
+    scene_path = root / "scene.json"
+    try:
+        spec = SceneSpec.read(scene_path)
+    except (OSError, ValueError) as exc:
+        raise ValueError("bundle scene.json 无法读取或格式无效") from exc
+    # Older bundles were written with a canonical hash of the JSON document
+    # (omitting Pydantic defaults), while current writers hash the validated
+    # model.  Accept both representations so existing portable bundles stay
+    # readable; all file hashes are still checked above.
+    scene_hash = manifest.get("scene_sha256")
+    if scene_hash not in {spec.digest(), scene_document_digest(scene_path)}:
         raise ValueError("scene_sha256 不匹配")
     catalog = AssetCatalog(root / "assets")
     validate_layout(spec, catalog)
@@ -94,6 +116,6 @@ def verify_bundle(root: Path) -> SceneSpec:
     for entity in spec.entities:
         asset = catalog.read(entity.asset_uid)
         required.update(f"assets/{entity.asset_uid}/{name}" for name in (f"model.{asset.format}", "asset.json", "metadata.json"))
-    if not required.issubset(manifest["files"]):
+    if not required.issubset(files):
         raise ValueError("manifest 缺少必需文件")
     return spec

@@ -48,6 +48,13 @@ class Asset(Model):
     faces: int = Field(gt=0)
     format: Literal["glb", "usdz"] = "glb"
 
+    @model_validator(mode="after")
+    def valid_bounds(self):
+        lower, upper = self.bounds
+        if any(lo >= hi for lo, hi in zip(lower, upper)):
+            raise ValueError("asset bounds 必须在每个轴上具有正尺寸")
+        return self
+
 
 class Physics(Model):
     mass_kg: Positive = 0.1
@@ -152,6 +159,8 @@ class SceneSpec(Model):
 
     @classmethod
     def read(cls, path: Path) -> SceneSpec:
+        if not path.is_file():
+            raise FileNotFoundError(path)
         return cls.model_validate_json(path.read_text())
 
 

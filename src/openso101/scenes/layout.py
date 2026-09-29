@@ -11,6 +11,36 @@ from .catalog import AssetCatalog
 from .models import Pose, SceneSpec
 
 
+def sample_reset_positions(
+    spec: SceneSpec,
+    count: int,
+    *,
+    seed: int | None = None,
+) -> dict[str, np.ndarray]:
+    """Sample deterministic reset translations from the scene bounds.
+
+    The runtime sampler lives in Isaac Lab and uses device tensors.  This
+    CPU helper makes the same contract available to scene tooling and CI:
+    every returned position is the entity pose plus a uniformly sampled
+    translation inside ``reset_translation_m``.  Static entities are
+    returned at their configured pose for convenient complete-state checks.
+    """
+    if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+        raise ValueError("count must be a positive integer")
+    rng = np.random.default_rng(spec.reset_seed if seed is None else seed)
+    samples: dict[str, np.ndarray] = {}
+    for entity in spec.entities:
+        if entity.dynamic:
+            lower, upper = np.asarray(entity.reset_translation_m, dtype=float)
+            translation = rng.uniform(lower, upper, size=(count, 3))
+            samples[entity.entity_id] = np.asarray(entity.pose.position, dtype=float) + translation
+        else:
+            samples[entity.entity_id] = np.broadcast_to(
+                np.asarray(entity.pose.position, dtype=float), (count, 3)
+            ).copy()
+    return samples
+
+
 def solve_layout(spec: SceneSpec, catalog: AssetCatalog, *, locked=(), clearance_m=0.01) -> SceneSpec:
     if clearance_m < 0 or not np.isfinite(clearance_m):
         raise ValueError("clearance_m 必须为非负有限数值")
@@ -77,7 +107,62 @@ def solve_layout(spec: SceneSpec, catalog: AssetCatalog, *, locked=(), clearance
     entities = []
     for i, entity in enumerate(spec.entities):
         position = (*result.x[2 * i:2 * i + 2], entity.pose.position[2])
-        entities.append(entity.model_copy(update={"pose": Pose(position=position, quaternion_wxyz=entity.pose.quaternion_wxyz)}))
+        entities.append(
+            entity.model_copy(
+                update={"pose": Pose(position=position, quaternion_wxyz=entity.pose.quaternion_wxyz)}
+            )
+        )
     solved = SceneSpec.model_validate(spec.model_dump() | {"entities": entities})
     validate_layout(solved, catalog)
     return solved
+
+
+def diagnose_layout(
+    spec: SceneSpec,
+    catalog: AssetCatalog,
+    *,
+    clearance_m: float = 0.0,
+) -> dict:
+    """Run inexpensive geometry checks that do not require Isaac Sim.
+
+    ``validate_layout`` checks tabletop and asset integrity.  This companion
+    report covers the remaining static checks that can be decided from the
+    scene schema: initial AABB collisions and whether relation goals have
+    enough target area/volume for the moved object.  Robot reachability,
+    contact geometry and dynamic stability remain runtime checks.
+    """
+    if clearance_m < 0 or not np.isfinite(clearance_m):
+        raise ValueError("clearance_m must be a non-negative finite number")
+    validate_layout(spec, catalog)
+    bounds = {entity.entity_id: entity_bounds(entity) for entity in spec.entities}
+    collisions: list[tuple[str, str]] = []
+    for first, second in itertools.combinations(spec.entities, 2):
+        a, b = bounds[first.entity_id], bounds[second.entity_id]
+        overlap = np.minimum(a[1], b[1]) - np.maximum(a[0], b[0])
+        if np.all(overlap > clearance_m):
+            collisions.append((first.entity_id, second.entity_id))
+
+    relation_errors: list[str] = []
+    entities = {entity.entity_id: entity for entity in spec.entities}
+    goals = spec.task.goals
+    for goal in goals:
+        if goal.predicate == "inside":
+            lower, upper = np.asarray(goal.region_bounds_m, dtype=float)
+            size = np.asarray(entities[goal.object_id].dimensions_m, dtype=float)
+            if np.any(size > upper - lower + 1e-9):
+                relation_errors.append(
+                    f"inside goal {goal.object_id}->{goal.target_id} region is smaller than object"
+                )
+        elif goal.predicate == "on_top":
+            object_size = np.asarray(entities[goal.object_id].dimensions_m, dtype=float)
+            target_size = np.asarray(entities[goal.target_id].dimensions_m, dtype=float)
+            if np.any(object_size[:2] > target_size[:2] + 2 * spec.task.position_tolerance_m):
+                relation_errors.append(
+                    f"on_top goal {goal.object_id}->{goal.target_id} target footprint is too small"
+                )
+    return {
+        "status": "static_checks_passed" if not collisions and not relation_errors else "static_checks_failed",
+        "collisions": [list(pair) for pair in collisions],
+        "relation_errors": relation_errors,
+        "pending_checks": ["stability", "reachability", "contact_geometry", "cameras", "collection"],
+    }

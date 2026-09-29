@@ -16,10 +16,14 @@ This conftest launches a headless `AppLauncher` once per session if
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 
 def pytest_configure(config: pytest.Config) -> None:
+    if os.environ.get("OPENSO101_SKIP_ISAAC", "0") == "1":
+        return
     try:
         from isaaclab.app import AppLauncher
     except ModuleNotFoundError:

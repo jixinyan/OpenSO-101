@@ -12,12 +12,18 @@ from pathlib import Path
 def _run(args):
     from openso101.scenes.bundle import export_bundle, validate_layout, verify_bundle
     from openso101.scenes.catalog import AssetCatalog, search_categories
+    from openso101.scenes.layout import diagnose_layout
     from openso101.scenes.models import Entity, Pose, SceneSpec, Task
 
     if args.command == "search":
         result = search_categories(args.query, args.limit)
     elif args.command == "verify":
         result = {"scene_id": verify_bundle(args.bundle).scene_id, "status": "bundle_verified"}
+    elif args.command == "diagnose":
+        catalog = AssetCatalog(args.catalog)
+        from openso101.scenes.models import SceneSpec
+
+        result = diagnose_layout(SceneSpec.read(args.scene_file), catalog, clearance_m=args.clearance)
     else:
         catalog = AssetCatalog(args.catalog)
         if args.command == "fetch":
@@ -119,6 +125,34 @@ def add_subparsers(parser: argparse.ArgumentParser):
     layout.add_argument("--locked", nargs="*", default=[])
     layout.add_argument("--clearance", type=float, default=0.01)
     layout.set_defaults(func=_layout)
+    diagnose = sub.add_parser(
+        "diagnose",
+        help="Run CPU-only collision and relation checks for a scene",
+    )
+    diagnose.add_argument("scene_file", type=Path)
+    diagnose.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    diagnose.add_argument("--clearance", type=float, default=0.0)
+    diagnose.set_defaults(func=_run)
+    agent = sub.add_parser(
+        "agent-loop",
+        help="Run RGB-video -> GPT-6 Astra -> Objaverse/generated assets -> SO-101 review",
+    )
+    agent.add_argument("--video", required=True, help="RGB video source path or URI")
+    agent.add_argument("--instruction", default="", help="Optional task instruction to preserve through reconstruction")
+    agent.add_argument("--frame", dest="frame_paths", action="append", default=[],
+                       help="Sampled RGB frame path; repeat for multiple frames (optional)")
+    agent.add_argument("--fps", type=float, help="Required when --frame is supplied")
+    agent.add_argument("--frame-count", type=int, help="Required when --frame is supplied")
+    agent.add_argument("--width", type=int, help="Required when --frame is supplied")
+    agent.add_argument("--height", type=int, help="Required when --frame is supplied")
+    agent.add_argument("--sample-count", type=int, default=8, help="Frames to decode when --frame is omitted")
+    agent.add_argument("--frames-dir", type=Path, help="Persistent directory for automatically sampled frames")
+    agent.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    agent.add_argument("--output", type=Path, required=True, help="Output portable scene bundle")
+    agent.add_argument("--base-url", default=os.environ.get("SCENE_MODEL_BASE_URL"))
+    agent.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME", "gpt-6-astra"))
+    agent.add_argument("--api-key-env", default="SCENE_MODEL_API_KEY")
+    agent.set_defaults(func=_agent_loop)
     compile_parser = sub.add_parser("compile", help="Convert bundle to USD using Isaac Sim")
     compile_parser.add_argument("bundle", type=Path)
     compile_parser.add_argument("--output", type=Path, required=True)
@@ -174,6 +208,45 @@ def _generate(args):
     spec = propose_scene(args.instruction, AssetCatalog(args.catalog), service)
     path = save_proposal(spec, args.output, service)
     print(json.dumps({"scene_file": str(path.resolve()), "scene_sha256": spec.digest()}, indent=2))
+
+
+def _agent_loop(args):
+    from openso101.scenes.agent_loop import (
+        AstraScenePlanner,
+        RGBVideoInput,
+        Real2SimAgentLoop,
+        TrimeshAssetGenerator,
+    )
+    from openso101.scenes.video import sample_rgb_video
+    from openso101.scenes.video import SceneContext
+    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.model_client import ModelService
+
+    if not args.base_url:
+        raise ValueError("请设置 --base-url 或 SCENE_MODEL_BASE_URL")
+    if args.output.exists():
+        raise FileExistsError(args.output)
+    if args.frame_paths:
+        if any(value is None for value in (args.fps, args.frame_count, args.width, args.height)):
+            raise ValueError("使用 --frame 时必须同时提供 --fps、--frame-count、--width 和 --height")
+        video = RGBVideoInput(
+            source=args.video, frame_count=args.frame_count, fps=args.fps,
+            width=args.width, height=args.height, frame_paths=tuple(args.frame_paths),
+            context=SceneContext(instruction=args.instruction),
+        )
+    else:
+        frames_dir = args.frames_dir or args.output.parent / f".{args.output.name}.frames"
+        video = sample_rgb_video(
+            Path(args.video), frames_dir, count=args.sample_count,
+            context=SceneContext(instruction=args.instruction),
+        )
+    loop = Real2SimAgentLoop(
+        AssetCatalog(args.catalog),
+        AstraScenePlanner(ModelService(args.base_url, args.model, args.api_key_env)),
+        generator=TrimeshAssetGenerator(),
+    )
+    result = loop.run(video, output=args.output)
+    print(result.model_dump_json(indent=2))
 
 
 def _import_asset(args):
@@ -262,6 +335,10 @@ def _validate_runtime(args):
     if args.cameras:
         command.append("--cameras")
     subprocess.run(command, check=True)
+    if not args.output.is_file():
+        raise RuntimeError(
+            "Isaac runtime worker 未生成报告；请检查 Isaac Sim 启动日志（常见原因是首次运行需要接受 NVIDIA EULA）"
+        )
     report = json.loads(args.output.read_text())
     if report["scene_sha256"] != compilation["scene_sha256"] or report["status"] != "runtime_verified":
         raise ValueError("运行报告与请求场景不匹配")

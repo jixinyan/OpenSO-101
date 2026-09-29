@@ -100,6 +100,8 @@ OpenSO-101/
 │   ├── envs/                 # OpenSO101EnvCfg base + register_task decorator
 │   ├── robots/so101/         # SO-101 ArticulationCfg, USD spawn, cameras, pose constants
 │   ├── tasks/                # Built-in tasks: lift, pick_place, stack (+ shared/)
+│   ├── scenes/               # Objaverse catalog, scene bundles, Astra real2sim loop
+│   ├── real2sim/             # Public real2sim orchestration exports
 │   ├── teleop/               # LeRobot leader-arm → simulated follower (async daemon poll)
 │   ├── rl/                   # rsl_rl-backed PPO + BestCheckpointRunner; Distillation cfgs
 │   ├── il/
@@ -265,6 +267,7 @@ The full CLI surface:
 |      | `play` | Load a LeRobot checkpoint and roll it out in sim |
 |      | `replay` | Replay a recorded teleop episode |
 | `sim2real` | `deploy` | Drive the real SO-101 from a LeRobot checkpoint |
+| `scenes` | `agent-loop` | RGB video → GPT-6 Astra → Objaverse/generated assets → SO-101 review |
 
 Variants live behind `gym.make` kwargs — one gym ID per task:
 
@@ -318,7 +321,7 @@ If you have a suggestion that would make this better, please fork the repo and c
 5. Open a Pull Request
 
 Before submitting, please:
-- Run the tests. The full suite (~21 test modules under `tests/`) needs a CUDA GPU and Isaac Sim — a bare `pytest tests/` boots the simulator via `conftest.py`, so it only works on a GPU machine. A CPU-pure subset has no Isaac Sim dependency and runs anywhere (e.g. `pytest tests/test_shaping_rewards.py tests/test_cli_rl.py`); CI runs exactly this CPU-only subset.
+- Run the tests. The full suite (~21 test modules under `tests/`) needs a CUDA GPU and Isaac Sim. For the CPU suite, set `OPENSO101_SKIP_ISAAC=1` so the conftest does not start Omniverse, then run `OPENSO101_SKIP_ISAAC=1 pytest tests/test_cpu_regressions.py tests/test_shaping_rewards.py tests/test_cli_rl.py`.
 - Follow the conventions documented in `docs/guides/add_a_task.md`.
 - Keep changes scoped — one PR per concern.
 

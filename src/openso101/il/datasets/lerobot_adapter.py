@@ -39,11 +39,32 @@ class LeRobotDatasetHandle:
 
     @property
     def num_frames(self) -> int:
-        return int(getattr(self.dataset, "num_frames", len(self.dataset)))
+        # Do not use ``getattr(..., len(self.dataset))`` here: Python
+        # evaluates the default argument before calling ``getattr``.  Some
+        # LeRobot dataset implementations expose ``num_frames`` but are not
+        # sequence-like, so that seemingly harmless fallback raised a
+        # ``TypeError`` even when the attribute was present.
+        value = getattr(self.dataset, "num_frames", None)
+        if value is None:
+            try:
+                value = len(self.dataset)
+            except TypeError as exc:
+                raise TypeError("loaded dataset exposes neither num_frames nor __len__") from exc
+        return int(value)
 
     @property
     def num_episodes(self) -> int:
-        return int(getattr(self.dataset, "num_episodes", 0))
+        value = getattr(self.dataset, "num_episodes", None)
+        if value is not None:
+            return int(value)
+        # Older LeRobot releases keep episode metadata on ``meta`` rather
+        # than the dataset object.  Prefer that value when available, while
+        # retaining a safe zero for Hub/custom dataset implementations that
+        # do not expose episode counts.
+        info = getattr(getattr(self.dataset, "meta", None), "info", None)
+        if isinstance(info, dict) and info.get("total_episodes") is not None:
+            return int(info["total_episodes"])
+        return 0
 
 
 def _is_local_dataset_dir(p: Path) -> bool:
@@ -87,9 +108,14 @@ def load_lerobot_dataset(
         on-disk root (None for Hub-backed datasets).
     """
     source_path = Path(str(source)).expanduser()
+    if episodes is not None:
+        if any(not isinstance(index, int) or isinstance(index, bool) or index < 0 for index in episodes):
+            raise ValueError("episodes must contain non-negative integer indices")
 
     # Path validation runs before the LeRobot import so callers get a
     # crisp FileNotFoundError without paying the import cost.
+    if source_path.exists() and not source_path.is_dir():
+        raise ValueError(f"dataset source exists but is not a directory: {source_path}")
     is_local = source_path.exists() and source_path.is_dir()
     if is_local:
         root = _resolve_local_root(source_path.resolve())

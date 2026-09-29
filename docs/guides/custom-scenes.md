@@ -25,6 +25,8 @@ openso101 scenes create 4c19ae47dbe8468285ee53ff487fe51a \
   --scene-id apple_table --dimensions 0.04 0.04 0.05 \
   --output outputs/apple_table.json
 openso101 scenes validate outputs/apple_table.json
+# CPU-only collision and relation checks
+openso101 scenes diagnose outputs/apple_table.json
 ```
 
 编辑生成的 JSON 可设置多个 `entities`、桌面尺寸、物体尺寸、位置、旋转、物理属性、机器人基座和任务目标。单位为米、千克、秒，坐标使用右手 Z-up，旋转使用 `quaternion_wxyz`。物体位置表示几何包围盒中心。`dimensions_m` 表示物体旋转前在场景坐标轴方向上的尺寸。原始 GLB 的 Y-up 在编译时转换为 Z-up。
@@ -60,7 +62,21 @@ openso101 scenes layout outputs/apple_proposal/scene.json \
 
 模型接口为 OpenAI-compatible Chat Completions，服务地址包含其 API 前缀。默认从 `SCENE_MODEL_API_KEY` 读取密钥；`--api-key-env` 指定其他变量，无鉴权服务使用空字符串。模型名称与地址也可通过 `SCENE_MODEL_NAME` 和 `SCENE_MODEL_BASE_URL` 配置。
 
-`generate` 将当前资产目录和场景 schema 发送给指定服务，校验返回配置并保存 proposal。目录需要预先导入所需资产。外部服务、超时、输出格式和场景校验错误立即终止。当前没有配置实际服务地址和模型，因此在线生成尚未验收。Agent 编排结构由后续设计确定；资产、布局、版本保存、编译与仿真检查均可独立调用。
+`generate` 将当前资产目录和场景 schema 发送给指定服务，校验返回配置并保存 proposal。目录需要预先导入所需资产。外部服务、超时、输出格式和场景校验错误立即终止。当前没有配置实际服务地址和模型，因此在线生成尚未验收；资产、布局、版本保存、编译与仿真检查均可独立调用。
+
+## RGB 视频 real2sim agent loop
+
+`agent-loop` 自动从 RGB 视频均匀抽帧，把帧和场景上下文交给 GPT-6 Astra，依次完成视频描述、Objaverse/LVIS 检索、场景编排、缺失 primitive/generated parts 资产生成、静态几何检查、物理合理性审查和 SO-101 数据采集 readiness 审查。模型发现问题时最多自动修复两轮，并把每轮反馈保存到结果 JSON。
+
+```bash
+openso101 scenes agent-loop \
+  --video captures/pick_place.mp4 \
+  --sample-count 8 --frames-dir outputs/pick_place_frames \
+  --base-url "$SCENE_MODEL_BASE_URL" --model gpt-6-astra \
+  --catalog outputs/assets --output outputs/agent_scene_bundle
+```
+
+也可以用 `--frame` 重用已经抽好的 JPEG/PNG；这时必须同时提供 `--fps`、`--frame-count`、`--width` 和 `--height`。`status=completed` 只表示静态检查和两个 Astra 审查通过；Isaac 的动态碰撞、可达性、接触、相机和成功采集仍由 `validate-runtime`、runtime check 或真机采集完成。
 
 `inspect` 返回几何测量信息，未经验证的操作能力保持 `unknown`。`layout` 使用 SciPy MILP 求解桌面范围、reset 范围和实体间距，保留锁定实体的位置。机器人路径与接触验证在运行报告中单独记录。
 
@@ -105,11 +121,13 @@ openso101 il replay --episode outputs/apple_dataset/episodes/episode_000000.hdf5
 ## 测试
 
 ```bash
+OPENSO101_SKIP_ISAAC=1 PYTHONPATH=src python -m pytest tests/test_cpu_regressions.py \
+  -q
 PYTHONPATH=src python -m pytest --confcutdir=tests/scenes tests/scenes \
   --basetemp=outputs/pytest-scenes -q
 ```
 
-测试依赖为 `scenes` extra、pytest 与 usd-core。测试使用实际 GLB 文件、OpenUSD 场景和可计算尺寸的几何体，覆盖配置拒绝条件、文件修改检查、场景包迁移及 USD 属性。在线 Objaverse 下载和目标主机的 Isaac Sim 转换分别执行集成检查。
+测试依赖为 `scenes` extra、pytest 与 usd-core。测试使用实际 GLB 文件、OpenUSD 场景和可计算尺寸的几何体，覆盖配置拒绝条件、视频抽帧、生成资产、agent loop 修复路径、文件修改检查、场景包迁移及 USD 属性。在线 Objaverse 下载和目标主机的 Isaac Sim 转换分别执行集成检查。
 
 ## 2026-09-26 运行记录
 

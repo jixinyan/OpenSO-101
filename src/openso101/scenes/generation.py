@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .bundle import validate_layout
 from .catalog import AssetCatalog
+from .layout import diagnose_layout
 from .model_client import ModelService, schema_instruction
 from .models import SceneSpec
 
@@ -31,6 +32,12 @@ def propose_scene(instruction: str, catalog: AssetCatalog, service: ModelService
     if spec.task.instruction != instruction:
         raise ValueError("模型必须完整保留用户任务描述")
     validate_layout(spec, catalog)
+    diagnostics = diagnose_layout(spec, catalog)
+    if diagnostics["status"] != "static_checks_passed":
+        raise ValueError(
+            "模型生成的场景未通过静态几何检查："
+            + json.dumps(diagnostics, ensure_ascii=False)
+        )
     return spec
 
 

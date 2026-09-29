@@ -30,6 +30,12 @@ class JointLimitsDeg:
     lower: float
     upper: float
 
+    def __post_init__(self) -> None:
+        if not math.isfinite(float(self.lower)) or not math.isfinite(float(self.upper)):
+            raise ValueError("joint limits must be finite")
+        if self.lower > self.upper:
+            raise ValueError("joint lower limit cannot exceed upper limit")
+
 
 LEROBOT_SO101_ACTION_NAMES: tuple[str, ...] = (
     "shoulder_pan.pos",
@@ -138,9 +144,12 @@ def lerobot_action_to_joint_targets(action: Mapping[str, float]) -> dict[str, fl
 
     targets: dict[str, float] = {}
     for action_name in LEROBOT_SO101_ACTION_NAMES:
+        value = float(action[action_name])
+        if not math.isfinite(value):
+            raise ValueError(f"LeRobot action {action_name} must be finite")
         joint_name = LEROBOT_TO_SO101_CONTROL_JOINTS[action_name]
         target_deg = _map_interval(
-            float(action[action_name]),
+            value,
             LEROBOT_LEADER_LIMITS_DEG[action_name],
             SO101_TELEOP_TARGET_LIMITS_DEG[joint_name],
         )
@@ -182,7 +191,10 @@ def parse_joint_offsets_deg(value: str | None) -> dict[str, float]:
         name, raw_offset = (part.strip() for part in item.split(":", 1))
         if name not in SO101_TELEOP_CONTROL_JOINT_NAMES:
             raise ValueError(f"Unknown SO-101 joint name: {name}")
-        offsets[name] = math.radians(float(raw_offset))
+        offset = float(raw_offset)
+        if not math.isfinite(offset):
+            raise ValueError(f"Offset for {name} must be finite")
+        offsets[name] = math.radians(offset)
     return offsets
 
 
@@ -196,10 +208,19 @@ def transform_ordered_targets(
 
     inverted = set(inverted_joints)
     offsets = offsets_rad or {}
+    unknown_inverted = inverted.difference(SO101_TELEOP_CONTROL_JOINT_NAMES)
+    unknown_offsets = set(offsets).difference(SO101_TELEOP_CONTROL_JOINT_NAMES)
+    if unknown_inverted or unknown_offsets:
+        unknown = sorted(unknown_inverted | unknown_offsets)
+        raise ValueError(f"Unknown SO-101 joint name(s): {', '.join(unknown)}")
     transformed: list[float] = []
     for joint_name, target in zip(SO101_TELEOP_CONTROL_JOINT_NAMES, targets, strict=True):
         value = -float(target) if joint_name in inverted else float(target)
+        if not math.isfinite(value):
+            raise ValueError(f"Target for {joint_name} must be finite")
         value += float(offsets.get(joint_name, 0.0))
+        if not math.isfinite(value):
+            raise ValueError(f"Transformed target for {joint_name} must be finite")
         limits = SO101_TELEOP_TARGET_LIMITS_DEG[joint_name]
         lower = math.radians(limits.lower)
         upper = math.radians(limits.upper)
@@ -294,6 +315,8 @@ def batched_action_to_motor_units(actions: "torch.Tensor") -> "torch.Tensor":
             f"Expected last dim={len(JOINT_ORDER)} (got {tuple(actions.shape)}); "
             f"joints: {JOINT_ORDER}"
         )
+    if not torch.isfinite(actions).all():
+        raise ValueError("actions must contain finite values")
     out = torch.empty_like(actions)
     for i, name in enumerate(JOINT_ORDER):
         out[..., i] = sim_radians_to_motor_units(actions[..., i], name)
@@ -309,6 +332,8 @@ def batched_motor_units_to_action(motors: "torch.Tensor") -> "torch.Tensor":
             f"Expected last dim={len(JOINT_ORDER)} (got {tuple(motors.shape)}); "
             f"joints: {JOINT_ORDER}"
         )
+    if not torch.isfinite(motors).all():
+        raise ValueError("motor units must contain finite values")
     out = torch.empty_like(motors)
     for i, name in enumerate(JOINT_ORDER):
         out[..., i] = motor_units_to_sim_radians(motors[..., i], name)

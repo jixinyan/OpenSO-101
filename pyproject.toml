@@ -61,6 +61,7 @@ scenes = [
     "trimesh>=4.5,<5",
     "scipy>=1.14",
     "pillow>=10",
+    "av>=12,<15",
     "httpx>=0.27,<1",
 ]
 scene-tests = ["pytest>=7", "usd-core>=25,<27"]

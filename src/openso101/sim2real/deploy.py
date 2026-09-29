@@ -240,20 +240,28 @@ def _open_cameras(
         ) from exc
 
     cameras: dict[str, Any] = {}
-    for name, index in (
-        ("wrist_camera", int(wrist_index)),
-        ("overhead_camera", int(overhead_index)),
-    ):
-        cam = OpenCVCamera(
-            OpenCVCameraConfig(
-                index_or_path=index,
-                width=int(width),
-                height=int(height),
-                fps=30,
+    try:
+        for name, index in (
+            ("wrist_camera", int(wrist_index)),
+            ("overhead_camera", int(overhead_index)),
+        ):
+            cam = OpenCVCamera(
+                OpenCVCameraConfig(
+                    index_or_path=index,
+                    width=int(width),
+                    height=int(height),
+                    fps=30,
+                )
             )
-        )
-        cam.connect()
-        cameras[name] = cam
+            cam.connect()
+            cameras[name] = cam
+    except Exception:
+        for cam in cameras.values():
+            try:
+                cam.disconnect()
+            except Exception:
+                pass
+        raise
     return cameras
 
 
@@ -359,7 +367,16 @@ _MOTOR_UNIT_CLAMP: dict[str, tuple[float, float]] = {
 
 def _clamp_motor_units(action: np.ndarray) -> np.ndarray:
     """Clamp each commanded motor-unit target to its calibrated safe range."""
-    out = np.asarray(action, dtype=np.float32).copy()
+    out = np.asarray(action, dtype=np.float32)
+    if out.ndim == 2 and out.shape[0] == 1:
+        out = out[0]
+    if out.shape != (len(_LEROBOT_JOINT_KEYS),):
+        raise ValueError(
+            f"motor-unit action must have shape ({len(_LEROBOT_JOINT_KEYS)},), got {out.shape}"
+        )
+    if not np.isfinite(out).all():
+        raise ValueError("motor-unit action must contain finite values")
+    out = out.copy()
     for i, key in enumerate(_LEROBOT_JOINT_KEYS):
         lo, hi = _MOTOR_UNIT_CLAMP[key]
         out[i] = float(min(max(out[i], lo), hi))
@@ -426,11 +443,16 @@ def _lerobot_joint_dict_to_array(raw: Mapping[str, float]) -> np.ndarray:
 
 def _action_array_to_lerobot_dict(action: np.ndarray) -> dict[str, float]:
     """Inverse of :func:`_lerobot_joint_dict_to_array`."""
-    if action.shape[-1] != len(_LEROBOT_JOINT_KEYS):
+    action = np.asarray(action, dtype=np.float32)
+    if action.ndim == 2 and action.shape[0] == 1:
+        action = action[0]
+    if action.shape != (len(_LEROBOT_JOINT_KEYS),):
         raise ValueError(
             f"Policy action has shape {tuple(action.shape)}; expected last "
             f"dim={len(_LEROBOT_JOINT_KEYS)} matching LeRobot joint order."
         )
+    if not np.isfinite(action).all():
+        raise ValueError("Policy action must contain finite values")
     return {key: float(value) for key, value in zip(_LEROBOT_JOINT_KEYS, action.tolist(), strict=True)}
 
 

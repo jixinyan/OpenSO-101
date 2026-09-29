@@ -71,6 +71,8 @@ def build_lerobot_features(cameras: Mapping[str, Mapping[str, int]], fps: int) -
     """Build LeRobotDataset features including wrist and overhead videos."""
 
     ensure_required_cameras(cameras)
+    if int(fps) <= 0:
+        raise ValueError(f"fps must be positive, got {fps}")
     features: dict[str, dict[str, Any]] = {
         "observation.state": {
             "dtype": "float32",
@@ -88,10 +90,16 @@ def build_lerobot_features(cameras: Mapping[str, Mapping[str, int]], fps: int) -
 
     for camera_name in REQUIRED_CAMERA_NAMES:
         camera = cameras[camera_name]
+        try:
+            height, width = int(camera["height"]), int(camera["width"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"camera {camera_name!r} needs integer height and width") from exc
+        if height <= 0 or width <= 0:
+            raise ValueError(f"camera {camera_name!r} dimensions must be positive")
         features[f"observation.images.{camera_name}"] = {
             "dtype": "video",
             "fps": fps,
-            "shape": (int(camera["height"]), int(camera["width"]), 3),
+            "shape": (height, width, 3),
             "names": ["height", "width", "channels"],
         }
     return features
@@ -145,11 +153,17 @@ def _as_numpy_rgb(image: Any) -> np.ndarray:
     array = np.asarray(image)
     if array.ndim == 4:
         array = array[0]
+    if array.ndim != 3 or array.shape[-1] not in (3, 4) or array.shape[0] <= 0 or array.shape[1] <= 0:
+        raise ValueError(f"camera frame must have shape (H, W, 3/4), got {array.shape}")
     if array.shape[-1] == 4:
         array = array[..., :3]
     if array.dtype != np.uint8:
+        if not np.issubdtype(array.dtype, np.number) or not np.isfinite(array).all():
+            raise ValueError("camera frame must contain finite numeric pixels")
         if array.max(initial=0) <= 1.0:
             array = np.clip(array * 255.0, 0.0, 255.0)
+        else:
+            array = np.clip(array, 0.0, 255.0)
         array = array.astype(np.uint8)
     return np.ascontiguousarray(array)
 

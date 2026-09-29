@@ -10,9 +10,13 @@ from .models import Goal, SceneSpec
 def evaluate_goals(spec: SceneSpec, states: dict[str, np.ndarray], gripper_open: bool) -> dict:
     entities = {entity.entity_id: entity for entity in spec.entities}
     for entity_id in entities:
+        if entity_id not in states:
+            raise KeyError(f"missing state for entity: {entity_id}")
         state = np.asarray(states[entity_id])
         if state.shape != (13,) or not np.isfinite(state).all():
             raise ValueError(f"实体状态必须包含 13 个有限数值：{entity_id}")
+        if not np.isclose(np.dot(state[3:7], state[3:7]), 1.0, atol=1e-4):
+            raise ValueError(f"实体 quaternion 必须为单位 quaternion：{entity_id}")
     goals = spec.task.goals or (Goal(object_id=spec.task.object_id, position_m=spec.task.goal_position_m),)
     conditions = []
     for goal in goals:
@@ -58,8 +62,8 @@ class SuccessTracker:
         self.elapsed = 0.0
 
     def update(self, states, gripper_open, dt):
-        if dt <= 0:
-            raise ValueError("dt 必须为正数")
+        if not np.isfinite(dt) or dt <= 0:
+            raise ValueError("dt 必须为正数有限数值")
         report = evaluate_goals(self.spec, states, gripper_open)
         self.elapsed = self.elapsed + dt if report["instant_success"] else 0.0
         report["held_seconds"] = self.elapsed
