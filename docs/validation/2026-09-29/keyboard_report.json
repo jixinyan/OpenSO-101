@@ -1,0 +1,42 @@
+{
+  "status": "terminal_isaac_control_and_recording_verified",
+  "keys": [
+    "UP",
+    "G",
+    "PAGE_DOWN",
+    "A",
+    "SPACE",
+    "Q"
+  ],
+  "frames": 2281,
+  "camera_shapes": {
+    "wrist_camera": [
+      128,
+      128,
+      3
+    ],
+    "overhead_camera": [
+      128,
+      128,
+      3
+    ]
+  },
+  "joint_motion_rad": [
+    0.02495456673204899,
+    0.6230930685997009,
+    0.26870816946029663,
+    0.10873961448669434,
+    0.08821011334657669,
+    1.0079431533813477
+  ],
+  "target_motion_rad": [
+    0.02495456673204899,
+    0.631625771522522,
+    0.26870816946029663,
+    0.10839259624481201,
+    0.08631891012191772,
+    0.800000011920929
+  ],
+  "episode": "outputs/rl_progress/keyboard_dataset/episodes/episode_000001.hdf5",
+  "task_success": false
+}

@@ -1,0 +1,22 @@
+{
+  "backend": "rsl_rl",
+  "algo": "ppo",
+  "seed": 42,
+  "iterations": 2,
+  "rollout_steps": 16,
+  "epochs": 1,
+  "mini_batches": 2,
+  "learning_rate": 0.0001,
+  "gamma": 0.99,
+  "gae_lambda": 0.95,
+  "clip": 0.2,
+  "entropy_coef": 0.01,
+  "max_grad_norm": 1.0,
+  "hidden_dims": [
+    32,
+    32
+  ],
+  "normalize_observations": true,
+  "replay_size": 100000,
+  "learning_starts": 1000
+}

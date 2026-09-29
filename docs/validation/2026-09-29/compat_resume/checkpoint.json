@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "task_id": "OpenSO101-CustomScene-v0",
+  "config": {
+    "backend": "rsl_rl",
+    "algo": "ppo",
+    "seed": 42,
+    "iterations": 2,
+    "rollout_steps": 16,
+    "epochs": 1,
+    "mini_batches": 2,
+    "learning_rate": 0.0001,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip": 0.2,
+    "entropy_coef": 0.01,
+    "max_grad_norm": 1.0,
+    "hidden_dims": [
+      32,
+      32
+    ],
+    "normalize_observations": true,
+    "replay_size": 100000,
+    "learning_starts": 1000
+  },
+  "observation_format": "state",
+  "git_sha": "568c488f7992581a45da2003c8bbb333247f51d1",
+  "checkpoint": "model.pt",
+  "files": {
+    "model.pt": "9de71b31b295cc54319510ac98b8fcce4032a6e86a9849b123adcc48d1329161",
+    "train.json": "c268801255a3c96c66c942cc83e02970d336420abe0c26bdc2a408ff9b2d0326",
+    "backend.json": "67f89749db5fade81f901dff2c964f6ee126466fb9634986e5193bf357a8e855",
+    "environment.yaml": "c63fb159a4cf2fa3c3eef69a7a58188cbccc8273376514fd3b7a755fa9787c91",
+    "source.zip": "0dde4df7acc138a153669480a151d1f1e8c4e2563195da3ead8a8a87965e2625",
+    "scene/scene.usda": "cca02ea5a3d7edbb6c598a8d02c1527c29cabe2a81da1e828ec2c57a87227557",
+    "scene/environment.usda": "fe75f9f2788de569934068b0a7597ad8691aabfebcc7974dea5c9744a1e8c744",
+    "scene/scene.json": "eadb235d25a1f2348707bea992f39a79a8cc40666272f243a1afb5a132c4d2b2",
+    "scene/compilation.json": "732b8fdc31b2690b11be4155abd17001ae78145d656c4eed0ecbd746fb3d9b41",
+    "scene/assets/4c19ae47dbe8468285ee53ff487fe51a/model.usd": "250e3c01106ba6b599018b653d2773da678f8c2f0d02527d197bbf4a91f56263",
+    "scene/assets/4c19ae47dbe8468285ee53ff487fe51a/asset.json": "09741bfe2ccfc12add2ed18aa44f167127b87777beda59c491fe160caea7c0ba",
+    "scene/assets/4c19ae47dbe8468285ee53ff487fe51a/metadata.json": "405de79d4c91c01dd90d6609f336463916a8e3ac555eba0a362d184016f47b3d"
+  },
+  "scene_sha256": "0038e97e9359a1f9e430e5079c6ed5de74953e0cb76a4b0cde201f110f9be373",
+  "completed_transitions": 128
+}

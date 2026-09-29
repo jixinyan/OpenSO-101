@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task_id": "OpenSO101-Lift-v0",
+  "config": {
+    "backend": "rsl_rl",
+    "algo": "ppo",
+    "seed": 42,
+    "iterations": 200,
+    "rollout_steps": 96,
+    "epochs": 5,
+    "mini_batches": 4,
+    "learning_rate": 0.0001,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip": 0.2,
+    "entropy_coef": 0.005,
+    "max_grad_norm": 1.0,
+    "hidden_dims": [
+      256,
+      128,
+      64
+    ],
+    "normalize_observations": true,
+    "replay_size": 100000,
+    "learning_starts": 1000
+  },
+  "observation_format": "state",
+  "git_sha": "3a16ff38f5ecba4ab2dcc0f6d58fd5ab39f7c3f1",
+  "checkpoint": "model.pt",
+  "files": {
+    "model.pt": "07d587aa1b9c8ab533c701e91c5d53f67f1380ed0d6a524dfa951ff4e014f9cb",
+    "train.json": "f741af671a7eba7f1a3c9750e32692082912211b3852b0c4def5ae00b9fc624e",
+    "backend.json": "6522d94b963ff8c733f17175df520b96692faf1ad0354ec8b1d5f33bc033b417",
+    "environment.yaml": "1d203f8e0b63a97394148963815f70a04ddfe84e4da3721cc0c9c00651995126",
+    "source.zip": "df37a538a3f9821b31244060ac7fae63145ed6abe225b9d745de4ef96da90c3c"
+  },
+  "scene_sha256": null,
+  "completed_transitions": 19660800
+}

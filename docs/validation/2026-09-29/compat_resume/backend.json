@@ -1,0 +1,44 @@
+{
+  "seed": 42,
+  "device": "cuda:0",
+  "num_steps_per_env": 16,
+  "save_interval": 2,
+  "logger": "tensorboard",
+  "obs_groups": {
+    "policy": [
+      "policy"
+    ],
+    "critic": [
+      "policy"
+    ]
+  },
+  "policy": {
+    "class_name": "ActorCritic",
+    "init_noise_std": 0.5,
+    "actor_obs_normalization": true,
+    "critic_obs_normalization": true,
+    "actor_hidden_dims": [
+      32,
+      32
+    ],
+    "critic_hidden_dims": [
+      32,
+      32
+    ],
+    "activation": "elu"
+  },
+  "algorithm": {
+    "class_name": "PPO",
+    "num_learning_epochs": 1,
+    "num_mini_batches": 2,
+    "learning_rate": 0.0001,
+    "schedule": "fixed",
+    "gamma": 0.99,
+    "lam": 0.95,
+    "entropy_coef": 0.01,
+    "clip_param": 0.2,
+    "max_grad_norm": 1.0,
+    "value_loss_coef": 1.0,
+    "use_clipped_value_loss": true
+  }
+}

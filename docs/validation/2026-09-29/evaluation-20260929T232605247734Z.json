@@ -1,0 +1,33 @@
+{
+  "task": "OpenSO101-CustomScene-v0",
+  "backend": "rsl_rl",
+  "seed": 0,
+  "episodes": [
+    {
+      "success": false,
+      "return": 2.8727152347564697,
+      "steps": 1800,
+      "env_index": 0
+    },
+    {
+      "success": false,
+      "return": 2.8878610134124756,
+      "steps": 1800,
+      "env_index": 1
+    }
+  ],
+  "success_rate": 0.0,
+  "checkpoint_sha256": "9de71b31b295cc54319510ac98b8fcce4032a6e86a9849b123adcc48d1329161",
+  "training_git_sha": "568c488f7992581a45da2003c8bbb333247f51d1",
+  "completed_transitions": 128,
+  "evaluation_git_sha": "568c488f7992581a45da2003c8bbb333247f51d1",
+  "torch_version": "2.7.0+cu128",
+  "device": "cuda:0",
+  "num_envs": 2,
+  "episode_allocation": [
+    1,
+    1
+  ],
+  "progress_sampling": null,
+  "progress_rates": {}
+}

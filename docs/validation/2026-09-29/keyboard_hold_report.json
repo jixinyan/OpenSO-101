@@ -1,0 +1,14 @@
+{
+  "status": "terminal_idle_targets_and_reset_reference_verified",
+  "git_sha": "2f52a02d6cada189f0e611e2c9a2040ed948a62f",
+  "keys": [
+    "UP",
+    "G",
+    "SPACE",
+    "Q"
+  ],
+  "idle_checks": 2382,
+  "maximum_idle_target_change_rad": 0.0,
+  "reset_reference_error_rad": 0.0,
+  "task_success": false
+}

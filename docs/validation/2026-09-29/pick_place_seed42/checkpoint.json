@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task_id": "OpenSO101-PickPlace-v0",
+  "config": {
+    "backend": "rsl_rl",
+    "algo": "ppo",
+    "seed": 42,
+    "iterations": 200,
+    "rollout_steps": 96,
+    "epochs": 5,
+    "mini_batches": 4,
+    "learning_rate": 0.0001,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip": 0.2,
+    "entropy_coef": 0.005,
+    "max_grad_norm": 1.0,
+    "hidden_dims": [
+      256,
+      128,
+      64
+    ],
+    "normalize_observations": true,
+    "replay_size": 100000,
+    "learning_starts": 1000
+  },
+  "observation_format": "state",
+  "git_sha": "3a16ff38f5ecba4ab2dcc0f6d58fd5ab39f7c3f1",
+  "checkpoint": "model.pt",
+  "files": {
+    "model.pt": "55743d3aa18b70553eeae14622aa1fbe7255db5ee19735c0deaddcdccf3f97b8",
+    "train.json": "f741af671a7eba7f1a3c9750e32692082912211b3852b0c4def5ae00b9fc624e",
+    "backend.json": "6522d94b963ff8c733f17175df520b96692faf1ad0354ec8b1d5f33bc033b417",
+    "environment.yaml": "62ab17bda71dc1ffca1542fe1d694df36b7f3eb5c820bb4753a04765a71bc2c4",
+    "source.zip": "df37a538a3f9821b31244060ac7fae63145ed6abe225b9d745de4ef96da90c3c"
+  },
+  "scene_sha256": null,
+  "completed_transitions": 19660800
+}
