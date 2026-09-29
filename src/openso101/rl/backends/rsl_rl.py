@@ -13,9 +13,10 @@ from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
 def configuration(cfg: TrainCfg, device: str):
     return {
         "seed": cfg.seed, "device": device, "num_steps_per_env": cfg.rollout_steps,
-        "save_interval": max(1, cfg.iterations),
+        "save_interval": min(50, cfg.iterations),
         "logger": "tensorboard", "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
         "policy": {"class_name": "ActorCritic", "init_noise_std": 0.5,
+                   "noise_std_type": "log",
                    "actor_obs_normalization": cfg.normalize_observations,
                    "critic_obs_normalization": cfg.normalize_observations,
                    "actor_hidden_dims": list(cfg.hidden_dims), "critic_hidden_dims": list(cfg.hidden_dims),
