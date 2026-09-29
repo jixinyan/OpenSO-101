@@ -474,13 +474,8 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
             self.actions = TeleopActionsCfg()
             # Re-spawn the scene with the teleop robot articulation.
             _configure_so101_pick_place_scene(self, robot_cfg=SO_ARM101_TELEOP_CFG)
-            # Strip jaw contact sensors: the teleop robot has
-            # activate_contact_sensors=False (no contact reporter API on its
-            # bodies), and no teleop reward consumes the signal.
-            self.scene.gripper_jaw_contact = None
-            self.scene.moving_jaw_contact = None
-            # The grasp_state obs term reads those (now-absent) contact sensors,
-            # so drop it for teleop. None terms are skipped by the obs manager.
+            # 放置成功检查使用两侧夹爪的实际接触力。
+            self.scene.robot.spawn.activate_contact_sensors = True
             self.observations.policy.grasp_state = None
             self.rewards = None
             self.terminations = None

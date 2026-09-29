@@ -163,7 +163,7 @@ def evaluate(args, *, play=False):
             from openso101.tasks.shared.grasp import object_grasped_by_jaws
             from openso101.tasks.shared.rl_defaults import SO101_CONTROLLED_OBJECT_MIN_HEIGHT
 
-            progress = {name: torch.zeros_like(latched) for name in ("reached", "grasped", "lifted")}
+            progress = {name: torch.zeros_like(latched) for name in ("reached", "grasped", "lifted", "held_above_table")}
             if args.task == "OpenSO101-PickPlace-v0":
                 progress.update({name: torch.zeros_like(latched) for name in ("carry_stage", "place_stage")})
         success_terms = [name for name in env.unwrapped.termination_manager.active_terms if "success" in name]
@@ -176,8 +176,11 @@ def evaluate(args, *, play=False):
                     object_position = scene["object"].data.root_pos_w
                     ee_position = scene["ee_frame"].data.target_pos_w[:, 0, :]
                     progress["reached"] |= torch.linalg.vector_norm(object_position - ee_position, dim=-1) < 0.08
-                    progress["grasped"] |= object_grasped_by_jaws(env.unwrapped)
-                    progress["lifted"] |= object_position[:, 2] - scene.env_origins[:, 2] > SO101_CONTROLLED_OBJECT_MIN_HEIGHT
+                    grasped = object_grasped_by_jaws(env.unwrapped)
+                    above_table = object_position[:, 2] - scene.env_origins[:, 2] > SO101_CONTROLLED_OBJECT_MIN_HEIGHT
+                    progress["grasped"] |= grasped
+                    progress["lifted"] |= above_table
+                    progress["held_above_table"] |= grasped & above_table
                     if "carry_stage" in progress:
                         stage = env.unwrapped.command_manager.get_term("object_pose").stage
                         progress["carry_stage"] |= stage >= 1
@@ -205,6 +208,10 @@ def evaluate(args, *, play=False):
                   "episodes": records, "success_rate": sum(record["success"] for record in records) / len(records),
                   "checkpoint_sha256": digest(folder / meta.checkpoint), "training_git_sha": meta.git_sha,
                   "completed_transitions": meta.completed_transitions,
+                  "evaluation_git_sha": subprocess.run(
+                      ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
+                  ).stdout.strip(),
+                  "torch_version": torch.__version__, "device": env.unwrapped.device,
                   "num_envs": env.unwrapped.num_envs, "episode_allocation": quotas.tolist(),
                   "progress_sampling": "before_control_step" if progress else None,
                   "progress_rates": {name: sum(record[name] for record in records) / len(records) for name in progress}}
