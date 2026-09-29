@@ -31,7 +31,7 @@ CUDA capability `sm_103` 的主机使用 `--override requirements-sm103.txt` 安
 
 ```bash
 openso101 rl train --task OpenSO101-CustomScene-v0 --scene outputs/apple_usd \
-  --backend rsl_rl --train-config train.json --num_envs 64 \
+  --backend rsl_rl --algo ppo --train-config train.json --num_envs 64 \
   --output outputs/apple_ppo --logger tensorboard --headless --no-video
 openso101 rl eval --task OpenSO101-CustomScene-v0 \
   --checkpoint outputs/apple_ppo --n-episodes 100 --num-envs 16 --headless
@@ -42,7 +42,7 @@ openso101 rl eval --task OpenSO101-CustomScene-v0 \
 训练目录保存实际环境配置、训练配置、模型、归一化状态、适用的 replay buffer、源码压缩包及 SHA256 清单。自定义场景保存完整副本。没有 Git metadata 的远程代码副本通过 `--source-revision` 或 `OPENSO101_SOURCE_REVISION` 提供完整源代码 commit SHA；实际执行的 Python 文件同时保存在 `source.zip`。
 
 ```bash
-openso101 rl train --task OpenSO101-CustomScene-v0 --backend sb3 \
+openso101 rl train --task OpenSO101-CustomScene-v0 --backend sb3 --algo ppo \
   --train-config train.json --resume --load_run outputs/previous_run \
   --output outputs/continued_run --logger tensorboard --headless --no-video
 ```
