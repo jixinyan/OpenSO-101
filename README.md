@@ -10,7 +10,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/jixinyan/OpenSO-101">
-    <img src="media/logo.png" alt="OpenSO-101 logo" width="280">
+    <img src="media/logo.png" alt="OpenSO-101 项目 logo 与流程图" width="760">
   </a>
 
   <h3 align="center">OpenSO-101</h3>

@@ -6,8 +6,7 @@ material need to reference.
 
 ## Conventions
 
-- **Logos:** `logo.png` (square or near-square, ~420px wide). Used by the
-  top-level README hero.
+- **项目 logo：** `logo.png` 为 1254 × 1254 的 RGBA PNG，包含项目名称与流程图，在 README 顶部以 760px 宽度展示。
 - **Banners:** `banner.png` (16:9, 1200×630 recommended — also serves as
   the GitHub social-preview card).
 - **Screenshots:** `screenshot_<feature>.png` — e.g. `screenshot_teleop.png`.
