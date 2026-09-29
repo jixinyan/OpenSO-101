@@ -94,6 +94,42 @@ their mesh/body layout did not behave reliably with the SO101 gripper.
 
 ## Keyboard Controls
 
+### 键盘驱动机器人
+
+图形界面启动：
+
+```bash
+openso101 il record --task OpenSO101-PickPlace-v0 \
+  --teleop-device keyboard --keyboard-input window \
+  --repo-root outputs/keyboard_pick_place
+```
+
+SSH 终端使用 `ssh -tt jd_B300` 进入已配置的仿真环境，执行：
+
+```bash
+openso101 il record --task OpenSO101-PickPlace-v0 \
+  --teleop-device keyboard --keyboard-input terminal --headless \
+  --no-camera-viewports --repo-root outputs/keyboard_pick_place
+```
+
+键盘控制使用机器人实际 Jacobian，执行关节限位与速度限制，并按照仿真控制周期处理输入。终端使用 prompt_toolkit 读取按键；方向按键在最后一次输入后 150ms 释放，持续按住按键通过终端重复输入继续移动。
+
+| 按键 | 操作 |
+|---|---|
+| ↑ / ↓ | 沿世界坐标的 +x / −x 移动 |
+| ← / → | 沿世界坐标的 +y / −y 移动 |
+| PageUp / PageDown | 沿 +z / −z 移动 |
+| A / D | 控制 yaw |
+| Space | 打开夹爪 |
+| G | 关闭夹爪；图形窗口也支持 Shift |
+| C / R | 保存当前 checkpoint / 恢复 checkpoint |
+| S | 人工标记成功并保存 episode |
+| Q | 取消当前 episode 并退出 |
+
+终端模式也支持 Ctrl+C 和 Ctrl+D 取消录制。没有交互终端的输入会在启动仿真前终止；图形窗口输入需要实际窗口。PickPlace 的放置检查使用两侧夹爪接触测量、夹爪打开状态、目标位置及持续稳定时间。
+
+### 录制操作
+
 - `S`: mark the current episode SUCCESS, save it, and exit.
 - `Q`: cancel the active episode and exit (data discarded).
 - `C`: checkpoint the current frame (robot pose + env state + recording

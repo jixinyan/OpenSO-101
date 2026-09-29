@@ -49,6 +49,10 @@ openso101 rl train --task OpenSO101-CustomScene-v0 --backend sb3 \
 
 继续训练读取完整训练目录，检查任务、算法、backend、文件内容及场景版本。输出目录必须为新目录。评估直接读取 `checkpoint.json` 选择正确的加载方式。
 
+rsl_rl PPO 使用 log 参数表示探索标准差，并每 50 个 iteration 保存中间模型。继续训练沿用原模型的 policy 配置，保持网络结构和观测归一化设置。
+
+评估按照环境分配 episode 数量，完整完成请求的数量后生成报告。Lift 和 PickPlace 报告包含接近物体、两侧夹爪接触、物体高度、持物抬升及 PickPlace 阶段统计；这些诊断在控制步骤开始前采样。任务成功率读取实际 success termination，报告同时保存模型 SHA256、训练和评估代码版本、训练 transitions、运行设备及 Torch 版本。
+
 ## 动作与相机随机化
 
 训练环境启用动作延迟、deadband 和执行幅度变化，各环境分别维护并重置历史。双相机训练启用相机安装位置和旋转随机化。play 与遥操采用对应任务的评估配置。
