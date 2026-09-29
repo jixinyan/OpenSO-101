@@ -112,7 +112,7 @@ openso101 il record --task OpenSO101-PickPlace-v0 \
   --no-camera-viewports --repo-root outputs/keyboard_pick_place
 ```
 
-键盘控制使用机器人实际 Jacobian，执行关节限位与速度限制，并按照仿真控制周期处理输入。终端使用 prompt_toolkit 读取按键；方向按键在最后一次输入后 150ms 释放，持续按住按键通过终端重复输入继续移动。
+键盘控制使用机器人实际 Jacobian，执行关节限位与速度限制，并按照仿真控制周期处理输入。释放方向按键后保持最近的关节目标，恢复 checkpoint 时更新控制参考。终端使用 prompt_toolkit 读取按键；方向按键在最后一次输入后 150ms 释放，持续按住按键通过终端重复输入继续移动。
 
 | 按键 | 操作 |
 |---|---|

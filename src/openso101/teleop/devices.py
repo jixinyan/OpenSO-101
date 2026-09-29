@@ -54,6 +54,7 @@ class KeyboardDevice:
         self.input_mode = input_mode
         self.on_key = on_key
         self.terminal = None
+        self.arm_target = None
 
     def connect(self):
         if self.input_mode == "terminal":
@@ -108,6 +109,15 @@ class KeyboardDevice:
         from isaaclab.utils.math import quat_apply
 
         command = self.get_command()
+        if self.arm_target is None:
+            self.reset_reference()
+        if not torch.any(command.delta):
+            targets = torch.cat((self.arm_target, torch.full(
+                (self.env.num_envs, 1), command.gripper, device=device,
+            )), dim=-1)
+            raw = {f"{name}.pos": float(torch.rad2deg(targets[0, i]))
+                   for i, name in enumerate(SO101_TELEOP_CONTROL_JOINT_NAMES)}
+            return raw, targets[0]
         body_index = self.body_id - int(self.robot.is_fixed_base)
         jacobian = self.robot.root_physx_view.get_jacobians()[:, body_index][:, :, self.arm_ids].clone()
         offset = torch.tensor((0.01, 0.0, -0.09), device=device).expand(self.env.num_envs, -1)
@@ -119,11 +129,16 @@ class KeyboardDevice:
             jacobian[:, [0, 1, 2, 5], :], command.delta.expand(self.env.num_envs, -1),
             joint_position, self.robot.data.joint_pos_limits[:, self.arm_ids], dt=self.env.step_dt,
         )
+        self.arm_target = target.clone()
         targets = torch.cat((target, torch.full((self.env.num_envs, 1), command.gripper, device=device)), dim=-1)
         raw = {f"{name}.pos": float(torch.rad2deg(targets[0, i])) for i, name in enumerate(SO101_TELEOP_CONTROL_JOINT_NAMES)}
         return raw, targets[0]
 
+    def reset_reference(self):
+        self.arm_target = self.robot.data.joint_pos[:, self.arm_ids].clone()
+
     def disconnect(self):
+        self.arm_target = None
         if self.terminal is not None:
             self.terminal.disconnect()
             self.terminal = None

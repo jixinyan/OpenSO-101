@@ -1055,8 +1055,11 @@ def _cmd_record(args: argparse.Namespace) -> int:
                             recorder, confirm=not bool(getattr(args, "auto_save", False))
                         )
                     break
+                restore_requested = keyboard.restore_checkpoint
                 if _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold):
                     break
+                if restore_requested and args.teleop_device == "keyboard":
+                    leader.reset_reference()
                 if args.teleop_device == "keyboard":
                     remaining = unwrapped_env.step_dt - (time.perf_counter() - loop_start)
                     if remaining > 0:
