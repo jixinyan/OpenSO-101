@@ -34,6 +34,13 @@ class Backend:
     def train(self, env, cfg: TrainCfg, output: Path, resume: Path | None = None) -> Path:
         cfg.batch_size(env.unwrapped.num_envs)
         config = configuration(cfg, env.unwrapped.device)
+        if resume:
+            previous = CheckpointMeta.read(resume)
+            if (cfg.hidden_dims, cfg.normalize_observations) != (
+                previous.config.hidden_dims, previous.config.normalize_observations,
+            ):
+                raise ValueError("继续训练需要保持 policy 结构和观测归一化配置")
+            config["policy"] = json.loads((resume / "backend.json").read_text())["policy"]
         write_backend_config(output, config)
         runner = OnPolicyRunner(RslRlVecEnvWrapper(env), config, log_dir=str(output), device=env.unwrapped.device)
         if resume:
