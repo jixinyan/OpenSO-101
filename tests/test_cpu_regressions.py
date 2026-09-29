@@ -6,6 +6,8 @@ regular Python 3.11 environment.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import pytest
 
 np = pytest.importorskip("numpy")
@@ -131,6 +133,76 @@ def test_model_service_accepts_no_auth_and_object_json(monkeypatch, tmp_path):
         system="system", prompt="prompt", schema=Output, images=(frame,)
     )
     assert result.value == 3
+
+
+def test_model_service_responses_wire_and_codex_config(tmp_path, monkeypatch):
+    class Output(BaseModel):
+        value: int
+
+    class Response:
+        headers = {"content-type": "text/event-stream"}
+
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self):
+            yield 'data: {"type":"response.output_text.delta","delta":"{\\"value\\": 4}"}'
+            yield 'data: {"type":"response.completed","response":{"status":"completed"}}'
+
+    class Client:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def post(self, endpoint, *, headers, json):
+            assert endpoint.endswith("/responses")
+            assert headers == {"Authorization": "Bearer test-token"}
+            assert json["input"][0]["role"] == "developer"
+            assert json["input"][0]["content"][0]["text"].startswith("system")
+            assert json["input"][1]["content"][0]["text"] == "prompt"
+            assert json["text"] == {"verbosity": "low"}
+            assert json["reasoning"] == {"effort": "xhigh", "summary": "auto"}
+            assert json["stream"] is True
+            assert json["store"] is False
+            return Response()
+
+        @contextmanager
+        def stream(self, method, endpoint, *, headers, json):
+            assert method == "POST"
+            yield self.post(endpoint, headers=headers, json=json)
+
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        'model = "gpt-6-astra"\n'
+        'model_provider = "litchi"\n'
+        'model_reasoning_effort = "xhigh"\n'
+        'model_reasoning_summary = "auto"\n'
+        '\n'
+        '[model_providers.litchi]\n'
+        'name = "litchi"\n'
+        'base_url = "https://example.invalid/v1"\n'
+        'wire_api = "responses"\n'
+        'experimental_bearer_token = "test-token"\n'
+        'model = "ignored-provider-model"\n',
+    )
+    config = model_client.load_codex_runtime_config(config_path)
+    assert config.model == "gpt-6-astra"
+    assert config.base_url == "https://example.invalid/v1"
+    assert config.wire_api == "responses"
+    assert config.reasoning_effort == "xhigh"
+    assert "test-token" not in repr(config)
+
+    monkeypatch.setenv("OPEN_SO_RESPONSES_KEY", config.bearer_token or "")
+    monkeypatch.setattr(model_client.httpx, "Client", Client)
+    result = model_client.ModelService(
+        config.base_url, config.model, "OPEN_SO_RESPONSES_KEY", wire_api=config.wire_api,
+    ).complete(system="system", prompt="prompt", schema=Output)
+    assert result.value == 4
 
 
 def test_real2sim_agent_loop_materializes_generated_asset_and_bundle(tmp_path):

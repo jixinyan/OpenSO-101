@@ -146,12 +146,25 @@ def add_subparsers(parser: argparse.ArgumentParser):
     agent.add_argument("--width", type=int, help="Required when --frame is supplied")
     agent.add_argument("--height", type=int, help="Required when --frame is supplied")
     agent.add_argument("--sample-count", type=int, default=8, help="Frames to decode when --frame is omitted")
+    agent.add_argument("--max-revisions", type=int, default=2, help="Maximum Astra repair iterations after review failures")
+    agent.add_argument("--timeout-seconds", type=float, default=300, help="Per-request Astra timeout")
+    agent.add_argument("--image-limit", type=int, default=4, help="Maximum RGB frames attached to each Astra request")
+    agent.add_argument("--reasoning-effort", choices=("low", "medium", "high", "xhigh"),
+                       help="Override the Codex reasoning effort")
     agent.add_argument("--frames-dir", type=Path, help="Persistent directory for automatically sampled frames")
     agent.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    agent.add_argument("--offline-objaverse", action="store_true",
+                       help="Skip online Objaverse metadata/downloads and let Astra generate missing assets")
     agent.add_argument("--output", type=Path, required=True, help="Output portable scene bundle")
     agent.add_argument("--base-url", default=os.environ.get("SCENE_MODEL_BASE_URL"))
-    agent.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME", "gpt-6-astra"))
+    agent.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME"))
     agent.add_argument("--api-key-env", default="SCENE_MODEL_API_KEY")
+    agent.add_argument(
+        "--codex-config",
+        type=Path,
+        default=Path(os.environ["CODEX_CONFIG"]) if os.environ.get("CODEX_CONFIG") else None,
+        help="Optional Codex TOML config; defaults to the local LitchiAgent runtime config when present",
+    )
     agent.set_defaults(func=_agent_loop)
     compile_parser = sub.add_parser("compile", help="Convert bundle to USD using Isaac Sim")
     compile_parser.add_argument("bundle", type=Path)
@@ -215,17 +228,37 @@ def _agent_loop(args):
         AstraScenePlanner,
         RGBVideoInput,
         Real2SimAgentLoop,
+        ObjaverseRetriever,
         TrimeshAssetGenerator,
     )
     from openso101.scenes.video import sample_rgb_video
     from openso101.scenes.video import SceneContext
     from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.model_client import ModelService
+    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
 
-    if not args.base_url:
-        raise ValueError("请设置 --base-url 或 SCENE_MODEL_BASE_URL")
     if args.output.exists():
         raise FileExistsError(args.output)
+
+    # LitchiAgent keeps the active Astra provider in this runtime config.  We
+    # discover it for the local checkout while still allowing an explicit path
+    # or the normal SCENE_MODEL_* environment variables to take precedence.
+    config = None
+    config_path = args.codex_config
+    if config_path is None:
+        candidate = Path("/mnt/data/users/jixin/workspace/code/LitchiAgent/runtime/codex/config.toml")
+        if candidate.is_file():
+            config_path = candidate
+    if config_path is not None:
+        config = load_codex_runtime_config(config_path)
+        if config.bearer_token and not os.environ.get(args.api_key_env, "").strip():
+            os.environ[args.api_key_env] = config.bearer_token
+    base_url = args.base_url or (config.base_url if config else None)
+    model = args.model or (config.model if config else "gpt-6-astra")
+    wire_api = config.wire_api if config else "chat"
+    reasoning_effort = args.reasoning_effort or (config.reasoning_effort if config else "xhigh")
+    reasoning_summary = config.reasoning_summary if config else "auto"
+    if not base_url:
+        raise ValueError("请设置 --base-url、SCENE_MODEL_BASE_URL 或提供 Codex runtime config")
     if args.frame_paths:
         if any(value is None for value in (args.fps, args.frame_count, args.width, args.height)):
             raise ValueError("使用 --frame 时必须同时提供 --fps、--frame-count、--width 和 --height")
@@ -240,10 +273,17 @@ def _agent_loop(args):
             Path(args.video), frames_dir, count=args.sample_count,
             context=SceneContext(instruction=args.instruction),
         )
+    catalog = AssetCatalog(args.catalog)
     loop = Real2SimAgentLoop(
-        AssetCatalog(args.catalog),
-        AstraScenePlanner(ModelService(args.base_url, args.model, args.api_key_env)),
+        catalog,
+        AstraScenePlanner(ModelService(
+            base_url, model, args.api_key_env,
+            timeout_seconds=args.timeout_seconds, wire_api=wire_api,
+            reasoning_effort=reasoning_effort, reasoning_summary=reasoning_summary,
+        ), image_limit=args.image_limit),
+        retriever=ObjaverseRetriever(catalog, online=not args.offline_objaverse),
         generator=TrimeshAssetGenerator(),
+        max_revisions=args.max_revisions,
     )
     result = loop.run(video, output=args.output)
     print(result.model_dump_json(indent=2))

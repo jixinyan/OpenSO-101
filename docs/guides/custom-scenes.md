@@ -76,6 +76,18 @@ openso101 scenes agent-loop \
   --catalog outputs/assets --output outputs/agent_scene_bundle
 ```
 
+`agent-loop` 会自动发现本机的
+`/mnt/data/users/jixin/workspace/code/LitchiAgent/runtime/codex/config.toml`；也可以用
+`--codex-config PATH` 或 `CODEX_CONFIG` 指定 Codex TOML。配置中的 `base_url`、模型、
+`wire_api = "responses"`、reasoning effort 和 bearer token 只在当前进程中使用，token
+不会写入场景或日志。也可以显式传 `--base-url`、`--model` 和 `--api-key-env` 覆盖地址、
+模型和密钥环境变量。Responses API 使用 Codex 兼容的 SSE 流，收到完整结构化 JSON 后
+立即结束本次请求。
+
+默认会在线搜索 Objaverse；网络不可用或只需验证生成资产分支时使用
+`--offline-objaverse`。`--image-limit`、`--reasoning-effort`、`--timeout-seconds` 和
+`--max-revisions` 可分别控制每次请求的帧数、推理强度、单次超时和修复次数。
+
 也可以用 `--frame` 重用已经抽好的 JPEG/PNG；这时必须同时提供 `--fps`、`--frame-count`、`--width` 和 `--height`。`status=completed` 只表示静态检查和两个 Astra 审查通过；Isaac 的动态碰撞、可达性、接触、相机和成功采集仍由 `validate-runtime`、runtime check 或真机采集完成。
 
 `inspect` 返回几何测量信息，未经验证的操作能力保持 `unknown`。`layout` 使用 SciPy MILP 求解桌面范围、reset 范围和实体间距，保留锁定实体的位置。机器人路径与接触验证在运行报告中单独记录。

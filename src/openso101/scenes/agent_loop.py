@@ -241,8 +241,9 @@ class AssetGenerator(Protocol):
 class ObjaverseRetriever:
     """Search local catalog first, then Objaverse LVIS annotations."""
 
-    def __init__(self, catalog: AssetCatalog):
+    def __init__(self, catalog: AssetCatalog, *, online: bool = True):
         self.catalog = catalog
+        self.online = online
 
     def search(self, request: AssetSearchRequest) -> Sequence[AssetCandidate]:
         tokens = {token for token in re.findall(r"\w+", request.query.casefold()) if len(token) > 1}
@@ -254,6 +255,8 @@ class ObjaverseRetriever:
                 local.append((score, AssetCandidate.from_asset(asset)))
         if local:
             return [item for _, item in sorted(local, key=lambda pair: (-pair[0], pair[1].uid))][:request.limit]
+        if not self.online:
+            return []
 
         candidates: list[AssetCandidate] = []
         try:
@@ -351,8 +354,11 @@ class TrimeshAssetGenerator:
 class AstraScenePlanner:
     """GPT-6 Astra planner using structured JSON at every loop boundary."""
 
-    def __init__(self, service: ModelService):
+    def __init__(self, service: ModelService, *, image_limit: int = 4):
         self.service = service
+        if not isinstance(image_limit, int) or isinstance(image_limit, bool) or not 1 <= image_limit <= 32:
+            raise ValueError("image_limit 必须位于 1 到 32")
+        self.image_limit = image_limit
 
     def describe(self, video: RGBVideoInput) -> VideoSceneDescription:
         description = self.service.complete(
@@ -363,10 +369,14 @@ class AstraScenePlanner:
             ),
             prompt=json.dumps(video.model_dump(), ensure_ascii=False),
             schema=VideoSceneDescription,
-            images=video.model_images(),
+            images=video.model_images(limit=self.image_limit),
         )
         if video.context.instruction and description.instruction != video.context.instruction:
-            raise ValueError("模型必须完整保留视频上下文中的 task instruction")
+            # The task instruction is user-owned context.  Models may return a
+            # faithful paraphrase even when asked for an exact copy, so make
+            # the invariant deterministic at this boundary while preserving
+            # all model-produced perception fields.
+            description = description.model_copy(update={"instruction": video.context.instruction})
         return description
 
     def revise(
@@ -385,7 +395,7 @@ class AstraScenePlanner:
                 "draft": draft.model_dump(), "feedback": feedback,
             }, ensure_ascii=False),
             schema=SceneDraft,
-            images=video.model_images(),
+            images=video.model_images(limit=self.image_limit),
         )
 
     def compose(
@@ -408,7 +418,7 @@ class AstraScenePlanner:
                 "asset_search": [item.model_dump() for item in candidates],
             }, ensure_ascii=False),
             schema=SceneDraft,
-            images=video.model_images(),
+            images=video.model_images(limit=self.image_limit),
         )
 
     def review_physical(
@@ -425,7 +435,7 @@ class AstraScenePlanner:
             ),
             prompt=json.dumps({"scene": spec.model_dump(), "static": static_diagnostics}, ensure_ascii=False),
             schema=PlausibilityReview,
-            images=video.model_images(),
+            images=video.model_images(limit=self.image_limit),
         )
 
     def review_so101(
@@ -485,7 +495,9 @@ class Real2SimAgentLoop:
             )
             draft = self.planner.compose(video, description, search_reports)
             if draft.task.instruction != description.instruction:
-                raise AgentLoopError("composition", "场景 draft 必须完整保留视频任务指令")
+                draft = draft.model_copy(update={
+                    "task": draft.task.model_copy(update={"instruction": description.instruction}),
+                })
             iterations: list[dict[str, Any]] = []
             physical = None
             so101 = None
