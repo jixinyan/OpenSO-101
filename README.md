@@ -68,6 +68,8 @@
 
 v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL backend、键盘采集和视觉蒸馏。当前功能、实际检查范围及尚未完成的验收见 [v2 状态记录](docs/guides/v2-status-2026-09-29.md)；使用方法见 [自定义场景](docs/guides/custom-scenes.md) 和 [训练与蒸馏](docs/guides/v2-training.md)。生成场景的成功采集、策略收敛与真机任务仍需验收。
 
+当前优先完成 RL 验证与键盘遥操作，并推进 MuJoCo sim2sim 和真机准备；agentic real2sim 同步进行。验收条件与迭代顺序见 [v2 迭代安排](docs/guides/v2-priorities.md)。
+
 OpenSO-101 is an end-to-end unified robot learning framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles three pillars of modern robot learning behind one CLI and one Python API:
 
 1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] plus rsl_rl's `Distillation` for teacher → student knowledge transfer.
