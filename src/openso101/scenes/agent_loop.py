@@ -484,6 +484,8 @@ class Real2SimAgentLoop:
                 self._search_report(request) for request in requests
             )
             draft = self.planner.compose(video, description, search_reports)
+            if draft.task.instruction != description.instruction:
+                raise AgentLoopError("composition", "场景 draft 必须完整保留视频任务指令")
             iterations: list[dict[str, Any]] = []
             physical = None
             so101 = None
