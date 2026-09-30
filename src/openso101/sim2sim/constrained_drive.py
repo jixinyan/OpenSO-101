@@ -60,7 +60,8 @@ class ConstrainedImplicitDrive:
         torque_bounds = self.model.actuator_forcerange[self.actuator_ids]
         limits = self.limits - 1e-6
         center = np.zeros(len(self.actuator_ids))
-        for iteration in range(12):
+        radius = np.max(np.abs(torque_bounds), axis=1)
+        for iteration in range(32):
             base = self._predict(data, center)
             jacobian = np.empty((len(center), len(center)))
             for index in range(len(center)):
@@ -71,18 +72,19 @@ class ConstrainedImplicitDrive:
             intercept = base - jacobian @ center
             error_force = self.stiffness * (targets - data.qpos[self.qpos_ids])
             feedback = self.damping + timestep * self.stiffness
-            desired = np.linalg.solve(np.eye(len(center)) + jacobian * feedback[None, :],
-                                      intercept + jacobian @ error_force)
-            quadratic = jacobian.T @ metric @ jacobian
-            linear = jacobian.T @ metric @ (intercept - desired)
+            # 完整力矩反馈保留夹爪压紧力，实际速度约束通过物理响应矩阵求解。
+            response = np.eye(len(center)) + feedback[:, None] * jacobian
+            residual = feedback * intercept - error_force
+            quadratic = response.T @ np.linalg.solve(metric, response)
+            linear = response.T @ np.linalg.solve(metric, residual)
             scale = np.max(np.abs(quadratic))
             if not np.isfinite(scale) or scale <= 0:
                 raise RuntimeError("constrained drive 的控制响应矩阵无效")
             solver = osqp.OSQP()
             solver.setup(P=sparse.csc_matrix(quadratic / scale), q=linear / scale,
                          A=sparse.csc_matrix(np.vstack([jacobian, np.eye(len(center))])),
-                         l=np.concatenate([-limits - intercept, torque_bounds[:, 0]]),
-                         u=np.concatenate([limits - intercept, torque_bounds[:, 1]]),
+                         l=np.concatenate([-limits - intercept, np.maximum(torque_bounds[:, 0], center - radius)]),
+                         u=np.concatenate([limits - intercept, np.minimum(torque_bounds[:, 1], center + radius)]),
                          verbose=False, eps_abs=1e-9, eps_rel=1e-9, max_iter=10000,
                          adaptive_rho_interval=25)
             solution = solver.solve(raise_error=True)
@@ -96,7 +98,8 @@ class ConstrainedImplicitDrive:
                 data.ctrl[self.actuator_ids] = torque
                 return predicted.copy()
             center = torque
-        raise RuntimeError("constrained drive 未找到满足实际速度限制的力矩")
+            radius *= .5
+        raise RuntimeError(f"constrained drive 未找到满足实际速度限制的力矩: time={data.time}, velocity={predicted}")
 
     def verify(self, data):
         velocity = data.qvel[self.dof_ids]

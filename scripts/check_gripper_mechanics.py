@@ -85,7 +85,7 @@ data.qpos[oq+3:oq+7] = [1, 0, 0, 0]
 mujoco.mj_forward(model, data)
 drive = ConstrainedImplicitDrive(model, aids, qids, dids)
 drive.configure(fields["joint_stiffness"][0, 0], fields["joint_damping"][0, 0], fields["joint_vel_limits"][0, 0])
-arrays = {name: [] for name in ("joint_position", "joint_velocity", "object_position_root", "jaw_forces", "phase_index")}
+arrays = {name: [] for name in ("joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "gripper_position_root", "gripper_quaternion_root", "jaw_forces", "phase_index", "object_contact_count")}
 physics_arrays = {name: [] for name in ("joint_velocity", "actuator_force", "jaw_forces")}
 for step, target in enumerate(targets):
     for _ in range(round(metadata["control_dt"] / model.opt.timestep)):
@@ -99,6 +99,11 @@ for step, target in enumerate(targets):
     arrays["joint_position"].append(data.qpos[qids].copy() - JOINT_OFFSETS)
     arrays["joint_velocity"].append(data.qvel[dids].copy())
     arrays["object_position_root"].append(data.xpos[oid].copy())
+    arrays["object_quaternion_root"].append(data.xquat[oid].copy())
+    arrays["gripper_position_root"].append(data.xpos[gid].copy())
+    arrays["gripper_quaternion_root"].append(data.xquat[gid].copy())
+    object_geom = model.geom("object").id
+    arrays["object_contact_count"].append(sum(object_geom in (data.contact[index].geom1, data.contact[index].geom2) for index in range(data.ncon)))
     arrays["jaw_forces"].append(jaw_forces(model, data))
     arrays["phase_index"].append(("settle", "approach", "close", "lift", "hold").index(phases[step]))
 arrays = {name: np.asarray(values) for name, values in arrays.items()}
