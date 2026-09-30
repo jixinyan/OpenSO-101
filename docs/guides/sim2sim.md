@@ -282,3 +282,16 @@ openso101 sim2real deploy --policy-path outputs/verify_student_ready \
 - [双相机读取报告](../validation/2026-09-29/camera_read_report.json)
 - [双相机编码转换报告](../validation/2026-09-29/camera_transcode_report.json)
 - [部署预检查报告](../validation/2026-09-29/deploy_preflight_report.json)
+
+## 实际参数与受限力矩控制
+
+`sim2sim compare --constrained-drive` 使用 OSQP 求解 implicit PD 的关节力矩。独立 `MjData` 执行真实 MuJoCo 步骤，计算关节力矩对下一步速度的响应；求解同时限制实际速度与 actuator 力矩。运行步骤只设置 `ctrl`，每步检查预测速度、实际速度、实际力矩及物理警告。控制目标保持源 `joint_targets`。该控制器使用 semi-implicit Euler，完整惯性矩阵参与优化；接触产生的响应由实际物理预测计算。
+
+`sim2sim mujoco --recorded-physics --constrained-drive` 使用源初始环境的质量、完整惯性、COM、重力、armature、已验证的零关节摩擦、PD 和速度限制。各环境独立建立模型；参数在该 episode 内保持初始值，后续关节与物体状态由策略反馈和物理运行产生。HDF5 保存动作、关节目标、关节速度、接触力、模型参数及每个物理步骤的速度和力矩。
+
+```bash
+OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
+  .venv/bin/python scripts/run_constrained_sim2sim.py --run-id acceptance
+```
+
+运行需要 `requirements-mujoco.txt` 的 OSQP 依赖，以及原生导出目录 `outputs/rl_progress/{lift,pick_place}_scene_geometry_oriented_verified`。检查使用已有模型进行推理。实际速度限制验收、PhysX 接触等价和任务成功分别记录。

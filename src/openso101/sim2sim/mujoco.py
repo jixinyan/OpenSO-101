@@ -110,6 +110,10 @@ def jaw_forces(model, data):
 
 
 def evaluate(args):
+    recorded = getattr(args, "recorded_physics", False)
+    constrained = getattr(args, "constrained_drive", False)
+    if constrained and not recorded:
+        raise ValueError("constrained-drive 策略评估需要 recorded-physics")
     if args.episodes <= 0:
         raise ValueError("episodes 必须为正数")
     policy_folder = Path(args.policy).resolve()
@@ -117,7 +121,14 @@ def evaluate(args):
     policy = PortablePolicy(policy_folder)
     metadata = policy.metadata
     output = Path(args.output).resolve()
-    output.mkdir(parents=True, exist_ok=False)
+    if output.exists():
+        raise FileExistsError(output)
+    if recorded:
+        from .recorded_physics import COMPONENT_FIELDS, RecordedPhysics
+
+        validation = json.loads((policy_folder / "validation.json").read_text())
+        if digest(policy_folder / "isaac_validation.hdf5") != validation["trace_sha256"]:
+            raise ValueError("实际物理轨迹 SHA256 与源报告不一致")
     with h5py.File(policy_folder / "isaac_validation.hdf5", "r") as reference:
         kinematics = check_kinematics(mujoco.MjModel.from_xml_path(str(robot_model)), reference)
         if args.episodes > reference["joint_position"].shape[1]:
@@ -133,6 +144,13 @@ def evaluate(args):
             starts.update({name: reference[name][0, :args.episodes] for name in velocity_fields})
             if any(starts[name].shape != (args.episodes, 3) or not np.isfinite(starts[name]).all() for name in velocity_fields):
                 raise ValueError("记录的物体速度无效")
+        if recorded:
+            names = {name for component in COMPONENT_FIELDS.values() for name in component}
+            names.update(("joint_position", "object_position_root", "object_quaternion_root",
+                          "joint_stiffness", "joint_damping", "joint_vel_limits"))
+            fields = {name: reference[name][:1] if name == "scene_gravity" else reference[name][:1, :args.episodes] for name in names}
+            if any(not np.isfinite(value).all() for value in fields.values()):
+                raise ValueError("实际初始环境参数含有无效数值")
     model = build_model(robot_model, metadata)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
@@ -149,8 +167,11 @@ def evaluate(args):
     parameters = metadata["task_parameters"]
     task_height = metadata["task_reference_height_root"] if "task_reference_height_root" in metadata else metadata["table_height_root"]
     records = []
+    output.mkdir(parents=True, exist_ok=False)
     with h5py.File(output / "trajectory.hdf5", "w") as trajectory:
         for episode in range(args.episodes):
+            model = build_model(robot_model, metadata)
+            data = mujoco.MjData(model)
             mujoco.mj_resetData(model, data)
             data.qpos[joint_qpos_ids] = starts["joint_position"][episode] + JOINT_OFFSETS
             data.qvel[joint_dof_ids] = starts["joint_velocity"][episode]
@@ -162,6 +183,23 @@ def evaluate(args):
                     starts["object_quaternion_root"][episode], scalar_first=True,
                 ).inv().apply(starts["object_angular_velocity_root"][episode])
             mujoco.mj_forward(model, data)
+            physics = None
+            drive = None
+            if recorded:
+                physics = RecordedPhysics(model, metadata, fields, list(COMPONENT_FIELDS), episode)
+                physics.apply(data, 0)
+                stiffness = fields["joint_stiffness"][0, episode]
+                damping = fields["joint_damping"][0, episode]
+                if (stiffness < 0).any() or (damping <= 0).any():
+                    raise ValueError("实际 PD 参数需要非负 stiffness 和正数 damping")
+                model.actuator_gainprm[actuator_ids, 0] = stiffness
+                model.actuator_biasprm[actuator_ids, 1] = -stiffness
+                model.actuator_biasprm[actuator_ids, 2] = -damping
+            if constrained:
+                from .constrained_drive import ConstrainedImplicitDrive
+
+                drive = ConstrainedImplicitDrive(model, actuator_ids, joint_qpos_ids, joint_dof_ids)
+                drive.configure(stiffness, damping, fields["joint_vel_limits"][0, episode])
             goal = starts["goal_root"][episode].copy()
             last_action = np.zeros((1, 6), dtype=np.float32)
             stage = 0
@@ -169,7 +207,8 @@ def evaluate(args):
             lift_hold_seconds = 0.
             success = False
             progress = {name: False for name in ("reached", "grasped", "held_above_table", "carry_stage", "place_stage")}
-            buffers = {name: [] for name in ("joint_position", "object_position_root", "jaw_forces", "raw_action", "stage")}
+            buffers = {name: [] for name in ("joint_position", "joint_velocity", "joint_targets", "object_position_root", "jaw_forces", "raw_action", "stage")}
+            physics_buffers = {name: [] for name in ("joint_velocity", "actuator_force", "velocity_command")}
             for step in range(round(metadata["episode_length_s"] / control_dt)):
                 qpos = data.qpos[joint_qpos_ids] - JOINT_OFFSETS
                 qvel = data.qvel[joint_dof_ids]
@@ -181,13 +220,22 @@ def evaluate(args):
                 targets = policy.joint_targets(actions, enforce_limits=False).numpy()[0]
                 last_action = actions.numpy()
                 buffers["joint_position"].append(qpos.copy())
+                buffers["joint_velocity"].append(qvel.copy())
+                buffers["joint_targets"].append(targets.copy())
                 buffers["object_position_root"].append(data.xpos[object_id].copy())
                 buffers["jaw_forces"].append(forces.copy())
                 buffers["raw_action"].append(last_action[0].copy())
                 buffers["stage"].append(stage)
                 data.ctrl[actuator_ids] = targets + JOINT_OFFSETS
                 for _ in range(substeps):
+                    if drive is not None:
+                        command = drive.apply(data, targets + JOINT_OFFSETS)
                     mujoco.mj_step(model, data)
+                    if drive is not None:
+                        drive.verify(data)
+                        physics_buffers["joint_velocity"].append(data.qvel[joint_dof_ids].copy())
+                        physics_buffers["actuator_force"].append(data.actuator_force[actuator_ids].copy())
+                        physics_buffers["velocity_command"].append(command)
                 mujoco.mj_forward(model, data)
                 if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(warning.number for warning in data.warning):
                     raise RuntimeError("MuJoCo 物理运行产生无效状态或警告")
@@ -231,6 +279,14 @@ def evaluate(args):
                 group.create_dataset(name, data=np.asarray(values))
             records.append({"initial_env_index": episode, "success": success, "steps": step + 1,
                             **{name: bool(value) for name, value in progress.items()}})
+            if physics is not None:
+                records[-1]["recorded_physics"] = physics.report()
+                for name, values in physics.snapshot().items():
+                    group.create_dataset(f"model_parameters/{name}", data=values)
+            if drive is not None:
+                records[-1]["constrained_drive"] = drive.report()
+                for name, values in physics_buffers.items():
+                    group.create_dataset(f"physics_steps/{name}", data=np.asarray(values))
     report = {
         "status": "mujoco_policy_evaluation_completed", "task": metadata["task_id"],
         "task_profile": metadata.get("task_profile", "default"), "episodes": records,
@@ -242,7 +298,12 @@ def evaluate(args):
         "isaac_trace_sha256": digest(policy_folder / "isaac_validation.hdf5"),
         "trajectory_sha256": digest(output / "trajectory.hdf5"), "control_dt": control_dt,
         "physics_dt": model.opt.timestep, "joint_offsets": JOINT_OFFSETS.tolist(),
-        "dynamics": "nominal_isaac_PD_and_effort_limits_with_upstream_MJCF_inertia_and_frictionloss",
+        "dynamics": "actual_Isaac_initial_environment_body_gravity_armature_friction_and_PD" if recorded else "nominal_isaac_PD_and_effort_limits_with_upstream_MJCF_inertia_and_frictionloss",
+        "parameter_schedule": "fixed_source_initial_environment" if recorded else "nominal",
+        "drive_model": "constrained_implicit_PD" if constrained else "position_pd",
+        "actual_velocity_limits_verified": constrained and all(record["constrained_drive"]["actual_velocity_limits_verified"] for record in records),
+        "constrained_drive_source_sha256": digest(Path(__file__).with_name("constrained_drive.py")) if constrained else None,
+        "evaluation_source_sha256": digest(Path(__file__)),
         "contact_geometry": "upstream_MJCF_convex_meshes", "initial_states": "first_frame_of_actual_Isaac_trace",
         "source_object_velocity_available": velocity_available,
         "table_geometry_source": "native_USD_collision_mesh" if "table_geometry" in metadata else "legacy_metadata_plane",

@@ -13,6 +13,9 @@ from .recorded_physics import COMPONENT_FIELDS, RecordedPhysics
 
 
 def compare(args):
+    constrained = getattr(args, "constrained_drive", False)
+    if constrained and args.velocity_servo:
+        raise ValueError("constrained-drive 与 velocity-servo 不能同时启用")
     if args.steps <= 1 or args.episodes <= 0:
         raise ValueError("steps 必须大于 1，episodes 必须为正数")
     policy_folder = Path(args.policy).resolve()
@@ -44,7 +47,7 @@ def compare(args):
         physics_fields = ("joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits")
         if args.recorded_pd and not all(name in trace for name in physics_fields):
             raise ValueError("recorded-pd 需要实际 Isaac 物理参数记录")
-        if args.velocity_servo and "joint_vel_limits" not in trace:
+        if (args.velocity_servo or constrained) and "joint_vel_limits" not in trace:
             raise ValueError("velocity-servo 需要实际 Isaac 速度限制记录")
         for name in physics_fields + ("object_linear_velocity_root", "object_angular_velocity_root"):
             if name in trace:
@@ -102,6 +105,10 @@ def compare(args):
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
     actuator_ids = [model.actuator(name).id for name in JOINT_NAMES]
     servo = VelocityLimitedServo(model, actuator_ids, joint_qpos_ids) if args.velocity_servo else None
+    if constrained:
+        from .constrained_drive import ConstrainedImplicitDrive
+
+        servo = ConstrainedImplicitDrive(model, actuator_ids, joint_qpos_ids, joint_dof_ids)
     object_qpos_id = int(model.joint("object_free").qposadr[0])
     object_dof_id = int(model.joint("object_free").dofadr[0])
     object_id = model.body("object").id
@@ -113,6 +120,8 @@ def compare(args):
     records = []
     with h5py.File(output / "comparison.hdf5", "w") as trajectory:
         for episode in range(args.episodes):
+            if constrained:
+                servo = ConstrainedImplicitDrive(model, actuator_ids, joint_qpos_ids, joint_dof_ids)
             # 只比较首次 episode 的连续片段，停止于源记录的终止步骤。
             boundaries = np.flatnonzero(fields["terminated"][:, episode] | fields["truncated"][:, episode])
             steps = min(args.steps, int(boundaries[0]) + 1) if len(boundaries) else args.steps
@@ -163,6 +172,8 @@ def compare(args):
                         physics_buffers["joint_velocity_before"].append(data.qvel[joint_dof_ids].copy())
                         command = servo.apply(data, fields["joint_targets"][step, episode] + JOINT_OFFSETS)
                     mujoco.mj_step(model, data)
+                    if constrained:
+                        servo.verify(data)
                     if servo is not None:
                         physics_buffers["joint_velocity"].append(data.qvel[joint_dof_ids].copy())
                         physics_buffers["actuator_force"].append(data.actuator_force[actuator_ids].copy())
@@ -235,6 +246,8 @@ def compare(args):
                     "velocity_commands_within_limits_verified": True,
                     "actuator_forces_within_limits_verified": True,
                 }
+                if constrained:
+                    records[-1]["constrained_drive"] = servo.report()
     report = {
         "status": "mujoco_recorded_action_comparison_completed",
         "task": metadata["task_id"], "task_profile": metadata.get("task_profile", "default"),
@@ -257,7 +270,9 @@ def compare(args):
         "action_source": "actual_Isaac_ActionManager_joint_targets",
         "sampling": "state_before_each_control_step",
         "pd_source": "recorded_Isaac_per_environment" if args.recorded_pd else "nominal_policy_metadata",
-        "drive_model": "bounded_velocity_reference_servo" if args.velocity_servo else "position_pd",
+        "drive_model": "constrained_implicit_PD" if constrained else ("bounded_velocity_reference_servo" if args.velocity_servo else "position_pd"),
+        "actual_velocity_limits_verified": constrained and all(record["constrained_drive"]["actual_velocity_limits_verified"] for record in records),
+        "constrained_drive_source_sha256": digest(Path(__file__).with_name("constrained_drive.py")) if constrained else None,
         "physics_components": args.physics_components,
         "recorded_physics_source_sha256": digest(Path(__file__).with_name("recorded_physics.py")),
         "velocity_constraint_equivalence_verified": False,
