@@ -30,6 +30,18 @@ class RecordedPhysics:
         self.max_inertia_error = 0.0
         self.max_mass_error = 0.0
         self.verified_steps = 0
+        self.bvh_indices = np.concatenate([
+            np.arange(address, address + count)
+            for address, count in zip(model.body_bvhadr, model.body_bvhnum) if count
+        ])
+        self.bvh_bodies = np.concatenate([
+            np.full(count, body, dtype=np.int64)
+            for body, count in enumerate(model.body_bvhnum) if count
+        ])
+        self.compiled_bvh = model.bvh_aabb[self.bvh_indices].copy()
+        self.compiled_com = model.body_ipos.copy()
+        self.compiled_rotation = Rotation.from_quat(model.body_iquat, scalar_first=True).as_matrix()
+        self.bvh_updates = 0
         if "bodies" in components:
             recording = metadata["physics_recording"]
             if (recording["inertia_frame"] != "body_prim_at_center_of_mass"
@@ -91,6 +103,7 @@ class RecordedPhysics:
                 fields["object_body_inertia"][step, environment].reshape(1, 3, 3).swapaxes(-1, -2),
                 fields["object_body_com"][step, environment, :3][None], [self.object_id],
             )
+            self._update_collision_bounds()
         if "gravity" in self.components:
             self.model.opt.gravity[:] = self.fields["scene_gravity"][step]
         if "armature" in self.components:
@@ -129,6 +142,24 @@ class RecordedPhysics:
             self.max_mass_error = max(self.max_mass_error, float(np.max(np.abs(self.model.body_mass[self.body_ids] - self.fields["robot_body_mass"][step, environment]))))
         self.verified_steps += 1
 
+    def _update_collision_bounds(self):
+        # body BVH 使用惯性坐标；mesh 内部的三角形 BVH 保持原值。
+        bodies = self.bvh_bodies
+        current = Rotation.from_quat(self.model.body_iquat[bodies], scalar_first=True).as_matrix()
+        original = self.compiled_rotation[bodies]
+        transform = current.swapaxes(-1, -2) @ original
+        displacement = self.compiled_com[bodies] - self.model.body_ipos[bodies]
+        centers = np.einsum("bij,bj->bi", transform, self.compiled_bvh[:, :3])
+        centers += np.einsum("bij,bj->bi", current.swapaxes(-1, -2), displacement)
+        extents = np.einsum("bij,bj->bi", np.abs(transform), self.compiled_bvh[:, 3:])
+        bounds = np.column_stack((centers, extents))
+        if not np.isfinite(bounds).all() or (extents < 0).any():
+            raise RuntimeError("碰撞包围盒坐标转换检查失败")
+        self.model.bvh_aabb[self.bvh_indices] = bounds
+        if not np.array_equal(self.model.bvh_aabb[self.bvh_indices], bounds):
+            raise RuntimeError("碰撞包围盒写入检查失败")
+        self.bvh_updates += 1
+
     def snapshot(self):
         return {"body_mass": self.model.body_mass.copy(), "body_ipos": self.model.body_ipos.copy(),
                 "body_inertia": self.model.body_inertia.copy(), "body_iquat": self.model.body_iquat.copy(),
@@ -140,4 +171,4 @@ class RecordedPhysics:
                 "maximum_source_com_error_m": self.max_com_error,
                 "maximum_source_inertia_relative_error": self.max_inertia_error,
                 "maximum_mass_error_kg": self.max_mass_error, "running_state_preserved_verified": True,
-                "parameter_readback_verified": True}
+                "parameter_readback_verified": True, "body_collision_bounds_updates": self.bvh_updates}

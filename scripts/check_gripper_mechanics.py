@@ -129,6 +129,8 @@ report = {"status": "scripted_gripper_physics_completed", "control_steps": len(t
           "physics": physics.report(), "source_trace_sha256": digest(source),
           "trajectory_sha256": digest(args.output / "trajectory.hdf5"), "plan_sha256": digest(args.output / "plan.json"),
           "source_code_sha256": digest(Path(__file__)), "controller": "scripted_IK_joint_targets",
+          "constrained_drive_source_sha256": digest(root / "src/openso101/sim2sim/constrained_drive.py"),
+          "recorded_physics_source_sha256": digest(root / "src/openso101/sim2sim/recorded_physics.py"),
           "rl_policy_success_verified": False, "physics_equivalence_verified": False}
 report["collision_bundle_sha256"] = digest(args.collision_bundle / "manifest.json") if args.collision_bundle else None
 (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
