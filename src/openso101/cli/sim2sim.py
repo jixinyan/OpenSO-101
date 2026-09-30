@@ -12,6 +12,7 @@ def add_subparsers(parser):
     comparison.add_argument("--episodes", type=int, default=4)
     comparison.add_argument("--steps", type=int, default=500)
     comparison.add_argument("--recorded-pd", action="store_true", help="使用 Isaac 记录的每环境实际 PD 参数")
+    comparison.add_argument("--velocity-servo", action="store_true", help="原生 velocity servo 使用受限速度目标，需要实际速度限制记录")
     comparison.add_argument("--output", required=True)
     comparison.set_defaults(func=_compare)
 

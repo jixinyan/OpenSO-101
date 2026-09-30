@@ -8,6 +8,7 @@ import numpy as np
 from openso101.rl.config import digest
 from openso101.rl.portable import PortablePolicy
 from .mujoco import JOINT_NAMES, JOINT_OFFSETS, build_model, check_kinematics, jaw_forces
+from .velocity_servo import VelocityLimitedServo
 
 
 def compare(args):
@@ -35,6 +36,8 @@ def compare(args):
         physics_fields = ("joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits")
         if args.recorded_pd and not all(name in trace for name in physics_fields):
             raise ValueError("recorded-pd 需要实际 Isaac 物理参数记录")
+        if args.velocity_servo and "joint_vel_limits" not in trace:
+            raise ValueError("velocity-servo 需要实际 Isaac 速度限制记录")
         for name in physics_fields + ("object_linear_velocity_root", "object_angular_velocity_root"):
             if name in trace:
                 fields[name] = trace[name][:args.steps, :args.episodes]
@@ -47,6 +50,11 @@ def compare(args):
     for name in physics_fields:
         if name in fields and fields[name].shape != (args.steps, args.episodes, 6):
             raise ValueError(f"Isaac 物理参数形状不一致: {name}")
+    if args.velocity_servo:
+        damping = fields["joint_damping"] if args.recorded_pd else np.asarray(metadata["nominal_damping"])
+        stiffness = fields["joint_stiffness"] if args.recorded_pd else np.asarray(metadata["nominal_stiffness"])
+        if (damping <= 0).any() or (stiffness < 0).any() or (fields["joint_vel_limits"] <= 0).any():
+            raise ValueError("velocity-servo 要求非负 stiffness、正数 damping 与速度限制")
     velocity_available = all(name in fields for name in ("object_linear_velocity_root", "object_angular_velocity_root"))
     if any(name in fields for name in ("object_linear_velocity_root", "object_angular_velocity_root")) and not velocity_available:
         raise ValueError("物体线速度与角速度需要同时记录")
@@ -63,6 +71,7 @@ def compare(args):
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
     actuator_ids = [model.actuator(name).id for name in JOINT_NAMES]
+    servo = VelocityLimitedServo(model, actuator_ids, joint_qpos_ids) if args.velocity_servo else None
     object_qpos_id = int(model.joint("object_free").qposadr[0])
     object_dof_id = int(model.joint("object_free").dofadr[0])
     object_id = model.body("object").id
@@ -96,22 +105,36 @@ def compare(args):
             if initial_position_error > 1e-6 or initial_velocity_error > 1e-6:
                 raise ValueError("MuJoCo 初始关节状态与源数据不一致")
             buffers = {name: [] for name in ("joint_position", "joint_velocity", "object_position_root", "jaw_forces")}
+            physics_buffers = {name: [] for name in ("joint_position_before", "joint_velocity_before", "joint_velocity", "actuator_force", "velocity_command", "velocity_limits")}
             for step in range(steps):
                 buffers["joint_position"].append(data.qpos[joint_qpos_ids].copy() - JOINT_OFFSETS)
                 buffers["joint_velocity"].append(data.qvel[joint_dof_ids].copy())
                 buffers["object_position_root"].append(data.xpos[object_id].copy())
                 buffers["jaw_forces"].append(jaw_forces(model, data))
                 data.ctrl[actuator_ids] = fields["joint_targets"][step, episode] + JOINT_OFFSETS
-                if args.recorded_pd:
-                    stiffness = fields["joint_stiffness"][step, episode]
-                    damping = fields["joint_damping"][step, episode]
+                stiffness = fields["joint_stiffness"][step, episode] if args.recorded_pd else np.asarray(metadata["nominal_stiffness"])
+                damping = fields["joint_damping"][step, episode] if args.recorded_pd else np.asarray(metadata["nominal_damping"])
+                if servo is not None:
+                    servo.configure(stiffness, damping, fields["joint_vel_limits"][step, episode])
+                elif args.recorded_pd:
                     if (stiffness < 0).any() or (damping < 0).any():
                         raise ValueError("实际 PD 参数需要非负")
                     model.actuator_gainprm[actuator_ids, 0] = stiffness
                     model.actuator_biasprm[actuator_ids, 1] = -stiffness
                     model.actuator_biasprm[actuator_ids, 2] = -damping
                 for _ in range(substeps):
+                    if servo is not None:
+                        physics_buffers["joint_position_before"].append(data.qpos[joint_qpos_ids].copy() - JOINT_OFFSETS)
+                        physics_buffers["joint_velocity_before"].append(data.qvel[joint_dof_ids].copy())
+                        command = servo.apply(data, fields["joint_targets"][step, episode] + JOINT_OFFSETS)
                     mujoco.mj_step(model, data)
+                    if servo is not None:
+                        physics_buffers["joint_velocity"].append(data.qvel[joint_dof_ids].copy())
+                        physics_buffers["actuator_force"].append(data.actuator_force[actuator_ids].copy())
+                        physics_buffers["velocity_command"].append(command)
+                        physics_buffers["velocity_limits"].append(servo.limits.copy())
+                        if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(warning.number for warning in data.warning):
+                            raise RuntimeError("MuJoCo velocity-servo 物理步骤产生无效状态或警告")
                 mujoco.mj_forward(model, data)
                 if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(warning.number for warning in data.warning):
                     raise RuntimeError("MuJoCo 动力学比较产生无效状态或警告")
@@ -151,6 +174,27 @@ def compare(args):
                 "mujoco_max_joint_speed_rad_s": np.max(np.abs(arrays["joint_velocity"]), axis=0).tolist(),
                 "recorded_physics_initial": {name: fields[name][0, episode].tolist() for name in physics_fields if name in fields},
             })
+            if servo is not None:
+                physics_arrays = {name: np.asarray(values) for name, values in physics_buffers.items()}
+                if any(not np.isfinite(values).all() for values in physics_arrays.values()):
+                    raise RuntimeError("velocity-servo 物理步骤记录包含无效数据")
+                if (np.abs(physics_arrays["velocity_command"]) > physics_arrays["velocity_limits"] + 1e-9).any():
+                    raise RuntimeError("velocity-servo 速度目标超过配置范围")
+                if (np.abs(physics_arrays["actuator_force"]) > np.asarray(metadata["effort_limits"]) + 1e-9).any():
+                    raise RuntimeError("velocity-servo 原生 actuator 力矩超过配置范围")
+                for name, values in physics_arrays.items():
+                    group.create_dataset(f"physics_steps/{name}", data=values)
+                overspeed = np.maximum(np.abs(physics_arrays["joint_velocity"]) - physics_arrays["velocity_limits"], 0)
+                records[-1]["velocity_servo"] = {
+                    "physics_steps": len(overspeed),
+                    "max_command_rad_s": np.max(np.abs(physics_arrays["velocity_command"]), axis=0).tolist(),
+                    "max_actual_speed_rad_s": np.max(np.abs(physics_arrays["joint_velocity"]), axis=0).tolist(),
+                    "max_overspeed_rad_s": np.max(overspeed, axis=0).tolist(),
+                    "overspeed_sample_fraction": np.mean(overspeed > 1e-6, axis=0).tolist(),
+                    "max_actuator_force_nm": np.max(np.abs(physics_arrays["actuator_force"]), axis=0).tolist(),
+                    "velocity_commands_within_limits_verified": True,
+                    "actuator_forces_within_limits_verified": True,
+                }
     report = {
         "status": "mujoco_recorded_action_comparison_completed",
         "task": metadata["task_id"], "task_profile": metadata.get("task_profile", "default"),
@@ -166,6 +210,9 @@ def compare(args):
         "action_source": "actual_Isaac_ActionManager_joint_targets",
         "sampling": "state_before_each_control_step",
         "pd_source": "recorded_Isaac_per_environment" if args.recorded_pd else "nominal_policy_metadata",
+        "drive_model": "bounded_velocity_reference_servo" if args.velocity_servo else "position_pd",
+        "velocity_constraint_equivalence_verified": False,
+        "velocity_servo_source_sha256": digest(Path(__file__).with_name("velocity_servo.py")) if args.velocity_servo else None,
         "source_object_velocity_available": velocity_available,
         "mujoco_initial_object_velocity": "recorded_Isaac" if velocity_available else "zero",
         "physics_equivalence_verified": False, "task_success_verified": False,
