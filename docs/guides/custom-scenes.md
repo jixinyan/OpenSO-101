@@ -90,6 +90,18 @@ openso101 scenes agent-loop \
 
 也可以用 `--frame` 重用已经抽好的 JPEG/PNG；这时必须同时提供 `--fps`、`--frame-count`、`--width` 和 `--height`。`status=completed` 只表示静态检查和两个 Astra 审查通过；Isaac 的动态碰撞、可达性、接触、相机和成功采集仍由 `validate-runtime`、runtime check 或真机采集完成。
 
+`--runtime-output` 将生成 bundle 连接到 USD 编译和实际 Isaac 双相机检查，保存 `compiled/`、`runtime.json`、`preparation.json` 和 `agent_loop_result.json`。结果增加 `compiled_scene` 与 `runtime_validation`；`pending_checks` 使用实际运行报告中仍需完成的项目。模型审查结果、程序运行和任务成功分别保留其验证范围。
+
+```bash
+openso101 scenes agent-loop --video captures/pick_place.mp4 \
+  --instruction "使用 SO-101 将苹果移动到桌面右侧" \
+  --catalog outputs/assets --offline-objaverse \
+  --output outputs/agent_scene_bundle --runtime-output outputs/agent_scene_ready \
+  --runtime-num-envs 4 --runtime-resets 100 --runtime-steps 200
+```
+
+生成 bundle 和运行输出使用独立的新目录。调用模型之前检查运行输出路径和正数检查数量；编译、文件 hash 或运行检查失败时立即终止。
+
 `inspect` 返回几何测量信息，未经验证的操作能力保持 `unknown`。`layout` 使用 SciPy MILP 求解桌面范围、reset 范围和实体间距，保留锁定实体的位置。机器人路径与接触验证在运行报告中单独记录。
 
 ```bash
@@ -123,6 +135,24 @@ openso101 il replay --episode outputs/apple_dataset/episodes/episode_000000.hdf5
 ```
 
 `validate-runtime` 默认运行四个环境、100 次 reset 和 200 个随机控制步骤，检查状态与数值有效性。`--cameras` 同时检查双相机图像。报告状态为 `runtime_verified`，任务完成、完整路径和成功采集保留独立检查要求。
+
+已有 bundle 可以通过统一入口执行相同的完整程序检查：
+
+```bash
+openso101 scenes prepare outputs/apple_bundle --output outputs/apple_prepared \
+  --num-envs 4 --resets 100 --steps 200
+openso101 il record --task OpenSO101-CustomScene-v0 \
+  --scene outputs/apple_prepared/compiled --teleop-device keyboard \
+  --repo-root outputs/apple_dataset
+```
+
+`prepare` 检查源 bundle、编译产物和场景 SHA256，执行全部 reset 范围检查，以及每个控制步骤的关节、实体、观测、reward 和双相机图像检查。相机报告包含形状、检查帧数和最小像素标准差；另行记录 episode 终止数量、控制周期及检查代码 SHA256。四个环境执行 200 个步骤时，每个相机检查 800 帧。
+
+`preparation.json` 保留源 manifest、编译清单与 runtime 报告的 SHA256，并验证请求数量与实际数量一致。`runtime_verified` 表示上述程序检查通过；动态稳定性、完整路径、接触几何、任务物体可见性、任务完成和成功采集保留在 `pending_checks`，`task_success_verified` 与 `dataset_verified` 保持 `false`。
+
+实际验证覆盖已有 Apple bundle 和真实 Astra 调用生成的 `so101_apple_move_right`。每项均完成四环境、100 次 reset、200 个控制步骤，每个相机检查 800 帧，关节、实体、观测和 reward 数值有效。生成场景的模型状态保持 `needs_review`；输入来自已保存仿真视频，度量重建与成功任务仍需验收。该生成场景另行录制双相机各 720 帧、512×512、60 FPS，供完整流程 MP4 演示使用；报告见 [运行记录](../validation/2026-09-29/README.md)。
+
+完整流程演示已生成 35 秒、1080p、30 FPS 的 MP4，全部 1050 帧解码检查通过。录制与视频构建脚本、目录要求和报告见 [演示说明](../validation/2026-09-29/README.md#agentic-场景生成演示)。
 
 键盘方向键控制平面移动，PageUp/PageDown 控制高度，A/D 控制旋转，Space 打开夹爪，Shift 关闭夹爪。damped least-squares IK 使用实际 Jacobian、关节限位与速度限制。leader 使用 `--teleop-device leader` 及原有设备参数。
 

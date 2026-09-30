@@ -144,6 +144,45 @@ PickPlace 使用 `OpenSO101-PickPlace-v0`、`pick_place_seed42/train.json` 和�
 
 ## CPU 检查
 
+场景编译与双相机运行入口版本为 `69c1ee6`。已有 Apple bundle 和真实 Astra 生成的 `so101_apple_move_right` 均完成四个环境、100 次 reset 和 200 个控制步骤；每个相机检查 800 帧，观测形状为 `(4, 34)`，episode 终止数量为 0。场景准备报告保存源 manifest、编译清单、runtime 报告和检查代码 SHA256，并核查请求数量与实际数量一致。
+
+生成调用使用已有仿真录制视频的两个采样帧、本地资产目录和离线资产检索配置，产生一项生成苹果资产，模型状态为 `needs_review`。完整模型结果保存在主机 `outputs/rl_progress/agent_runtime_prepared/agent_loop_result.json`；场景 SHA256 为 `f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537`。`runtime_verified` 保留程序检查范围，模型审查、任务接触、可达性、物体可见性和成功采集使用对应验收。
+
+生成场景的双相机另行录制各 720 帧、512×512、60 FPS。机器人使用已有键盘 HDF5 的前 720 帧绝对关节目标，每步 ActionManager 动作与源动作的误差阈值为 `1e-6`，相机和状态检查通过。录制报告保存场景、源键盘 HDF5、相机视频和录制代码的 SHA256；任务成功与真机运行保持未验证。
+
+主机运行脚本为 `run_scene_prepare.sh`、`run_agent_runtime.sh`、`run_agent_capture.sh` 和 `capture_agent_scene.py`，均保存在 `outputs/rl_progress/`。正式报告：
+
+- [已有 Apple 场景准备](apple_preparation_report.json)
+- [已有 Apple 场景运行](apple_prepare_runtime_report.json)
+- [模型生成场景准备](agent_preparation_report.json)
+- [模型生成场景运行](agent_prepare_runtime_report.json)
+- [模型生成场景双相机录制](agent_scene_capture_report.json)
+- [完整流程 MP4 检查](agent_demo_report.json)
+
+## Agentic 场景生成演示
+
+`outputs/rl_progress/agent_demo/OpenSO101-agentic-demo.mp4` 为 35 秒、1920×1080、30 FPS 的完整演示，全部 1050 帧经过实际解码检查。内容依次展示用户任务与视频输入、资产查询与生成、任务场景布局、Isaac 双相机运行和验收状态。场景和相机视频使用上述真实运行产物；输入为已有仿真视频，机器人动作来自已有键盘 HDF5，任务成功与真机运行保持未验证。
+
+演示 SHA256 为 `ee5cc580d0c7fbc5c69105e221875676de09d65657c0fddefa1f03b5851c04f9`。模型结果、录制报告与构建脚本 SHA256 保存在 [演示检查报告](agent_demo_report.json)。MP4 同时保存于 `jd_B300` 的 `outputs/rl_progress/OpenSO101-agentic-demo.mp4`。
+
+录制脚本为仓库中的 `scripts/capture_agent_scene.py`，在配置好的 Isaac 环境中使用编译场景、真实动作记录与新的输出目录执行：
+
+```bash
+PYTHONPATH=src /home/jixin/workspace/envs/openso101-v2/bin/python \
+  scripts/capture_agent_scene.py \
+  outputs/rl_progress/agent_runtime_prepared/compiled \
+  outputs/rl_progress/keyboard_dataset/episodes/episode_000001.hdf5 \
+  outputs/new_scene_capture --steps 720
+```
+
+`scripts/build_agent_demo.py` 使用 PyAV、Pillow 和 macOS 的 STHeiti 字体生成演示。输入目录需要包含实际运行的 `bundle/`、`prepared/`、`input_frames/` 和 `capture/`；脚本检查场景及视频 SHA256，要求两个输入采样帧和双相机各 720 帧，输出文件存在时立即终止。使用包含这些文件的新目录执行：
+
+```bash
+PYTHONPATH=src .venv/bin/python scripts/build_agent_demo.py outputs/my_demo
+```
+
+## 相机与部署检查
+
 sim2real 相机与停止控制的代码版本为 `9d1d711`。正式 `camera-check` 使用已有自定义场景的双相机视频，各读取全部 12 帧，metadata 为 128×128、60 FPS，图像转换使用部署入口相同的函数。视频使用 FFmpeg 从已保存的 AV1 编码转换为 H.264；全部解码帧数量、形状和 FPS 一致，归一化 RGB 平均绝对误差分别约为 0.00518、0.00192。两种编码的源文件和输出文件 SHA256 均保留。上述相机运行与 student 录制数据推理的进程均正常退出。
 
 真实保存的 student 用于停止文件、30／60Hz 控制频率和零步骤配置检查，通过实际函数调用观察确认均未连接 follower。停止文件存在时没有加载模型；控制频率检查实际加载 student 并拒绝不匹配的频率。共享初始姿态使用实际 Torch 和动作转换函数，生成时没有导入 Isaac。检查范围为程序与录制文件，真机运行保持未验证。

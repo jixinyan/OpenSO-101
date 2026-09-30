@@ -1,0 +1,25 @@
+{
+  "scene_sha256": "f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537",
+  "motion_episode_sha256": "da6fbb27454ca124e7cc088bef1c38b1330b81d69f2dcb839dd452ad4235b637",
+  "captured_env_index": 0,
+  "frames": 720,
+  "fps": 60,
+  "resolution": [
+    512,
+    512
+  ],
+  "task_success_verified": false,
+  "hardware_run_verified": false,
+  "videos": {
+    "overhead_camera": {
+      "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_demo_capture/overhead_camera.mp4",
+      "sha256": "0384254d3873918e6977880406eb82ab5b9403c484f0e141ce2dfefdbe2b8d7a"
+    },
+    "wrist_camera": {
+      "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_demo_capture/wrist_camera.mp4",
+      "sha256": "61effc42b929d5b7e8920109dea595fdac23bb7876642daa64ebeeb0f986ce70"
+    }
+  },
+  "capture_source_sha256": "2ef78766271f9383c656aa6f61db57172c0d47deb14187736b4a6a2364b57be6",
+  "status": "scene_camera_capture_verified"
+}

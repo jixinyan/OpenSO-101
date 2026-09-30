@@ -1,0 +1,17 @@
+{
+  "status": "demo_video_verified",
+  "path": "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/agent_demo/OpenSO101-agentic-demo.mp4",
+  "sha256": "ee5cc580d0c7fbc5c69105e221875676de09d65657c0fddefa1f03b5851c04f9",
+  "frames": 1050,
+  "fps": 30,
+  "duration_seconds": 35,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "scene_sha256": "f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537",
+  "task_success_verified": false,
+  "agent_result_sha256": "64f23495c96a3e86d5dd6d3462b1bcf0d23ac328431e97773f1ef724351dfe76",
+  "capture_report_sha256": "c7cb0d6d4e15bfabc3c39226627aaabcd44610e3ca4f0862d81ca7d6573af254",
+  "builder_sha256": "527ae5cf767e3e7a4ecb0062697b9062bdfde137170de10d7ec119e51580a6ae"
+}
