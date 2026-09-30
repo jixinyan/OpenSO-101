@@ -237,6 +237,7 @@ def evaluate(args):
         "success_rate": sum(record["success"] for record in records) / len(records),
         "kinematics": kinematics, "mujoco_version": mujoco.__version__,
         "policy_sha256": metadata["files"]["policy.pt"], "robot_model_sha256": digest(robot_model),
+        "policy_metadata_sha256": digest(policy_folder / "policy.json"),
         "robot_meshes": {path.name: digest(path) for path in sorted((robot_model.parent / "assets").glob("*.stl"))},
         "isaac_trace_sha256": digest(policy_folder / "isaac_validation.hdf5"),
         "trajectory_sha256": digest(output / "trajectory.hdf5"), "control_dt": control_dt,

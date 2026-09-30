@@ -26,12 +26,16 @@ def table_collision_geometry(stage, table_path, root_position, root_quaternion):
     if points.ndim != 2 or points.shape[1] != 3 or not len(points) or not np.isfinite(points).all():
         raise ValueError("桌面 collision mesh points 无效")
     matrix = np.asarray(UsdGeom.XformCache().GetLocalToWorldTransform(collider))
+    if not np.isfinite(matrix).all():
+        raise ValueError("桌面 box transform 需要有限值")
     minimum, maximum = points.min(axis=0), points.max(axis=0)
     if (maximum <= minimum).any():
         raise ValueError("桌面 collision mesh 需要正数尺寸")
     if not np.all(np.minimum(np.abs(points-minimum), np.abs(points-maximum)) <= 1e-8):
         raise ValueError("桌面 collision mesh 需要 box 顶点")
     scales = np.linalg.norm(matrix[:3, :3], axis=1)
+    if (scales <= 0).any():
+        raise ValueError("桌面 box scale 必须为正数")
     axes = matrix[:3, :3] / scales[:, None]
     if not np.allclose(axes @ axes.T, np.eye(3), atol=1e-8, rtol=0) or np.linalg.det(axes) <= 0:
         raise ValueError("桌面 box transform 需要正数 scale 与正交坐标")

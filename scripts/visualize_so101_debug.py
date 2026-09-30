@@ -42,6 +42,7 @@ for column, task in enumerate(("lift", "pick_place")):
         native_q = trace["joint_position"][:, environment, joint]
         native_v = trace["joint_velocity"][:, environment, joint]
         native_object = trace["object_position_root"][:, environment]
+        native_objects = trace["object_position_root"][:]
         jaw = trace["joint_targets"][:, :, 5]
         raw_jaw = trace["raw_action"][:, :, 5]
         policy_time = np.arange(len(jaw))*.02
@@ -76,10 +77,15 @@ for column, task in enumerate(("lift", "pick_place")):
     table_axes[column].set_title(f"{task}: object vertical difference (mm)")
     table_axes[column].set_xlabel("time (s)")
     measured = next(row for row in table["conditions"] if row["task"] == task)
+    measured_arrays = np.load(args.table / f"{task}_velocity_measured_table.npz")
+    settled_error = max(float(np.linalg.norm(measured_arrays[f"env_{index}_object_position"][-1]
+                                            - native_objects[len(original[f"env_{index}_object_position"])-1, index]))
+                        for index in range(native_objects.shape[1]))
     checks.append({"task": task, "paired_no_contact_maximum_difference": without_contact_error,
                    "paired_effort_limit_maximum_difference": effort_error,
                    "baseline_maximum_object_error_m": max(row["maximum_object_error_m"] for row in baseline["environments"]),
                    "measured_table_maximum_object_error_m": max(row["maximum_object_error_m"] for row in measured["environments"]),
+                   "measured_table_final_object_error_m": settled_error,
                    "raw_gripper_action_minimum": float(raw_jaw.min()), "raw_gripper_action_maximum": float(raw_jaw.max()),
                    "processed_gripper_target_minimum_rad": float(jaw.min()), "processed_gripper_target_maximum_rad": float(jaw.max())})
 axes[0, 0].legend(fontsize=8)
