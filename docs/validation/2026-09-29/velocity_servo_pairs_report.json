@@ -1,0 +1,52 @@
+{
+  "status": "actual_velocity_servo_pairs_verified",
+  "tasks": [
+    {
+      "task": "OpenSO101-Lift-v0",
+      "paired_input_verified": true,
+      "environments": 4,
+      "steps_per_environment": [
+        250,
+        250,
+        250,
+        250
+      ],
+      "position_pd_max_position_error_rad": 0.6309368125228876,
+      "velocity_servo_max_position_error_rad": 0.16383489336608442,
+      "position_pd_max_control_sample_speed_rad_s": 13.373408857229844,
+      "velocity_servo_max_physics_sample_speed_rad_s": 2.0176286704263493,
+      "velocity_servo_max_overspeed_rad_s": 0.017628670426349302,
+      "maximum_velocity_command_error_rad_s": 0.0,
+      "maximum_native_force_error_nm": 4.440892098500626e-16,
+      "servo_report_sha256": "96658bfe2b31020b6ec4aba695c8cb95421f0a4e75d1625194e423244a387400",
+      "control_report_sha256": "0ecb5dd21357e8be3689585c29c0e51a2762d481848eee8a56b6a9a5c48d9b1e",
+      "velocity_constraint_equivalence_verified": false,
+      "physics_equivalence_verified": false,
+      "task_success_verified": false
+    },
+    {
+      "task": "OpenSO101-PickPlace-v0",
+      "paired_input_verified": true,
+      "environments": 4,
+      "steps_per_environment": [
+        400,
+        400,
+        400,
+        400
+      ],
+      "position_pd_max_position_error_rad": 0.28083590793236923,
+      "velocity_servo_max_position_error_rad": 0.13260381359174445,
+      "position_pd_max_control_sample_speed_rad_s": 7.030537136005521,
+      "velocity_servo_max_physics_sample_speed_rad_s": 2.215268333106417,
+      "velocity_servo_max_overspeed_rad_s": 0.21526833310641713,
+      "maximum_velocity_command_error_rad_s": 0.0,
+      "maximum_native_force_error_nm": 2.220446049250313e-16,
+      "servo_report_sha256": "a12af846d74a4f1bd7dcc5a9b692fc512528730817c6d6d0746d0da739da3273",
+      "control_report_sha256": "b60958dbca45e094568b168a9ffff9ef92ef376544becad7752f77c27f7749a0",
+      "velocity_constraint_equivalence_verified": false,
+      "physics_equivalence_verified": false,
+      "task_success_verified": false
+    }
+  ],
+  "checker_sha256": "b065e730e10c02a4ee926c19fdb40a21d5ffdb10743ddca1ce0fe5b30d2ab5b5"
+}

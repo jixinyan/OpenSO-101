@@ -124,13 +124,47 @@ PYTHONPATH=src /home/jixin/workspace/envs/openso101-v2/bin/python \
 
 该实验确认速度限制会明显改变这些动作的实际运动。每组的物理参数和 PD 一致性检查通过；新场景的随机物理参数没有完整恢复为源记录参数，因此 `source_physics_reproduction_verified=false`。1000 rad/s 仅用于本次因素控制实验。跨模拟器物理等价与任务成功仍未验证。
 
-下一项 sim2sim 目标是在 MuJoCo 中实现并验证速度受限的驱动行为，比较相同输入下的速度与关节轨迹，同时记录机器人质量、惯性和接触参数。该驱动需要保持动力学与接触求解的作用；直接修改关节速度不能提供对应的 solver 行为验证。
+MuJoCo 的受限速度目标驱动及实际比较见下节。当前继续记录机器人质量、惯性与接触参数，检查实际速度超过目标限制的行为。
 
 六项实际无效输入检查均在启动 Isaac 前终止，覆盖单步骤、无效或非有限速度限制、源轨迹数量不足、episode 边界和已有输出目录。
 
 - [Lift 原生速度限制报告](../validation/2026-09-29/lift_native_velocity_report.json)
 - [PickPlace 原生速度限制报告](../validation/2026-09-29/pick_place_native_velocity_report.json)
 - [六项输入拒绝检查](../validation/2026-09-29/native_velocity_guards_report.json)
+
+## MuJoCo 受限速度目标驱动
+
+`4485a89` 为 `sim2sim compare` 添加 `--velocity-servo`。位置反馈生成 `clip(kp / kd × (target - q), -limit, limit)`，每个物理步骤重新计算。MuJoCo 原生 actuator 使用速度反馈产生力矩，保留原来的 effort limits、惯性、摩擦与接触求解；实际关节状态由物理步骤生成。`--recorded-pd` 使用源记录的实际 `kp`、`kd`，速度目标范围使用实际 `joint_vel_limits`。配置要求正数 damping 与速度限制，stiffness 非负。
+
+```bash
+openso101 sim2sim compare --policy outputs/rl_progress/lift_physics_portable_50 \
+  --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --episodes 4 --steps 500 --recorded-pd --velocity-servo \
+  --output outputs/lift_velocity_servo
+```
+
+每个环境的 `physics_steps/` 保存物理步骤之前的关节位置与速度、之后的实际速度、原生 actuator 力矩、速度目标和限制。报告分别记录实际速度超过目标限制的幅度与采样比例，并检查速度目标和力矩满足配置范围。`drive_model=bounded_velocity_reference_servo`，`velocity_constraint_equivalence_verified=false`。
+
+本地 MuJoCo 3.14.0 对两个任务各运行四个环境，并重新运行相同输入的 position PD 控制组。Lift 每环境 250 个控制步骤，PickPlace 每环境 400 个；原始关节目标、实际 Isaac 状态、PD 与速度限制逐项一致。每个控制步骤包含十个 0.002 秒的物理步骤。
+
+| 指标 | Lift | PickPlace |
+|---|---:|---:|
+| position PD 最大关节位置误差 | 0.63094 rad | 0.28084 rad |
+| velocity servo 最大关节位置误差 | 0.16383 rad | 0.13260 rad |
+| position PD 控制采样最大速度 | 13.37341 rad/s | 7.03054 rad/s |
+| velocity servo 物理采样最大速度 | 2.01763 rad/s | 2.21527 rad/s |
+| 实际速度超过 2 rad/s 的最大幅度 | 0.01763 rad/s | 0.21527 rad/s |
+
+速度目标公式与全部物理步骤记录的误差为 0；原生 actuator 力矩与速度误差反馈公式的最大差异小于 `4.5e-16` N·m。全部速度目标与力矩范围检查通过。两个任务均减少了这些记录动作的最大关节位置差异，仍存在实际速度超过目标限制的情况。该结果的范围为已记录动作的动力学比较；PhysX solver 速度约束等价、质量与接触等价，以及任务迁移均待验证。
+
+下一项检查使用实际 Isaac 质量、惯性、COM 与材质数据，与 MuJoCo 对应机器人实体逐项比较，继续定位速度响应和接触差异。
+
+- [Lift velocity servo](../validation/2026-09-29/lift_velocity_servo_report.json)
+- [PickPlace velocity servo](../validation/2026-09-29/pick_place_velocity_servo_report.json)
+- [Lift position PD 控制组](../validation/2026-09-29/lift_position_pd_control_report.json)
+- [PickPlace position PD 控制组](../validation/2026-09-29/pick_place_position_pd_control_report.json)
+- [相同输入与原生力矩检查](../validation/2026-09-29/velocity_servo_pairs_report.json)
+- [四项实际输入拒绝检查](../validation/2026-09-29/velocity_servo_guards_report.json)
 
 ## sim2real 视觉策略检查
 

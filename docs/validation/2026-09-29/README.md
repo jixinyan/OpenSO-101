@@ -35,6 +35,22 @@
 - [输入拒绝检查](native_velocity_guards_report.json)
 - [运行方式与后续目标](../../guides/sim2sim.md#原生-isaac-速度限制实验)
 
+## MuJoCo velocity servo 运行
+
+`4485a89` 使用原生 velocity servo 与受限速度目标，保留 effort limits 和物理求解。Lift 与 PickPlace 各完成四环境，分别为每环境 250／400 个控制步骤、2500／4000 个物理步骤。相同源轨迹的 position PD 控制组重新运行完成，实际输入逐项一致。
+
+Lift 的最大关节位置误差由 0.63094 减少至 0.16383 rad，PickPlace 由 0.28084 减少至 0.13260 rad。每个物理步骤记录的最大速度分别为 2.01763 和 2.21527 rad/s。速度目标公式与记录的误差为 0，原生 actuator 力矩反馈公式误差小于 `4.5e-16` N·m，全部速度目标与力矩范围检查通过。实际速度超过目标限制的行为保留在报告中，solver 约束等价、物理等价与任务成功仍未验证。
+
+完整 HDF5 与报告保存在本地和主机 `outputs/rl_progress/lift_velocity_servo_final/`、`pick_place_velocity_servo_final/`、`lift_position_pd_control/`、`pick_place_position_pd_control/`。检查脚本为同目录下的 `check_velocity_servo_results.py` 和 `check_velocity_servo_guards.py`，报告保留其代码 SHA256。四项无效输入请求使用实际文件检查，覆盖已有输出、单步骤、超过源记录数量和旧轨迹缺少速度限制字段。
+
+- [Lift 原始报告](lift_velocity_servo_report.json)
+- [PickPlace 原始报告](pick_place_velocity_servo_report.json)
+- [Lift position PD 控制组](lift_position_pd_control_report.json)
+- [PickPlace position PD 控制组](pick_place_position_pd_control_report.json)
+- [配对输入与原生力矩检查](velocity_servo_pairs_report.json)
+- [四项输入拒绝检查](velocity_servo_guards_report.json)
+- [运行方式](../../guides/sim2sim.md#mujoco-受限速度目标驱动)
+
 ## 运行环境与模型
 
 - 主机：`jd_B300`，NVIDIA H20G；Isaac Sim 5.1、Isaac Lab 2.3、Torch 2.7.0+cu128。

@@ -1,0 +1,27 @@
+{
+  "status": "actual_velocity_servo_guards_verified",
+  "cases": [
+    {
+      "name": "existing_output",
+      "returncode": 1,
+      "expected_error": "FileExistsError"
+    },
+    {
+      "name": "single_step",
+      "returncode": 1,
+      "expected_error": "steps 必须大于 1"
+    },
+    {
+      "name": "excess_steps",
+      "returncode": 1,
+      "expected_error": "请求数量超过实际 Isaac 记录数量"
+    },
+    {
+      "name": "missing_velocity_record",
+      "returncode": 1,
+      "expected_error": "velocity-servo 需要实际 Isaac 速度限制记录"
+    }
+  ],
+  "comparison_source_sha256": "b13b93deda85a2669110ddab1e5d572250ec3f51d2a044eb60f7416327c9631e",
+  "checker_sha256": "42274f657ddfbd4ce2c3a4a6e0f36c1f935188a505006ac0363fead23baf40c7"
+}
