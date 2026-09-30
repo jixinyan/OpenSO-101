@@ -206,8 +206,7 @@ class OpenSO101HDF5TeleopRecorder:
         self._flushed_frames = 0
         # Checkpoint frame indices recorded for the current episode.
         self._checkpoints: list[int] = []
-        # Sim-state key set discovered on the first frame that supplied
-        # sim_state. Subsequent frames are expected to provide the same keys.
+        # 首帧确定 sim state 字段，后续每帧保持一致。
         self._sim_keys: tuple[str, ...] | None = None
         # Current on-disk file handle and path for the in-progress episode.
         self._h5: h5py.File | None = None
