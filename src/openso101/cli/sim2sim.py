@@ -13,6 +13,8 @@ def add_subparsers(parser):
     comparison.add_argument("--steps", type=int, default=500)
     comparison.add_argument("--recorded-pd", action="store_true", help="使用 Isaac 记录的每环境实际 PD 参数")
     comparison.add_argument("--velocity-servo", action="store_true", help="原生 velocity servo 使用受限速度目标，需要实际速度限制记录")
+    comparison.add_argument("--physics-components", nargs="+", choices=["bodies", "gravity", "armature", "friction"], default=[],
+                            help="使用实际实体参数、重力、armature 或已验证的零关节摩擦")
     comparison.add_argument("--output", required=True)
     comparison.set_defaults(func=_compare)
     physics = sub.add_parser("physics", help="比较实际 Isaac 实体质量、惯性、COM 与 MuJoCo 参数")

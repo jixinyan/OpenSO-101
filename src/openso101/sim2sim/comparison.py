@@ -9,6 +9,7 @@ from openso101.rl.config import digest
 from openso101.rl.portable import PortablePolicy
 from .mujoco import JOINT_NAMES, JOINT_OFFSETS, build_model, check_kinematics, jaw_forces
 from .velocity_servo import VelocityLimitedServo
+from .recorded_physics import COMPONENT_FIELDS, RecordedPhysics
 
 
 def compare(args):
@@ -22,6 +23,13 @@ def compare(args):
     policy = PortablePolicy(policy_folder)
     metadata = policy.metadata
     reference_path = policy_folder / "isaac_validation.hdf5"
+    if len(set(args.physics_components)) != len(args.physics_components):
+        raise ValueError("physics-components 不允许重复")
+    selected_fields = {name for component in args.physics_components for name in COMPONENT_FIELDS[component]}
+    if args.physics_components:
+        validation = json.loads((policy_folder / "validation.json").read_text())
+        if digest(reference_path) != validation["trace_sha256"]:
+            raise ValueError("实际物理轨迹 SHA256 与源报告不一致")
     with h5py.File(reference_path, "r") as trace:
         positions = trace["joint_position"][:]
         if positions.ndim != 3 or positions.shape[2] != 6:
@@ -41,6 +49,10 @@ def compare(args):
         for name in physics_fields + ("object_linear_velocity_root", "object_angular_velocity_root"):
             if name in trace:
                 fields[name] = trace[name][:args.steps, :args.episodes]
+        for name in selected_fields:
+            if name not in trace:
+                raise ValueError(f"所选实际物理参数缺少源字段: {name}")
+            fields[name] = trace[name][:args.steps] if name == "scene_gravity" else trace[name][:args.steps, :args.episodes]
     for name, values in fields.items():
         if not np.isfinite(values).all():
             raise ValueError(f"Isaac 原始数据含有无效数值: {name}")
@@ -66,6 +78,24 @@ def compare(args):
     for name in ("terminated", "truncated"):
         if fields[name].shape != (args.steps, args.episodes):
             raise ValueError(f"Isaac 终止标记形状不一致: {name}")
+    if "gravity" in args.physics_components and fields["scene_gravity"].shape != (args.steps, 3):
+        raise ValueError("实际重力需要 steps×3 形状")
+    if "bodies" in args.physics_components:
+        names = metadata["physics_recording"]["robot_body_names"]
+        if not names or len(names) != len(set(names)):
+            raise ValueError("实际实体名称必须完整且唯一")
+        body_shapes = {"robot_body_mass": (len(names),), "robot_body_inertia": (len(names), 9),
+                       "robot_body_com": (len(names), 7), "robot_body_position_root": (len(names), 3),
+                       "robot_body_quaternion_root": (len(names), 4), "object_body_mass": (1,),
+                       "object_body_inertia": (9,), "object_body_com": (7,)}
+        for name, shape in body_shapes.items():
+            if fields[name].shape != (args.steps, args.episodes, *shape):
+                raise ValueError(f"实际实体参数形状不一致: {name}")
+    for name in ("joint_armature", "joint_friction_coeff"):
+        if name in selected_fields and (fields[name] < 0).any():
+            raise ValueError(f"实际物理参数需要非负: {name}")
+    if "friction" in args.physics_components and np.any(fields["joint_friction_coeff"] != 0):
+        raise ValueError("实际非零摩擦系数需要独立的 frictionloss 转换验证")
     model = build_model(robot_model, metadata)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
@@ -100,13 +130,18 @@ def compare(args):
                 mujoco.mju_quat2Mat(rotation, data.qpos[object_qpos_id + 3:object_qpos_id + 7])
                 data.qvel[object_dof_id + 3:object_dof_id + 6] = rotation.reshape(3, 3).T @ fields["object_angular_velocity_root"][0, episode]
             mujoco.mj_forward(model, data)
+            recorded_physics = RecordedPhysics(model, metadata, fields, args.physics_components, episode)
             initial_position_error = float(np.max(np.abs(data.qpos[joint_qpos_ids] - JOINT_OFFSETS - fields["joint_position"][0, episode])))
             initial_velocity_error = float(np.max(np.abs(data.qvel[joint_dof_ids] - fields["joint_velocity"][0, episode])))
             if initial_position_error > 1e-6 or initial_velocity_error > 1e-6:
                 raise ValueError("MuJoCo 初始关节状态与源数据不一致")
             buffers = {name: [] for name in ("joint_position", "joint_velocity", "object_position_root", "jaw_forces")}
             physics_buffers = {name: [] for name in ("joint_position_before", "joint_velocity_before", "joint_velocity", "actuator_force", "velocity_command", "velocity_limits")}
+            parameter_buffers = {}
             for step in range(steps):
+                recorded_physics.apply(data, step)
+                for name, value in recorded_physics.snapshot().items():
+                    parameter_buffers.setdefault(name, []).append(value)
                 buffers["joint_position"].append(data.qpos[joint_qpos_ids].copy() - JOINT_OFFSETS)
                 buffers["joint_velocity"].append(data.qvel[joint_dof_ids].copy())
                 buffers["object_position_root"].append(data.xpos[object_id].copy())
@@ -150,6 +185,10 @@ def compare(args):
             for name in physics_fields:
                 if name in fields:
                     group.create_dataset(f"isaac/{name}", data=fields[name][:steps, episode])
+            for name in selected_fields - set(physics_fields):
+                group.create_dataset(f"isaac/{name}", data=fields[name][:steps] if name == "scene_gravity" else fields[name][:steps, episode])
+            for name, values in parameter_buffers.items():
+                group.create_dataset(f"model_parameters/{name}", data=np.asarray(values))
             peak_step, peak_joint = np.unravel_index(np.argmax(np.abs(position_error)), position_error.shape)
             records.append({
                 "source_env_index": episode, "steps": steps,
@@ -174,6 +213,7 @@ def compare(args):
                 "mujoco_max_joint_speed_rad_s": np.max(np.abs(arrays["joint_velocity"]), axis=0).tolist(),
                 "recorded_physics_initial": {name: fields[name][0, episode].tolist() for name in physics_fields if name in fields},
             })
+            records[-1]["recorded_physics"] = recorded_physics.report()
             if servo is not None:
                 physics_arrays = {name: np.asarray(values) for name, values in physics_buffers.items()}
                 if any(not np.isfinite(values).all() for values in physics_arrays.values()):
@@ -211,12 +251,14 @@ def compare(args):
         "sampling": "state_before_each_control_step",
         "pd_source": "recorded_Isaac_per_environment" if args.recorded_pd else "nominal_policy_metadata",
         "drive_model": "bounded_velocity_reference_servo" if args.velocity_servo else "position_pd",
+        "physics_components": args.physics_components,
+        "recorded_physics_source_sha256": digest(Path(__file__).with_name("recorded_physics.py")),
         "velocity_constraint_equivalence_verified": False,
         "velocity_servo_source_sha256": digest(Path(__file__).with_name("velocity_servo.py")) if args.velocity_servo else None,
         "source_object_velocity_available": velocity_available,
         "mujoco_initial_object_velocity": "recorded_Isaac" if velocity_available else "zero",
         "physics_equivalence_verified": False, "task_success_verified": False,
-        "limitations": ["Isaac 实际质量、惯性与接触材质未记录", "两个模拟器的接触、惯性、摩擦和速度限制需要独立测量"]
+        "limitations": ["两个模拟器的接触材质、碰撞与 solver 速度约束需要独立测量", "实际参数应用范围见 physics_components"]
         + ([] if velocity_available else ["Isaac 物体初始速度未记录"]),
     }
     (output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))

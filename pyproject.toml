@@ -57,6 +57,7 @@ dev = [
 ]
 wandb = ["wandb"]
 sim2sim = ["mujoco==3.14.0", "scipy>=1.14"]
+analysis = ["plotly>=6,<7"]
 scenes = [
     "objaverse==0.1.7",
     "pydantic>=2.10,<3",
