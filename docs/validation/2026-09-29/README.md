@@ -20,6 +20,21 @@
 - [PickPlace 实际 PD](pick_place_recorded_pd_report.json)
 - [实际输入配对检查](pd_comparison_pairs_report.json)
 
+## 原生速度限制的配对运行
+
+`51647ee` 在同一实际 Isaac 场景中对 Lift 与 PickPlace 各运行四组配对环境、100 个控制步骤。原生接口检查每组质量、惯性、材质、关节参数和每步 PD 一致，初始关节位置与速度误差为 0。每组使用相同已记录关节目标，原生 solver 速度限制分别为 2 和 1000 rad/s。
+
+2 rad/s 组的最大关节速度约为 2.014 rad/s；1000 rad/s 组的 Lift 与 PickPlace 分别为 19.46912 和 9.69941 rad/s，配对关节位置最大差异为 0.54092 和 0.26580 rad。2 rad/s 组与源轨迹的最大关节位置差异分别为 0.000253 和 0.000257 rad。该运行确认速度限制对当前轨迹的影响；源场景随机物理参数完整恢复、跨模拟器物理等价和任务成功均保持未验证。
+
+运行入口为 `scripts/check_isaac_velocity_limit.py`，执行代码 SHA256 为 `f2f28d4ba76ae380593fc8edb0317daaa8c888950c36d9e8293ccefca2b9900c`。主机与本地均保留 `outputs/rl_progress/lift_velocity_limit/` 和 `pick_place_velocity_limit/` 中的实际 HDF5 与原始报告。主机执行脚本为 `outputs/rl_progress/run_velocity_experiment.sh`，日志为 `velocity_experiment.log`。物理周期 0.01 秒，控制周期 0.02 秒；使用直接物理步骤。
+
+六项真实无效输入请求均在启动 Isaac 前终止：单步骤、无效速度限制、非有限速度限制、源轨迹数量不足、episode 边界和已有输出目录。
+
+- [Lift 原生实验报告](lift_native_velocity_report.json)
+- [PickPlace 原生实验报告](pick_place_native_velocity_report.json)
+- [输入拒绝检查](native_velocity_guards_report.json)
+- [运行方式与后续目标](../../guides/sim2sim.md#原生-isaac-速度限制实验)
+
 ## 运行环境与模型
 
 - 主机：`jd_B300`，NVIDIA H20G；Isaac Sim 5.1、Isaac Lab 2.3、Torch 2.7.0+cu128。

@@ -99,6 +99,39 @@ openso101 sim2sim compare --policy outputs/rl_progress/lift_grasp_v2_portable_50
 - [PickPlace 实际 PD 比较](../validation/2026-09-29/pick_place_recorded_pd_report.json)
 - [实际输入与来源配对检查](../validation/2026-09-29/pd_comparison_pairs_report.json)
 
+## 原生 Isaac 速度限制实验
+
+`scripts/check_isaac_velocity_limit.py` 在同一实际 Isaac 场景中建立四组配对环境，每组使用相同的关节与物体初始状态、实际 PD 和已记录的绝对关节目标。机器人与物体的质量、惯性、材质，以及关节参数通过原生接口读取并检查配对一致性。速度限制通过 `write_joint_velocity_limit_to_sim` 写入 PhysX，再读取实际 solver 参数确认；每组分别使用源记录的 2 rad/s 和实验参数 1000 rad/s。
+
+```bash
+PYTHONPATH=src /home/jixin/workspace/envs/openso101-v2/bin/python \
+  scripts/check_isaac_velocity_limit.py \
+  outputs/rl_progress/lift_physics_portable_50 \
+  outputs/rl_progress/lift_velocity_limit --steps 100
+```
+
+在配置好的 Isaac 环境中执行，PickPlace 使用 `pick_place_physics_portable_50` 和独立输出目录。每个任务使用八个环境、100 个控制步骤，控制周期 0.02 秒，物理周期 0.01 秒。实验直接执行物理步骤，期间没有任务重置和策略反馈计算。输出 `velocity_limit.hdf5` 与 `report.json`，保存实际轨迹、输入、物理参数，以及代码和源文件 SHA256。
+
+`51647ee` 在 `jd_B300` 完成两个任务的实际运行：
+
+| 指标 | Lift | PickPlace |
+|---|---:|---:|
+| 配对初始关节位置、速度误差 | 0 | 0 |
+| 2 rad/s 限制下最大关节速度 | 2.01409 rad/s | 2.01432 rad/s |
+| 1000 rad/s 限制下最大关节速度 | 19.46912 rad/s | 9.69941 rad/s |
+| 配对轨迹最大关节位置差异 | 0.54092 rad | 0.26580 rad |
+| 2 rad/s 轨迹与源记录最大关节位置差异 | 0.000253 rad | 0.000257 rad |
+
+该实验确认速度限制会明显改变这些动作的实际运动。每组的物理参数和 PD 一致性检查通过；新场景的随机物理参数没有完整恢复为源记录参数，因此 `source_physics_reproduction_verified=false`。1000 rad/s 仅用于本次因素控制实验。跨模拟器物理等价与任务成功仍未验证。
+
+下一项 sim2sim 目标是在 MuJoCo 中实现并验证速度受限的驱动行为，比较相同输入下的速度与关节轨迹，同时记录机器人质量、惯性和接触参数。该驱动需要保持动力学与接触求解的作用；直接修改关节速度不能提供对应的 solver 行为验证。
+
+六项实际无效输入检查均在启动 Isaac 前终止，覆盖单步骤、无效或非有限速度限制、源轨迹数量不足、episode 边界和已有输出目录。
+
+- [Lift 原生速度限制报告](../validation/2026-09-29/lift_native_velocity_report.json)
+- [PickPlace 原生速度限制报告](../validation/2026-09-29/pick_place_native_velocity_report.json)
+- [六项输入拒绝检查](../validation/2026-09-29/native_velocity_guards_report.json)
+
 ## sim2real 视觉策略检查
 
 `PortablePolicy` 接收状态观测，其中物体位置、任务目标与抓取状态需要实际观测来源。现有真机 deploy 使用视觉 student 或 LeRobot policy。视觉 student 与 PortablePolicy 共用关节动作转换函数，随后按已有 SO-101 映射转换为 LeRobot motor units。

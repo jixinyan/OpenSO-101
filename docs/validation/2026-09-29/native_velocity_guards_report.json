@@ -1,0 +1,36 @@
+{
+  "status": "native_velocity_guards_verified",
+  "cases": [
+    {
+      "name": "single_step",
+      "returncode": 1,
+      "expected_error": "steps 必须大于 1"
+    },
+    {
+      "name": "invalid_limit",
+      "returncode": 1,
+      "expected_error": "high-limit 必须大于 2"
+    },
+    {
+      "name": "nonfinite_limit",
+      "returncode": 1,
+      "expected_error": "high-limit 必须大于 2"
+    },
+    {
+      "name": "excess_steps",
+      "returncode": 1,
+      "expected_error": "源轨迹数量不足"
+    },
+    {
+      "name": "episode_boundary",
+      "returncode": 1,
+      "expected_error": "请求范围包含源 episode 的重置边界"
+    },
+    {
+      "name": "existing_output",
+      "returncode": 1,
+      "expected_error": "FileExistsError"
+    }
+  ],
+  "checked_source_sha256": "f2f28d4ba76ae380593fc8edb0317daaa8c888950c36d9e8293ccefca2b9900c"
+}
