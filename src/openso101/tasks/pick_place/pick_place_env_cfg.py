@@ -310,12 +310,7 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Gentle smoothness ramp after early lift/carry behavior can emerge.
-
-    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
-    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
-    we want delayed until lift fires (action_rate) belong here.
-    """
+    """超过指定控制步骤数量后调整 action_rate 权重。"""
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
@@ -393,7 +388,7 @@ class PickPlaceEnvCfg(OpenSO101EnvCfg):
         # SO-101 scene wiring.
         _configure_so101_pick_place_scene(self)
 
-        # Actions: arm joint-pos (delta scale) + gripper binary toggle.
+        # 手臂动作相对于默认姿态设置目标，夹爪动作通过正负符号控制开合。
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot",
             joint_names=list(SO101_ARM_JOINT_NAMES),

@@ -51,7 +51,7 @@ def build_model(robot_model, metadata):
     spec.option.gravity = [0, 0, -9.81]
     for index, name in enumerate(JOINT_NAMES):
         joint = spec.joint(name)
-        joint.damping = 0.
+        joint.damping[:] = 0.
         actuator = spec.actuator(name)
         stiffness = metadata["nominal_stiffness"][index]
         actuator.gainprm[0] = stiffness
@@ -157,6 +157,7 @@ def evaluate(args):
                 data.ctrl[actuator_ids] = targets + JOINT_OFFSETS
                 for _ in range(substeps):
                     mujoco.mj_step(model, data)
+                mujoco.mj_forward(model, data)
                 if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(warning.number for warning in data.warning):
                     raise RuntimeError("MuJoCo 物理运行产生无效状态或警告")
                 forces = jaw_forces(model, data)
@@ -178,7 +179,7 @@ def evaluate(args):
                             goal[2] = parameters["carry_height"]
                     velocity = np.zeros(6)
                     mujoco.mj_objectVelocity(model, data, mujoco.mjtObj.mjOBJ_BODY, object_id, velocity, 0)
-                    released = (stage == 2 and not grasped and qpos[-1] > parameters["jaw_open_min"]
+                    released = (stage == 2 and not grasped and data.qpos[joint_qpos_ids[-1]] > parameters["jaw_open_min"]
                                 and np.linalg.norm(object_position - parameters["place_goal"]) <= parameters["place_radius"]
                                 and np.linalg.norm(velocity[3:]) <= parameters["linear_speed_max"]
                                 and np.linalg.norm(velocity[:3]) <= parameters["angular_speed_max"])
@@ -198,6 +199,7 @@ def evaluate(args):
         "success_rate": sum(record["success"] for record in records) / len(records),
         "kinematics": kinematics, "mujoco_version": mujoco.__version__,
         "policy_sha256": metadata["files"]["policy.pt"], "robot_model_sha256": digest(robot_model),
+        "robot_meshes": {path.name: digest(path) for path in sorted((robot_model.parent / "assets").glob("*.stl"))},
         "isaac_trace_sha256": digest(policy_folder / "isaac_validation.hdf5"),
         "trajectory_sha256": digest(output / "trajectory.hdf5"), "control_dt": control_dt,
         "physics_dt": model.opt.timestep, "joint_offsets": JOINT_OFFSETS.tolist(),

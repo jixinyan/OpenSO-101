@@ -222,56 +222,36 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Minimal three-signal reward chain: reach -> lift -> goal-track-in-air.
+    """接近、双夹爪接触、物体高度和目标距离奖励。"""
 
-    No close_gripper shaping, no "controlled" gates. The lift reward (height-
-    only) implicitly rewards grasping because lifting the cube requires
-    closing the gripper. Goal-tracking is height-gated so it only fires once
-    the cube is airborne. Smoothness penalties start at 0 and curriculum-ramp
-    in once lift fires.
-    """
-
-    # Two-scale reach: coarse covers ~35cm starting distance, fine sharpens
-    # at grasp range.
+    # 两种距离尺度分别使用 0.20m 和 0.05m。
     reaching_object_coarse = RewTerm(
         func=mdp.object_ee_distance,
         params={"std": SO101_REACH_REWARD_COARSE_STD},
         weight=SO101_REACH_REWARD_COARSE_WEIGHT,
     )
-    # Fine reach attractor, de-weighted to fix the "camp at contact" failure:
-    # the old weight=1.0 fine-reach kernel peaks exactly where the gripper sits
-    # touching the cube, so the policy could maximise it by hovering against the
-    # cube WITHOUT closing the jaws — there was no gradient to cross the grasp
-    # transition. Dropping fine-reach to 0.5 and raising the grasp bonus to 6.0
-    # (below) makes confirming a grasp strictly out-value camping at contact.
-    # NEEDS VALIDATION: this is a weight re-balance, not a derived optimum; a
-    # training run is required to confirm the policy now grasps instead of camps.
+    # 根据末端与物体的距离持续计算接近奖励。
     reaching_object_fine = RewTerm(
         func=mdp.object_ee_distance,
         params={"std": SO101_REACH_REWARD_STD},
         weight=0.5,
     )
 
-    # Contact-confirmed grasp bonus (both jaws register force > threshold).
-    # Dense gradient for the close-then-lift sequence; without it the policy
-    # stalls on "just reach" before entropy collapses. Raised 3.0 -> 6.0 so the
-    # grasp transition out-values lingering in the (now de-weighted) fine-reach
-    # camp at the cube surface. NEEDS VALIDATION (see reaching_object_fine).
+    # 两侧夹爪同时测得大于 0.5N 的物体接触力时提供奖励。
     grasped = RewTerm(
         func=mdp.grasped_reward,
         params={"force_threshold": 0.5},
         weight=6.0,
     )
 
-    # Height-only lift reward. No AND-conjunction with gripper-closed or
-    # EE-near. Once the cube goes up, this fires.
+    # 根据物体高度计算抬升奖励。
     lifting_object = RewTerm(
         func=mdp.object_is_lifted,
         params={"minimal_height": SO101_CONTROLLED_OBJECT_MIN_HEIGHT},
         weight=3.0,
     )
 
-    # Height-only goal tracking, same minimal-height gate as the lift term.
+    # 达到高度条件后计算目标距离奖励。
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
         params={
@@ -282,9 +262,7 @@ class RewardsCfg:
         weight=5.0,
     )
 
-    # Sparse per-step bonus when the cube enters the goal region while
-    # still in the air. goal_radius matches the lift_success termination
-    # (0.05 m) so the reward fires inside the same success ball.
+    # 使用与 success termination 相同的高度和目标距离条件。
     success_bonus_in_air = RewTerm(
         func=mdp.object_reached_goal_in_air,
         params={
@@ -295,8 +273,7 @@ class RewardsCfg:
         weight=3.0,
     )
 
-    # Smoothness (zero-weighted initially; curriculum ramps them in
-    # once lift fires).
+    # action_rate 使用控制步骤计数调整；joint_vel 从训练开始启用。
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=SO101_ACTION_RATE_WEIGHT)
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
@@ -335,12 +312,7 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """Curriculum terms for the MDP.
-
-    NOTE: joint_vel is NOT in the curriculum — it's active from step 0
-    (see SO101_JOINT_VEL_WEIGHT). Only exploration-suppressing penalties
-    we want delayed until lift fires (action_rate) belong here.
-    """
+    """超过指定控制步骤数量后调整 action_rate 权重。"""
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
@@ -422,7 +394,7 @@ class LiftEnvCfg(OpenSO101EnvCfg):
         # SO-101 scene wiring.
         _configure_so101_lift_scene(self)
 
-        # Actions: arm joint-pos (delta scale) + gripper binary toggle.
+        # 手臂动作相对于默认姿态设置目标，夹爪动作通过正负符号控制开合。
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot",
             joint_names=list(SO101_ARM_JOINT_NAMES),
