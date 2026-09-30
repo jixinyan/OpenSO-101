@@ -28,6 +28,12 @@ _ALGO_TO_ENTRY_POINT = {
 }
 
 
+def _cmd_snapshot(args: argparse.Namespace) -> int:
+    from openso101.rl.snapshot import snapshot
+
+    return snapshot(args)
+
+
 def _cmd_train(args: argparse.Namespace) -> int:
     if getattr(args, "backend", None) or getattr(args, "scene", None) or getattr(args, "train_config", None) or getattr(args, "task_profile", None) or args.algo in ("sac", "tqc"):
         if args.algo == "distillation":
@@ -1258,6 +1264,12 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     )
     p_train.add_argument("--headless", action="store_true")
     p_train.set_defaults(func=_cmd_train)
+
+    p_snapshot = sub.add_parser("snapshot", help="保存训练中的 checkpoint 副本，用于独立评估")
+    p_snapshot.add_argument("--run", required=True, type=Path)
+    p_snapshot.add_argument("--checkpoint", required=True)
+    p_snapshot.add_argument("--output", required=True, type=Path)
+    p_snapshot.set_defaults(func=_cmd_snapshot)
 
     p_play = sub.add_parser("play", help="Replay a trained checkpoint")
     p_play.add_argument("--task", required=True)

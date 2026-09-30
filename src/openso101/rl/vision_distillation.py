@@ -110,7 +110,8 @@ def train_vision_student(env, teacher_folder: Path, output: Path, iterations: in
     runner.save(str(output / "distillation.pt"))
     torch.save(runner.alg.policy.student.state_dict(), output / "student.pt")
     (output / "student.json").write_text(json.dumps({
-        "schema_version": 1, "task_id": meta.task_id, "teacher_sha256": meta.files[meta.checkpoint],
+        "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile,
+        "teacher_sha256": meta.files[meta.checkpoint],
         "scene_sha256": meta.scene_sha256, "control_dt": env.unwrapped.step_dt,
         "observation_format": "motor_positions_and_two_rgb_cameras", "image_size": [64, 64],
         "action_mapping": action_mapping(env.unwrapped), "files": {"student.pt": digest(output / "student.pt")},

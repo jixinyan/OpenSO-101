@@ -112,9 +112,25 @@ def train(args):
 
         env = build_environment(args, training=True, scene=scene)
         dump_yaml(str(output / "environment.yaml"), env.unwrapped.cfg)
+        from .snapshot import TrainingRunMeta
+
+        source_files = {name: digest(output / name) for name in ("train.json", "source.zip", "environment.yaml")}
+        if scene:
+            source_files.update({path.relative_to(output).as_posix(): digest(path)
+                                 for path in scene.rglob("*") if path.is_file()})
+        start_iteration = 0
+        if previous and config.backend == "rsl_rl":
+            import torch
+
+            start_iteration = torch.load(resume / previous.checkpoint, map_location="cpu", weights_only=False)["iter"]
+        TrainingRunMeta(
+            task_id=args.task, task_profile=args.task_profile, config=config, git_sha=git_sha,
+            num_envs=env.unwrapped.num_envs, files=source_files, scene_sha256=scene_sha,
+            prior_transitions=previous.completed_transitions if previous else 0, start_iteration=start_iteration,
+        ).write(output)
         checkpoint = get_backend(config.backend).train(env, config, output, resume)
         files = {checkpoint.name: digest(checkpoint), "train.json": digest(output / "train.json")}
-        for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip"):
+        for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json"):
             if (output / name).exists():
                 files[name] = digest(output / name)
         if scene:
