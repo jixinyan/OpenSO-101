@@ -10,11 +10,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--plan", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--num-envs", type=int, default=4)
+parser.add_argument("--physics-dt", type=float, default=.01)
+parser.add_argument("--velocity-iterations", type=int, default=1)
+parser.add_argument("--max-depenetration-velocity", type=float, default=5.)
 args = parser.parse_args()
 plan = json.loads(args.plan.read_text())
 targets = np.asarray(plan["joint_targets"])
 if (args.output.exists() or args.num_envs <= 0 or targets.ndim != 2 or targets.shape[1] != 6
-        or not np.isfinite(targets).all() or len(plan["phases"]) != len(targets)):
+        or not np.isfinite(targets).all() or len(plan["phases"]) != len(targets)
+        or not np.isfinite(args.physics_dt) or args.physics_dt <= 0 or args.velocity_iterations <= 0
+        or not np.isfinite(args.max_depenetration_velocity) or args.max_depenetration_velocity <= 0):
     raise ValueError("夹爪检查需要有效计划、环境数量与尚未存在的输出目录")
 args.task = "OpenSO101-Lift-v0"
 args.task_profile = "grasp_v2"
@@ -27,14 +32,28 @@ app = AppLauncher(headless=True).app
 env = None
 try:
     import torch
+    import gymnasium as gym
+    from isaaclab_tasks.utils import parse_env_cfg
     from isaaclab.utils.math import combine_frame_transforms, subtract_frame_transforms
 
     from openso101.rl.config import digest
-    from openso101.rl.execution import build_environment
+    import openso101.tasks
+    from openso101.tasks.shared.grasp_profile import configure_grasp_profile
     from openso101.robots import SO101_SIM_JOINT_NAMES
     from openso101.tasks.shared.grasp import _jaw_force_magnitude
 
-    env = build_environment(args, training=False)
+    cfg = parse_env_cfg(args.task, device="cuda:0", num_envs=args.num_envs)
+    configure_grasp_profile(cfg, args.task)
+    cfg.configure_play(True)
+    cfg.configure_cameras(False)
+    cfg.seed = args.seed
+    cfg.sim.dt = args.physics_dt
+    cfg.decimation = round(plan["control_dt"] / cfg.sim.dt)
+    cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count = args.velocity_iterations
+    for asset in (cfg.scene.robot, cfg.scene.object):
+        asset.spawn.rigid_props.max_depenetration_velocity = args.max_depenetration_velocity
+    cfg.scene.object.spawn.rigid_props.solver_velocity_iteration_count = args.velocity_iterations
+    env = gym.make(args.task, cfg=cfg)
     env.reset()
     runtime = env.unwrapped
     robot = runtime.scene["robot"]
@@ -93,6 +112,8 @@ try:
     report = {"status": "native_scripted_gripper_physics_completed", "environments": records,
               "control_steps": len(targets), "physics_steps_per_environment": len(physics_velocity),
               "physics_dt": runtime.physics_dt, "control_dt": plan["control_dt"], "initial_physics": initial_physics,
+              "solver_velocity_iterations": args.velocity_iterations,
+              "maximum_depenetration_velocity_m_s": args.max_depenetration_velocity,
               "plan_sha256": digest(args.plan), "trajectory_sha256": digest(args.output / "trajectory.hdf5"),
               "source_code_sha256": digest(Path(__file__)), "controller": "scripted_IK_joint_targets",
               "rl_policy_success_verified": False, "physics_equivalence_verified": False}
