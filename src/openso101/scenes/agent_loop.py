@@ -25,6 +25,7 @@ from .layout import diagnose_layout
 from .model_client import ModelService
 from .models import (
     Asset,
+    Digest,
     Dimensions,
     Entity,
     Identifier,
@@ -180,6 +181,15 @@ class SO101ReadinessReview(BaseModel):
     suggested_changes: tuple[str, ...] = ()
 
 
+class SceneRevision(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, frozen=True)
+
+    revision: int = Field(ge=0)
+    scene_sha256: Digest
+    task_instruction: str = Field(min_length=1)
+    instruction_source: Literal["user_context", "video_description"]
+
+
 class AgentLoopResult(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, frozen=True)
 
@@ -197,6 +207,7 @@ class AgentLoopResult(BaseModel):
     physical: PlausibilityReview
     so101: SO101ReadinessReview
     iterations: tuple[dict[str, Any], ...] = ()
+    scene_revisions: tuple[SceneRevision, ...] = ()
     pending_checks: tuple[str, ...] = ()
 
 
@@ -374,10 +385,7 @@ class AstraScenePlanner:
             images=video.model_images(limit=self.image_limit),
         )
         if video.context.instruction and description.instruction != video.context.instruction:
-            # The task instruction is user-owned context.  Models may return a
-            # faithful paraphrase even when asked for an exact copy, so make
-            # the invariant deterministic at this boundary while preserving
-            # all model-produced perception fields.
+            # 用户任务文本保持原文，模型感知字段保留其生成结果。
             description = description.model_copy(update={"instruction": video.context.instruction})
         return description
 
@@ -490,24 +498,33 @@ class Real2SimAgentLoop:
     def run(self, video: RGBVideoInput, *, output: Path | None = None) -> AgentLoopResult:
         try:
             description = self.planner.describe(video)
+            instruction = video.context.instruction or description.instruction
+            if description.instruction != instruction:
+                description = description.model_copy(update={"instruction": instruction})
             requests = [AssetSearchRequest(entity_id=obj.entity_id, query=obj.asset_query)
                         for obj in description.objects]
             search_reports = tuple(
                 self._search_report(request) for request in requests
             )
             draft = self.planner.compose(video, description, search_reports)
-            if draft.task.instruction != description.instruction:
-                draft = draft.model_copy(update={
-                    "task": draft.task.model_copy(update={"instruction": description.instruction}),
-                })
             iterations: list[dict[str, Any]] = []
+            scene_revisions: list[SceneRevision] = []
             physical = None
             so101 = None
             spec = None
             static: dict[str, Any] = {}
             generated_asset_uids: tuple[str, ...] = ()
             for iteration in range(self.max_revisions + 1):
+                if draft.task.instruction != instruction:
+                    draft = draft.model_copy(update={
+                        "task": draft.task.model_copy(update={"instruction": instruction}),
+                    })
                 spec, generated_asset_uids = self._materialize(draft, search_reports)
+                scene_revisions.append(SceneRevision(
+                    revision=iteration, scene_sha256=spec.digest(),
+                    task_instruction=spec.task.instruction,
+                    instruction_source="user_context" if video.context.instruction else "video_description",
+                ))
                 static = diagnose_layout(spec, self.catalog)
                 if static["status"] != "static_checks_passed":
                     feedback = {"phase": "static", "diagnostics": static}
@@ -573,6 +590,7 @@ class Real2SimAgentLoop:
                 physical=physical,
                 so101=so101,
                 iterations=tuple(iterations),
+                scene_revisions=tuple(scene_revisions),
                 pending_checks=tuple(static.get("pending_checks", ())),
             )
         except AgentLoopError:
