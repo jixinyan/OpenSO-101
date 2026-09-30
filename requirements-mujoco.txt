@@ -5,6 +5,8 @@ numpy==1.26.4
 mujoco==3.14.0
 scipy==1.17.1
 osqp==1.1.1
+coacd==1.0.7
+trimesh==4.12.2
 h5py==3.16.0
 pydantic==2.13.5
 PyYAML==6.0.3

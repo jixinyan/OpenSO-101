@@ -38,7 +38,7 @@ def check_kinematics(model, trace):
             "maximum_rotation_error_rad": maximum_rotation_error}
 
 
-def build_model(robot_model, metadata):
+def build_model(robot_model, metadata, collision_bundle=None):
     spec = mujoco.MjSpec.from_file(str(robot_model))
     if [joint.name for joint in spec.joints] != list(JOINT_NAMES):
         raise ValueError("需要官方 SO-101 old-calibration MJCF 的六个关节")
@@ -66,6 +66,35 @@ def build_model(robot_model, metadata):
             geom.conaffinity = 6
             if geom.parent.name in ("gripper", "moving_jaw_so101_v1"):
                 geom.friction = [1.2, 0.005, 0.0001]
+    if collision_bundle is not None:
+        bundle = Path(collision_bundle).resolve()
+        manifest = json.loads((bundle / "manifest.json").read_text())
+        if manifest["schema_version"] != 1 or manifest["generator"] != "CoACD":
+            raise ValueError("需要已校验的 CoACD collision bundle")
+        replaced = set()
+        for geom in list(spec.geoms):
+            if not (geom.contype or geom.conaffinity) or geom.meshname not in manifest["meshes"]:
+                continue
+            name = geom.meshname
+            record = manifest["meshes"][name]
+            if digest(Path(robot_model).parent / "assets" / f"{name}.stl") != record["source_sha256"]:
+                raise ValueError("collision bundle 的原始 STL 校验失败")
+            if len(record["parts"]) < 2 or name in replaced:
+                raise ValueError("collision bundle 的实体或 convex parts 不完整")
+            for index, part in enumerate(record["parts"]):
+                path = (bundle / part["file"]).resolve()
+                if not path.is_relative_to(bundle) or digest(path) != part["sha256"]:
+                    raise ValueError("collision bundle 的 convex part 校验失败")
+                part_name = f"collision_{name}_{index:03d}"
+                spec.add_mesh(name=part_name, file=str(path))
+                geom.parent.add_geom(name=part_name, type=mujoco.mjtGeom.mjGEOM_MESH, meshname=part_name,
+                                     pos=geom.pos, quat=geom.quat, contype=geom.contype, conaffinity=geom.conaffinity,
+                                     friction=geom.friction, solref=geom.solref, solimp=geom.solimp, group=3)
+            geom.contype = 0
+            geom.conaffinity = 0
+            replaced.add(name)
+        if replaced != set(manifest["meshes"]):
+            raise ValueError("collision bundle 中的 mesh 未完整应用")
     if "table_geometry" in metadata:
         geometry = metadata["table_geometry"]
         position = np.asarray(geometry["position_root"], dtype=float)
@@ -88,7 +117,12 @@ def build_model(robot_model, metadata):
     cube.add_freejoint(name="object_free")
     cube.add_geom(name="object", type=mujoco.mjtGeom.mjGEOM_BOX, size=np.asarray(metadata["object_size"]) / 2,
                   mass=metadata["object_mass"], contype=2, conaffinity=5, friction=[1, 0.005, 0.0001])
-    return spec.compile()
+    compiled = spec.compile()
+    if collision_bundle is not None:
+        for name in ("body_mass", "body_ipos", "body_inertia", "body_iquat"):
+            if not np.allclose(getattr(compiled, name)[:model.nbody], getattr(model, name), atol=1e-12, rtol=0):
+                raise RuntimeError("碰撞表示改变了机器人质量、COM 或惯性")
+    return compiled
 
 
 def jaw_forces(model, data):
