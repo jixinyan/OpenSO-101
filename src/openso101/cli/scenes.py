@@ -65,6 +65,13 @@ def add_subparsers(parser: argparse.ArgumentParser):
     runtime.add_argument("--resets", type=int, default=100)
     runtime.add_argument("--cameras", action="store_true")
     runtime.set_defaults(func=_validate_runtime)
+    prepare = sub.add_parser("prepare", help="编译场景并执行 Isaac 双相机与并行环境检查")
+    prepare.add_argument("bundle", type=Path)
+    prepare.add_argument("--output", type=Path, required=True)
+    prepare.add_argument("--num-envs", type=int, default=4)
+    prepare.add_argument("--steps", type=int, default=200)
+    prepare.add_argument("--resets", type=int, default=100)
+    prepare.set_defaults(func=_prepare)
     save = sub.add_parser("save", help="Save a scene revision with an expected base revision")
     save.add_argument("scene_file", type=Path)
     save.add_argument("--store", type=Path, default=Path("outputs/scenes.sqlite"))
@@ -156,6 +163,10 @@ def add_subparsers(parser: argparse.ArgumentParser):
     agent.add_argument("--offline-objaverse", action="store_true",
                        help="Skip online Objaverse metadata/downloads and let Astra generate missing assets")
     agent.add_argument("--output", type=Path, required=True, help="Output portable scene bundle")
+    agent.add_argument("--runtime-output", type=Path, help="保存自动编译与 Isaac 双相机运行检查")
+    agent.add_argument("--runtime-num-envs", type=int, default=4)
+    agent.add_argument("--runtime-steps", type=int, default=200)
+    agent.add_argument("--runtime-resets", type=int, default=100)
     agent.add_argument("--base-url", default=os.environ.get("SCENE_MODEL_BASE_URL"))
     agent.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME"))
     agent.add_argument("--api-key-env", default="SCENE_MODEL_API_KEY")
@@ -239,6 +250,14 @@ def _agent_loop(args):
     if args.output.exists():
         raise FileExistsError(args.output)
 
+    if args.runtime_output is not None:
+        if args.runtime_output.exists():
+            raise FileExistsError(args.runtime_output)
+        if args.runtime_output.resolve().is_relative_to(args.output.resolve()):
+            raise ValueError("场景准备输出需要位于源 bundle 目录以外")
+        if min(args.runtime_num_envs, args.runtime_steps, args.runtime_resets) <= 0:
+            raise ValueError("环境数量、步骤数量和 reset 次数必须大于零")
+
     # LitchiAgent keeps the active Astra provider in this runtime config.  We
     # discover it for the local checkout while still allowing an explicit path
     # or the normal SCENE_MODEL_* environment variables to take precedence.
@@ -286,6 +305,19 @@ def _agent_loop(args):
         max_revisions=args.max_revisions,
     )
     result = loop.run(video, output=args.output)
+    if args.runtime_output is not None:
+        from openso101.scenes.preparation import prepare_scene
+
+        prepared = prepare_scene(
+            Path(result.bundle), args.runtime_output, num_envs=args.runtime_num_envs,
+            steps=args.runtime_steps, resets=args.runtime_resets,
+        )
+        result = result.model_copy(update={
+            "compiled_scene": prepared["compiled_scene"], "runtime_validation": prepared["runtime"],
+            "pending_checks": tuple(prepared["pending_checks"]),
+        })
+        with (args.runtime_output / "agent_loop_result.json").open("x") as stream:
+            stream.write(result.model_dump_json(indent=2))
     print(result.model_dump_json(indent=2))
 
 
@@ -382,4 +414,11 @@ def _validate_runtime(args):
     report = json.loads(args.output.read_text())
     if report["scene_sha256"] != compilation["scene_sha256"] or report["status"] != "runtime_verified":
         raise ValueError("运行报告与请求场景不匹配")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+
+def _prepare(args):
+    from openso101.scenes.preparation import prepare_scene
+
+    report = prepare_scene(args.bundle, args.output, num_envs=args.num_envs, steps=args.steps, resets=args.resets)
     print(json.dumps(report, ensure_ascii=False, indent=2))

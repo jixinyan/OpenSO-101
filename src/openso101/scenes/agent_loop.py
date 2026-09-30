@@ -191,6 +191,8 @@ class AgentLoopResult(BaseModel):
     scene_sha256: str | None
     generated_asset_uids: tuple[str, ...] = ()
     bundle: str | None = None
+    compiled_scene: str | None = None
+    runtime_validation: dict[str, Any] | None = None
     static_diagnostics: dict[str, Any]
     physical: PlausibilityReview
     so101: SO101ReadinessReview
