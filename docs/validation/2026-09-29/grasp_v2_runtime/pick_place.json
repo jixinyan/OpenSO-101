@@ -1,0 +1,120 @@
+{
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v2",
+  "steps": 300,
+  "num_envs": 4,
+  "maximum_target_error": 0.0,
+  "compared_samples": 1200,
+  "action_randomization_enabled": true,
+  "action_mapping": [
+    {
+      "joint_name": "Rotation",
+      "action_index": 0,
+      "lower": -1.7278738021850586,
+      "upper": 1.7278738021850586,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Pitch",
+      "action_index": 1,
+      "lower": -1.5707968473434448,
+      "upper": 1.5707968473434448,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Elbow",
+      "action_index": 2,
+      "lower": -1.5795233249664307,
+      "upper": 1.4049932956695557,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Wrist_Pitch",
+      "action_index": 3,
+      "lower": -1.4922537803649902,
+      "upper": 1.4922537803649902,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 1.5707999467849731
+    },
+    {
+      "joint_name": "Wrist_Roll",
+      "action_index": 4,
+      "lower": -2.513277053833008,
+      "upper": 2.513277053833008,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Jaw",
+      "action_index": 5,
+      "lower": -0.07853984832763672,
+      "upper": 1.6493366956710815,
+      "type": "position",
+      "scale": 0.4000000059604645,
+      "offset": 0.4000000059604645,
+      "processed_clip": [
+        0.0,
+        0.800000011920929
+      ]
+    }
+  ],
+  "reward_terms": [
+    "approach",
+    "alignment",
+    "closure",
+    "closure_away",
+    "grasp_hold",
+    "held_height",
+    "held_goal",
+    "processed_action_change",
+    "joint_vel",
+    "success_bonus",
+    "release",
+    "stable_placement"
+  ],
+  "weighted_reward_totals": [
+    11.675442695617676,
+    0.007200834807008505,
+    0.006783553399145603,
+    -6.010680675506592,
+    0.0,
+    0.0,
+    0.0,
+    -1.6480799913406372,
+    -0.043506089597940445,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "jaw_target_range": [
+    0.0,
+    0.800000011920929
+  ],
+  "actual_joint_position_range": [
+    [
+      -0.20458193123340607,
+      -0.2102925181388855,
+      -0.20485682785511017,
+      1.3461250066757202,
+      -0.2366439551115036,
+      0.2229175567626953
+    ],
+    [
+      0.22942087054252625,
+      0.20488974452018738,
+      0.20231296122074127,
+      1.6581252813339233,
+      0.1989450752735138,
+      0.7615605592727661
+    ]
+  ],
+  "task_success_verified": false
+}

@@ -1,0 +1,65 @@
+{
+  "status": "production_terminal_checkpoint_state_checks_verified",
+  "captures": [
+    {
+      "frames": 386,
+      "joint_position": [
+        [
+          1.0712768926168792e-05,
+          0.028801826760172844,
+          0.027411824092268944,
+          1.5677440166473389,
+          -6.133285296527902e-06,
+          0.7995142936706543
+        ]
+      ],
+      "object_state": [
+        [
+          0.26342999935150146,
+          -0.00032339023891836405,
+          0.011999954469501972,
+          0.9999999403953552,
+          -3.14895396513748e-06,
+          1.012087977869669e-06,
+          -1.0227126523432162e-07,
+          -0.00013027746172156185,
+          -4.4851592974737287e-05,
+          0.00925785768777132,
+          -0.002153649227693677,
+          -0.0028849828522652388,
+          5.645479177474044e-07
+        ]
+      ],
+      "placement_hold_seconds": [
+        0.0
+      ]
+    }
+  ],
+  "restores": [
+    {
+      "errors": {
+        "joint_position": 0.0,
+        "joint_velocity": 0.0,
+        "object_state": 0.0,
+        "command_goal": 0.0,
+        "placement_hold_seconds": 0.0
+      },
+      "frames": 386
+    }
+  ],
+  "reference_checks": [
+    {
+      "arm_target": 0.0,
+      "gripper_target": 0.0
+    }
+  ],
+  "keys": [
+    "UP",
+    "C",
+    "G",
+    "R"
+  ],
+  "state_sampling": "immediately_after_restore_and_keyboard_reference_reset",
+  "observer_sha256": "781d5c67569002df15617c34ac43becaea60944131e4c378bf0069057ac2e090",
+  "task_success_verified": false
+}

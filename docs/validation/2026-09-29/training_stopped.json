@@ -1,0 +1,48 @@
+{
+  "status": "training_stopped_and_saved_models_verified",
+  "checked_at": "2026-09-30T01:22:43.094630+00:00",
+  "restart_authorized": false,
+  "active_training": [],
+  "models": {
+    "lift_grasp_v2_seed42": [
+      {
+        "file": "model_0.pt",
+        "sha256": "a6ac90ac91948d43379d158b4c2c36d868b470ce87293cb4fb8e14dbd3ce274a",
+        "iteration": 0,
+        "model_tensors_finite": true
+      },
+      {
+        "file": "model_100.pt",
+        "sha256": "3d567a9d1ebff91be33db1298c23e1771e1611bb74fd87b6232b25bf10c759c1",
+        "iteration": 100,
+        "model_tensors_finite": true
+      },
+      {
+        "file": "model_50.pt",
+        "sha256": "15897309e0b46a2c63cacb9dc98d339864da14d7680215c8ebff69c2cf988f31",
+        "iteration": 50,
+        "model_tensors_finite": true
+      }
+    ],
+    "pick_place_grasp_v2_seed42": [
+      {
+        "file": "model_0.pt",
+        "sha256": "04326faac86584de57b211fefef96754b4991dd93644d1c8c761a33c6b7ade3a",
+        "iteration": 0,
+        "model_tensors_finite": true
+      },
+      {
+        "file": "model_100.pt",
+        "sha256": "1d01b0ff852f6447f90b7bca487e9d51ec7c8c627f0e70504f7a3bb2019c5170",
+        "iteration": 100,
+        "model_tensors_finite": true
+      },
+      {
+        "file": "model_50.pt",
+        "sha256": "aa7696cb346eeba2c4d5757b2fff3b786d502d6409bb7e5abc7dca548f74c240",
+        "iteration": 50,
+        "model_tensors_finite": true
+      }
+    ]
+  }
+}

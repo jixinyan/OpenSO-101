@@ -1,0 +1,92 @@
+{
+  "status": "mujoco_policy_evaluation_completed",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v2",
+  "episodes": [
+    {
+      "initial_env_index": 0,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false
+    },
+    {
+      "initial_env_index": 1,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false
+    },
+    {
+      "initial_env_index": 2,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false
+    },
+    {
+      "initial_env_index": 3,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false
+    }
+  ],
+  "success_rate": 0.0,
+  "kinematics": {
+    "poses": 2000,
+    "maximum_position_error_m": 1.988081119384583e-06,
+    "maximum_rotation_error_rad": 1.1787281043024872e-05
+  },
+  "mujoco_version": "3.14.0",
+  "policy_sha256": "6e828dd162a4aab6edac23bf555a2df0f5ac7a9cc4994374665430616ce2d02c",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "robot_meshes": {
+    "Handle_SO101.stl": "a69b004691392cf0130b32ed9da5cc0c5fee49c2c8abee6ca27bf88e2a11347d",
+    "Trigger_SO101.stl": "7122e0c476e69689eaf18441ecd36f5cf5cdca4d7033c15e5238a9b788e9d71a",
+    "Wrist_Roll_SO101.stl": "db20e6ac7c08cf8d75692a38db5a217011c97c0ab5d73c248296535df81e39b7",
+    "base_motor_holder_so101_v1.stl": "8cd2f241037ea377af1191fffe0dd9d9006beea6dcc48543660ed41647072424",
+    "base_so101_v2.stl": "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d",
+    "motor_holder_so101_base_v1.stl": "31242ae6fb59d8b15c66617b88ad8e9bded62d57c35d11c0c43a70d2f4caa95b",
+    "motor_holder_so101_wrist_v1.stl": "887f92e6013cb64ea3a1ab8675e92da1e0beacfd5e001f972523540545e08011",
+    "moving_jaw_so101_v1.stl": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d",
+    "rotation_pitch_so101_v1.stl": "9be900cc2a2bf718102841ef82ef8d2873842427648092c8ed2ca1e2ef4ffa34",
+    "sts3215_03a_no_horn_v1.stl": "75ef3781b752e4065891aea855e34dc161a38a549549cd0970cedd07eae6f887",
+    "sts3215_03a_v1.stl": "a37c871fb502483ab96c256baf457d36f2e97afc9205313d9c5ab275ef941cd0",
+    "under_arm_so101_v1.stl": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71",
+    "upper_arm_so101_v1.stl": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f",
+    "waveshare_mounting_plate_so101_v2.stl": "e197e24005a07d01bbc06a8c42311664eaeda415bf859f68fa247884d0f1a6e9",
+    "wrist_camera_mount_so101_v1.stl": "e17a626158951ac8cdf8d960962c1a3c8bf23b64635a02f88b62016fe895cef8",
+    "wrist_camera_so101_v1.stl": "1147857bb136876c81f98d18b533342bae2383f0e23bec216064c9f093bd3577",
+    "wrist_roll_follower_so101_v1.stl": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4",
+    "wrist_roll_pitch_so101_v2.stl": "6c7ec5525b4d8b9e397a30ab4bb0037156a5d5f38a4adf2c7d943d6c56eda5ae"
+  },
+  "isaac_trace_sha256": "7b3a038491c946e0f95398bd3d54802b549070abfe62db3639f7023bbd31c4ce",
+  "trajectory_sha256": "530b8d4b4023f255dce275fd8aafe270f9c6bbd33c6525b9593d6129cd10e90e",
+  "control_dt": 0.02,
+  "physics_dt": 0.002,
+  "joint_offsets": [
+    0.0,
+    -1.5707963267948966,
+    1.5707963267948966,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "dynamics": "nominal_isaac_PD_and_effort_limits_with_upstream_MJCF_inertia_and_frictionloss",
+  "contact_geometry": "upstream_MJCF_convex_meshes",
+  "initial_states": "first_frame_of_actual_Isaac_trace",
+  "physics_equivalence_verified": false
+}

@@ -1,0 +1,24 @@
+{
+  "status": "full_keyboard_lerobot_read_verified",
+  "frames": 2281,
+  "cameras": [
+    "observation.images.wrist_camera",
+    "observation.images.overhead_camera"
+  ],
+  "source_sha256": "da6fbb27454ca124e7cc088bef1c38b1330b81d69f2dcb839dd452ad4235b637",
+  "source_episode": "outputs/rl_progress/keyboard_dataset/episodes/episode_000001.hdf5",
+  "maximum_action_error_motor_units": 0.0,
+  "maximum_state_error_motor_units": 0.0,
+  "video_mean_absolute_errors": {
+    "observation.images.wrist_camera": {
+      "mean": 0.008515156448868964,
+      "maximum": 0.01120781060308218
+    },
+    "observation.images.overhead_camera": {
+      "mean": 0.005950685508846453,
+      "maximum": 0.0067788115702569485
+    }
+  },
+  "task_success": false,
+  "git_sha": "b779ea853305ac313bbe3868867fb66f3ece8fa4"
+}

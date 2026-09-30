@@ -1,5 +1,7 @@
 # 抓取训练配置
 
+当前 RL 训练保持停止，已有模型用于独立推理与接口验证。以下命令说明配置的使用方式；启动或恢复训练需要用户重新授权。
+
 `grasp_v2` 用于 Lift 和 PickPlace，通过 `--task-profile grasp_v2` 选择。`checkpoint.json` 保存 `task_profile`；继续训练、独立评估、策略导出与视觉蒸馏读取该字段。未提供字段的已有 checkpoint 使用 `default`。继续训练时改变 `task_profile` 会终止。
 
 夹爪目标为 `clamp(0.4 + 0.4 * action, 0, 0.8)`，单位为 rad。手臂目标保持为默认关节位置加上 `0.5 * action`。共享动作转换包含处理后的限幅，MuJoCo 与视觉 student 使用相同定义。

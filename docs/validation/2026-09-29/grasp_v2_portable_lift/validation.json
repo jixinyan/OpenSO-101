@@ -1,0 +1,29 @@
+{
+  "status": "portable_policy_numerically_verified_in_isaac",
+  "git_sha": "bc59081b6228b7d7a1535647bf144a74abf1b1f9",
+  "validation_steps": 500,
+  "num_envs": 4,
+  "maximum_errors": {
+    "observation": 0.0,
+    "policy_action": 8.344650268554688e-07,
+    "processed_targets": 2.980232238769531e-07
+  },
+  "close_command_fraction": 0.0,
+  "jaw_sign_changes": 0,
+  "dual_contact_fraction": 0.0,
+  "mean_ee_object_distance_m": 0.07588516920804977,
+  "weighted_reward_totals": {
+    "approach": 26.16395378112793,
+    "alignment": 5.002559661865234,
+    "closure": 0.0,
+    "closure_away": 0.0,
+    "grasp_hold": 0.0,
+    "held_height": 0.0,
+    "held_goal": 0.0,
+    "processed_action_change": -0.09793076664209366,
+    "joint_vel": -0.01717417500913143,
+    "success_bonus": 0.0
+  },
+  "trace_sha256": "4b1d84fc20a66826d1f1103fd8ebd43f02783864996df43667d47ba82a0eee9a",
+  "task_success_verified": false
+}

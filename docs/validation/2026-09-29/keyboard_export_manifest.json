@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "repo_id": "local/openso101-keyboard-verified",
+  "fps": 60,
+  "skip_leading_frames": 0,
+  "min_episode_frames": 10,
+  "include_failures": true,
+  "episodes": [
+    {
+      "episode_index": 0,
+      "source_episode": "episode_000001.hdf5",
+      "source_sha256": "da6fbb27454ca124e7cc088bef1c38b1330b81d69f2dcb839dd452ad4235b637",
+      "source_frames": 2281,
+      "exported_frames": 2281,
+      "success": false,
+      "task": "terminal control check",
+      "env_id": "OpenSO101-PickPlace-v0"
+    }
+  ],
+  "skipped_failed": [],
+  "skipped_short": []
+}

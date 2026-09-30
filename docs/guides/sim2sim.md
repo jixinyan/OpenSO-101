@@ -37,6 +37,13 @@ openso101 sim2sim mujoco --policy outputs/lift_portable \
 - [Lift MuJoCo 报告](../validation/2026-09-29/mujoco_lift/report.json)
 - [PickPlace MuJoCo 报告](../validation/2026-09-29/mujoco_pick_place/report.json)
 
+`grasp_v2` 第 50 次迭代的已保存模型也完成相同检查。两项策略导出覆盖四个环境、500 个步骤，实际观测误差为 0，策略动作误差小于 `8.4e-7`，ActionManager 目标误差小于 `3e-7`。MuJoCo 各完成四个 episode，成功率均为 0/4；每项 2000 个姿态的最大位置误差分别约 2.07μm、1.99μm。Lift 的 `grasp_v2` 成功条件同时要求实际双夹爪接触与 0.25 秒保持。
+
+- [grasp_v2 Lift 策略导出](../validation/2026-09-29/grasp_v2_portable_lift/validation.json)
+- [grasp_v2 PickPlace 策略导出](../validation/2026-09-29/grasp_v2_portable_pick_place/validation.json)
+- [grasp_v2 Lift MuJoCo](../validation/2026-09-29/grasp_v2_mujoco_lift/report.json)
+- [grasp_v2 PickPlace MuJoCo](../validation/2026-09-29/grasp_v2_mujoco_pick_place/report.json)
+
 ## sim2real 视觉策略检查
 
 `PortablePolicy` 接收状态观测，其中物体位置、任务目标与抓取状态需要实际观测来源。现有真机 deploy 使用视觉 student 或 LeRobot policy。视觉 student 与 PortablePolicy 共用关节动作转换函数，随后按已有 SO-101 映射转换为 LeRobot motor units。
