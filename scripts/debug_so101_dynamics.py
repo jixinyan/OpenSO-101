@@ -103,10 +103,10 @@ def experiment(robot_path, metadata, fields, timestep, velocity_servo, contacts,
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
-parser.add_argument("--scene-report", type=Path)
+parser.add_argument("--geometry-input", type=Path)
 parser.add_argument("--measured-table-only", action="store_true")
 args = parser.parse_args()
-if args.output.exists() or (args.measured_table_only and args.scene_report is None):
+if args.output.exists() or (args.measured_table_only and args.geometry_input is None):
     raise ValueError("输出目录需要尚未存在，桌面专项检查需要原生场景报告")
 root = Path(__file__).resolve().parents[1]
 args.output.mkdir(parents=True, exist_ok=False)
@@ -115,9 +115,10 @@ conditions += [("position_dt_0.002", .002, False, True, 30., None),
                ("position_dt_0.0005", .0005, False, True, 30., None),
                ("velocity_no_contact", .002, True, False, 30., None),
                ("velocity_effort_3.35", .002, True, True, 3.35, None)]
-if args.scene_report:
-    scene = json.loads(args.scene_report.read_text())
-    if scene["status"] != "native_scene_geometry_and_settling_checked":
+if args.geometry_input:
+    scene = json.loads(args.geometry_input.read_text())
+    if (scene.get("status") != "native_scene_geometry_and_settling_checked"
+            and not (scene.get("schema_version") == 1 and "robot_usd_sha256" in scene and "table_geometry" in scene)):
         raise ValueError("桌面检查需要原生场景报告")
     measured = ("velocity_measured_table", .002, True, True, 30., scene["table_geometry"])
     conditions = [measured] if args.measured_table_only else [*conditions, measured]
@@ -143,7 +144,7 @@ for task in ("lift", "pick_place"):
         reports.append(result)
         print(f"{task} {name}: RMSE={np.sqrt(np.mean([record['joint_position_rmse_rad']**2 for record in records])):.6f}, speed={max(record['maximum_speed_rad_s'] for record in records):.6f}", flush=True)
 report = {"status": "actual_action_trace_dynamics_checked", "conditions": reports,
-          "native_scene_report_sha256": digest(args.scene_report) if args.scene_report else None,
+          "geometry_input_sha256": digest(args.geometry_input) if args.geometry_input else None,
           "source_code_sha256": digest(Path(__file__)), "physics_equivalence_verified": False, "task_success_verified": False}
 (args.output / "dynamics_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
 fig, axes = plt.subplots(3, 1, figsize=(13, 11), layout="constrained")
