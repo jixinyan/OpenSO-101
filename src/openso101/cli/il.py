@@ -1253,6 +1253,8 @@ def _push_convert_hdf5_to_lerobot(
     multi-episode pushes this typically halves wall-clock time because
     LeRobot's ``save_episode`` blocks on ffmpeg/torchcodec encode.
     """
+    import hashlib
+    import json
     import h5py
     import numpy as np
     import queue
@@ -1261,6 +1263,10 @@ def _push_convert_hdf5_to_lerobot(
 
     from openso101.teleop.hdf5_recorder import validate_hdf5_dataset
 
+    if skip_leading_frames < 0:
+        raise ValueError("skip_leading_frames 必须大于或等于 0")
+    if min_episode_frames < 1:
+        raise ValueError("min_episode_frames 必须大于或等于 1")
     episode_files = validate_hdf5_dataset(hdf5_root)
     if lerobot_root.exists():
         if not overwrite_export:
@@ -1291,6 +1297,7 @@ def _push_convert_hdf5_to_lerobot(
     skipped_failed: list[str] = []
     exported = 0
     scene_records = []
+    episode_records = []
 
     def _flush_episode_sync(name: str) -> None:
         dataset.save_episode()
@@ -1386,6 +1393,18 @@ def _push_convert_hdf5_to_lerobot(
                     )
                 dataset.add_frame(frame)
             _enqueue_flush(episode_file.name)
+            with episode_file.open("rb") as source:
+                source_sha256 = hashlib.file_digest(source, "sha256").hexdigest()
+            episode_records.append({
+                "episode_index": exported,
+                "source_episode": episode_file.name,
+                "source_sha256": source_sha256,
+                "source_frames": frame_count,
+                "exported_frames": effective_count,
+                "success": episode_success,
+                "task": str(task),
+                "env_id": str(h5.attrs.get("env_id", "")),
+            })
             exported += 1
 
     # Drain the worker before we let the function return.
@@ -1431,10 +1450,35 @@ def _push_convert_hdf5_to_lerobot(
         )
     dataset.finalize()
     if scene_records:
-        import json
-
         (lerobot_root / "meta" / "scenes.json").write_text(json.dumps(scene_records, indent=2))
+    (lerobot_root / "meta" / "openso101_export.json").write_text(json.dumps({
+        "schema_version": 1,
+        "repo_id": repo_id,
+        "fps": fps,
+        "skip_leading_frames": skip_leading_frames,
+        "min_episode_frames": min_episode_frames,
+        "include_failures": include_failures,
+        "episodes": episode_records,
+        "skipped_failed": skipped_failed,
+        "skipped_short": skipped_short,
+    }, indent=2), encoding="utf-8")
     return lerobot_root
+
+
+def _cmd_export(args: argparse.Namespace) -> int:
+    source_root = Path(args.repo_root).expanduser().resolve()
+    export_root = _push_convert_hdf5_to_lerobot(
+        hdf5_root=source_root,
+        lerobot_root=Path(args.output).expanduser().resolve(),
+        repo_id=args.repo_id,
+        overwrite_export=args.overwrite_export,
+        skip_leading_frames=args.skip_leading_frames,
+        min_episode_frames=args.min_episode_frames,
+        async_flush=not args.no_async_flush,
+        include_failures=args.include_failures,
+    )
+    print(f"[INFO]: Local LeRobot dataset: {export_root}")
+    return 0
 
 
 def _cmd_push(args: argparse.Namespace) -> int:
@@ -1459,10 +1503,7 @@ def _cmd_push(args: argparse.Namespace) -> int:
         print("[INFO]: Dry run only; no Hub upload performed.")
         return 0
 
-    try:
-        from lerobot.datasets.lerobot_dataset import LeRobotDataset
-    except ImportError as exc:
-        raise RuntimeError("LeRobot is required to push datasets from this script.") from exc
+    from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
     if resolved_input_format == "hdf5":
         export_root = Path(lerobot_root) if lerobot_root is not None else (repo_root / "lerobot_dataset")
@@ -2343,6 +2384,26 @@ def _cmd_il_eval(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _add_export_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--overwrite-export", action="store_true")
+    parser.add_argument(
+        "--skip-leading-frames", type=int, default=_DEFAULT_SKIP_LEADING_FRAMES,
+        help="导出时跳过每个 episode 的前 N 帧；设置 0 保留全部帧。",
+    )
+    parser.add_argument(
+        "--min-episode-frames", type=int, default=_DEFAULT_MIN_EPISODE_FRAMES,
+        help="跳过开头帧后，episode 必须达到此帧数。",
+    )
+    parser.add_argument(
+        "--no-async-flush", action="store_true",
+        help="在主线程执行视频编码与 episode 保存。",
+    )
+    parser.add_argument(
+        "--include-failures", action="store_true",
+        help="保留 success=False 的 episode；默认仅导出成功 episode。",
+    )
+
+
 def add_subparsers(parser: argparse.ArgumentParser) -> None:
     sub = parser.add_subparsers(dest="il_cmd", required=True)
 
@@ -2419,6 +2480,13 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     )
     p_rec.set_defaults(func=_cmd_record)
 
+    p_export = sub.add_parser("export", help="将 HDF5 导出为本地 LeRobot 数据集")
+    p_export.add_argument("--repo-root", required=True)
+    p_export.add_argument("--repo-id", required=True)
+    p_export.add_argument("--output", required=True)
+    _add_export_arguments(p_export)
+    p_export.set_defaults(func=_cmd_export)
+
     p_push = sub.add_parser("push", help="Push HDF5 dataset to LeRobot Hub")
     p_push.add_argument("--repo-root", required=True)
     p_push.add_argument("--repo-id", required=True)
@@ -2428,49 +2496,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_push.add_argument("--no-tag-version", action="store_true")
     p_push.add_argument("--no-videos", action="store_true")
     p_push.add_argument("--dry-run", action="store_true")
-    p_push.add_argument("--overwrite-export", action="store_true")
-    p_push.add_argument(
-        "--skip-leading-frames",
-        type=int,
-        default=_DEFAULT_SKIP_LEADING_FRAMES,
-        help=(
-            "Drop the first N frames of each episode before LeRobot export. "
-            "These are dominated by env.reset() transients and startup-hold "
-            "zero-action frames that pollute IL training signal. "
-            f"Default: {_DEFAULT_SKIP_LEADING_FRAMES}. Use 0 to keep all frames."
-        ),
-    )
-    p_push.add_argument(
-        "--min-episode-frames",
-        type=int,
-        default=_DEFAULT_MIN_EPISODE_FRAMES,
-        help=(
-            "Drop episodes whose post-skip frame count is below this threshold. "
-            "Short episodes are almost always failed attempts. "
-            f"Default: {_DEFAULT_MIN_EPISODE_FRAMES}."
-        ),
-    )
-    p_push.add_argument(
-        "--no-async-flush",
-        action="store_true",
-        default=False,
-        help=(
-            "Disable the per-episode video-encode worker thread (default ON). "
-            "With async flush, the next episode's HDF5 read overlaps the "
-            "previous episode's LeRobot save_episode() encode. Useful to "
-            "disable when debugging or on memory-constrained machines."
-        ),
-    )
-    p_push.add_argument(
-        "--include-failures",
-        action="store_true",
-        default=False,
-        help=(
-            "Keep episodes whose h5.attrs['success'] is False / absent. By "
-            "default these failed/aborted demos are skipped so the IL dataset "
-            "does not teach the policy to imitate failures."
-        ),
-    )
+    _add_export_arguments(p_push)
     p_push.set_defaults(func=_cmd_push)
 
     p_train = sub.add_parser(

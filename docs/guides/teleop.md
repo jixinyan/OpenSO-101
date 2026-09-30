@@ -144,7 +144,18 @@ prompt for unattended batch capture.
 
 ## Export To LeRobot Later
 
-After recording local HDF5 episodes, export/push as a separate step:
+录制 HDF5 后，可以导出本地 LeRobot 数据集：
+
+```bash
+openso101 il export \
+  --repo-root outputs/my_dataset \
+  --repo-id local/my_dataset \
+  --output outputs/my_lerobot_dataset
+```
+
+默认仅导出成功 episode，跳过每个 episode 开头的五帧，并要求剩余至少十帧。检查控制与记录流程时，可以设置 `--include-failures --skip-leading-frames 0` 保留全部帧。`meta/openso101_export.json` 保存源文件 SHA256、源帧数、导出帧数、成功标记和筛选配置；自定义场景同时保存场景副本与 `meta/scenes.json`。双相机视频、动作和关节观测均包含在导出的数据中。
+
+使用 Hub 上传入口发布数据集：
 
 ```bash
 conda run -n openso101 openso101 il push \
