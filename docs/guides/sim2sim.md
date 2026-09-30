@@ -16,7 +16,19 @@ HDF5 中的状态和当前动作在控制步骤之前记录，reward 和终止�
 
 ## MuJoCo 评估
 
-安装 `openso-101[sim2sim]`，使用 MuJoCo 3.14.0。机器人模型来自 [TheRobotStudio 的 SO-101 仿真目录](https://github.com/TheRobotStudio/SO-ARM100/blob/main/Simulation/SO101/README.md)，本次使用版本 `5f6d2b876a53a4872e405b991dd925556c9e38a4` 的 `so101_old_calib.xml` 与其 meshes。该目录提供两种零点定义；此入口使用经过实际坐标验证的 old-calibration 定义。
+MuJoCo 验证使用独立的 Python 3.11 CPU 环境，依赖保存在 `requirements-mujoco.txt`。在仓库根目录执行：
+
+```bash
+mkdir -p outputs/tmp
+python3.11 -m venv .venv-mujoco
+TMPDIR="$PWD/outputs/tmp" .venv-mujoco/bin/python -m pip install \
+  --index-url https://pypi.org/simple -r requirements-mujoco.txt
+export OPENSO101_SKIP_ISAAC=1 PYTHONPATH="$PWD/src" TMPDIR="$PWD/outputs/tmp"
+```
+
+随后使用 `.venv-mujoco/bin/python -m openso101.cli.main` 执行本页的 `openso101` 命令。`jd_B300` 的独立环境为 `/home/jixin/workspace/envs/openso101-mujoco`；Isaac 使用 `/home/jixin/workspace/envs/openso101-v2`。
+
+机器人模型来自 [TheRobotStudio 的 SO-101 仿真目录](https://github.com/TheRobotStudio/SO-ARM100/blob/main/Simulation/SO101/README.md)，本次使用版本 `5f6d2b876a53a4872e405b991dd925556c9e38a4` 的 `so101_old_calib.xml` 与其 meshes。该目录提供两种零点定义；此入口使用经过实际坐标验证的 old-calibration 定义。
 
 ```bash
 openso101 sim2sim mujoco --policy outputs/lift_portable \

@@ -1,0 +1,13 @@
+{
+  "source_and_counts_verified": true,
+  "maximum_metric_difference": {
+    "joint_position_rmse_rad": 4.5102810375396984e-17,
+    "joint_position_max_error_rad": 2.220446049250313e-16,
+    "physics_max_joint_speed_rad_s": 4.440892098500626e-16,
+    "object_position_max_error_m": 1.2576745200831851e-16
+  },
+  "local_report_sha256": "7bb07afd73150915330593fd4be56fabc7bcecd23de67c0e5e19b8cdbe2443d4",
+  "linux_report_sha256": "9034614f7f87fedc3f034598bea11514e6c120c3f344ed03d5d04b5bee5bd105",
+  "task_success_verified": false,
+  "physics_equivalence_verified": false
+}

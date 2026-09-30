@@ -11,6 +11,7 @@ dist/
 
 # Environments
 .venv/
+.venv-mujoco/
 .env
 
 # IDE

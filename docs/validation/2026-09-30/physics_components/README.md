@@ -37,7 +37,7 @@ RMSE 汇集四个环境的全部控制采样和六个关节。最大速度来自
 
 ## 图表
 
-交互页面保存在仓库的 `outputs/rl_progress/physics_components_visuals/physics_explorer.html`，同时保存在 `jd_B300` 的相同相对路径。页面包含八个任务／环境选项、184 条实际数据曲线，支持时间缩放和曲线选择。静态图及其 SHA256 见 [可视化报告](visuals/visualization_report.json)。关节与物体曲线展示 Combined 最大关节误差所在的环境，环境编号保存在图标题。
+本地交互页面保存在仓库的 `outputs/rl_progress/physics_components_visuals/physics_explorer.html`，`jd_B300` 的独立运行页面位于 `outputs/rl_progress/physics_components_linux_visuals/physics_explorer.html`。页面包含八个任务／环境选项、184 条实际数据曲线，支持时间缩放和曲线选择。静态图及其 SHA256 见 [可视化报告](visuals/visualization_report.json)。关节与物体曲线展示 Combined 最大关节误差所在的环境，环境编号保存在图标题。
 
 ![各项参数与两个任务的误差和速度](visuals/physics_overview.png)
 
@@ -66,6 +66,12 @@ OPENSO101_SKIP_ISAAC=1 PYTHONPATH=src TMPDIR="$PWD/outputs/tmp" \
   --output outputs/rl_progress/new_run_visuals
 ```
 
-图表使用 `openso-101[analysis]` 中的 Plotly 和项目已有 Matplotlib。原始 HDF5、运行日志与全部源模型保存在本地及远程 `outputs/rl_progress/`。本目录保存十二份独立条件报告和检查结果。
+图表使用 Plotly 和 Matplotlib。独立 CPU 环境的依赖保存于 `requirements-mujoco.txt`；`jd_B300` 使用 `/home/jixin/workspace/envs/openso101-mujoco`，环境依赖检查通过。
+
+`jd_B300` 使用相同 Isaac 源记录和代码独立完成六种条件及全部读取检查，共计另外 48 个环境片段。原始 HDF5 与日志在本地使用 `*_physics_components_paired_*`，远程使用 `*_physics_components_linux_verified_*`，均保存在 `outputs/rl_progress/`。源模型继续保留。本目录保存十二份本地独立条件报告、Linux 复现汇总与检查结果。
+
+- [Linux 配对检查](physics_components_linux_report.json)
+- [两台主机的来源、数量与指标比较](physics_hosts_report.json)：最大关节误差指标差异为 `2.23e-16` rad，最大速度指标差异为 `4.45e-16` rad/s。
+- [Linux 图表检查](linux_visualization_report.json)
 
 后续目标为使用上述实际参数，测量两个模拟器的 solver 速度约束和接触响应。RL 训练继续保持停止；成功策略迁移和真机任务仍待验收。
