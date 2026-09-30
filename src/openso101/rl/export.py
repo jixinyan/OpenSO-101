@@ -25,7 +25,7 @@ def export(args):
         import h5py
         import numpy as np
         import torch
-        from isaaclab.utils.math import subtract_frame_transforms
+        from isaaclab.utils.math import quat_apply_inverse, subtract_frame_transforms
         from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, export_policy_as_jit
         from rsl_rl.runners import OnPolicyRunner
 
@@ -101,6 +101,8 @@ def export(args):
             "joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "goal_root", "jaw_forces",
             "ee_object_distance", "gripper_position_root", "gripper_quaternion_root",
             "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
+            "joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits",
+            "object_linear_velocity_root", "object_angular_velocity_root",
         )}
         for _ in range(args.validation_steps):
             with torch.inference_mode():
@@ -129,7 +131,11 @@ def export(args):
                     "ee_object_distance": torch.linalg.vector_norm(
                         obj.data.root_pos_w - unwrapped.scene["ee_frame"].data.target_pos_w[:, 0], dim=-1),
                     "raw_action": actions, "joint_targets": decoded,
+                    "object_linear_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_lin_vel_w),
+                    "object_angular_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_ang_vel_w),
                 }
+                for name in ("joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits"):
+                    before_step[name] = getattr(robot.data, name)[:, joint_ids]
                 gripper_id = robot.body_names.index("gripper")
                 gripper_position, gripper_quaternion = subtract_frame_transforms(
                     robot.data.root_pos_w, robot.data.root_quat_w,
