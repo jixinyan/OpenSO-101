@@ -185,7 +185,8 @@ def evaluate(args):
             fields = {name: reference[name][:1] if name == "scene_gravity" else reference[name][:1, :args.episodes] for name in names}
             if any(not np.isfinite(value).all() for value in fields.values()):
                 raise ValueError("实际初始环境参数含有无效数值")
-    model = build_model(robot_model, metadata)
+    collision_bundle = getattr(args, "collision_bundle", None)
+    model = build_model(robot_model, metadata, collision_bundle)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
@@ -204,7 +205,7 @@ def evaluate(args):
     output.mkdir(parents=True, exist_ok=False)
     with h5py.File(output / "trajectory.hdf5", "w") as trajectory:
         for episode in range(args.episodes):
-            model = build_model(robot_model, metadata)
+            model = build_model(robot_model, metadata, collision_bundle)
             data = mujoco.MjData(model)
             mujoco.mj_resetData(model, data)
             data.qpos[joint_qpos_ids] = starts["joint_position"][episode] + JOINT_OFFSETS
@@ -338,7 +339,9 @@ def evaluate(args):
         "actual_velocity_limits_verified": constrained and all(record["constrained_drive"]["actual_velocity_limits_verified"] for record in records),
         "constrained_drive_source_sha256": digest(Path(__file__).with_name("constrained_drive.py")) if constrained else None,
         "evaluation_source_sha256": digest(Path(__file__)),
-        "contact_geometry": "upstream_MJCF_convex_meshes", "initial_states": "first_frame_of_actual_Isaac_trace",
+        "contact_geometry": "CoACD_gripper_convex_parts" if collision_bundle else "upstream_MJCF_convex_meshes",
+        "collision_bundle_sha256": digest(Path(collision_bundle) / "manifest.json") if collision_bundle else None,
+        "initial_states": "first_frame_of_actual_Isaac_trace",
         "source_object_velocity_available": velocity_available,
         "table_geometry_source": "native_USD_collision_mesh" if "table_geometry" in metadata else "legacy_metadata_plane",
         "task_reference_height_root": task_height,

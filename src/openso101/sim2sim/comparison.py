@@ -99,7 +99,8 @@ def compare(args):
             raise ValueError(f"实际物理参数需要非负: {name}")
     if "friction" in args.physics_components and np.any(fields["joint_friction_coeff"] != 0):
         raise ValueError("实际非零摩擦系数需要独立的 frictionloss 转换验证")
-    model = build_model(robot_model, metadata)
+    collision_bundle = getattr(args, "collision_bundle", None)
+    model = build_model(robot_model, metadata, collision_bundle)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
@@ -272,6 +273,7 @@ def compare(args):
         "pd_source": "recorded_Isaac_per_environment" if args.recorded_pd else "nominal_policy_metadata",
         "drive_model": "constrained_implicit_PD" if constrained else ("bounded_velocity_reference_servo" if args.velocity_servo else "position_pd"),
         "actual_velocity_limits_verified": constrained and all(record["constrained_drive"]["actual_velocity_limits_verified"] for record in records),
+        "collision_bundle_sha256": digest(Path(collision_bundle) / "manifest.json") if collision_bundle else None,
         "constrained_drive_source_sha256": digest(Path(__file__).with_name("constrained_drive.py")) if constrained else None,
         "physics_components": args.physics_components,
         "recorded_physics_source_sha256": digest(Path(__file__).with_name("recorded_physics.py")),

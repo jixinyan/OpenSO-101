@@ -43,13 +43,13 @@ try:
     substeps = round(plan["control_dt"] / runtime.physics_dt)
     if substeps < 1 or not np.isclose(substeps * runtime.physics_dt, plan["control_dt"]):
         raise ValueError("原生物理周期无法表示夹爪检查周期")
-    positions = torch.tensor(plan["initial_joint_position"], device=env.device).repeat(args.num_envs, 1)
+    positions = torch.tensor(plan["initial_joint_position"], device=runtime.device).repeat(args.num_envs, 1)
     robot.write_joint_state_to_sim(positions, torch.zeros_like(positions), joint_ids=ids)
-    local_position = torch.tensor(plan["object_position_root"], device=env.device).repeat(args.num_envs, 1)
-    local_quaternion = torch.tensor(plan["object_quaternion_root"], device=env.device).repeat(args.num_envs, 1)
+    local_position = torch.tensor(plan["object_position_root"], device=runtime.device).repeat(args.num_envs, 1)
+    local_quaternion = torch.tensor(plan["object_quaternion_root"], device=runtime.device).repeat(args.num_envs, 1)
     position, quaternion = combine_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, local_position, local_quaternion)
     obj.write_root_pose_to_sim(torch.cat([position, quaternion], dim=-1))
-    obj.write_root_velocity_to_sim(torch.zeros(args.num_envs, 6, device=env.device))
+    obj.write_root_velocity_to_sim(torch.zeros(args.num_envs, 6, device=runtime.device))
     robot.set_joint_position_target(positions, joint_ids=ids)
     initial_physics = {}
     for name, asset in (("robot", robot), ("object", obj)):
@@ -58,7 +58,7 @@ try:
     arrays = {name: [] for name in ("joint_position", "joint_velocity", "object_position_root", "jaw_forces")}
     physics_velocity = []
     for target in targets:
-        robot.set_joint_position_target(torch.tensor(target, dtype=torch.float32, device=env.device).repeat(args.num_envs, 1), joint_ids=ids)
+        robot.set_joint_position_target(torch.tensor(target, dtype=torch.float32, device=runtime.device).repeat(args.num_envs, 1), joint_ids=ids)
         for _ in range(substeps):
             runtime.scene.write_data_to_sim()
             runtime.sim.step(render=False)
