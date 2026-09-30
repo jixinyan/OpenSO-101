@@ -24,6 +24,10 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
         if args.task != "OpenSO101-CustomScene-v0":
             raise ValueError("--scene 需要使用 OpenSO101-CustomScene-v0")
     cfg = parse_env_cfg(args.task, device="cuda:0", num_envs=args.num_envs or 16)
+    if getattr(args, "task_profile", "default") == "grasp_v2":
+        from openso101.tasks.shared.grasp_profile import configure_grasp_profile
+
+        configure_grasp_profile(cfg, args.task)
     cfg.configure_play(not training)
     cfg.scene.num_envs = args.num_envs or 16
     if scene:
@@ -65,6 +69,9 @@ def train(args):
     args.seed = config.seed
     resume = Path(args.load_run).resolve() if args.load_run else None
     previous = CheckpointMeta.read(resume) if resume else None
+    args.task_profile = getattr(args, "task_profile", None) or (previous.task_profile if previous else "default")
+    if previous and previous.task_profile != args.task_profile:
+        raise ValueError("继续训练需要保持 task_profile")
     if args.resume and resume is None:
         raise ValueError("继续训练需要 --load_run 指向完整训练目录")
     if args.checkpoint:
@@ -115,7 +122,7 @@ def train(args):
                 if path.is_file():
                     files[path.relative_to(output).as_posix()] = digest(path)
         CheckpointMeta(
-            task_id=args.task, config=config, git_sha=git_sha, checkpoint=checkpoint.name,
+            task_id=args.task, task_profile=args.task_profile, config=config, git_sha=git_sha, checkpoint=checkpoint.name,
             files=files, scene_sha256=scene_sha,
             completed_transitions=(previous.completed_transitions if previous else 0)
             + config.iterations * config.rollout_steps * env.unwrapped.num_envs,
@@ -132,6 +139,7 @@ def train(args):
 def evaluate(args, *, play=False):
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
+    args.task_profile = meta.task_profile
     if args.task != meta.task_id:
         raise ValueError("checkpoint 与请求任务不匹配")
     scene = folder / "scene" if meta.scene_sha256 else None
@@ -204,7 +212,7 @@ def evaluate(args, *, play=False):
                         value[index] = False
         if len(records) != episodes_requested:
             raise RuntimeError("仿真在评估完成之前终止")
-        result = {"task": args.task, "backend": meta.config.backend, "seed": args.seed,
+        result = {"task": args.task, "task_profile": meta.task_profile, "backend": meta.config.backend, "seed": args.seed,
                   "episodes": records, "success_rate": sum(record["success"] for record in records) / len(records),
                   "checkpoint_sha256": digest(folder / meta.checkpoint), "training_git_sha": meta.git_sha,
                   "completed_transitions": meta.completed_transitions,
@@ -235,6 +243,7 @@ def distill(args):
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     args.task = meta.task_id
+    args.task_profile = meta.task_profile
     args.seed = meta.config.seed
     args.with_cameras = True
     scene = teacher / "scene" if meta.scene_sha256 else None

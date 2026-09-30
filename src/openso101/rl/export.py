@@ -37,6 +37,7 @@ def export(args):
         from .vision_distillation import action_mapping
 
         args.seed = meta.config.seed
+        args.task_profile = meta.task_profile
         env = build_environment(args, training=False)
         unwrapped = env.unwrapped
         config = json.loads((folder / "backend.json").read_text())
@@ -57,7 +58,7 @@ def export(args):
         if robot.num_joints != 6:
             raise ValueError("policy 导出需要六个 SO-101 关节")
         metadata = {
-            "schema_version": 1, "task_id": meta.task_id, "training_git_sha": meta.git_sha,
+            "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile, "training_git_sha": meta.git_sha,
             "export_git_sha": revision, "checkpoint_sha256": digest(folder / meta.checkpoint),
             "files": {"policy.pt": digest(output / "policy.pt")}, "control_dt": unwrapped.step_dt,
             "physics_dt": unwrapped.physics_dt, "joint_names": list(SO101_SIM_JOINT_NAMES),
@@ -162,7 +163,8 @@ def export(args):
             trace.attrs["joint_names"] = json.dumps(list(SO101_SIM_JOINT_NAMES))
             for name, value in arrays.items():
                 trace.create_dataset(name, data=value)
-        closed = arrays["raw_action"][..., -1] < 0
+        jaw_target = arrays["joint_targets"][..., -1]
+        closed = jaw_target < 0.4
         summary = {
             "status": "portable_policy_numerically_verified_in_isaac", "git_sha": revision,
             "validation_steps": args.validation_steps, "num_envs": unwrapped.num_envs,

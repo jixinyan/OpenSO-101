@@ -19,6 +19,8 @@ def decode_joint_targets(actions, action_mapping, *, enforce_limits=True):
             value = torch.where(value < 0, item["close"], item["open"])
         else:
             raise ValueError("不支持的 action 类型")
+        if "processed_clip" in item:
+            value = value.clamp(*item["processed_clip"])
         if enforce_limits:
             value = value.clamp(item["lower"], item["upper"])
         targets.append(value)

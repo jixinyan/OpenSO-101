@@ -136,6 +136,7 @@ def evaluate(args):
             last_action = np.zeros((1, 6), dtype=np.float32)
             stage = 0
             hold_seconds = 0.
+            lift_hold_seconds = 0.
             success = False
             progress = {name: False for name in ("reached", "grasped", "held_above_table", "carry_stage", "place_stage")}
             buffers = {name: [] for name in ("joint_position", "object_position_root", "jaw_forces", "raw_action", "stage")}
@@ -169,8 +170,14 @@ def evaluate(args):
                 progress["grasped"] |= grasped
                 progress["held_above_table"] |= grasped and object_position[2] > metadata["table_height_root"] + 0.04
                 if metadata["task_id"] == "OpenSO101-Lift-v0":
-                    success = bool(object_position[2] > metadata["table_height_root"] + parameters["minimal_height"]
-                                   and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
+                    eligible = bool(object_position[2] > metadata["table_height_root"] + parameters["minimal_height"]
+                                    and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
+                    if metadata.get("task_profile", "default") == "grasp_v2":
+                        eligible = eligible and grasped
+                        lift_hold_seconds = lift_hold_seconds + control_dt if eligible else 0.
+                        success = lift_hold_seconds >= parameters["settle_seconds"]
+                    else:
+                        success = eligible
                 else:
                     if stage < 2 and grasped and np.linalg.norm(object_position - goal) <= parameters["advance_threshold"] + parameters["object_contact_radius"]:
                         stage += 1
@@ -195,7 +202,8 @@ def evaluate(args):
             records.append({"initial_env_index": episode, "success": success, "steps": step + 1,
                             **{name: bool(value) for name, value in progress.items()}})
     report = {
-        "status": "mujoco_policy_evaluation_completed", "task": metadata["task_id"], "episodes": records,
+        "status": "mujoco_policy_evaluation_completed", "task": metadata["task_id"],
+        "task_profile": metadata.get("task_profile", "default"), "episodes": records,
         "success_rate": sum(record["success"] for record in records) / len(records),
         "kinematics": kinematics, "mujoco_version": mujoco.__version__,
         "policy_sha256": metadata["files"]["policy.pt"], "robot_model_sha256": digest(robot_model),

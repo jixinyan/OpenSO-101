@@ -29,7 +29,7 @@ _ALGO_TO_ENTRY_POINT = {
 
 
 def _cmd_train(args: argparse.Namespace) -> int:
-    if getattr(args, "backend", None) or getattr(args, "scene", None) or getattr(args, "train_config", None) or args.algo in ("sac", "tqc"):
+    if getattr(args, "backend", None) or getattr(args, "scene", None) or getattr(args, "train_config", None) or getattr(args, "task_profile", None) or args.algo in ("sac", "tqc"):
         if args.algo == "distillation":
             raise ValueError("distillation 使用现有 teacher-checkpoint 训练入口")
         if args.algo in ("sac", "tqc") and args.backend is None:
@@ -1169,6 +1169,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
+    p_train.add_argument("--task-profile", choices=("default", "grasp_v2"), help="训练使用的任务配置版本")
     p_train.add_argument("--backend", choices=("rsl_rl", "sb3", "skrl", "rl_games"))
     p_train.add_argument("--train-config", help="Backend-neutral TrainCfg JSON")
     p_train.add_argument("--output", help="New run directory")

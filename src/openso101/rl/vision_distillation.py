@@ -73,6 +73,8 @@ def action_mapping(env):
                 scale = torch.as_tensor(term._scale).expand(env.num_envs, len(ids))[0, index]
                 offset = torch.as_tensor(term._offset).expand(env.num_envs, len(ids))[0, index]
                 item.update(type="position", scale=float(scale), offset=float(offset))
+                if term.cfg.clip is not None:
+                    item["processed_clip"] = term._clip[0, index].tolist()
             elif type(term) is BinaryJointPositionAction:
                 item.update(type="binary", action_index=action_index,
                             close=float(term._close_command[index]), open=float(term._open_command[index]))
