@@ -1,0 +1,41 @@
+{
+  "status": "mujoco_comparison_guards_verified",
+  "cases": [
+    {
+      "name": "existing_output",
+      "returncode": 1,
+      "expected_error": "FileExistsError",
+      "new_output_created": false
+    },
+    {
+      "name": "single_step",
+      "returncode": 1,
+      "expected_error": "steps 必须大于 1",
+      "new_output_created": false
+    },
+    {
+      "name": "zero_environments",
+      "returncode": 1,
+      "expected_error": "episodes 必须为正数",
+      "new_output_created": false
+    },
+    {
+      "name": "excess_environments",
+      "returncode": 1,
+      "expected_error": "请求数量超过实际 Isaac 记录数量",
+      "new_output_created": false
+    },
+    {
+      "name": "excess_steps",
+      "returncode": 1,
+      "expected_error": "请求数量超过实际 Isaac 记录数量",
+      "new_output_created": false
+    },
+    {
+      "name": "missing_actual_pd",
+      "returncode": 1,
+      "expected_error": "recorded-pd 需要实际 Isaac 物理参数记录",
+      "new_output_created": false
+    }
+  ]
+}

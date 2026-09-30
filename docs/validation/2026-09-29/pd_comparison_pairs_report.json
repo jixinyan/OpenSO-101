@@ -1,0 +1,29 @@
+{
+  "status": "actual_pd_comparison_pairs_verified",
+  "tasks": [
+    {
+      "task": "OpenSO101-Lift-v0",
+      "input_equality_verified": true,
+      "nominal_report_sha256": "41b9bd0172d20ccfebd5a43dba81a48f1bbe496e328583d01027379c1656bf9c",
+      "recorded_report_sha256": "cadd142c763a724512643630516832ff74760c4c1f08c1d7ae7da87e1eeab7e0",
+      "nominal_max_joint_position_error_rad": 0.7123689702628173,
+      "recorded_max_joint_position_error_rad": 0.6309368125228876,
+      "nominal_max_joint_speed_rad_s": 15.806540872720072,
+      "recorded_max_joint_speed_rad_s": 13.373408857229844,
+      "source_trace_sha256": "61d4b48e2169f90be94b866abc7b44f12cd9167dab49b1fe621380f29ddd7f6d"
+    },
+    {
+      "task": "OpenSO101-PickPlace-v0",
+      "input_equality_verified": true,
+      "nominal_report_sha256": "e3fc05d1e6e88c5b22c4031f226c9737b10792a6a28df84abe4ce3cb956dff99",
+      "recorded_report_sha256": "63ad5c759b2e68cee4bd1d8efa1ebe0df60dfcc520c536540b040620e51cec3b",
+      "nominal_max_joint_position_error_rad": 0.23730512287101813,
+      "recorded_max_joint_position_error_rad": 0.28083590793236923,
+      "nominal_max_joint_speed_rad_s": 6.435416990437399,
+      "recorded_max_joint_speed_rad_s": 7.030537136005521,
+      "source_trace_sha256": "25b150230d6913c6599b2c9a1182fd98763208dc3f8f990ff732d243ef287a53"
+    }
+  ],
+  "verifier_sha256": "5e6a3e55e61f1b9e8f439fe7bf2dde5a4d8626959d3b7e5948e540e61394482a",
+  "physics_equivalence_verified": false
+}

@@ -44,6 +44,61 @@ openso101 sim2sim mujoco --policy outputs/lift_portable \
 - [grasp_v2 Lift MuJoCo](../validation/2026-09-29/grasp_v2_mujoco_lift/report.json)
 - [grasp_v2 PickPlace MuJoCo](../validation/2026-09-29/grasp_v2_mujoco_pick_place/report.json)
 
+## 相同动作的动力学比较
+
+当前优先推进 sim2sim，真机工作暂缓，RL 训练保持停止。验证使用已保存的策略与实际 Isaac 动作记录。
+
+`sim2sim compare` 将 Isaac 验证轨迹中每步已检查的关节目标发送给 MuJoCo，初始关节位置与速度保持一致，比较每个控制步骤之前的关节、物体与夹爪接触数据。源记录发生 episode 终止时结束对应连续片段。该入口使用记录动作，不执行策略反馈计算。
+
+```bash
+openso101 sim2sim compare --policy outputs/rl_progress/lift_grasp_v2_portable_50 \
+  --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --episodes 4 --steps 500 --output outputs/lift_dynamics_comparison
+```
+
+`comparison.hdf5` 保存两个模拟器的状态和同一关节目标；`report.json` 保存每个关节的 RMSE、最大位置差异、峰值时刻、速度、接触力，以及源轨迹、模型、代码和输出 SHA256。已有输出、无效数量、超过源记录的数量及缺少实际 PD 的请求立即终止。
+
+`01f075e` 对 grasp_v2 第 50 次迭代模型的实际轨迹完成以下检查：
+
+| 指标 | Lift | PickPlace |
+|---|---:|---:|
+| 配对环境 | 4 | 4 |
+| 每环境连续控制步骤 | 250 | 400 |
+| 初始关节位置、速度误差 | 0 | 0 |
+| 最大关节位置差异 | 0.71237 rad | 0.23731 rad |
+| 该峰值时刻与关节 | 0.08 s，shoulder_pan | 0.10 s，shoulder_lift |
+| Isaac 最大关节速度 | 2.01423 rad/s | 2.01450 rad/s |
+| MuJoCo 最大关节速度 | 15.80654 rad/s | 6.43542 rad/s |
+| 最大物体位置差异 | 3.80325 mm | 2.89232 mm |
+
+机器人坐标检查仍保持微米级位置误差。动力学差异在控制开始阶段出现，速度行为需要重点验证：Isaac 配置使用 2 rad/s 的 solver 速度限制，当前 MuJoCo 模型没有该限制。Isaac 的评估配置还保留物理随机化，MuJoCo 使用名义 PD、官方 MJCF 惯性和 frictionloss。上述结果给出实际差异，单项原因的影响需要对应参数控制实验。
+
+`rl export` 的 HDF5 逐步保存实际 `joint_stiffness`、`joint_damping`、`joint_armature`、`joint_friction_coeff`、`joint_vel_limits`，以及物体线速度与角速度。包含这些字段的新记录可以使用 `sim2sim compare --recorded-pd`，将每环境实际 PD 参数用于 MuJoCo 原生 actuator，物体初始速度使用实际记录。旧轨迹缺少物体速度时，报告明确记录 MuJoCo 初始物体速度为零。
+
+当前 sim2sim 验证目标是检查相同初始状态与关节目标下的速度、实际 PD、质量、惯性和接触行为，并使用成功策略验证任务迁移。此报告保持 `physics_equivalence_verified=false` 与 `task_success_verified=false`。
+
+两项已保存模型使用新导出入口各完成四环境、500 步实际 Isaac 推理与动作检查，观测重建误差为 0，策略动作误差小于 `8.4e-7`。实际记录显示六关节速度限制均为 2 rad/s，各环境的 PD 参数存在随机化；记录中的 `joint_armature` 与 `joint_friction_coeff` 均为零。
+
+使用同一新轨迹、同一初始状态和完全相同的关节目标，对名义 PD 与记录的实际 PD 分别运行 MuJoCo，结果如下。配对输入、模型、时间步和源文件 SHA256 检查通过。
+
+| 指标 | Lift 名义 PD | Lift 实际 PD | PickPlace 名义 PD | PickPlace 实际 PD |
+|---|---:|---:|---:|---:|
+| 最大关节位置差异，rad | 0.71237 | 0.63094 | 0.23731 | 0.28084 |
+| MuJoCo 最大关节速度，rad/s | 15.80654 | 13.37341 | 6.43542 | 7.03054 |
+
+实际 PD 参数仍保留明显的速度与位置差异。当前重点是速度限制的驱动行为，以及机器人实际质量、惯性和接触参数；MJCF 中保留的 armature 与 frictionloss 需要和 Isaac 的实际参数分别检查。
+
+- [Lift 动力学比较](../validation/2026-09-29/lift_dynamics_comparison_report.json)
+- [PickPlace 动力学比较](../validation/2026-09-29/pick_place_dynamics_comparison_report.json)
+- [六项输入拒绝检查](../validation/2026-09-29/comparison_guards_report.json)
+- [Lift 新推理记录检查](../validation/2026-09-29/lift_physics_export_report.json)
+- [PickPlace 新推理记录检查](../validation/2026-09-29/pick_place_physics_export_report.json)
+- [Lift 名义 PD 比较](../validation/2026-09-29/lift_physics_nominal_report.json)
+- [Lift 实际 PD 比较](../validation/2026-09-29/lift_recorded_pd_report.json)
+- [PickPlace 名义 PD 比较](../validation/2026-09-29/pick_place_physics_nominal_report.json)
+- [PickPlace 实际 PD 比较](../validation/2026-09-29/pick_place_recorded_pd_report.json)
+- [实际输入与来源配对检查](../validation/2026-09-29/pd_comparison_pairs_report.json)
+
 ## sim2real 视觉策略检查
 
 `PortablePolicy` 接收状态观测，其中物体位置、任务目标与抓取状态需要实际观测来源。现有真机 deploy 使用视觉 student 或 LeRobot policy。视觉 student 与 PortablePolicy 共用关节动作转换函数，随后按已有 SO-101 映射转换为 LeRobot motor units。

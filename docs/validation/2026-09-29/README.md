@@ -4,6 +4,22 @@
 
 按用户指令，Lift 与 PickPlace 的 RL 训练均已停止，持续开发任务禁止启动或恢复 RL 训练。两项训练目录中的 `model_0.pt`、`model_50.pt`、`model_100.pt` 已重新读取，全部模型参数有限，文件 SHA256 保存于 [停止状态检查](training_stopped.json)。当前继续推进键盘采集、LeRobot 导出与回放、MuJoCo sim2sim、sim2real 和 agentic real2sim。
 
+当前优先推进 sim2sim，真机工作暂缓。`01f075e` 使用实际 Isaac 关节目标、初始位置和速度，在 MuJoCo 对 Lift 四环境各 250 步、PickPlace 四环境各 400 步进行动力学比较。两项最大关节位置差异为 0.71237 和 0.23731 rad，出现在 0.08 和 0.10 秒；实际速度及参数来源见 [动力学比较说明](../../guides/sim2sim.md#相同动作的动力学比较)。此比较保持任务成功与物理等价未验证。
+
+- [Lift 原始比较报告](lift_dynamics_comparison_report.json)
+- [PickPlace 原始比较报告](pick_place_dynamics_comparison_report.json)
+- [六项实际输入拒绝检查](comparison_guards_report.json)
+
+两项保存模型的新导出各完成四环境、500 步实际 Isaac 推理，记录每步实际物理参数和物体速度。MuJoCo 的名义 PD 与实际 PD 检查使用相同源轨迹和初始状态，全部关节目标与 Isaac 状态逐项完全一致。实际 PD 下最大关节位置差异为 Lift 0.63094 rad、PickPlace 0.28084 rad；最大速度为 13.37341 和 7.03054 rad/s。当前保持物理等价与任务成功未验证。
+
+- [Lift 推理与动作转换](lift_physics_export_report.json)
+- [PickPlace 推理与动作转换](pick_place_physics_export_report.json)
+- [Lift 名义 PD](lift_physics_nominal_report.json)
+- [Lift 实际 PD](lift_recorded_pd_report.json)
+- [PickPlace 名义 PD](pick_place_physics_nominal_report.json)
+- [PickPlace 实际 PD](pick_place_recorded_pd_report.json)
+- [实际输入配对检查](pd_comparison_pairs_report.json)
+
 ## 运行环境与模型
 
 - 主机：`jd_B300`，NVIDIA H20G；Isaac Sim 5.1、Isaac Lab 2.3、Torch 2.7.0+cu128。

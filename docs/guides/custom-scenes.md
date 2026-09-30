@@ -68,6 +68,8 @@ openso101 scenes layout outputs/apple_proposal/scene.json \
 
 `agent-loop` 自动从 RGB 视频均匀抽帧，把帧和场景上下文交给 GPT-6 Astra，依次完成视频描述、Objaverse/LVIS 检索、场景编排、缺失 primitive/generated parts 资产生成、静态几何检查、物理合理性审查和 SO-101 数据采集 readiness 审查。模型发现问题时最多自动修复两轮，并把每轮反馈保存到结果 JSON。
 
+用户提供的 `--instruction` 在视频描述、首次编排及每轮修复中保持原文。没有显式任务文本时，使用视频描述中的任务文本。结果中的 `scene_revisions` 保存每个场景版本的编号、场景 SHA256、任务原文和文本来源；模型审查与修改建议保存在对应反馈字段。
+
 ```bash
 openso101 scenes agent-loop \
   --video captures/pick_place.mp4 \
