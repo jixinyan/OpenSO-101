@@ -94,9 +94,24 @@ SSH 实际 TTY 输入经过 prompt_toolkit、KeyboardDevice、实际 Jacobian IK
 - [2281 帧 LeRobot 读取报告](keyboard_lerobot_report.json)
 - [2281 帧 Isaac 关节与双相机回放](keyboard_replay_report.json)
 - [180 帧 PickPlace 状态采集与恢复](keyboard_state_report.json)
+- [正式入口 PickPlace 回放报告](replay_cli_state_report.json)
+- [正式入口自定义场景回放报告](replay_cli_custom_report.json)
+- [正式入口旧键盘数据回放报告](replay_cli_legacy_report.json)
+- [正式入口参数检查报告](replay_cli_guards_report.json)
 - [键盘操作指南](../../guides/teleop.md)
 
 ## 重复运行
+
+`eb3e763` 的正式 `il replay --report` 完成三项实际 Isaac 检查，共 132 帧；三项进程的 exit code 均为 0。PickPlace 状态数据从第 120 帧恢复并执行 60 帧，六项场景字段及关节位置、速度恢复误差均为 0。自定义场景执行全部 12 帧，实体状态和关节恢复误差均为 0。旧键盘数据执行前 60 帧，检查其已保存的关节状态。三项控制周期与源 FPS 一致，动作误差为 0，每帧实际关节和双相机数据均通过检查，源任务成功标记均为 `false`。报告包含检查代码 SHA256，任务成功和完整物理状态重现保持未验证。
+
+实际运行脚本保存在主机的 `outputs/rl_progress/run_native_replay_report.sh`。已有报告文件、空动作范围与负数保持步骤使用同一实际 HDF5 检查，均在启动 Isaac 前以非零状态终止；检查脚本为 `check_replay_cli_guards.py`。正式命令示例：
+
+```bash
+/home/jixin/workspace/envs/openso101-v2/bin/python -m openso101.cli.main il replay \
+  --episode outputs/rl_progress/keyboard_state_dataset/episodes/episode_000000.hdf5 \
+  --checkpoint-frame 120 --start-frame 120 --stop-frame 180 --hold-steps 0 \
+  --report outputs/replay_state_report.json --headless --no-camera-viewports
+```
 
 PickPlace 的状态采集检查使用实际双相机、机器人、物体和 command，录制 180 帧后重置环境，再恢复第 120 帧并回放后续 60 帧。源动作来自已有键盘 HDF5，图像、关节和场景状态在本次真实运行中重新采集。报告中的六项场景状态与两项关节状态恢复误差均为 0，放置计时器为 0，任务成功为 `false`。物理随机化参数及接触求解状态的重现仍需独立验证。
 

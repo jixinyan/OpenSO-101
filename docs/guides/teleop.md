@@ -166,6 +166,26 @@ conda run -n openso101 openso101 il push \
   --overwrite-export
 ```
 
+## 回放与验证报告
+
+正式回放入口可以从指定帧恢复记录中的关节和场景状态，并执行指定范围的动作：
+
+```bash
+openso101 il replay \
+  --episode outputs/my_dataset/episodes/episode_000000.hdf5 \
+  --checkpoint-frame 120 --start-frame 120 --stop-frame 180 \
+  --hold-steps 0 --report outputs/replay_report.json \
+  --headless --no-camera-viewports
+```
+
+`--checkpoint-frame` 指定恢复帧；`--start-frame` 与 `--stop-frame` 指定动作范围，结束帧不包含在范围中。没有指定恢复帧时使用所选 checkpoint，没有 checkpoint 时使用第零帧。`--hold-steps` 默认执行 30 个保持步骤，设置为零可直接执行记录动作。
+
+`--report` 检查控制周期与源 FPS、已记录状态的恢复误差、ActionManager 每步动作、关节有限数值，以及 wrist／overhead RGB 的形状与有限数值。报告保存源文件与检查代码的 SHA256、实际检查帧数和源任务成功标记；状态与动作误差阈值为 `1e-6`。检查覆盖环境索引零；已有报告文件、空动作范围和负数保持步骤会在启动 Isaac 前终止。
+
+`replay_verified` 表示请求范围的程序检查全部通过。报告中的 `task_success_verified` 与 `physics_state_reproducibility_verified` 保持 `false`；任务完成、随机化参数和接触求解状态需要对应验收。旧数据仅检查已保存的状态字段，可通过 `source_sim_fields` 与 `restore_errors` 查看检查范围。
+
+实际运行覆盖 PickPlace 的第 120–179 帧、自定义场景全部 12 帧及旧键盘数据的前 60 帧；三项进程均正常退出，动作和状态恢复误差均为零。报告见 [回放运行记录](../validation/2026-09-29/README.md)。
+
 ## Diagnostics
 
 If contact errors appear again:

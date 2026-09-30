@@ -1,0 +1,23 @@
+{
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/keyboard_state_dataset/episodes/episode_000000.hdf5",
+  "checks": {
+    "existing_report": {
+      "exit_code": 1,
+      "error_type": "FileExistsError",
+      "isaac_launched": false
+    },
+    "empty_range": {
+      "exit_code": 1,
+      "error_type": "ValueError",
+      "isaac_launched": false
+    },
+    "negative_hold": {
+      "exit_code": 1,
+      "error_type": "ValueError",
+      "isaac_launched": false
+    }
+  },
+  "source_sha256": "a50fe0c4722eca262ab125336e1bdb55b75faf11bd42b250cd330de708c99466",
+  "cli_sha256": "3e9811144fbbe2b710c0ab922f7eb334500170bdde0e860612322331c8bcccd9",
+  "status": "guards_verified"
+}

@@ -1,0 +1,45 @@
+{
+  "status": "replay_verified",
+  "task": "OpenSO101-CustomScene-v0",
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/runtime_dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "7351f1cd155b47eef8e0f701ff4d02f3b9d8935e0b8fdd68a7f41daf1bc284f0",
+  "source_task_success": false,
+  "source_scene_sha256": "0038e97e9359a1f9e430e5079c6ed5de74953e0cb76a4b0cde201f110f9be373",
+  "source_sim_fields": [
+    "scene_entity_states"
+  ],
+  "observed_env_index": 0,
+  "checkpoint_frame": 0,
+  "start_frame": 0,
+  "stop_frame": 12,
+  "requested_frames": 12,
+  "completed_frames": 12,
+  "control_dt": 0.016666666666666666,
+  "source_fps": 60,
+  "control_timing_error_seconds": 0.0,
+  "step_checks": {
+    "warm_start": 0,
+    "hold": 0,
+    "replay": 12
+  },
+  "maximum_action_error": 0.0,
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0,
+    "scene_entity_states": 0.0
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 12,
+      "minimum_pixel_std": 36.628807067871094
+    },
+    "overhead_camera": {
+      "frames": 12,
+      "minimum_pixel_std": 9.983464241027832
+    }
+  },
+  "task_success_verified": false,
+  "physics_state_reproducibility_verified": false,
+  "validator_sha256": "6dcea53f65da01d1e8d5d62cccb1fdb5ceb410294c6fb3658afbfe975a8729bd",
+  "cli_sha256": "3e9811144fbbe2b710c0ab922f7eb334500170bdde0e860612322331c8bcccd9"
+}

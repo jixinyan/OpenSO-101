@@ -1,0 +1,42 @@
+{
+  "status": "replay_verified",
+  "task": "OpenSO101-PickPlace-v0",
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/keyboard_dataset/episodes/episode_000001.hdf5",
+  "source_sha256": "da6fbb27454ca124e7cc088bef1c38b1330b81d69f2dcb839dd452ad4235b637",
+  "source_task_success": false,
+  "source_scene_sha256": "",
+  "source_sim_fields": [],
+  "observed_env_index": 0,
+  "checkpoint_frame": 0,
+  "start_frame": 0,
+  "stop_frame": 60,
+  "requested_frames": 60,
+  "completed_frames": 60,
+  "control_dt": 0.016666666666666666,
+  "source_fps": 60,
+  "control_timing_error_seconds": 0.0,
+  "step_checks": {
+    "warm_start": 0,
+    "hold": 0,
+    "replay": 60
+  },
+  "maximum_action_error": 0.0,
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 60,
+      "minimum_pixel_std": 59.43456268310547
+    },
+    "overhead_camera": {
+      "frames": 60,
+      "minimum_pixel_std": 23.788949966430664
+    }
+  },
+  "task_success_verified": false,
+  "physics_state_reproducibility_verified": false,
+  "validator_sha256": "6dcea53f65da01d1e8d5d62cccb1fdb5ceb410294c6fb3658afbfe975a8729bd",
+  "cli_sha256": "3e9811144fbbe2b710c0ab922f7eb334500170bdde0e860612322331c8bcccd9"
+}
