@@ -339,6 +339,7 @@ def evaluate(args):
         "actual_velocity_limits_verified": constrained and all(record["constrained_drive"]["actual_velocity_limits_verified"] for record in records),
         "constrained_drive_source_sha256": digest(Path(__file__).with_name("constrained_drive.py")) if constrained else None,
         "evaluation_source_sha256": digest(Path(__file__)),
+        "recorded_physics_source_sha256": digest(Path(__file__).with_name("recorded_physics.py")) if recorded else None,
         "contact_geometry": "CoACD_gripper_convex_parts" if collision_bundle else "upstream_MJCF_convex_meshes",
         "collision_bundle_sha256": digest(Path(collision_bundle) / "manifest.json") if collision_bundle else None,
         "initial_states": "first_frame_of_actual_Isaac_trace",

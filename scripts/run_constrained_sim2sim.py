@@ -8,6 +8,7 @@ import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--run-id", required=True)
+parser.add_argument("--collision-bundle", type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 environment = dict(os.environ, OPENSO101_SKIP_ISAAC="1", PYTHONPATH=str(root / "src"),
@@ -23,6 +24,8 @@ for task in ("lift", "pick_place"):
             command += ["--steps", "500", "--recorded-pd", "--physics-components", "bodies", "gravity", "armature", "friction"]
         else:
             command += ["--recorded-physics"]
+        if args.collision_bundle:
+            command += ["--collision-bundle", str(args.collision_bundle.resolve())]
         with (root / f"outputs/rl_progress/{name}.log").open("x") as log:
             subprocess.run(command, cwd=root, env=environment, stdout=log, stderr=subprocess.STDOUT, check=True)
         report = json.loads((root / f"outputs/rl_progress/{name}/report.json").read_text())

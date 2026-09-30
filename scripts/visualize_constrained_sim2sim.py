@@ -17,6 +17,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--gripper", type=Path)
 parser.add_argument("--native-gripper", type=Path)
+parser.add_argument("--local-run-id", default="mac_bvh_verified")
+parser.add_argument("--linux-reports", type=Path, required=True)
+parser.add_argument("--baseline-gripper", type=Path)
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=False)
 root = Path(__file__).resolve().parents[1]
@@ -25,12 +28,14 @@ metrics = []
 fig, axes = plt.subplots(2, 2, figsize=(13, 8), layout="constrained")
 colors = ("#2471a3", "#d35400")
 for row, task in enumerate(("lift", "pick_place")):
-    folder = root / f"outputs/rl_progress/{task}_constrained_mac_final_compare"
+    folder = root / f"outputs/rl_progress/{task}_constrained_{args.local_run_id}_compare"
     report = json.loads((folder / "report.json").read_text())
-    linux = json.loads((root / f"outputs/rl_progress/constrained_linux_reports/{task}_compare.json").read_text())
+    linux = json.loads((args.linux_reports / f"{task}_compare.json").read_text())
     if (report["policy_sha256"] != linux["policy_sha256"] or report["isaac_trace_sha256"] != linux["isaac_trace_sha256"]
             or report["policy_metadata_sha256"] != linux["policy_metadata_sha256"]
-            or report["constrained_drive_source_sha256"] != linux["constrained_drive_source_sha256"]):
+            or report["constrained_drive_source_sha256"] != linux["constrained_drive_source_sha256"]
+            or report["recorded_physics_source_sha256"] != linux["recorded_physics_source_sha256"]
+            or report["collision_bundle_sha256"] != linux["collision_bundle_sha256"]):
         raise ValueError("两台主机的策略、源记录、场景或控制器不一致")
     for local_record, linux_record in zip(report["environments"], linux["environments"], strict=True):
         for name in ("joint_position_rmse_rad", "joint_position_max_error_rad", "joint_velocity_rmse_rad_s"):
@@ -84,8 +89,10 @@ fig.suptitle("SO-101: actual source actions, recorded physics, physical velocity
 fig.savefig(args.output / "constrained_drive.png", dpi=160)
 plt.close(fig)
 if args.gripper:
+    if args.baseline_gripper is None:
+        raise ValueError("夹爪图表需要同一控制器的基础碰撞记录")
     fig, axes = plt.subplots(3, 1, figsize=(12, 9), layout="constrained")
-    cases = [("MuJoCo upstream convex", root / "outputs/rl_progress/gripper_mechanics_probe3", "#888888"),
+    cases = [("MuJoCo upstream convex", args.baseline_gripper, "#888888"),
              ("MuJoCo CoACD parts", args.gripper, "#2471a3")]
     for label, folder, color in cases:
         report = json.loads((folder / "report.json").read_text())
