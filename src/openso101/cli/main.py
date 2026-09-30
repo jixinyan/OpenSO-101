@@ -41,6 +41,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_sim2real = sub.add_parser("sim2real", help="Sim-to-real deployment on a real SO-101")
     sim2real_cli.add_subparsers(p_sim2real)
 
+    from . import sim2sim as sim2sim_cli
+
+    p_sim2sim = sub.add_parser("sim2sim", help="MuJoCo 策略与物理评估")
+    sim2sim_cli.add_subparsers(p_sim2sim)
+
     from . import scenes as scenes_cli
 
     p_scenes = sub.add_parser("scenes", help="Objaverse assets and custom scenes")

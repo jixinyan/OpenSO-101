@@ -1,0 +1,210 @@
+import json
+from pathlib import Path
+
+import h5py
+import mujoco
+import numpy as np
+from scipy.spatial.transform import Rotation
+
+from openso101.rl.config import digest
+from openso101.rl.portable import PortablePolicy
+
+JOINT_NAMES = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
+JOINT_OFFSETS = np.array([0., -np.pi / 2, np.pi / 2, 0., 0., 0.])
+
+
+def check_kinematics(model, trace):
+    data = mujoco.MjData(model)
+    gripper_id = model.body("gripper").id
+    qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
+    maximum_position_error = 0.
+    maximum_rotation_error = 0.
+    positions = trace["joint_position"][:]
+    expected_positions = trace["gripper_position_root"][:]
+    expected_rotations = trace["gripper_quaternion_root"][:]
+    for index in range(len(positions)):
+        for env_index in range(positions.shape[1]):
+            data.qpos[qpos_ids] = positions[index, env_index] + JOINT_OFFSETS
+            mujoco.mj_forward(model, data)
+            position_error = np.linalg.norm(data.xpos[gripper_id] - expected_positions[index, env_index])
+            predicted = Rotation.from_quat(data.xquat[gripper_id], scalar_first=True)
+            expected = Rotation.from_quat(expected_rotations[index, env_index], scalar_first=True)
+            rotation_error = (expected.inv() * predicted).magnitude()
+            maximum_position_error = max(maximum_position_error, float(position_error))
+            maximum_rotation_error = max(maximum_rotation_error, float(rotation_error))
+    if maximum_position_error > 0.001 or maximum_rotation_error > 0.001:
+        raise ValueError("MuJoCo 关节坐标未通过 Isaac 末端坐标检查")
+    return {"poses": int(np.prod(positions.shape[:2])), "maximum_position_error_m": maximum_position_error,
+            "maximum_rotation_error_rad": maximum_rotation_error}
+
+
+def build_model(robot_model, metadata):
+    spec = mujoco.MjSpec.from_file(str(robot_model))
+    if [joint.name for joint in spec.joints] != list(JOINT_NAMES):
+        raise ValueError("需要官方 SO-101 old-calibration MJCF 的六个关节")
+    model = spec.compile()
+    expected_limits = np.asarray(metadata["physical_joint_limits"]) + JOINT_OFFSETS[:, None]
+    if not np.allclose(model.jnt_range, expected_limits, atol=1e-5, rtol=0):
+        raise ValueError("MJCF 关节限位与 policy 定义不一致")
+    spec.option.timestep = 0.002
+    spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
+    spec.option.gravity = [0, 0, -9.81]
+    for index, name in enumerate(JOINT_NAMES):
+        joint = spec.joint(name)
+        joint.damping = 0.
+        actuator = spec.actuator(name)
+        stiffness = metadata["nominal_stiffness"][index]
+        actuator.gainprm[0] = stiffness
+        actuator.biasprm[1] = -stiffness
+        actuator.biasprm[2] = -metadata["nominal_damping"][index]
+        actuator.forcerange = [-metadata["effort_limits"][index], metadata["effort_limits"][index]]
+        actuator.forcelimited = True
+        actuator.ctrllimited = False
+    for geom in spec.geoms:
+        if geom.contype or geom.conaffinity:
+            geom.contype = 1
+            geom.conaffinity = 6
+            if geom.parent.name in ("gripper", "moving_jaw_so101_v1"):
+                geom.friction = [1.2, 0.005, 0.0001]
+    spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[1, 1, 0.05],
+                           pos=[0, 0, metadata["table_height_root"]], contype=4, conaffinity=3,
+                           friction=[1, 0.005, 0.0001])
+    cube = spec.worldbody.add_body(name="object", pos=[0.02, -0.3, metadata["table_height_root"] + 0.015])
+    cube.add_freejoint(name="object_free")
+    cube.add_geom(name="object", type=mujoco.mjtGeom.mjGEOM_BOX, size=np.asarray(metadata["object_size"]) / 2,
+                  mass=metadata["object_mass"], contype=2, conaffinity=5, friction=[1, 0.005, 0.0001])
+    return spec.compile()
+
+
+def jaw_forces(model, data):
+    object_id = model.geom("object").id
+    jaw_ids = [model.body(name).id for name in ("gripper", "moving_jaw_so101_v1")]
+    forces = np.zeros((2, 3))
+    for index in range(data.ncon):
+        contact = data.contact[index]
+        if object_id not in (contact.geom1, contact.geom2):
+            continue
+        robot_geom = contact.geom2 if contact.geom1 == object_id else contact.geom1
+        body_id = model.geom_bodyid[robot_geom]
+        if body_id in jaw_ids:
+            wrench = np.zeros(6)
+            mujoco.mj_contactForce(model, data, index, wrench)
+            force_world = contact.frame.reshape(3, 3).T @ wrench[:3]
+            forces[jaw_ids.index(body_id)] += force_world if contact.geom1 == object_id else -force_world
+    return np.linalg.norm(forces, axis=-1)
+
+
+def evaluate(args):
+    if args.episodes <= 0:
+        raise ValueError("episodes 必须为正数")
+    policy_folder = Path(args.policy).resolve()
+    robot_model = Path(args.robot_model).resolve()
+    policy = PortablePolicy(policy_folder)
+    metadata = policy.metadata
+    output = Path(args.output).resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    with h5py.File(policy_folder / "isaac_validation.hdf5", "r") as reference:
+        kinematics = check_kinematics(mujoco.MjModel.from_xml_path(str(robot_model)), reference)
+        if args.episodes > reference["joint_position"].shape[1]:
+            raise ValueError("episodes 超过 Isaac 记录的初始场景数量")
+        starts = {name: reference[name][0, :args.episodes] for name in (
+            "joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "goal_root",
+        )}
+    model = build_model(robot_model, metadata)
+    data = mujoco.MjData(model)
+    joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
+    joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
+    actuator_ids = [model.actuator(name).id for name in JOINT_NAMES]
+    object_qpos_id = int(model.joint("object_free").qposadr[0])
+    object_id = model.body("object").id
+    gripper_id = model.body("gripper").id
+    control_dt = metadata["control_dt"]
+    substeps = round(control_dt / model.opt.timestep)
+    if not np.isclose(substeps * model.opt.timestep, control_dt):
+        raise ValueError("MuJoCo physics_dt 无法表示 policy control_dt")
+    parameters = metadata["task_parameters"]
+    records = []
+    with h5py.File(output / "trajectory.hdf5", "w") as trajectory:
+        for episode in range(args.episodes):
+            mujoco.mj_resetData(model, data)
+            data.qpos[joint_qpos_ids] = starts["joint_position"][episode] + JOINT_OFFSETS
+            data.qvel[joint_dof_ids] = starts["joint_velocity"][episode]
+            data.qpos[object_qpos_id:object_qpos_id + 3] = starts["object_position_root"][episode]
+            data.qpos[object_qpos_id + 3:object_qpos_id + 7] = starts["object_quaternion_root"][episode]
+            mujoco.mj_forward(model, data)
+            goal = starts["goal_root"][episode].copy()
+            last_action = np.zeros((1, 6), dtype=np.float32)
+            stage = 0
+            hold_seconds = 0.
+            success = False
+            progress = {name: False for name in ("reached", "grasped", "held_above_table", "carry_stage", "place_stage")}
+            buffers = {name: [] for name in ("joint_position", "object_position_root", "jaw_forces", "raw_action", "stage")}
+            for step in range(round(metadata["episode_length_s"] / control_dt)):
+                qpos = data.qpos[joint_qpos_ids] - JOINT_OFFSETS
+                qvel = data.qvel[joint_dof_ids]
+                forces = jaw_forces(model, data)
+                grasped = bool((forces > metadata["grasp_force_threshold_newtons"]).all())
+                observation = policy.observation(qpos[None], qvel[None], data.xpos[object_id][None],
+                                                 goal[None], [[float(grasped)]], last_action)
+                actions = policy.predict(observation)
+                targets = policy.joint_targets(actions, enforce_limits=False).numpy()[0]
+                last_action = actions.numpy()
+                buffers["joint_position"].append(qpos.copy())
+                buffers["object_position_root"].append(data.xpos[object_id].copy())
+                buffers["jaw_forces"].append(forces.copy())
+                buffers["raw_action"].append(last_action[0].copy())
+                buffers["stage"].append(stage)
+                data.ctrl[actuator_ids] = targets + JOINT_OFFSETS
+                for _ in range(substeps):
+                    mujoco.mj_step(model, data)
+                if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all() or any(warning.number for warning in data.warning):
+                    raise RuntimeError("MuJoCo 物理运行产生无效状态或警告")
+                forces = jaw_forces(model, data)
+                grasped = bool((forces > metadata["grasp_force_threshold_newtons"]).all())
+                object_position = data.xpos[object_id]
+                gripper_rotation = Rotation.from_quat(data.xquat[gripper_id], scalar_first=True)
+                ee_position = data.xpos[gripper_id] + gripper_rotation.apply([0.01, 0, -0.09])
+                progress["reached"] |= np.linalg.norm(ee_position - object_position) < 0.08
+                progress["grasped"] |= grasped
+                progress["held_above_table"] |= grasped and object_position[2] > metadata["table_height_root"] + 0.04
+                if metadata["task_id"] == "OpenSO101-Lift-v0":
+                    success = bool(object_position[2] > metadata["table_height_root"] + parameters["minimal_height"]
+                                   and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
+                else:
+                    if stage < 2 and grasped and np.linalg.norm(object_position - goal) <= parameters["advance_threshold"] + parameters["object_contact_radius"]:
+                        stage += 1
+                        goal = np.asarray(parameters["place_goal"]).copy()
+                        if stage == 1:
+                            goal[2] = parameters["carry_height"]
+                    velocity = np.zeros(6)
+                    mujoco.mj_objectVelocity(model, data, mujoco.mjtObj.mjOBJ_BODY, object_id, velocity, 0)
+                    released = (stage == 2 and not grasped and qpos[-1] > parameters["jaw_open_min"]
+                                and np.linalg.norm(object_position - parameters["place_goal"]) <= parameters["place_radius"]
+                                and np.linalg.norm(velocity[3:]) <= parameters["linear_speed_max"]
+                                and np.linalg.norm(velocity[:3]) <= parameters["angular_speed_max"])
+                    hold_seconds = hold_seconds + control_dt if released else 0.
+                    success = hold_seconds >= parameters["settle_seconds"]
+                    progress["carry_stage"] |= stage >= 1
+                    progress["place_stage"] |= stage >= 2
+                if success or object_position[2] < metadata["table_height_root"] - 0.05:
+                    break
+            group = trajectory.create_group(f"episode_{episode:06d}")
+            for name, values in buffers.items():
+                group.create_dataset(name, data=np.asarray(values))
+            records.append({"initial_env_index": episode, "success": success, "steps": step + 1,
+                            **{name: bool(value) for name, value in progress.items()}})
+    report = {
+        "status": "mujoco_policy_evaluation_completed", "task": metadata["task_id"], "episodes": records,
+        "success_rate": sum(record["success"] for record in records) / len(records),
+        "kinematics": kinematics, "mujoco_version": mujoco.__version__,
+        "policy_sha256": metadata["files"]["policy.pt"], "robot_model_sha256": digest(robot_model),
+        "isaac_trace_sha256": digest(policy_folder / "isaac_validation.hdf5"),
+        "trajectory_sha256": digest(output / "trajectory.hdf5"), "control_dt": control_dt,
+        "physics_dt": model.opt.timestep, "joint_offsets": JOINT_OFFSETS.tolist(),
+        "dynamics": "nominal_isaac_PD_and_effort_limits_with_upstream_MJCF_inertia_and_frictionloss",
+        "contact_geometry": "upstream_MJCF_convex_meshes", "initial_states": "first_frame_of_actual_Isaac_trace",
+        "physics_equivalence_verified": False,
+    }
+    (output / "report.json").write_text(json.dumps(report, indent=2))
+    print(json.dumps(report))
+    return 0
