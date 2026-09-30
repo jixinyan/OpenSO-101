@@ -84,6 +84,8 @@ PickPlace 使用 `OpenSO101-PickPlace-v0`、`pick_place_seed42/train.json` 和�
 
 ## CPU 检查
 
+共享策略的数值比较、动作诊断、MuJoCo 配对场景和视觉 student 检查见 [接口运行说明](../../guides/sim2sim.md)，reward 判断见 [RL audit](../../guides/rl-audit-2026-09-29.md)。实际模型和完整轨迹保留在主机及本地的 `outputs/rl_progress/`，本目录保存其配置与原始 JSON 报告。
+
 Python 3.11 下 44 项检查通过，覆盖实际 PTY、文件、MP4、HDF5、OpenUSD、Torch 运算和 CLI 参数。四项含替代服务或对象的测试未执行。
 
 ```bash

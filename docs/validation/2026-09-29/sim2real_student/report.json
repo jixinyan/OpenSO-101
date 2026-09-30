@@ -1,0 +1,28 @@
+{
+  "status": "student_recorded_observation_inference_verified",
+  "frames": 12,
+  "task": "OpenSO101-CustomScene-v0",
+  "scene_sha256": "0038e97e9359a1f9e430e5079c6ed5de74953e0cb76a4b0cde201f110f9be373",
+  "student_sha256": "074d9fa4e3416b89a3f155a0c52401a8c8bdab13ded395cec5a86c7826e41ac3",
+  "episode_sha256": "7351f1cd155b47eef8e0f701ff4d02f3b9d8935e0b8fdd68a7f41daf1bc284f0",
+  "control_dt": 0.016666666666666666,
+  "required_fps": 60.0,
+  "motor_minimum": [
+    -1.8982086181640625,
+    -0.40615081787109375,
+    -2.4141311645507812,
+    89.99998474121094,
+    -0.24724578857421875,
+    0.07854461669921875
+  ],
+  "motor_maximum": [
+    -1.8941650390625,
+    -0.39894866943359375,
+    -2.406158447265625,
+    89.99998474121094,
+    -0.2451934814453125,
+    0.0840911865234375
+  ],
+  "commands_sha256": "ebf8b47c410fdf8829df649fd8ff3c0d551a3c4d34364e2aa8c074b274ef788a",
+  "hardware_run_verified": false
+}

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "task_id": "OpenSO101-Lift-v0",
+  "training_git_sha": "3a16ff38f5ecba4ab2dcc0f6d58fd5ab39f7c3f1",
+  "export_git_sha": "dfb880909f392b910bfca5ca2d25ac9adad374b3",
+  "checkpoint_sha256": "07d587aa1b9c8ab533c701e91c5d53f67f1380ed0d6a524dfa951ff4e014f9cb",
+  "files": {
+    "policy.pt": "579910b6c9b344b5c76e640197b58a5e58d75c70d327448628407e04d901a58c"
+  },
+  "control_dt": 0.02,
+  "physics_dt": 0.01,
+  "joint_names": [
+    "Rotation",
+    "Pitch",
+    "Elbow",
+    "Wrist_Pitch",
+    "Wrist_Roll",
+    "Jaw"
+  ],
+  "observation_joint_names": [
+    "Rotation",
+    "Pitch",
+    "Elbow",
+    "Wrist_Pitch",
+    "Wrist_Roll",
+    "Jaw"
+  ],
+  "physical_joint_limits": [
+    [
+      -1.9198598861694336,
+      1.9198598861694336
+    ],
+    [
+      -1.7453298568725586,
+      1.7453298568725586
+    ],
+    [
+      -1.7453298568725586,
+      1.5707999467849731
+    ],
+    [
+      -1.65805983543396,
+      1.65805983543396
+    ],
+    [
+      -2.792530059814453,
+      2.792530059814453
+    ],
+    [
+      -0.17453299462795258,
+      1.7453298568725586
+    ]
+  ],
+  "default_joint_positions": [
+    0.0,
+    0.0,
+    0.0,
+    1.5707999467849731,
+    0.0,
+    0.800000011920929
+  ],
+  "default_joint_velocities": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "nominal_stiffness": [
+    55.0,
+    30.0,
+    25.0,
+    12.0,
+    7.0,
+    15.0
+  ],
+  "nominal_damping": [
+    0.699999988079071,
+    0.800000011920929,
+    0.699999988079071,
+    0.5,
+    0.5,
+    0.5
+  ],
+  "effort_limits": [
+    30.0,
+    30.0,
+    30.0,
+    30.0,
+    30.0,
+    30.0
+  ],
+  "table_height_root": 0.03008144721388817,
+  "object_size": [
+    0.03,
+    0.03,
+    0.03
+  ],
+  "object_mass": 0.02,
+  "episode_length_s": 5.0,
+  "observation_terms": [
+    {
+      "name": "joint_pos",
+      "size": 6
+    },
+    {
+      "name": "joint_vel",
+      "size": 6
+    },
+    {
+      "name": "object_position",
+      "size": 3
+    },
+    {
+      "name": "target_object_position",
+      "size": 7
+    },
+    {
+      "name": "grasp_state",
+      "size": 1
+    },
+    {
+      "name": "actions",
+      "size": 6
+    }
+  ],
+  "normalization": "embedded_in_policy.pt",
+  "position_frame": "robot_root",
+  "quaternion_order": "wxyz",
+  "joint_unit": "radian",
+  "last_action": "raw_policy_action",
+  "action_mapping": [
+    {
+      "joint_name": "Rotation",
+      "action_index": 0,
+      "lower": -1.7278738021850586,
+      "upper": 1.7278738021850586,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Pitch",
+      "action_index": 1,
+      "lower": -1.5707968473434448,
+      "upper": 1.5707968473434448,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Elbow",
+      "action_index": 2,
+      "lower": -1.5795233249664307,
+      "upper": 1.4049932956695557,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Wrist_Pitch",
+      "action_index": 3,
+      "lower": -1.4922537803649902,
+      "upper": 1.4922537803649902,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 1.5707999467849731
+    },
+    {
+      "joint_name": "Wrist_Roll",
+      "action_index": 4,
+      "lower": -2.513277053833008,
+      "upper": 2.513277053833008,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Jaw",
+      "action_index": 5,
+      "lower": -0.07853984832763672,
+      "upper": 1.6493366956710815,
+      "type": "binary",
+      "close": 0.0,
+      "open": 0.800000011920929
+    }
+  ],
+  "grasp_force_threshold_newtons": 0.5,
+  "reward_terms": [
+    {
+      "name": "reaching_object_coarse",
+      "weight": 0.5
+    },
+    {
+      "name": "reaching_object_fine",
+      "weight": 0.5
+    },
+    {
+      "name": "grasped",
+      "weight": 6.0
+    },
+    {
+      "name": "lifting_object",
+      "weight": 3.0
+    },
+    {
+      "name": "object_goal_tracking",
+      "weight": 5.0
+    },
+    {
+      "name": "success_bonus_in_air",
+      "weight": 3.0
+    },
+    {
+      "name": "action_rate",
+      "weight": 0.0
+    },
+    {
+      "name": "joint_vel",
+      "weight": -0.0001
+    },
+    {
+      "name": "joint_pos_delta",
+      "weight": 0.0
+    }
+  ],
+  "hardware_observations_required": [
+    "object_position_root",
+    "goal_root",
+    "grasp_state"
+  ],
+  "task_parameters": {
+    "minimal_height": 0.04,
+    "goal_radius": 0.05
+  }
+}
