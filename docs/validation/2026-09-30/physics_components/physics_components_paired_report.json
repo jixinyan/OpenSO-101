@@ -1,0 +1,169 @@
+{
+  "paired_inputs_verified": true,
+  "parameter_readback_verified": true,
+  "task_success_verified": false,
+  "physics_equivalence_verified": false,
+  "tasks": {
+    "lift": {
+      "baseline": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.018669616582250206,
+        "joint_position_max_error_rad": 0.16383489336608442,
+        "physics_max_joint_speed_rad_s": 2.0176286704263493,
+        "object_position_max_error_m": 0.00418367442737673,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "f04a34cd42ba84edad9007112506a53db28e1948becedfcc9b26d6be9ccbe8a6"
+      },
+      "bodies": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.01869448084617273,
+        "joint_position_max_error_rad": 0.16519408228854693,
+        "physics_max_joint_speed_rad_s": 2.016632542554074,
+        "object_position_max_error_m": 0.004154728243252558,
+        "maximum_com_error_m": 1.0071838847370015e-06,
+        "maximum_inertia_relative_error": 2.4987446607924532e-06,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "aefa19e1d9ecf80aadd6ac281d0e3c242cec49b810cf808a26355753a4aa96dc"
+      },
+      "gravity": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.01867317316589401,
+        "joint_position_max_error_rad": 0.16383628158995378,
+        "physics_max_joint_speed_rad_s": 2.022593422825471,
+        "object_position_max_error_m": 0.004171396772449624,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "aeb67aeee59cfb3e7209dc116e930c4c98de9a2e062e35d874131bf995ee0134"
+      },
+      "armature": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.013120702804038325,
+        "joint_position_max_error_rad": 0.06730112988726128,
+        "physics_max_joint_speed_rad_s": 2.8571977780667948,
+        "object_position_max_error_m": 0.0028924614136152595,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "a08f46c117de32107f8658145ec7a26872b76b35428028a04406f7e043268e4c"
+      },
+      "friction": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.018233165685874134,
+        "joint_position_max_error_rad": 0.14538525313144107,
+        "physics_max_joint_speed_rad_s": 2.0589725627002826,
+        "object_position_max_error_m": 0.004647404405235551,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "c1888e75dd9711a505c0cdde66e9d4afe043f50c298668d015c0a21359f3012d"
+      },
+      "combined": {
+        "environments": 4,
+        "control_samples": 1000,
+        "joint_position_rmse_rad": 0.01367021949343244,
+        "joint_position_max_error_rad": 0.050742853264241994,
+        "physics_max_joint_speed_rad_s": 2.9572996814035024,
+        "object_position_max_error_m": 0.0028910392726872176,
+        "maximum_com_error_m": 1.0071838847370015e-06,
+        "maximum_inertia_relative_error": 2.4987446607924532e-06,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+        "trajectory_sha256": "aac37611ce72e8ca8fcdd0630bedbbe49eb92ef7d1c7e936b49019856889b008"
+      }
+    },
+    "pick_place": {
+      "baseline": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.008170964975466525,
+        "joint_position_max_error_rad": 0.13260381359174445,
+        "physics_max_joint_speed_rad_s": 2.215268333106417,
+        "object_position_max_error_m": 0.002892318188735506,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 2.220446049250313e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "56d990f04e35e3195c0c12075a13020adef384142d90b07c320218b90c329ae3"
+      },
+      "bodies": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.008163466518671713,
+        "joint_position_max_error_rad": 0.1324538570714402,
+        "physics_max_joint_speed_rad_s": 2.18676710082388,
+        "object_position_max_error_m": 0.0028923181887355064,
+        "maximum_com_error_m": 7.274937732589184e-07,
+        "maximum_inertia_relative_error": 1.7736153040057995e-06,
+        "maximum_force_equation_error_nm": 2.220446049250313e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "fb930a1e6be9de0396437fcd4dbfc53d98aeaa917f7451aa4381f53099fb618f"
+      },
+      "gravity": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.008165525702458588,
+        "joint_position_max_error_rad": 0.13261767209248587,
+        "physics_max_joint_speed_rad_s": 2.224269582119781,
+        "object_position_max_error_m": 0.0028908960513013833,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "92704e5de2ea07335d61c935b55016d31b73d823636357071c40ab4f4ab5c30b"
+      },
+      "armature": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.001432336064323384,
+        "joint_position_max_error_rad": 0.027560099244170688,
+        "physics_max_joint_speed_rad_s": 2.5574848602095326,
+        "object_position_max_error_m": 0.0028923181887355173,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 2.220446049250313e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "e7ee7fa30f9634e26dc77c30a81963e07839c3fc6de421650212ea13322a207b"
+      },
+      "friction": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.007620123714866889,
+        "joint_position_max_error_rad": 0.11693092288408558,
+        "physics_max_joint_speed_rad_s": 2.2827466656836135,
+        "object_position_max_error_m": 0.002892318188735506,
+        "maximum_com_error_m": null,
+        "maximum_inertia_relative_error": null,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "1c81dc80204c5f8673f4ccd6e742ce8e4f5dd0a4341ea2847f0bcfe031cf8092"
+      },
+      "combined": {
+        "environments": 4,
+        "control_samples": 1600,
+        "joint_position_rmse_rad": 0.0009808811962490169,
+        "joint_position_max_error_rad": 0.026419308347256587,
+        "physics_max_joint_speed_rad_s": 2.615973604598969,
+        "object_position_max_error_m": 0.002890896051301376,
+        "maximum_com_error_m": 7.274937732589184e-07,
+        "maximum_inertia_relative_error": 1.7736153040057995e-06,
+        "maximum_force_equation_error_nm": 4.440892098500626e-16,
+        "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+        "trajectory_sha256": "8d18646d2f4dd67827d6a9678f49ee0c0bd0e2c98b2518a7e9463a4ad0c2c06a"
+      }
+    }
+  },
+  "checker_sha256": "cffe9c03a3f4b02b6f80812766f7258935a1eb4fda8f647d27dbed74007b1581"
+}

@@ -1,0 +1,55 @@
+{
+  "source_summary_sha256": "7bb07afd73150915330593fd4be56fabc7bcecd23de67c0e5e19b8cdbe2443d4",
+  "script_sha256": "599f414d46bc4fcc3c7a28eb554fbabca8dad05ebd60fc3d9c5e34f62ca75b86",
+  "interactive_trace_count": 184,
+  "interactive_environment_count": 8,
+  "source": "实际 Isaac 轨迹与 MuJoCo comparison.hdf5",
+  "task_success_verified": false,
+  "files": {
+    "joint_error_matrix.png": {
+      "sha256": "563bdb5e2f4b62e27628f051989f59dc7ffbfa322d47a25e45038336d76c793d",
+      "size": [
+        2240,
+        800
+      ]
+    },
+    "lift_joint_trajectories.png": {
+      "sha256": "92c58445da23933a2456dbea03f2775228360337023ba1f34b55a8a9ba5a528b",
+      "size": [
+        2240,
+        1600
+      ]
+    },
+    "lift_object_trajectories.png": {
+      "sha256": "40a89aedc023d451e4fb0b1a0887f076fc6a0d5b4946a96c2ca7c0b831848f60",
+      "size": [
+        2240,
+        1280
+      ]
+    },
+    "physics_explorer.html": {
+      "sha256": "bdd857dd8ac104e70868e88e79de200c40206b008be1b4d5dbdee52aa02f7adf"
+    },
+    "physics_overview.png": {
+      "sha256": "9c49c7b8be3d19a315cd0ee1834e9fbc5aa460bf1e2a4568309224b8efa2862d",
+      "size": [
+        2240,
+        1440
+      ]
+    },
+    "pick_place_joint_trajectories.png": {
+      "sha256": "2cb6437330d435f3f55d4424c3ecaa87349ecb9fa4b58e2cea088ad9ca239b37",
+      "size": [
+        2240,
+        1600
+      ]
+    },
+    "pick_place_object_trajectories.png": {
+      "sha256": "e75f1429a49fc940d178405dabb721ac2101fa468ac5ac08ab014b34dfa6640c",
+      "size": [
+        2240,
+        1280
+      ]
+    }
+  }
+}

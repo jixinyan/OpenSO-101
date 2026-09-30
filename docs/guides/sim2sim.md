@@ -193,7 +193,7 @@ openso101 sim2sim physics \
 
 六个关节的 Isaac armature 均为 0，MJCF 为 0.028；Isaac 关节摩擦系数均为 0，MJCF 的 frictionloss 为 0.052 N·m。摩擦系数与 frictionloss 使用各自的物理含义。实际重力为 `[0, 0, -9.943255]` m/s²，当前 MuJoCo 使用 `[0, 0, -9.81]`。物体实际质量分别覆盖 0.01426–0.02545 kg、0.01573–0.02588 kg，MuJoCo 名义值为 0.02 kg。原生静态／动态摩擦与 restitution、MuJoCo 滑动／扭转／滚动摩擦均保存于报告，接触等价保持未验证。
 
-后续工作是将每环境实际质量、惯性、COM、重力和 armature 用于相同动作的 MuJoCo 实验，分别测量速度、关节轨迹与接触变化。当前参数记录、共同坐标系比较和来源检查已完成；物理等价及任务迁移仍未验证。
+每环境实际质量、惯性、COM、重力、armature 与零关节摩擦已完成相同动作的 MuJoCo 配对实验，使用方法与运行结果见下节。物理等价及任务迁移仍未验证。
 
 - [Lift 实际物理记录](../validation/2026-09-29/lift_body_physics_export_report.json)
 - [PickPlace 实际物理记录](../validation/2026-09-29/pick_place_body_physics_export_report.json)
@@ -201,6 +201,24 @@ openso101 sim2sim physics \
 - [PickPlace 实体参数比较](../validation/2026-09-29/pick_place_body_physics_report.json)
 - [数量、有限值与来源检查](../validation/2026-09-29/body_physics_records_report.json)
 - [已有输出与旧记录拒绝检查](../validation/2026-09-29/body_physics_guards_report.json)
+
+## 实际参数的 MuJoCo 配对实验
+
+`sim2sim compare --physics-components` 支持 `bodies`、`gravity`、`armature` 和 `friction`，可以选择单项或组合。`bodies` 使用每步实际机器人与物体的质量、COM 和完整惯性矩阵，转换实体坐标后写入 MuJoCo 的主惯性矩与 quaternion。模型常数使用独立 `MjData` 更新，运行关节位置、速度与时间保持原值；Baseline 使用相同更新过程。每个控制步骤保存实际 `model_parameters/`，报告记录共同坐标检查误差。
+
+```bash
+openso101 sim2sim compare --policy outputs/rl_progress/lift_body_physics_verified_50 \
+  --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --episodes 4 --steps 500 --recorded-pd --velocity-servo \
+  --physics-components bodies gravity armature friction \
+  --output outputs/lift_actual_physics
+```
+
+`friction` 仅接受实际零系数并设置 `frictionloss=0`；非零系数需要经过独立单位转换验证。源轨迹 SHA256、实体字段、参数数量、有限值和惯性矩条件均执行检查。
+
+`3f0493c` 对两项任务各运行六种参数条件、四个环境，共 15,600 个控制步骤。全部组合的最大关节误差为 Lift 0.050743 rad、PickPlace 0.026419 rad；相同输入的 Baseline 为 0.163835 rad、0.132604 rad。实际 armature 对本次关节误差的单项影响最明显。全部组合的物理采样最大速度为 2.957300 rad/s、2.615974 rad/s，solver 速度约束等价仍待验证。
+
+相同输入、未修改参数、实际质量／惯性／COM、重力、armature、零关节摩擦和原生力矩公式检查通过。六张图表与交互页面使用实际 HDF5 数据生成；各条件数据、来源与复现命令见 [配对实验和图表](../validation/2026-09-30/physics_components/README.md)。
 
 ## sim2real 视觉策略检查
 

@@ -1,0 +1,26 @@
+{
+  "checks": [
+    {
+      "name": "existing_output",
+      "rejected_verified": true,
+      "returncode": 1,
+      "output_creation_unchanged_verified": true,
+      "expected_error": "FileExistsError"
+    },
+    {
+      "name": "duplicate_components",
+      "rejected_verified": true,
+      "returncode": 1,
+      "output_creation_unchanged_verified": true,
+      "expected_error": "physics-components 不允许重复"
+    },
+    {
+      "name": "missing_recorded_bodies",
+      "rejected_verified": true,
+      "returncode": 1,
+      "output_creation_unchanged_verified": true,
+      "expected_error": "所选实际物理参数缺少源字段"
+    }
+  ],
+  "script_sha256": "9a09494e2bc3feff65ebad4a32b9a4ec87b4368a695b257df33c6086f31eef42"
+}
