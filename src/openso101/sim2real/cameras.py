@@ -44,8 +44,11 @@ def check_cameras(args) -> int:
     )
     start = time.perf_counter()
     with ExitStack() as cleanup:
-        for camera in cameras.values():
+        for name, camera in cameras.items():
             cleanup.callback(camera.disconnect)
+            report["cameras"][name]["actual_fps"] = camera.fps
+            report["cameras"][name]["actual_width"] = camera.width
+            report["cameras"][name]["actual_height"] = camera.height
         for _ in range(args.frames):
             for name, camera in cameras.items():
                 frame = camera.read()

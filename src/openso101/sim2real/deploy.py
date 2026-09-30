@@ -245,17 +245,20 @@ def _open_cameras(
             ("wrist_camera", wrist_index),
             ("overhead_camera", overhead_index),
         ):
+            video_file = isinstance(index, Path) and index.is_file()
             cam = OpenCVCamera(
                 OpenCVCameraConfig(
                     index_or_path=index,
-                    width=int(width),
-                    height=int(height),
-                    fps=int(fps),
+                    width=None if video_file else int(width),
+                    height=None if video_file else int(height),
+                    fps=None if video_file else int(fps),
                 )
             )
             cleanup.callback(_disconnect_camera, cam)
             # 视频输入从首帧开始；设备输入执行 LeRobot warmup。
-            cam.connect(warmup=not (isinstance(index, Path) and index.is_file()))
+            cam.connect(warmup=not video_file)
+            if cam.width != width or cam.height != height or not np.isclose(cam.fps, fps, atol=1e-3):
+                raise ValueError(f"相机 metadata 与请求尺寸或 FPS 不一致: {name}")
             cameras[name] = cam
         cleanup.pop_all()
     return cameras
