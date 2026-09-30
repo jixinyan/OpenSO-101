@@ -1,0 +1,37 @@
+{
+  "status": "camera_video_transcode_verified",
+  "cameras": {
+    "wrist_camera": {
+      "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/runtime_lerobot_verified/videos/observation.images.wrist_camera/chunk-000/file-000.mp4",
+      "source_sha256": "5df2322d809a6c6ce8b601ba8ad11a3cade118e05e1f99fd361421ceebab6e5c",
+      "source_metadata": {
+        "codec": "libdav1d",
+        "fps": 60.0
+      },
+      "converted": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/camera_h264/wrist_camera.mp4",
+      "converted_sha256": "ffb25722888e6f857a9ce9e6f12210f5007f2d66bf379dbc574fefd6a6f618d8",
+      "converted_metadata": {
+        "codec": "h264",
+        "fps": 60.0
+      },
+      "frames": 12,
+      "normalized_rgb_mean_absolute_error": 0.005179398200091194
+    },
+    "overhead_camera": {
+      "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/runtime_lerobot_verified/videos/observation.images.overhead_camera/chunk-000/file-000.mp4",
+      "source_sha256": "39e52e73d7bcae41d98b99ba5716440bfc8b86739fabfed1df43502fc794015c",
+      "source_metadata": {
+        "codec": "libdav1d",
+        "fps": 60.0
+      },
+      "converted": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/camera_h264/overhead_camera.mp4",
+      "converted_sha256": "578398cdf44ee7cb2cb7e99bb6f4118ec5bfb5d2b4ea3a68ded580314aaac16d",
+      "converted_metadata": {
+        "codec": "h264",
+        "fps": 60.0
+      },
+      "frames": 12,
+      "normalized_rgb_mean_absolute_error": 0.0019239305281171612
+    }
+  }
+}

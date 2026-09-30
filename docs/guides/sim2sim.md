@@ -59,3 +59,36 @@ openso101 sim2real validate --policy-path outputs/verify_student_ready \
 本次使用已有自定义场景的 12 帧双相机数据和已保存的 student，全部帧推理通过；训练控制周期为 1/60 秒，报告要求部署频率为 60Hz。该 student 的训练与任务成功仍需验证。硬件校准、实际相机、停止控制和机器人任务完成使用真机验收，报告保持 `hardware_run_verified=false`。
 
 [sim2real student 检查报告](../validation/2026-09-29/sim2real_student/report.json)
+
+## sim2real 相机与停止控制
+
+`camera-check` 使用部署入口相同的 LeRobot OpenCVCamera 与图像转换函数，独立检查双相机尺寸、FPS、RGB 格式和实际读取帧数：
+
+```bash
+openso101 sim2real camera-check \
+  --wrist-camera-path /dev/video0 --overhead-camera-path /dev/video2 \
+  --camera-width 128 --camera-height 128 --fps 60 --frames 60 \
+  --output outputs/camera_check.json
+```
+
+设备路径优先于 `--wrist-camera-index` 和 `--overhead-camera-index`。此入口同时接受已有视频文件，从首帧开始读取并校验文件的尺寸与 FPS。文件编码需要当前 OpenCV 的解码支持；本次检查使用 H.264 MP4。设备输入执行 LeRobot warmup，并请求指定的采集参数。图像转换要求 `uint8 H×W×3 RGB`，输出归一化的 `(1, 3, H, W)` tensor，格式错误立即终止。
+
+部署入口将相机 FPS 设置为 `--fps`，在连接机器人之前检查正数配置、独立相机来源、student 控制周期以及 preprocessor／postprocessor。机器人部署需要实际相机设备；已有视频通过 `camera-check` 检查。共享 canonical 初始姿态可以独立导入，生成动作时执行相同的 motor-unit 转换与范围限制。
+
+```bash
+openso101 sim2real deploy --policy-path outputs/verify_student_ready \
+  --follower-port /dev/ttyACM0 --follower-id so101 \
+  --wrist-camera-path /dev/video0 --overhead-camera-path /dev/video2 \
+  --camera-width 128 --camera-height 128 --fps 60 \
+  --stop-file outputs/deploy.stop --max-steps 60 --device cpu
+```
+
+部署前需要使用该 follower_id 对应的实际 LeRobot 校准，并核查相机设备和动作转换。当前示例中的设备路径需要根据连接主机设置，真机信息仍待提供。
+
+`--stop-file` 存在时，启动入口直接退出。运行期间在初始化动作发送之前、每次观测读取之前和每次策略动作发送之前检查该文件；可通过另一个终端执行 `touch outputs/deploy.stop` 请求停止。退出调用 LeRobot `follower.disconnect()`，默认关闭电机扭矩，并关闭双相机。Ctrl+C 同样执行连接清理。文件检查的响应时间受同步设备读取和推理耗时影响；真机扭矩、退出行为和紧急停止需要实际设备验收。
+
+`9d1d711` 的实际验证包括：双相机各 12 帧 H.264 文件读取、128×128 和 60 FPS metadata、部署图像转换、保存的 student 全部 12 帧推理、停止文件与控制频率预检查，以及 44 项 CPU 检查。预检查使用真实 student 和文件，通过函数调用观察确认三个检查均未连接 follower；初始姿态生成没有导入 Isaac。源视频、编码转换误差和文件 hashes 保存在独立报告中。此次使用录制文件，`hardware_run_verified=false`，真机采集、控制与任务成功仍需验收。
+
+- [双相机读取报告](../validation/2026-09-29/camera_read_report.json)
+- [双相机编码转换报告](../validation/2026-09-29/camera_transcode_report.json)
+- [部署预检查报告](../validation/2026-09-29/deploy_preflight_report.json)

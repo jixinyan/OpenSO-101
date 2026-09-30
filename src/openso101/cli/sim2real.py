@@ -85,8 +85,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         "--camera-width",
         type=int,
         default=128,
-        help="Width to which camera frames are resized before inference. "
-             "Must match what the dataset was recorded with.",
+        help="相机采集宽度，需要与模型输入尺寸一致。",
     )
     p_dep.add_argument("--wrist-camera-path", default=None, help="wrist OpenCV 设备路径，优先于设备索引")
     p_dep.add_argument("--overhead-camera-path", default=None, help="overhead OpenCV 设备路径，优先于设备索引")
@@ -95,7 +94,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         "--camera-height",
         type=int,
         default=128,
-        help="Height to which camera frames are resized before inference.",
+        help="相机采集高度，需要与模型输入尺寸一致。",
     )
     p_dep.add_argument(
         "--fps",

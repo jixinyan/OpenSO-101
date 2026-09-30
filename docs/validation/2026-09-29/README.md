@@ -144,6 +144,16 @@ PickPlace 使用 `OpenSO101-PickPlace-v0`、`pick_place_seed42/train.json` 和�
 
 ## CPU 检查
 
+sim2real 相机与停止控制的代码版本为 `9d1d711`。正式 `camera-check` 使用已有自定义场景的双相机视频，各读取全部 12 帧，metadata 为 128×128、60 FPS，图像转换使用部署入口相同的函数。视频使用 FFmpeg 从已保存的 AV1 编码转换为 H.264；全部解码帧数量、形状和 FPS 一致，归一化 RGB 平均绝对误差分别约为 0.00518、0.00192。两种编码的源文件和输出文件 SHA256 均保留。上述相机运行与 student 录制数据推理的进程均正常退出。
+
+真实保存的 student 用于停止文件、30／60Hz 控制频率和零步骤配置检查，通过实际函数调用观察确认均未连接 follower。停止文件存在时没有加载模型；控制频率检查实际加载 student 并拒绝不匹配的频率。共享初始姿态使用实际 Torch 和动作转换函数，生成时没有导入 Isaac。检查范围为程序与录制文件，真机运行保持未验证。
+
+运行脚本与报告保存在主机 `outputs/rl_progress/`：`run_camera_student_check.sh`、`transcode_camera_files.sh`、`check_camera_transcode.py` 和 `check_deploy_preflight.py`。正式报告：
+
+- [双相机读取](camera_read_report.json)
+- [视频编码转换](camera_transcode_report.json)
+- [部署预检查](deploy_preflight_report.json)
+
 共享策略的数值比较、动作诊断、MuJoCo 配对场景和视觉 student 检查见 [接口运行说明](../../guides/sim2sim.md)，reward 判断见 [RL audit](../../guides/rl-audit-2026-09-29.md)。实际模型和完整轨迹保留在主机及本地的 `outputs/rl_progress/`，本目录保存其配置与原始 JSON 报告。
 
 Python 3.11 下 44 项检查通过，覆盖实际 PTY、文件、MP4、HDF5、OpenUSD、Torch 运算和 CLI 参数。四项含替代服务或对象的测试未执行。

@@ -1,0 +1,29 @@
+{
+  "status": "deployment_preflight_verified",
+  "student_sha256": "074d9fa4e3416b89a3f155a0c52401a8c8bdab13ded395cec5a86c7826e41ac3",
+  "hardware_run_verified": false,
+  "checks": {
+    "existing_stop_file": {
+      "_connect_so101_follower": 0,
+      "_load_lerobot_policy": 0
+    },
+    "student_frequency_mismatch": {
+      "_connect_so101_follower": 0,
+      "_load_lerobot_policy": 1
+    },
+    "zero_max_steps": {
+      "_connect_so101_follower": 0,
+      "_load_lerobot_policy": 1
+    }
+  },
+  "canonical_reset_motor_units": {
+    "shoulder_pan.pos": 0.0,
+    "shoulder_lift.pos": 7.62939453125e-06,
+    "elbow_flex.pos": 0.0,
+    "wrist_flex.pos": 94.73721313476562,
+    "wrist_roll.pos": -1.7432174682617188,
+    "gripper.pos": 1.5211029052734375
+  },
+  "isaac_loaded": false,
+  "deploy_sha256": "5b38eb75c64ec4d91879a9d1bbc2f4e590b7bf6ae84f4c5e30c5fdc250207475"
+}

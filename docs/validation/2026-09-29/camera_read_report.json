@@ -1,0 +1,38 @@
+{
+  "status": "camera_read_verified",
+  "requested_frames": 12,
+  "completed_frames": 12,
+  "requested_fps": 60,
+  "image_tensor_shape": [
+    1,
+    3,
+    128,
+    128
+  ],
+  "hardware_run_verified": false,
+  "cameras": {
+    "wrist_camera": {
+      "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/camera_h264/wrist_camera.mp4",
+      "source_kind": "video_file",
+      "source_sha256": "ffb25722888e6f857a9ce9e6f12210f5007f2d66bf379dbc574fefd6a6f618d8",
+      "frames": 12,
+      "minimum_pixel_std": 35.56020464237517,
+      "actual_fps": 60.0,
+      "actual_width": 128,
+      "actual_height": 128
+    },
+    "overhead_camera": {
+      "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/camera_h264/overhead_camera.mp4",
+      "source_kind": "video_file",
+      "source_sha256": "578398cdf44ee7cb2cb7e99bb6f4118ec5bfb5d2b4ea3a68ded580314aaac16d",
+      "frames": 12,
+      "minimum_pixel_std": 10.136852694479678,
+      "actual_fps": 60.0,
+      "actual_width": 128,
+      "actual_height": 128
+    }
+  },
+  "checker_sha256": "8210f3a7901a2cb6f474d7d7bdf814c6ab4a5ff24387a1425dd113d5f64a3e07",
+  "deploy_sha256": "5b38eb75c64ec4d91879a9d1bbc2f4e590b7bf6ae84f4c5e30c5fdc250207475",
+  "read_seconds": 4.174278282094747
+}
