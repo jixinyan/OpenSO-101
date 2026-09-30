@@ -1,0 +1,15 @@
+{
+  "status": "recorded_gripper_video_verified",
+  "frames": 350,
+  "fps": 50.0,
+  "duration_seconds": 7.0,
+  "size": [
+    1280,
+    720
+  ],
+  "maximum_robot_pose_error_m": 0.0,
+  "trajectory_sha256": "11829c87825d3535dfe573a3dde5379dac214b9df93d77ee616a48b187d0890b",
+  "video_sha256": "859bac8f79f0c4170208c8f97749c658fd647e9fbcce5fd3e50fcf26d94ff60f",
+  "rendering_source_sha256": "65c428975fb9994ad05a38042e35b91191ab8f6cf9290a8f00e45d4c4643d967",
+  "rl_policy_success_verified": false
+}

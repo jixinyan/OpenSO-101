@@ -1,0 +1,64 @@
+{
+  "status": "scripted_gripper_physics_completed",
+  "control_steps": 350,
+  "maximum_jaw_forces_n": [
+    23.036756330780268,
+    23.1372201532056
+  ],
+  "bilateral_contact_steps": 181,
+  "maximum_object_lift_m": 0.04958827639401685,
+  "final_object_lift_m": 0.04722184018615119,
+  "held_lift_steps": 67,
+  "drive": {
+    "physics_steps": 3500,
+    "max_actual_speed_rad_s": [
+      0.0601853191967819,
+      0.3320716723769143,
+      0.3020281302684245,
+      0.4130054103884958,
+      0.7078843222213402,
+      0.733120771841636
+    ],
+    "max_actuator_force_nm": [
+      0.317118365038208,
+      0.6084472164773187,
+      0.414135535194421,
+      0.22112248022256722,
+      0.047746424831550345,
+      1.7119370455724063
+    ],
+    "maximum_prediction_error_rad_s": 0.0,
+    "maximum_optimization_iterations": 1,
+    "actual_velocity_limits_verified": true,
+    "actual_torque_limits_verified": true,
+    "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+    "integrator": "semi_implicit_Euler",
+    "state_velocity_modified": false
+  },
+  "physics": {
+    "components": [
+      "bodies",
+      "gravity",
+      "armature",
+      "friction"
+    ],
+    "verified_control_steps": 1,
+    "maximum_source_com_error_m": 1.1236938283130691e-16,
+    "maximum_source_inertia_relative_error": 1.1621514393210843e-08,
+    "maximum_mass_error_kg": 0.0,
+    "running_state_preserved_verified": true,
+    "parameter_readback_verified": true,
+    "body_collision_bounds_updates": 1
+  },
+  "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+  "trajectory_sha256": "11829c87825d3535dfe573a3dde5379dac214b9df93d77ee616a48b187d0890b",
+  "plan_sha256": "bfc1d2ef4ae2a2a595cf42dd9ce53e4310a4cfbcac970438a3ecdd9ed71f4945",
+  "source_code_sha256": "2ef9c2fa48f868a1d55363f2cb056c8c3aa3c219500135316cbb004c33aeee62",
+  "controller": "scripted_IK_joint_targets",
+  "constrained_drive_source_sha256": "e5fa64ee0ef17fd3cde9721286a76a2708f395752f159158b6096a02041d32e7",
+  "recorded_physics_source_sha256": "b822f24d1c5f887667132a71cea3320f49dd6a185ab72eb6cc905aa8b5987bb5",
+  "shared_plan_sha256": "bfc1d2ef4ae2a2a595cf42dd9ce53e4310a4cfbcac970438a3ecdd9ed71f4945",
+  "rl_policy_success_verified": false,
+  "physics_equivalence_verified": false,
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841"
+}

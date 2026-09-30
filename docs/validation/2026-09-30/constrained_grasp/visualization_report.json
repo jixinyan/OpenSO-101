@@ -1,0 +1,57 @@
+{
+  "status": "physical_trace_visualizations_checked",
+  "metrics": [
+    {
+      "task": "lift",
+      "control_samples": 1000,
+      "physics_steps": 10000,
+      "maximum_position_difference_rad": 0.0036794300204218786,
+      "joint_position_rmse_rad": 0.0007666774811625293,
+      "maximum_actual_speed_rad_s": 1.999999004569405,
+      "paired_host_metrics_verified": true
+    },
+    {
+      "task": "pick_place",
+      "control_samples": 1600,
+      "physics_steps": 16000,
+      "maximum_position_difference_rad": 0.0033733905455957114,
+      "joint_position_rmse_rad": 0.00047356831057490103,
+      "maximum_actual_speed_rad_s": 1.9999990025547196,
+      "paired_host_metrics_verified": true
+    }
+  ],
+  "evidence": [
+    {
+      "file": "outputs/rl_progress/lift_constrained_mac_coacd_verified_compare/comparison.hdf5",
+      "sha256": "6b3ec8abcee3980c3cc085a4cb579244d9ea2a354ae63c84a2cd6b7d2077da9c"
+    },
+    {
+      "file": "outputs/rl_progress/pick_place_constrained_mac_coacd_verified_compare/comparison.hdf5",
+      "sha256": "b7c40e45a38b3eef37211b754e5a15c9c7d82228b11b49c7b668de8a2fc954d0"
+    },
+    {
+      "file": "outputs/rl_progress/gripper_bvh_verified_convex/trajectory.hdf5",
+      "sha256": "d828667b8bee23856fbe204065aac26145be5ef53e5e6060af68a43c4ceff627"
+    },
+    {
+      "file": "outputs/rl_progress/gripper_shared_mac/trajectory.hdf5",
+      "sha256": "11829c87825d3535dfe573a3dde5379dac214b9df93d77ee616a48b187d0890b"
+    }
+  ],
+  "images": {
+    "gripper_mechanics.png": {
+      "sha256": "f2733a474bfe0f6b37e94c34cf672e0e0e6cf8ca8e910018877acad9b23304af",
+      "size": [
+        1920,
+        1440
+      ]
+    },
+    "constrained_drive.png": {
+      "sha256": "f5315ca2f7d72f96f8c9bdfa03168a309e25bce0b67e40a03ee1174af05d439c",
+      "size": [
+        2080,
+        1280
+      ]
+    }
+  }
+}

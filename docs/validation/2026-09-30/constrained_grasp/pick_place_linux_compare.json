@@ -1,0 +1,899 @@
+{
+  "status": "mujoco_recorded_action_comparison_completed",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v2",
+  "joint_names": [
+    "shoulder_pan",
+    "shoulder_lift",
+    "elbow_flex",
+    "wrist_flex",
+    "wrist_roll",
+    "gripper"
+  ],
+  "environments": [
+    {
+      "source_env_index": 0,
+      "steps": 400,
+      "compared_state_samples": 400,
+      "duration_seconds": 8.0,
+      "source_episode_boundary": true,
+      "initial_joint_position_error_rad": 0.0,
+      "initial_joint_velocity_error_rad_s": 0.0,
+      "joint_position_rmse_rad": [
+        7.507475987728877e-05,
+        0.0012449002133814117,
+        0.00017844080802072957,
+        0.0002911424159684677,
+        5.5482528881148405e-05,
+        8.98248456896058e-06
+      ],
+      "joint_position_max_error_rad": [
+        0.00107356556464909,
+        0.003373390545602817,
+        0.002228316616845305,
+        0.0009934980557677608,
+        0.0005114872290902933,
+        2.215641420499903e-05
+      ],
+      "joint_velocity_rmse_rad_s": [
+        0.003773666808316263,
+        0.15428041991126096,
+        0.09808496613858066,
+        0.031253350979454565,
+        0.0006275069138852847,
+        0.0014606018301449991
+      ],
+      "object_position_mean_error_m": 0.00011916317708960463,
+      "object_position_max_error_m": 0.001469150384688532,
+      "isaac_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "mujoco_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "peak_position_error": {
+        "step": 6,
+        "time_seconds": 0.12,
+        "joint": "shoulder_lift",
+        "error_rad": -0.003373390545602817,
+        "isaac_position_rad": 0.19830498099327087,
+        "mujoco_position_rad": 0.19493159044766806
+      },
+      "isaac_max_joint_speed_rad_s": [
+        1.9999552965164185,
+        2.014503002166748,
+        2.0004892349243164,
+        2.000002145767212,
+        1.4297648668289185,
+        0.010699344798922539
+      ],
+      "mujoco_max_joint_speed_rad_s": [
+        1.9999990000006007,
+        1.9999990000018366,
+        1.9999990003696062,
+        1.9999990004683563,
+        1.4342384390736809,
+        0.009105576419970854
+      ],
+      "recorded_physics_initial": {
+        "joint_stiffness": [
+          51.60928726196289,
+          26.924720764160156,
+          27.95496368408203,
+          13.180283546447754,
+          5.752151966094971,
+          14.595242500305176
+        ],
+        "joint_damping": [
+          0.8452631831169128,
+          0.6886858344078064,
+          0.572263777256012,
+          0.48553693294525146,
+          0.5052371621131897,
+          0.5321968793869019
+        ],
+        "joint_armature": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_friction_coeff": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_vel_limits": [
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 400,
+        "maximum_source_com_error_m": 6.466468474612317e-07,
+        "maximum_source_inertia_relative_error": 1.4657882083509073e-06,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 400
+      },
+      "velocity_servo": {
+        "physics_steps": 4000,
+        "max_command_rad_s": [
+          1.9999990000014363,
+          1.9999990008596782,
+          1.9999990025556547,
+          1.9999990018358225,
+          1.705682955216938,
+          0.11591210852984478
+        ],
+        "max_actual_speed_rad_s": [
+          1.9999990000014363,
+          1.9999990008596782,
+          1.9999990025556547,
+          1.9999990018358225,
+          1.705682955216938,
+          0.11591210852984478
+        ],
+        "max_overspeed_rad_s": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "overspeed_sample_fraction": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_actuator_force_nm": [
+          4.461979707835803,
+          4.292028907500418,
+          1.5486942402347275,
+          2.3049994192522627,
+          0.054953126440580806,
+          0.06507159317791278
+        ],
+        "velocity_commands_within_limits_verified": true,
+        "actuator_forces_within_limits_verified": true
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000014363,
+          1.9999990008596782,
+          1.9999990025556547,
+          1.9999990018358225,
+          1.705682955216938,
+          0.11591210852984478
+        ],
+        "max_actuator_force_nm": [
+          4.461979707835803,
+          4.292028907500418,
+          1.5486942402347275,
+          2.3049994192522627,
+          0.054953126440580806,
+          0.06507159317791278
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "source_env_index": 1,
+      "steps": 400,
+      "compared_state_samples": 400,
+      "duration_seconds": 8.0,
+      "source_episode_boundary": true,
+      "initial_joint_position_error_rad": 0.0,
+      "initial_joint_velocity_error_rad_s": 0.0,
+      "joint_position_rmse_rad": [
+        0.0001444470985098477,
+        0.0007671830813781693,
+        0.000419702970814786,
+        0.0003590293254129303,
+        5.508681191063554e-05,
+        9.748281517798577e-06
+      ],
+      "joint_position_max_error_rad": [
+        0.002297607961937613,
+        0.0031266463573969006,
+        0.0021480762116932173,
+        0.0012518296320422895,
+        0.0005717589938424306,
+        2.367381807999447e-05
+      ],
+      "joint_velocity_rmse_rad_s": [
+        0.011017822723698906,
+        0.16253320601047955,
+        0.07779279896911573,
+        0.019610610554110463,
+        0.0011053564065784888,
+        0.001327584277086753
+      ],
+      "object_position_mean_error_m": 0.00011911854276239778,
+      "object_position_max_error_m": 0.0014678532083514154,
+      "isaac_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "mujoco_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "peak_position_error": {
+        "step": 7,
+        "time_seconds": 0.14,
+        "joint": "shoulder_lift",
+        "error_rad": -0.0031266463573969006,
+        "isaac_position_rad": 0.24928687512874603,
+        "mujoco_position_rad": 0.24616022877134913
+      },
+      "isaac_max_joint_speed_rad_s": [
+        1.7621647119522095,
+        2.0071828365325928,
+        1.999620795249939,
+        2.0000016689300537,
+        2.0000014305114746,
+        0.010424024425446987
+      ],
+      "mujoco_max_joint_speed_rad_s": [
+        1.6329420913476185,
+        1.9999990001641563,
+        1.9999990003715646,
+        1.9999990009705932,
+        1.9999989999969479,
+        0.009754187834430113
+      ],
+      "recorded_physics_initial": {
+        "joint_stiffness": [
+          65.17591094970703,
+          30.503597259521484,
+          20.618759155273438,
+          10.039468765258789,
+          8.515985488891602,
+          15.51569938659668
+        ],
+        "joint_damping": [
+          0.7842427492141724,
+          0.6248933672904968,
+          0.8162999749183655,
+          0.5240309238433838,
+          0.43181824684143066,
+          0.4874287545681
+        ],
+        "joint_armature": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_friction_coeff": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_vel_limits": [
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 400,
+        "maximum_source_com_error_m": 6.872987871106408e-07,
+        "maximum_source_inertia_relative_error": 1.2824502814509186e-06,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 400
+      },
+      "velocity_servo": {
+        "physics_steps": 4000,
+        "max_command_rad_s": [
+          1.8087004511573577,
+          1.999999001624322,
+          1.9999990013426379,
+          1.9999990016707225,
+          1.9999990000103212,
+          0.13357995410863624
+        ],
+        "max_actual_speed_rad_s": [
+          1.8087004511573577,
+          1.999999001624322,
+          1.9999990013426379,
+          1.9999990016707225,
+          1.9999990000103212,
+          0.13357995410863624
+        ],
+        "max_overspeed_rad_s": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "overspeed_sample_fraction": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_actuator_force_nm": [
+          2.3680608599018225,
+          4.378755311693458,
+          1.3160201461037735,
+          2.005945978234985,
+          0.08897092695789197,
+          0.06925588360490866
+        ],
+        "velocity_commands_within_limits_verified": true,
+        "actuator_forces_within_limits_verified": true
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.8087004511573577,
+          1.999999001624322,
+          1.9999990013426379,
+          1.9999990016707225,
+          1.9999990000103212,
+          0.13357995410863624
+        ],
+        "max_actuator_force_nm": [
+          2.3680608599018225,
+          4.378755311693458,
+          1.3160201461037735,
+          2.005945978234985,
+          0.08897092695789197,
+          0.06925588360490866
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "source_env_index": 2,
+      "steps": 400,
+      "compared_state_samples": 400,
+      "duration_seconds": 8.0,
+      "source_episode_boundary": true,
+      "initial_joint_position_error_rad": 0.0,
+      "initial_joint_velocity_error_rad_s": 0.0,
+      "joint_position_rmse_rad": [
+        0.00010879967242828883,
+        0.000925865067158618,
+        0.0001471881302093398,
+        0.0003503319133504198,
+        5.31830355231071e-05,
+        8.95045947711691e-06
+      ],
+      "joint_position_max_error_rad": [
+        0.001231453155288744,
+        0.002998691747235993,
+        0.001538183056168485,
+        0.0012782090697831539,
+        0.0005808134838755086,
+        2.446031002878435e-05
+      ],
+      "joint_velocity_rmse_rad_s": [
+        0.006287213973918583,
+        0.14699881298718975,
+        0.1134716191909146,
+        0.0350370427710867,
+        0.0009121058437045586,
+        0.0014575228822609027
+      ],
+      "object_position_mean_error_m": 0.00011912548657925594,
+      "object_position_max_error_m": 0.0014675008491455328,
+      "isaac_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "mujoco_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "peak_position_error": {
+        "step": 5,
+        "time_seconds": 0.1,
+        "joint": "shoulder_lift",
+        "error_rad": -0.002998691747235993,
+        "isaac_position_rad": 0.18435685336589813,
+        "mujoco_position_rad": 0.18135816161866214
+      },
+      "isaac_max_joint_speed_rad_s": [
+        1.9999054670333862,
+        2.0119166374206543,
+        1.99995756149292,
+        2.0000033378601074,
+        1.834669828414917,
+        0.008869538083672523
+      ],
+      "mujoco_max_joint_speed_rad_s": [
+        1.9999990000001924,
+        1.999999001079394,
+        1.9999990004385915,
+        1.9999990012368123,
+        1.8421676528102344,
+        0.006947051054251305
+      ],
+      "recorded_physics_initial": {
+        "joint_stiffness": [
+          49.23640823364258,
+          36.35289001464844,
+          22.806190490722656,
+          10.380189895629883,
+          6.6375532150268555,
+          18.389862060546875
+        ],
+        "joint_damping": [
+          0.5568112730979919,
+          0.792183518409729,
+          0.5253593325614929,
+          0.5884197950363159,
+          0.3840787410736084,
+          0.5598852634429932
+        ],
+        "joint_armature": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_friction_coeff": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_vel_limits": [
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 400,
+        "maximum_source_com_error_m": 5.576682783097428e-07,
+        "maximum_source_inertia_relative_error": 1.3050501292111802e-06,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 400
+      },
+      "velocity_servo": {
+        "physics_steps": 4000,
+        "max_command_rad_s": [
+          1.9999990000024566,
+          1.999999001079394,
+          1.9999990004543107,
+          1.9999990016519482,
+          1.9999990000170393,
+          0.0993487001563799
+        ],
+        "max_actual_speed_rad_s": [
+          1.9999990000024566,
+          1.999999001079394,
+          1.9999990004543107,
+          1.9999990016519482,
+          1.9999990000170393,
+          0.0993487001563799
+        ],
+        "max_overspeed_rad_s": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "overspeed_sample_fraction": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_actuator_force_nm": [
+          3.4967802205063427,
+          4.611376354614174,
+          1.4071373249657448,
+          2.200488559594301,
+          0.043242574642996676,
+          0.05927789099389186
+        ],
+        "velocity_commands_within_limits_verified": true,
+        "actuator_forces_within_limits_verified": true
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000024566,
+          1.999999001079394,
+          1.9999990004543107,
+          1.9999990016519482,
+          1.9999990000170393,
+          0.0993487001563799
+        ],
+        "max_actuator_force_nm": [
+          3.4967802205063427,
+          4.611376354614174,
+          1.4071373249657448,
+          2.200488559594301,
+          0.043242574642996676,
+          0.05927789099389186
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "source_env_index": 3,
+      "steps": 400,
+      "compared_state_samples": 400,
+      "duration_seconds": 8.0,
+      "source_episode_boundary": true,
+      "initial_joint_position_error_rad": 0.0,
+      "initial_joint_velocity_error_rad_s": 0.0,
+      "joint_position_rmse_rad": [
+        9.346630164380762e-05,
+        0.0012355743629609759,
+        0.0003763558819093135,
+        0.00030635895869117463,
+        4.800802490076663e-05,
+        7.726482456627907e-06
+      ],
+      "joint_position_max_error_rad": [
+        0.0011323989061680292,
+        0.003185920679086296,
+        0.002160525840132932,
+        0.0010694706649896357,
+        0.0004964080609422689,
+        2.1428036212189916e-05
+      ],
+      "joint_velocity_rmse_rad_s": [
+        0.006219803860628355,
+        0.14640639628116803,
+        0.09716155368586493,
+        0.029225292448552966,
+        0.000955032719406685,
+        0.0010666195393637266
+      ],
+      "object_position_mean_error_m": 0.00011974404538237015,
+      "object_position_max_error_m": 0.0014990455511635168,
+      "isaac_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "mujoco_max_jaw_force_n": [
+        0.0,
+        0.0
+      ],
+      "peak_position_error": {
+        "step": 6,
+        "time_seconds": 0.12,
+        "joint": "shoulder_lift",
+        "error_rad": -0.003185920679086296,
+        "isaac_position_rad": 0.20024830102920532,
+        "mujoco_position_rad": 0.19706238035011903
+      },
+      "isaac_max_joint_speed_rad_s": [
+        1.9998642206192017,
+        2.007312774658203,
+        2.00063419342041,
+        2.0000011920928955,
+        1.9999573230743408,
+        0.008075177669525146
+      ],
+      "mujoco_max_joint_speed_rad_s": [
+        1.9999990000005317,
+        1.9999990002717563,
+        1.999999001293966,
+        1.9999990005097654,
+        1.9999989999924908,
+        0.006954436276520561
+      ],
+      "recorded_physics_initial": {
+        "joint_stiffness": [
+          58.505123138427734,
+          35.40897750854492,
+          21.910640716552734,
+          11.635435104370117,
+          8.362616539001465,
+          13.799991607666016
+        ],
+        "joint_damping": [
+          0.8360232710838318,
+          0.946500301361084,
+          0.7104712128639221,
+          0.46580320596694946,
+          0.3815746605396271,
+          0.525435209274292
+        ],
+        "joint_armature": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_friction_coeff": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "joint_vel_limits": [
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 400,
+        "maximum_source_com_error_m": 7.274937732941175e-07,
+        "maximum_source_inertia_relative_error": 1.7736153042537978e-06,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 400
+      },
+      "velocity_servo": {
+        "physics_steps": 4000,
+        "max_command_rad_s": [
+          1.9999990000051353,
+          1.9999990008191189,
+          1.999999001293966,
+          1.9999990017137286,
+          1.9999990000457162,
+          0.11312333202439641
+        ],
+        "max_actual_speed_rad_s": [
+          1.9999990000051353,
+          1.9999990008191189,
+          1.999999001293966,
+          1.9999990017137286,
+          1.9999990000457162,
+          0.11312333202439641
+        ],
+        "max_overspeed_rad_s": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "overspeed_sample_fraction": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max_actuator_force_nm": [
+          6.266465588941582,
+          4.263278770837872,
+          1.5174909041489504,
+          2.25154972386446,
+          0.05065892441812685,
+          0.06256118169943241
+        ],
+        "velocity_commands_within_limits_verified": true,
+        "actuator_forces_within_limits_verified": true
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000051353,
+          1.9999990008191189,
+          1.999999001293966,
+          1.9999990017137286,
+          1.9999990000457162,
+          0.11312333202439641
+        ],
+        "max_actuator_force_nm": [
+          6.266465588941582,
+          4.263278770837872,
+          1.5174909041489504,
+          2.25154972386446,
+          0.05065892441812685,
+          0.06256118169943241
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    }
+  ],
+  "control_dt": 0.02,
+  "physics_dt": 0.002,
+  "kinematics": {
+    "poses": 2000,
+    "maximum_position_error_m": 1.9880811193875437e-06,
+    "maximum_rotation_error_rad": 1.1787281042974187e-05
+  },
+  "mujoco_version": "3.14.0",
+  "policy_sha256": "1ffa7754c7480bbed8d55b7a48d3b1d7ce99221b0feba5c8598f69ed430791ec",
+  "policy_metadata_sha256": "6e2c5dee657516b6e9b304f393434e09bee261d0d8f512cf682938eb1b7e0e74",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "table_geometry_source": "native_USD_collision_mesh",
+  "table_geometry": {
+    "type": "box",
+    "position_root": [
+      -4.713462199479322e-05,
+      -0.3439000071161839,
+      -0.4729185527861117
+    ],
+    "quaternion_root": [
+      0.9999999886031646,
+      0.0,
+      0.0,
+      0.0001509757288016497
+    ],
+    "half_size": [
+      0.455,
+      0.64,
+      0.5
+    ],
+    "top_height_root": 0.027081447213888166,
+    "collider_paths": [
+      "/World/envs/env_0/Table/Collisions/Cube"
+    ],
+    "approximation": "convexHull",
+    "source": "native_USD_collision_mesh"
+  },
+  "table_geometry_mujoco": {
+    "type": 6,
+    "position": [
+      -4.713462199479322e-05,
+      -0.3439000071161839,
+      -0.4729185527861117
+    ],
+    "quaternion": [
+      0.9999999886031646,
+      0.0,
+      0.0,
+      0.0001509757288016497
+    ],
+    "half_size": [
+      0.455,
+      0.64,
+      0.5
+    ]
+  },
+  "robot_meshes": {
+    "Handle_SO101.stl": "a69b004691392cf0130b32ed9da5cc0c5fee49c2c8abee6ca27bf88e2a11347d",
+    "Trigger_SO101.stl": "7122e0c476e69689eaf18441ecd36f5cf5cdca4d7033c15e5238a9b788e9d71a",
+    "Wrist_Roll_SO101.stl": "db20e6ac7c08cf8d75692a38db5a217011c97c0ab5d73c248296535df81e39b7",
+    "base_motor_holder_so101_v1.stl": "8cd2f241037ea377af1191fffe0dd9d9006beea6dcc48543660ed41647072424",
+    "base_so101_v2.stl": "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d",
+    "motor_holder_so101_base_v1.stl": "31242ae6fb59d8b15c66617b88ad8e9bded62d57c35d11c0c43a70d2f4caa95b",
+    "motor_holder_so101_wrist_v1.stl": "887f92e6013cb64ea3a1ab8675e92da1e0beacfd5e001f972523540545e08011",
+    "moving_jaw_so101_v1.stl": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d",
+    "rotation_pitch_so101_v1.stl": "9be900cc2a2bf718102841ef82ef8d2873842427648092c8ed2ca1e2ef4ffa34",
+    "sts3215_03a_no_horn_v1.stl": "75ef3781b752e4065891aea855e34dc161a38a549549cd0970cedd07eae6f887",
+    "sts3215_03a_v1.stl": "a37c871fb502483ab96c256baf457d36f2e97afc9205313d9c5ab275ef941cd0",
+    "under_arm_so101_v1.stl": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71",
+    "upper_arm_so101_v1.stl": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f",
+    "waveshare_mounting_plate_so101_v2.stl": "e197e24005a07d01bbc06a8c42311664eaeda415bf859f68fa247884d0f1a6e9",
+    "wrist_camera_mount_so101_v1.stl": "e17a626158951ac8cdf8d960962c1a3c8bf23b64635a02f88b62016fe895cef8",
+    "wrist_camera_so101_v1.stl": "1147857bb136876c81f98d18b533342bae2383f0e23bec216064c9f093bd3577",
+    "wrist_roll_follower_so101_v1.stl": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4",
+    "wrist_roll_pitch_so101_v2.stl": "6c7ec5525b4d8b9e397a30ab4bb0037156a5d5f38a4adf2c7d943d6c56eda5ae"
+  },
+  "isaac_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+  "trajectory_sha256": "831ab6c7992a34acec7da5e87b69fc7188c5b17e33ead75d32477eb85d147b6b",
+  "comparison_source_sha256": "eb0cb6ab1c4bb37f48afb186f57b737706740458794549b879a7dc32057e108b",
+  "model_builder_sha256": "c31cdd1380c21eac9a66c68e744d8b30838ceb0ed5e37fabd91464fd33843f29",
+  "action_source": "actual_Isaac_ActionManager_joint_targets",
+  "sampling": "state_before_each_control_step",
+  "pd_source": "recorded_Isaac_per_environment",
+  "drive_model": "constrained_implicit_PD",
+  "actual_velocity_limits_verified": true,
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841",
+  "constrained_drive_source_sha256": "e5fa64ee0ef17fd3cde9721286a76a2708f395752f159158b6096a02041d32e7",
+  "physics_components": [
+    "bodies",
+    "gravity",
+    "armature",
+    "friction"
+  ],
+  "recorded_physics_source_sha256": "b822f24d1c5f887667132a71cea3320f49dd6a185ab72eb6cc905aa8b5987bb5",
+  "velocity_constraint_equivalence_verified": false,
+  "velocity_servo_source_sha256": null,
+  "source_object_velocity_available": true,
+  "mujoco_initial_object_velocity": "recorded_Isaac",
+  "physics_equivalence_verified": false,
+  "task_success_verified": false,
+  "limitations": [
+    "两个模拟器的接触材质、碰撞与 solver 速度约束需要独立测量",
+    "实际参数应用范围见 physics_components"
+  ]
+}

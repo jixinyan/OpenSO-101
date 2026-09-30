@@ -1,0 +1,267 @@
+{
+  "status": "mujoco_policy_evaluation_completed",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v2",
+  "episodes": [
+    {
+      "initial_env_index": 0,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false,
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 1,
+        "maximum_source_com_error_m": 1.1236938283130691e-16,
+        "maximum_source_inertia_relative_error": 1.1621514393210843e-08,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 1
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000008443,
+          1.9999990008629356,
+          1.999999002554743,
+          1.9999990013655191,
+          1.7072552694924223,
+          0.1159121085209863
+        ],
+        "max_actuator_force_nm": [
+          4.461980031473039,
+          4.29202890963365,
+          1.548694241325872,
+          2.304999420491695,
+          0.05495313053864031,
+          0.06507159317362575
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "initial_env_index": 1,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false,
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 1,
+        "maximum_source_com_error_m": 1.1236938283130691e-16,
+        "maximum_source_inertia_relative_error": 7.2917161190876944e-09,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 1
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.8557374869035783,
+          1.9999990013304014,
+          1.9999990014332327,
+          1.9999990017506346,
+          1.9999990000199086,
+          0.13357995409570778
+        ],
+        "max_actuator_force_nm": [
+          2.368060454014767,
+          4.37875531399526,
+          1.3160201472317592,
+          2.0059459795199563,
+          0.08897092030949996,
+          0.06925588360091296
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "initial_env_index": 2,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false,
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 1,
+        "maximum_source_com_error_m": 1.1236938283130691e-16,
+        "maximum_source_inertia_relative_error": 1.2741389116421561e-08,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 1
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000010917,
+          1.9999990010547344,
+          1.9999990004536017,
+          1.9999990017055786,
+          1.9999990000094974,
+          0.09934870012402734
+        ],
+        "max_actuator_force_nm": [
+          3.496780546018936,
+          4.61137635634686,
+          1.407137325420325,
+          2.2004885601808106,
+          0.04324257878164388,
+          0.0592778909717699
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    },
+    {
+      "initial_env_index": 3,
+      "success": false,
+      "steps": 400,
+      "reached": true,
+      "grasped": false,
+      "held_above_table": false,
+      "carry_stage": false,
+      "place_stage": false,
+      "recorded_physics": {
+        "components": [
+          "bodies",
+          "gravity",
+          "armature",
+          "friction"
+        ],
+        "verified_control_steps": 1,
+        "maximum_source_com_error_m": 1.1236938283130691e-16,
+        "maximum_source_inertia_relative_error": 2.1886155896164178e-08,
+        "maximum_mass_error_kg": 0.0,
+        "running_state_preserved_verified": true,
+        "parameter_readback_verified": true,
+        "body_collision_bounds_updates": 1
+      },
+      "constrained_drive": {
+        "physics_steps": 4000,
+        "max_actual_speed_rad_s": [
+          1.9999990000051655,
+          1.999999000849582,
+          1.9999990009853998,
+          1.9999990017735176,
+          1.9999990000458083,
+          0.1131233320018555
+        ],
+        "max_actuator_force_nm": [
+          6.266467770621948,
+          4.263278785112675,
+          1.5174909112436277,
+          2.251549731943287,
+          0.0506588936762547,
+          0.06256118168048398
+        ],
+        "maximum_prediction_error_rad_s": 0.0,
+        "maximum_optimization_iterations": 1,
+        "actual_velocity_limits_verified": true,
+        "actual_torque_limits_verified": true,
+        "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+        "integrator": "semi_implicit_Euler",
+        "state_velocity_modified": false
+      }
+    }
+  ],
+  "success_rate": 0.0,
+  "kinematics": {
+    "poses": 2000,
+    "maximum_position_error_m": 1.988081119384583e-06,
+    "maximum_rotation_error_rad": 1.1787281043024872e-05
+  },
+  "mujoco_version": "3.14.0",
+  "policy_sha256": "1ffa7754c7480bbed8d55b7a48d3b1d7ce99221b0feba5c8598f69ed430791ec",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "policy_metadata_sha256": "6e2c5dee657516b6e9b304f393434e09bee261d0d8f512cf682938eb1b7e0e74",
+  "robot_meshes": {
+    "Handle_SO101.stl": "a69b004691392cf0130b32ed9da5cc0c5fee49c2c8abee6ca27bf88e2a11347d",
+    "Trigger_SO101.stl": "7122e0c476e69689eaf18441ecd36f5cf5cdca4d7033c15e5238a9b788e9d71a",
+    "Wrist_Roll_SO101.stl": "db20e6ac7c08cf8d75692a38db5a217011c97c0ab5d73c248296535df81e39b7",
+    "base_motor_holder_so101_v1.stl": "8cd2f241037ea377af1191fffe0dd9d9006beea6dcc48543660ed41647072424",
+    "base_so101_v2.stl": "bb12b7026575e1f70ccc7240051f9d943553bf34e5128537de6cd86fae33924d",
+    "motor_holder_so101_base_v1.stl": "31242ae6fb59d8b15c66617b88ad8e9bded62d57c35d11c0c43a70d2f4caa95b",
+    "motor_holder_so101_wrist_v1.stl": "887f92e6013cb64ea3a1ab8675e92da1e0beacfd5e001f972523540545e08011",
+    "moving_jaw_so101_v1.stl": "785a9dded2f474bc1d869e0d3dae398a3dcd9c0c345640040472210d2861fa9d",
+    "rotation_pitch_so101_v1.stl": "9be900cc2a2bf718102841ef82ef8d2873842427648092c8ed2ca1e2ef4ffa34",
+    "sts3215_03a_no_horn_v1.stl": "75ef3781b752e4065891aea855e34dc161a38a549549cd0970cedd07eae6f887",
+    "sts3215_03a_v1.stl": "a37c871fb502483ab96c256baf457d36f2e97afc9205313d9c5ab275ef941cd0",
+    "under_arm_so101_v1.stl": "d01d1f2de365651dcad9d6669e94ff87ff7652b5bb2d10752a66a456a86dbc71",
+    "upper_arm_so101_v1.stl": "475056e03a17e71919b82fd88ab9a0b898ab50164f2a7943652a6b2941bb2d4f",
+    "waveshare_mounting_plate_so101_v2.stl": "e197e24005a07d01bbc06a8c42311664eaeda415bf859f68fa247884d0f1a6e9",
+    "wrist_camera_mount_so101_v1.stl": "e17a626158951ac8cdf8d960962c1a3c8bf23b64635a02f88b62016fe895cef8",
+    "wrist_camera_so101_v1.stl": "1147857bb136876c81f98d18b533342bae2383f0e23bec216064c9f093bd3577",
+    "wrist_roll_follower_so101_v1.stl": "4b17b410a12d64ec39554abc3e8054d8a97384b2dc4a8d95a5ecb2a93670f5f4",
+    "wrist_roll_pitch_so101_v2.stl": "6c7ec5525b4d8b9e397a30ab4bb0037156a5d5f38a4adf2c7d943d6c56eda5ae"
+  },
+  "isaac_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+  "trajectory_sha256": "c727dc31305f57da8f09100c35324bc1b65722a7a3d20de9b7e2b0fb56bf5863",
+  "control_dt": 0.02,
+  "physics_dt": 0.002,
+  "joint_offsets": [
+    0.0,
+    -1.5707963267948966,
+    1.5707963267948966,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "dynamics": "actual_Isaac_initial_environment_body_gravity_armature_friction_and_PD",
+  "parameter_schedule": "fixed_source_initial_environment",
+  "drive_model": "constrained_implicit_PD",
+  "actual_velocity_limits_verified": true,
+  "constrained_drive_source_sha256": "e5fa64ee0ef17fd3cde9721286a76a2708f395752f159158b6096a02041d32e7",
+  "evaluation_source_sha256": "c31cdd1380c21eac9a66c68e744d8b30838ceb0ed5e37fabd91464fd33843f29",
+  "recorded_physics_source_sha256": "b822f24d1c5f887667132a71cea3320f49dd6a185ab72eb6cc905aa8b5987bb5",
+  "contact_geometry": "CoACD_gripper_convex_parts",
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841",
+  "initial_states": "first_frame_of_actual_Isaac_trace",
+  "source_object_velocity_available": true,
+  "table_geometry_source": "native_USD_collision_mesh",
+  "task_reference_height_root": 0.03008144721388817,
+  "physics_equivalence_verified": false
+}
