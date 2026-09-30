@@ -1754,6 +1754,11 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         episode_index=getattr(args, "episode_index", -1),
     )
     validate_hdf5_episode(episode_path)
+    report_path = Path(args.report).expanduser().resolve() if getattr(args, "report", None) else None
+    if report_path is not None and report_path.exists():
+        raise FileExistsError(f"回放报告已存在: {report_path}")
+    if getattr(args, "hold_steps", 30) < 0:
+        raise ValueError("hold_steps 必须大于或等于 0")
 
     import h5py
 
@@ -1789,6 +1794,20 @@ def _cmd_replay(args: argparse.Namespace) -> int:
             )
         args.task = env_id.decode() if isinstance(env_id, bytes) else str(env_id)
         print(f"[INFO]: Replay env auto-selected from episode attrs: {args.task}")
+
+    checkpoint_frame = _replay_select_checkpoint_frame(
+        episode_path, args.checkpoint_frame, args.checkpoint_index
+    )
+    with h5py.File(episode_path, "r") as h5:
+        replay_range = _replay_frame_range(
+            frame_count=int(h5["action"].shape[0]),
+            checkpoint_frame=checkpoint_frame,
+            start_frame=args.start_frame,
+            stop_frame=args.stop_frame,
+            max_steps=args.max_steps,
+        )
+    if report_path is not None and not replay_range:
+        raise ValueError("回放报告要求至少执行一帧动作")
 
     simulation_app = _launch_isaac_app(args, enable_cameras=True)
 
@@ -1829,12 +1848,13 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
         with h5py.File(episode_path, "r") as h5:
-            frame_count = int(h5["action"].shape[0])
-            checkpoint_frame = _replay_select_checkpoint_frame(
-                episode_path, args.checkpoint_frame, args.checkpoint_index
-            )
             fps = int(h5.attrs.get("fps", 30))
             real_time_dt = 1.0 / fps if args.real_time and fps > 0 else None
+            validation = None
+            if report_path is not None:
+                from openso101.teleop.replay_validation import ReplayValidation
+
+                validation = ReplayValidation(episode_path, report_path, args.task, h5, unwrapped_env, replay_range, checkpoint_frame)
 
             print(f"[INFO]: Replaying teleop episode: {episode_path}")
             print(f"[INFO]: Checkpoint frame: {checkpoint_frame}")
@@ -1847,20 +1867,18 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                         np.asarray(h5["action"][frame_index], dtype=np.float32),
                         real_time_dt,
                     )
+                    if validation is not None:
+                        validation.check_step(unwrapped_env, "warm_start", h5["action"][frame_index])
             else:
                 _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, checkpoint_frame)
+                if validation is not None:
+                    validation.check_restore(unwrapped_env, h5, checkpoint_frame)
 
             checkpoint_action = np.asarray(h5["action"][checkpoint_frame], dtype=np.float32)
             for _ in range(max(args.hold_steps, 0)):
                 _replay_step_action(env, actions, checkpoint_action, real_time_dt)
-
-            replay_range = _replay_frame_range(
-                frame_count=frame_count,
-                checkpoint_frame=checkpoint_frame,
-                start_frame=args.start_frame,
-                stop_frame=args.stop_frame,
-                max_steps=args.max_steps,
-            )
+                if validation is not None:
+                    validation.check_step(unwrapped_env, "hold", checkpoint_action)
             print(
                 f"[INFO]: Running recorded teleop actions for frames {replay_range.start}:{replay_range.stop}."
             )
@@ -1873,6 +1891,10 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                     np.asarray(h5["action"][frame_index], dtype=np.float32),
                     real_time_dt,
                 )
+                if validation is not None:
+                    validation.check_step(unwrapped_env, "replay", h5["action"][frame_index])
+            if validation is not None:
+                validation.save()
     finally:
         if env is not None:
             env.close()
@@ -2607,6 +2629,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_replay.add_argument("--start-frame", type=int, default=None)
     p_replay.add_argument("--stop-frame", type=int, default=None)
     p_replay.add_argument("--max-steps", type=int, default=None)
+    p_replay.add_argument("--checkpoint-frame", type=int, default=None, help="恢复指定帧的已记录状态。")
+    p_replay.add_argument("--hold-steps", type=int, default=30, help="恢复后保持 checkpoint 动作的步骤数量。")
+    p_replay.add_argument("--report", default=None, help="保存实际状态恢复、关节与双相机检查的 JSON 报告。")
     p_replay.add_argument("--real-time", action="store_true")
     p_replay.add_argument("--list-checkpoints", action="store_true")
     p_replay.add_argument("--headless", action="store_true")
