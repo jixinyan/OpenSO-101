@@ -16,6 +16,7 @@ from openso101.sim2sim.recorded_physics import COMPONENT_FIELDS, RecordedPhysics
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--collision-bundle", type=Path)
+parser.add_argument("--plan", type=Path)
 args = parser.parse_args()
 if args.output.exists():
     raise FileExistsError(args.output)
@@ -62,23 +63,40 @@ def inverse_kinematics(position, initial):
     return solution.x
 
 
-initial = np.asarray(metadata["default_joint_positions"])[:5] + JOINT_OFFSETS[:5]
-approach = inverse_kinematics(object_start + [0, 0, .07], initial)
-grasp = inverse_kinematics(object_start, approach)
-lift = inverse_kinematics(object_start + [0, 0, .06], grasp)
-targets = []
-phases = []
-previous = np.concatenate([approach, [.8]])
-for phase, destination, seconds in (
-    ("settle", previous, .5), ("approach", np.concatenate([grasp, [.8]]), 2.),
-    ("close", np.concatenate([grasp, [0.]]), 1.5),
-    ("lift", np.concatenate([lift, [0.]]), 2.), ("hold", np.concatenate([lift, [0.]]), 1.),
-):
-    count = round(seconds / metadata["control_dt"])
-    for index in range(count):
-        targets.append(previous + (destination - previous) * (index + 1) / count)
-        phases.append(phase)
-    previous = destination
+source_plan = json.loads(args.plan.read_text()) if args.plan else None
+if source_plan is None:
+    initial = np.asarray(metadata["default_joint_positions"])[:5] + JOINT_OFFSETS[:5]
+    approach = inverse_kinematics(object_start + [0, 0, .07], initial)
+    grasp = inverse_kinematics(object_start, approach)
+    lift = inverse_kinematics(object_start + [0, 0, .06], grasp)
+    targets = []
+    phases = []
+    previous = np.concatenate([approach, [.8]])
+    for phase, destination, seconds in (
+        ("settle", previous, .5), ("approach", np.concatenate([grasp, [.8]]), 2.),
+        ("close", np.concatenate([grasp, [0.]]), 1.5),
+        ("lift", np.concatenate([lift, [0.]]), 2.), ("hold", np.concatenate([lift, [0.]]), 1.),
+    ):
+        count = round(seconds / metadata["control_dt"])
+        for index in range(count):
+            targets.append(previous + (destination - previous) * (index + 1) / count)
+            phases.append(phase)
+        previous = destination
+else:
+    targets = np.asarray(source_plan["joint_targets"], dtype=float) + JOINT_OFFSETS
+    phases = source_plan["phases"]
+    object_start = np.asarray(source_plan["object_position_root"], dtype=float)
+    center_local = np.asarray(source_plan["grasp_center_local"], dtype=float)
+    limits = model.jnt_range[[model.joint(name).id for name in JOINT_NAMES]]
+    if (targets.ndim != 2 or targets.shape[1] != 6 or len(targets) != len(phases)
+            or not np.isfinite(targets).all() or not np.isfinite(object_start).all()
+            or object_start.shape != (3,) or not np.isfinite(center_local).all() or center_local.shape != (3,)
+            or np.any(targets < limits[:, 0]) or np.any(targets > limits[:, 1])
+            or not np.isclose(source_plan["control_dt"], metadata["control_dt"], atol=1e-12, rtol=0)
+            or not np.allclose(source_plan["initial_joint_position"], targets[0] - JOINT_OFFSETS, atol=1e-12, rtol=0)
+            or source_plan["object_quaternion_root"] != [1., 0., 0., 0.]
+            or set(phases) != {"settle", "approach", "close", "lift", "hold"}):
+        raise ValueError("夹爪检查需要完整且满足关节范围的共享控制计划")
 data.qpos[qids] = targets[0]
 data.qpos[oq:oq+3] = object_start
 data.qpos[oq+3:oq+7] = [1, 0, 0, 0]
@@ -121,6 +139,8 @@ plan = {"initial_joint_position": (targets[0] - JOINT_OFFSETS).tolist(), "object
         "object_quaternion_root": [1., 0., 0., 0.], "control_dt": metadata["control_dt"],
         "joint_targets": (np.asarray(targets) - JOINT_OFFSETS).tolist(), "phases": phases,
         "grasp_center_local": center_local.tolist()}
+if source_plan is not None:
+    plan = source_plan
 (args.output / "plan.json").write_text(json.dumps(plan, indent=2) + "\n")
 report = {"status": "scripted_gripper_physics_completed", "control_steps": len(targets),
           "maximum_jaw_forces_n": forces.max(axis=0).tolist(), "bilateral_contact_steps": int(bilateral.sum()),
@@ -131,6 +151,7 @@ report = {"status": "scripted_gripper_physics_completed", "control_steps": len(t
           "source_code_sha256": digest(Path(__file__)), "controller": "scripted_IK_joint_targets",
           "constrained_drive_source_sha256": digest(root / "src/openso101/sim2sim/constrained_drive.py"),
           "recorded_physics_source_sha256": digest(root / "src/openso101/sim2sim/recorded_physics.py"),
+          "shared_plan_sha256": digest(args.plan) if args.plan else None,
           "rl_policy_success_verified": False, "physics_equivalence_verified": False}
 report["collision_bundle_sha256"] = digest(args.collision_bundle / "manifest.json") if args.collision_bundle else None
 (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
