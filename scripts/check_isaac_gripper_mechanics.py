@@ -45,6 +45,7 @@ try:
     cfg = parse_env_cfg(args.task, device="cuda:0", num_envs=args.num_envs)
     configure_grasp_profile(cfg, args.task)
     cfg.configure_play(True)
+    cfg.scene.num_envs = args.num_envs
     cfg.configure_cameras(False)
     cfg.seed = args.seed
     cfg.sim.dt = args.physics_dt
