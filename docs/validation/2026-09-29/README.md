@@ -77,6 +77,10 @@ SSH 实际 TTY 输入经过 prompt_toolkit、KeyboardDevice、实际 Jacobian IK
 
 读取环境使用主机已有的 `outputs/ffmpeg/root/usr/lib/x86_64-linux-gnu`、其 `pulseaudio`、`blas`、`lapack` 子目录与 graphics 目录。实际运行脚本保留在 `outputs/rl_progress/read_keyboard_export.sh`。
 
+正式 `il replay` 使用同一源 HDF5 完成 2281 帧录制动作，加上 30 个初始保持步骤，共 2311 个实际 Isaac 控制步骤，控制周期为 1/60 秒。源关节位置与速度恢复误差为 0，每步动作与源记录一致；2311 次关节状态检查与每台相机的 2311 次数据检查均通过，进程正常退出，SSH exit code 为 0。`outputs/rl_progress/verify_keyboard_replay.py` 使用 `sys.settrace` 在实际函数返回时读取状态，保存报告；它调用正式 CLI 并保持实际环境和控制器。
+
+该源文件没有记录物体与任务目标状态，报告中的 `source_object_state_available` 与 `source_command_goal_available` 均为 `false`。此次验证范围为关节动作和双相机运行，完整场景重现与任务成功仍需包含相应状态的录制数据。
+
 正式 `il record --keyboard-input terminal --headless --no-record` 入口接收方向、夹爪开合与退出输入，日志包含 `Quit-and-discard requested`，进程正常退出，SSH exit code 为 0。窗口按键与真机 leader 操作仍需实际操作验收。
 
 在 `2f52a02` 代码版本下，另一次无相机 Isaac 运行完成 2382 次无按键检查，关节目标最大变化为 0rad；环境重置后调用 `reset_reference()`，控制参考误差为 0rad。
@@ -88,6 +92,7 @@ SSH 实际 TTY 输入经过 prompt_toolkit、KeyboardDevice、实际 Jacobian IK
 - [C/R 原始状态观察](keyboard_cli_restore_report.json)
 - [C/R 数值验证](keyboard_cli_restore_verified.json)
 - [2281 帧 LeRobot 读取报告](keyboard_lerobot_report.json)
+- [2281 帧 Isaac 关节与双相机回放](keyboard_replay_report.json)
 - [键盘操作指南](../../guides/teleop.md)
 
 ## 重复运行

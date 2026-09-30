@@ -1,0 +1,20 @@
+{
+  "status": "keyboard_joint_and_camera_replay_verified",
+  "source_sha256": "da6fbb27454ca124e7cc088bef1c38b1330b81d69f2dcb839dd452ad4235b637",
+  "recorded_frames": 2281,
+  "replayed_steps": 2311,
+  "startup_hold_steps": 30,
+  "finite_joint_state_checks": 2311,
+  "camera_frame_checks": {
+    "wrist_camera": 2311,
+    "overhead_camera": 2311
+  },
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0
+  },
+  "task_success_verified": false,
+  "source_object_state_available": false,
+  "source_command_goal_available": false,
+  "git_sha": "16a476bf8fa496b12eb5cb890090432cda7ed3d6"
+}
