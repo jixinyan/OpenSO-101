@@ -155,7 +155,8 @@ def export(args):
                         before_step[f"{asset_name}_{field}"] = getattr(asset.root_physx_view, f"get_{getter}")()
                 before_step["scene_gravity"] = torch.tensor(list(robot.data._physics_sim_view.get_gravity()))
                 body_positions, body_quaternions = subtract_frame_transforms(
-                    robot.data.root_pos_w[:, None], robot.data.root_quat_w[:, None],
+                    robot.data.root_pos_w[:, None].expand_as(robot.data.body_pos_w),
+                    robot.data.root_quat_w[:, None].expand_as(robot.data.body_quat_w),
                     robot.data.body_pos_w, robot.data.body_quat_w,
                 )
                 before_step.update(robot_body_position_root=body_positions, robot_body_quaternion_root=body_quaternions)
