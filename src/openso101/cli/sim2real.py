@@ -29,6 +29,14 @@ def _cmd_deploy(args: argparse.Namespace) -> int:
 def add_subparsers(parser: argparse.ArgumentParser) -> None:
     sub = parser.add_subparsers(dest="sim2real_cmd", required=True)
 
+    validation = sub.add_parser("validate", help="使用实际录制文件检查视觉 student 推理与动作转换")
+    validation.add_argument("--policy-path", required=True)
+    validation.add_argument("--episode", required=True)
+    validation.add_argument("--output", required=True)
+    validation.add_argument("--device", default="cpu")
+    validation.add_argument("--batch-size", type=int, default=16)
+    validation.set_defaults(func=_cmd_validate)
+
     p_dep = sub.add_parser(
         "deploy",
         help="Roll out a trained IL policy on the real SO-101 follower.",
@@ -106,3 +114,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         help="Steps between profile prints.",
     )
     p_dep.set_defaults(func=_cmd_deploy)
+
+
+def _cmd_validate(args):
+    from openso101.sim2real.validation import validate
+
+    return validate(args)

@@ -7,6 +7,26 @@ import torch
 from .config import digest
 
 
+def decode_joint_targets(actions, action_mapping, *, enforce_limits=True):
+    if actions.ndim != 2 or actions.shape[1] != 6 or not torch.isfinite(actions).all():
+        raise ValueError("action 必须包含六个有限数值")
+    targets = []
+    for item in action_mapping:
+        value = actions[:, item["action_index"]]
+        if item["type"] == "position":
+            value = value * item["scale"] + item["offset"]
+        elif item["type"] == "binary":
+            value = torch.where(value < 0, item["close"], item["open"])
+        else:
+            raise ValueError("不支持的 action 类型")
+        if enforce_limits:
+            value = value.clamp(item["lower"], item["upper"])
+        targets.append(value)
+    if len(targets) != 6:
+        raise ValueError("action_mapping 必须包含六个关节")
+    return torch.stack(targets, dim=-1)
+
+
 class PortablePolicy:
     def __init__(self, folder: Path, device: str = "cpu"):
         folder = Path(folder).resolve()
@@ -61,18 +81,4 @@ class PortablePolicy:
 
     def joint_targets(self, actions, *, enforce_limits=True):
         actions = torch.as_tensor(actions, device=self.device, dtype=torch.float32)
-        if actions.ndim != 2 or actions.shape[1] != 6 or not torch.isfinite(actions).all():
-            raise ValueError("action 必须包含六个有限数值")
-        targets = []
-        for item in self.metadata["action_mapping"]:
-            value = actions[:, item["action_index"]]
-            if item["type"] == "position":
-                value = value * item["scale"] + item["offset"]
-            elif item["type"] == "binary":
-                value = torch.where(value < 0, item["close"], item["open"])
-            else:
-                raise ValueError("不支持的 action 类型")
-            if enforce_limits:
-                value = value.clamp(item["lower"], item["upper"])
-            targets.append(value)
-        return torch.stack(targets, dim=-1)
+        return decode_joint_targets(actions, self.metadata["action_mapping"], enforce_limits=enforce_limits)

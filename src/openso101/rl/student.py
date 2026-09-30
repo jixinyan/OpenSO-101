@@ -11,6 +11,7 @@ from torch.nn import functional as F
 from openso101.teleop.so101_mapping import batched_action_to_motor_units
 
 from .config import digest
+from .portable import decode_joint_targets
 
 CAMERA_SIZE = 64
 
@@ -62,16 +63,5 @@ class RLStudentPolicy:
         return self.model(features)
 
     def decode_actions(self, actions):
-        if actions.shape[-1] != 6 or not torch.isfinite(actions).all():
-            raise ValueError("student action 必须包含六个有限数值")
-        targets = []
-        for item in self.metadata["action_mapping"]:
-            value = actions[:, item["action_index"]]
-            if item["type"] == "position":
-                value = value * item["scale"] + item["offset"]
-            elif item["type"] == "binary":
-                value = torch.where(value < 0, item["close"], item["open"])
-            else:
-                raise ValueError("未知 student action 类型")
-            targets.append(value.clamp(item["lower"], item["upper"]))
-        return batched_action_to_motor_units(torch.stack(targets, dim=-1))
+        targets = decode_joint_targets(actions, self.metadata["action_mapping"])
+        return batched_action_to_motor_units(targets)
