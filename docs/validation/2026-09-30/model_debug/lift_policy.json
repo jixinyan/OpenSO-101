@@ -1,0 +1,298 @@
+{
+  "schema_version": 1,
+  "task_id": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v2",
+  "training_git_sha": "cdcaf0ea417861146fd7c635cc7150f8e99f3a12",
+  "export_git_sha": "cbe690a4de10289e05c0e8f87e2214931f401ad1",
+  "checkpoint_sha256": "15897309e0b46a2c63cacb9dc98d339864da14d7680215c8ebff69c2cf988f31",
+  "files": {
+    "policy.pt": "cbf99ddd7d93d32de436e9c89254412a2262a6d96d4754a3b0f7cb7dd89995a6"
+  },
+  "control_dt": 0.02,
+  "physics_dt": 0.01,
+  "joint_names": [
+    "Rotation",
+    "Pitch",
+    "Elbow",
+    "Wrist_Pitch",
+    "Wrist_Roll",
+    "Jaw"
+  ],
+  "observation_joint_names": [
+    "Rotation",
+    "Pitch",
+    "Elbow",
+    "Wrist_Pitch",
+    "Wrist_Roll",
+    "Jaw"
+  ],
+  "physical_joint_limits": [
+    [
+      -1.9198598861694336,
+      1.9198598861694336
+    ],
+    [
+      -1.7453298568725586,
+      1.7453298568725586
+    ],
+    [
+      -1.7453298568725586,
+      1.5707999467849731
+    ],
+    [
+      -1.65805983543396,
+      1.65805983543396
+    ],
+    [
+      -2.792530059814453,
+      2.792530059814453
+    ],
+    [
+      -0.17453299462795258,
+      1.7453298568725586
+    ]
+  ],
+  "default_joint_positions": [
+    0.0,
+    0.0,
+    0.0,
+    1.5707999467849731,
+    0.0,
+    0.800000011920929
+  ],
+  "default_joint_velocities": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "nominal_stiffness": [
+    55.0,
+    30.0,
+    25.0,
+    12.0,
+    7.0,
+    15.0
+  ],
+  "nominal_damping": [
+    0.699999988079071,
+    0.800000011920929,
+    0.699999988079071,
+    0.5,
+    0.5,
+    0.5
+  ],
+  "effort_limits": [
+    30.0,
+    30.0,
+    30.0,
+    30.0,
+    30.0,
+    30.0
+  ],
+  "table_height_root": 0.027081447213888166,
+  "table_geometry": {
+    "type": "box",
+    "position_root": [
+      -4.713462199479322e-05,
+      -0.3439000071161839,
+      -0.4729185527861117
+    ],
+    "quaternion_root": [
+      0.9999999886031646,
+      0.0,
+      0.0,
+      0.0001509757288016497
+    ],
+    "half_size": [
+      0.455,
+      0.64,
+      0.5
+    ],
+    "top_height_root": 0.027081447213888166,
+    "collider_paths": [
+      "/World/envs/env_0/Table/Collisions/Cube"
+    ],
+    "approximation": "convexHull",
+    "source": "native_USD_collision_mesh"
+  },
+  "task_reference_height_root": 0.03008144721388817,
+  "robot_usd_sha256": "11f5f0bb5f2fae3eefebbcd07dfafc6b14602f6c4e5dae8f21a4a46892991006",
+  "object_size": [
+    0.03,
+    0.03,
+    0.03
+  ],
+  "object_mass": 0.02,
+  "episode_length_s": 5.0,
+  "observation_terms": [
+    {
+      "name": "joint_pos",
+      "size": 6
+    },
+    {
+      "name": "joint_vel",
+      "size": 6
+    },
+    {
+      "name": "object_position",
+      "size": 3
+    },
+    {
+      "name": "target_object_position",
+      "size": 7
+    },
+    {
+      "name": "grasp_state",
+      "size": 1
+    },
+    {
+      "name": "actions",
+      "size": 6
+    }
+  ],
+  "normalization": "embedded_in_policy.pt",
+  "position_frame": "robot_root",
+  "quaternion_order": "wxyz",
+  "joint_unit": "radian",
+  "last_action": "raw_policy_action",
+  "action_mapping": [
+    {
+      "joint_name": "Rotation",
+      "action_index": 0,
+      "lower": -1.7278738021850586,
+      "upper": 1.7278738021850586,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Pitch",
+      "action_index": 1,
+      "lower": -1.5707968473434448,
+      "upper": 1.5707968473434448,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Elbow",
+      "action_index": 2,
+      "lower": -1.5795233249664307,
+      "upper": 1.4049932956695557,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Wrist_Pitch",
+      "action_index": 3,
+      "lower": -1.4922537803649902,
+      "upper": 1.4922537803649902,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 1.5707999467849731
+    },
+    {
+      "joint_name": "Wrist_Roll",
+      "action_index": 4,
+      "lower": -2.513277053833008,
+      "upper": 2.513277053833008,
+      "type": "position",
+      "scale": 0.5,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Jaw",
+      "action_index": 5,
+      "lower": -0.07853984832763672,
+      "upper": 1.6493366956710815,
+      "type": "position",
+      "scale": 0.4000000059604645,
+      "offset": 0.4000000059604645,
+      "processed_clip": [
+        0.0,
+        0.800000011920929
+      ]
+    }
+  ],
+  "grasp_force_threshold_newtons": 0.5,
+  "reward_terms": [
+    {
+      "name": "approach",
+      "weight": 1.0
+    },
+    {
+      "name": "alignment",
+      "weight": 1.0
+    },
+    {
+      "name": "closure",
+      "weight": 2.0
+    },
+    {
+      "name": "closure_away",
+      "weight": -0.5
+    },
+    {
+      "name": "grasp_hold",
+      "weight": 8.0
+    },
+    {
+      "name": "held_height",
+      "weight": 12.0
+    },
+    {
+      "name": "held_goal",
+      "weight": 16.0
+    },
+    {
+      "name": "processed_action_change",
+      "weight": -0.1
+    },
+    {
+      "name": "joint_vel",
+      "weight": -0.0001
+    },
+    {
+      "name": "success_bonus",
+      "weight": 100.0
+    }
+  ],
+  "hardware_observations_required": [
+    "object_position_root",
+    "goal_root",
+    "grasp_state"
+  ],
+  "physics_recording": {
+    "robot_body_names": [
+      "base",
+      "shoulder",
+      "upper_arm",
+      "lower_arm",
+      "wrist",
+      "gripper",
+      "jaw"
+    ],
+    "inertia_frame": "body_prim_at_center_of_mass",
+    "inertia_matrix_order": "column_major",
+    "com_pose_frame": "body_prim",
+    "com_quaternion_order": "xyzw",
+    "material_order": "native_PhysX_shape_order",
+    "material_components": [
+      "static_friction",
+      "dynamic_friction",
+      "restitution"
+    ],
+    "gravity_frame": "world",
+    "gravity_scope": "shared_physics_scene"
+  },
+  "task_parameters": {
+    "minimal_height": 0.04,
+    "goal_radius": 0.05,
+    "settle_seconds": 0.25,
+    "force_threshold": 0.5
+  }
+}

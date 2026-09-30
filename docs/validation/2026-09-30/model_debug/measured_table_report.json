@@ -1,0 +1,305 @@
+{
+  "status": "actual_action_trace_dynamics_checked",
+  "conditions": [
+    {
+      "task": "lift",
+      "condition": "velocity_measured_table",
+      "physics_dt": 0.002,
+      "velocity_servo": true,
+      "robot_contacts_enabled": true,
+      "effort_limit_nm": 30.0,
+      "table_geometry": {
+        "type": "box",
+        "position_root": [
+          -4.713462199479322e-05,
+          -0.3439000071161839,
+          -0.4729185527861117
+        ],
+        "quaternion_root": [
+          0.9999999886031646,
+          0.0,
+          0.0,
+          0.0001509757288016497
+        ],
+        "half_size": [
+          0.455,
+          0.64,
+          0.5
+        ],
+        "top_height_root": 0.027081447213888166,
+        "collider_paths": [
+          "/World/envs/env_0/Table/Collisions/Cube"
+        ],
+        "approximation": "convexHull",
+        "source": "native_USD_collision_mesh"
+      },
+      "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+      "environments": [
+        {
+          "environment": 0,
+          "control_steps": 250,
+          "physics_steps": 2500,
+          "joint_position_rmse_rad": 0.01447269279724358,
+          "maximum_joint_error_rad": 0.04545858482569734,
+          "maximum_speed_rad_s": 2.9572996814035024,
+          "maximum_actuator_torque_nm": 2.520295001875632,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014677615272992944,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.068,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 250,
+            "maximum_source_com_error_m": 5.158964743280869e-07,
+            "maximum_source_inertia_relative_error": 1.6608240617338899e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 1,
+          "control_steps": 250,
+          "physics_steps": 2500,
+          "joint_position_rmse_rad": 0.006371819911302313,
+          "maximum_joint_error_rad": 0.027008209115351067,
+          "maximum_speed_rad_s": 2.488709616000916,
+          "maximum_actuator_torque_nm": 2.669466787980766,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014675789712790524,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "wrist_flex",
+          "peak_speed_time_s": 0.042,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 250,
+            "maximum_source_com_error_m": 1.0071838847370015e-06,
+            "maximum_source_inertia_relative_error": 2.4987446607924532e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 2,
+          "control_steps": 250,
+          "physics_steps": 2500,
+          "joint_position_rmse_rad": 0.014146895367693767,
+          "maximum_joint_error_rad": 0.04549102647709802,
+          "maximum_speed_rad_s": 2.726206607919637,
+          "maximum_actuator_torque_nm": 1.8829433917999268,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.00146755661900384,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.032,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 250,
+            "maximum_source_com_error_m": 8.154085898256794e-07,
+            "maximum_source_inertia_relative_error": 2.3789446718932637e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 3,
+          "control_steps": 250,
+          "physics_steps": 2500,
+          "joint_position_rmse_rad": 0.017242564474710564,
+          "maximum_joint_error_rad": 0.050742853264241994,
+          "maximum_speed_rad_s": 2.8334690739178434,
+          "maximum_actuator_torque_nm": 2.598359134277989,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014675715231398992,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.044,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 250,
+            "maximum_source_com_error_m": 4.3484164717397743e-07,
+            "maximum_source_inertia_relative_error": 1.0030941528191509e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        }
+      ]
+    },
+    {
+      "task": "pick_place",
+      "condition": "velocity_measured_table",
+      "physics_dt": 0.002,
+      "velocity_servo": true,
+      "robot_contacts_enabled": true,
+      "effort_limit_nm": 30.0,
+      "table_geometry": {
+        "type": "box",
+        "position_root": [
+          -4.713462199479322e-05,
+          -0.3439000071161839,
+          -0.4729185527861117
+        ],
+        "quaternion_root": [
+          0.9999999886031646,
+          0.0,
+          0.0,
+          0.0001509757288016497
+        ],
+        "half_size": [
+          0.455,
+          0.64,
+          0.5
+        ],
+        "top_height_root": 0.027081447213888166,
+        "collider_paths": [
+          "/World/envs/env_0/Table/Collisions/Cube"
+        ],
+        "approximation": "convexHull",
+        "source": "native_USD_collision_mesh"
+      },
+      "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+      "environments": [
+        {
+          "environment": 0,
+          "control_steps": 400,
+          "physics_steps": 4000,
+          "joint_position_rmse_rad": 0.0009147965799497141,
+          "maximum_joint_error_rad": 0.015923027175590354,
+          "maximum_speed_rad_s": 2.491422705062482,
+          "maximum_actuator_torque_nm": 1.7249649362283772,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014691503850126734,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.04,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 400,
+            "maximum_source_com_error_m": 6.466468474990191e-07,
+            "maximum_source_inertia_relative_error": 1.465788208342886e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 1,
+          "control_steps": 400,
+          "physics_steps": 4000,
+          "joint_position_rmse_rad": 0.0012139078315032445,
+          "maximum_joint_error_rad": 0.026419308347256587,
+          "maximum_speed_rad_s": 2.615973604598969,
+          "maximum_actuator_torque_nm": 2.0300858543825315,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014678532092374053,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.06,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 400,
+            "maximum_source_com_error_m": 6.872987870803858e-07,
+            "maximum_source_inertia_relative_error": 1.282450281312298e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 2,
+          "control_steps": 400,
+          "physics_steps": 4000,
+          "joint_position_rmse_rad": 0.0007911984073562169,
+          "maximum_joint_error_rad": 0.01841507705239703,
+          "maximum_speed_rad_s": 2.430416816471374,
+          "maximum_actuator_torque_nm": 2.222778320524419,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014675008488632716,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.08,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 400,
+            "maximum_source_com_error_m": 5.57668278289999e-07,
+            "maximum_source_inertia_relative_error": 1.3050501294567092e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        },
+        {
+          "environment": 3,
+          "control_steps": 400,
+          "physics_steps": 4000,
+          "joint_position_rmse_rad": 0.0009550349515823977,
+          "maximum_joint_error_rad": 0.016207072200838783,
+          "maximum_speed_rad_s": 2.39943105717686,
+          "maximum_actuator_torque_nm": 1.981046772566899,
+          "torque_limit_fraction": 0.0,
+          "maximum_object_error_m": 0.0014990454379548068,
+          "robot_contact_samples": 0,
+          "peak_speed_joint": "shoulder_lift",
+          "peak_speed_time_s": 0.04,
+          "parameters": {
+            "components": [
+              "bodies",
+              "gravity",
+              "armature",
+              "friction"
+            ],
+            "verified_control_steps": 400,
+            "maximum_source_com_error_m": 7.274937732589184e-07,
+            "maximum_source_inertia_relative_error": 1.7736153040057995e-06,
+            "maximum_mass_error_kg": 0.0,
+            "running_state_preserved_verified": true,
+            "parameter_readback_verified": true
+          }
+        }
+      ]
+    }
+  ],
+  "geometry_input_sha256": "c9a9497559b88f1e278f3d1d2a789ae495c8364b433d2c3803d4b41e0dfa7517",
+  "source_code_sha256": "3f9bdaff7075824d764b95a4e07f4ccd157802bec68863e9c60b0066cfa09400",
+  "physics_equivalence_verified": false,
+  "task_success_verified": false
+}

@@ -1,0 +1,1166 @@
+{
+  "usd_sha256": "11f5f0bb5f2fae3eefebbcd07dfafc6b14602f6c4e5dae8f21a4a46892991006",
+  "mjcf_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "urdf_sha256": "a8151e4f7e5818d066680671d372ce49e7d30c4d068edb1666ab1bab2d5a8afc",
+  "usd_meters_per_unit": 1.0,
+  "usd_up_axis": "Z",
+  "usd_physics_prims": [
+    {
+      "path": "/so101_new_calib/joints/Rotation",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 0.0004949620342813432,
+        "physics:localPos0": "(0.0207909, -0.0230745, 0.0948817)",
+        "physics:localPos1": "(3.469447e-18, 3.469447e-18, 0)",
+        "physics:localRot0": "(-8.963205e-7, 0.7071055, 0.7071081, -8.963237e-7)",
+        "physics:localRot1": "(1, -3.677072e-14, 3.8411286e-17, 4.588883e-14)",
+        "physics:lowerLimit": -109.99987030029297,
+        "physics:upperLimit": 109.99987030029297,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/base"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/shoulder"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/joints/Pitch",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 0.00419496838003397,
+        "physics:localPos0": "(-0.0303992, -0.018277798, -0.05420001)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(-0.49999818, 0.49999997, 0.5, 0.5000018)",
+        "physics:localRot1": "(1, 0, 0, 0)",
+        "physics:lowerLimit": -100.00003814697266,
+        "physics:upperLimit": 100.00003814697266,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/shoulder"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/upper_arm"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/joints/Elbow",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 0.008457441814243793,
+        "physics:localPos0": "(-0.11257002, -0.028000006, -3.6395834e-11)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(0.7071056, 3.8406025e-8, -3.000745e-9, 0.707108)",
+        "physics:localRot1": "(1, 0, 0, 0)",
+        "physics:lowerLimit": -100.00003814697266,
+        "physics:upperLimit": 90.00020599365234,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/upper_arm"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/lower_arm"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/joints/Wrist_Pitch",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 0.007680980954319239,
+        "physics:localPos0": "(-0.13490003, 0.00519998, -2.2649212e-8)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(-0.7071055, 1.0536122e-7, 4.9158423e-8, 0.707108)",
+        "physics:localRot1": "(1, 0, 0, 0)",
+        "physics:lowerLimit": -94.99983215332031,
+        "physics:upperLimit": 94.99983215332031,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/lower_arm"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/wrist"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/joints/Wrist_Roll",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 0.0012044538743793964,
+        "physics:localPos0": "(4.4612474e-9, -0.061100032, 0.018100007)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(6.152631e-7, 0.0000010294956, 0.7071081, 0.70710546)",
+        "physics:localRot1": "(1, 0, 0, 0)",
+        "physics:lowerLimit": -160.00018310546875,
+        "physics:upperLimit": 160.00018310546875,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/wrist"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/gripper"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/joints/Jaw",
+      "type": "PhysicsRevoluteJoint",
+      "schemas": [
+        "PhysicsDriveAPI:angular"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsJointStateAPI:angular, PhysxJointAPI, PhysicsDriveAPI:angular])",
+      "attributes": {
+        "drive:angular:physics:damping": 0.6000000238418579,
+        "drive:angular:physics:maxForce": 10.0,
+        "drive:angular:physics:stiffness": 17.799999237060547,
+        "drive:angular:physics:targetPosition": 0.0,
+        "drive:angular:physics:targetVelocity": 0.0,
+        "drive:angular:physics:type": "force",
+        "physics:axis": "Z",
+        "physics:breakForce": 3.4028234663852886e+38,
+        "physics:breakTorque": 3.4028234663852886e+38,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:JointEquivalentInertia": 6.0506681620609015e-05,
+        "physics:localPos0": "(0.020200018, 0.018800007, -0.02340001)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(0.7071055, 0.707108, 6.31823e-8, 1.6858581e-7)",
+        "physics:localRot1": "(1, 0, 0, 0)",
+        "physics:lowerLimit": -10.000003814697266,
+        "physics:upperLimit": 100.00003814697266,
+        "physxJoint:maxJointVelocity": 572.957763671875
+      },
+      "relationships": {
+        "physics:body0": [
+          "/so101_new_calib/gripper"
+        ],
+        "physics:body1": [
+          "/so101_new_calib/jaw"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/root_joint",
+      "type": "PhysicsFixedJoint",
+      "schemas": [],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [])",
+      "attributes": {
+        "physics:breakForce": Infinity,
+        "physics:breakTorque": Infinity,
+        "physics:collisionEnabled": false,
+        "physics:excludeFromArticulation": false,
+        "physics:jointEnabled": true,
+        "physics:localPos0": "(0, 0, 0)",
+        "physics:localPos1": "(0, 0, 0)",
+        "physics:localRot0": "(1, 0, 0, 0)",
+        "physics:localRot1": "(0.70710677, 0, 0, -0.70710677)"
+      },
+      "relationships": {
+        "physics:body0": [],
+        "physics:body1": [
+          "/so101_new_calib/base"
+        ],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/base",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI",
+        "PhysicsArticulationRootAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI, PhysicsArticulationRootAPI, PhysxArticulationAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(0.020739, 0.00204287, 0.065966)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.00013612688, 0.000113232854, 0.00013180728)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.1469999998807907,
+        "physics:principalAxes": "(0.98998284, 0.14075974, 0.0025164369, 0.010700981)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)",
+        "physxArticulation:solverPositionIterationCount": 16,
+        "physxArticulation:solverVelocityIterationCount": 1
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/base/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "convexDecomposition",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/base/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/shoulder",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(-0.0307604, -0.0000166727, -0.0252713)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.00008378355, 0.00008103881, 0.00002395524)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.10000599920749664,
+        "physics:principalAxes": "(0.9998646, 0.0014956784, 0.009708396, 0.013204301)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/shoulder/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "convexDecomposition",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/shoulder/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/upper_arm",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(-0.0898471, -0.00838224, 0.0184089)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.000037245056, 0.00015087317, 0.000142487)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.10300000011920929,
+        "physics:principalAxes": "(0.9960497, 0.0009638968, -0.00009570287, 0.08879216)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/upper_arm/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "convexDecomposition",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/upper_arm/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/lower_arm",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(-0.0980701, 0.00324376, 0.0182831)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.00002831246, 0.00016026171, 0.00014530364)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.10400000214576721,
+        "physics:principalAxes": "(0.999589, 0.00089328334, 0.0053831167, -0.028146055)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/lower_arm/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "convexDecomposition",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/lower_arm/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/wrist",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(-0.000103312, -0.0386143, 0.0281156)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.000036826477, 0.000027447379, 0.000018943445)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.07900000363588333,
+        "physics:principalAxes": "(0.9671435, 0.2542262, 0.0016222623, -0.00014630717)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/wrist/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "convexDecomposition",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/wrist/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/gripper",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(0.000213627, 0.000245138, -0.025187)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.000024283923, 0.000043373493, 0.000037722883)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.08699999749660492,
+        "physics:principalAxes": "(0.96742505, 0.008077622, -0.25280195, 0.010714625)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/gripper/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI, PhysxSDFMeshCollisionAPI, PhysxConvexHullCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "sdf",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/gripper/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/jaw",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsRigidBodyAPI",
+        "PhysicsMassAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsRigidBodyAPI, PhysicsMassAPI])",
+      "attributes": {
+        "physics:angularVelocity": "(0, 0, 0)",
+        "physics:centerOfMass": "(-0.00157495, -0.0300244, 0.0192755)",
+        "physics:density": 0.0,
+        "physics:diagonalInertia": "(0.000006635825, 0.0000018652258, 0.00000529092)",
+        "physics:kinematicEnabled": false,
+        "physics:mass": 0.012000000104308128,
+        "physics:principalAxes": "(0.99930465, 0.016051318, -0.0010975002, -0.033638127)",
+        "physics:rigidBodyEnabled": true,
+        "physics:startsAsleep": false,
+        "physics:velocity": "(0, 0, 0)"
+      },
+      "relationships": {
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    },
+    {
+      "path": "/so101_new_calib/jaw/collisions",
+      "type": "Xform",
+      "schemas": [
+        "PhysicsCollisionAPI",
+        "PhysicsMeshCollisionAPI"
+      ],
+      "authored_schemas": "SdfTokenListOp(Explicit Items: [PhysicsCollisionAPI, PhysicsMeshCollisionAPI, PhysxMeshMergeCollisionAPI, PhysxSDFMeshCollisionAPI])",
+      "attributes": {
+        "physics:approximation": "sdf",
+        "physics:collisionEnabled": true
+      },
+      "relationships": {
+        "collection:collisionmeshes:includes": [
+          "/so101_new_calib/jaw/collisions"
+        ],
+        "physics:simulationOwner": [],
+        "proxyPrim": []
+      }
+    }
+  ],
+  "usd_collision_meshes": [
+    {
+      "path": "/so101_new_calib/base/collisions/base_motor_holder_so101_v1/mesh",
+      "point_count": 112620,
+      "local_min": [
+        -0.022350000217556953,
+        0.038100000470876694,
+        -0.020800000056624413
+      ],
+      "local_max": [
+        0.025297433137893677,
+        0.06949999928474426,
+        0.05939999967813492
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/base/collisions/base_so101_v2/mesh",
+      "point_count": 28290,
+      "local_min": [
+        -0.05546249821782112,
+        2.918672248330978e-16,
+        -0.01600000075995922
+      ],
+      "local_max": [
+        0.05546249821782112,
+        0.07199999690055847,
+        0.07100000232458115
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/base/collisions/sts3215_03a_v1/mesh",
+      "point_count": 57240,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/base/collisions/waveshare_mounting_plate_so101_v2/mesh",
+      "point_count": 3762,
+      "local_min": [
+        -0.025499999523162842,
+        -0.020999999716877937,
+        0.0
+      ],
+      "local_max": [
+        0.025499999523162842,
+        0.020999999716877937,
+        0.007600000128149986
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/shoulder/collisions/sts3215_03a_v1/mesh",
+      "point_count": 57240,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/shoulder/collisions/motor_holder_so101_base_v1/mesh",
+      "point_count": 67758,
+      "local_min": [
+        -0.05384990572929382,
+        -0.055097054690122604,
+        -0.028880443423986435
+      ],
+      "local_max": [
+        -0.025849906727671623,
+        -0.017000000923871994,
+        0.026200000196695328
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/shoulder/collisions/rotation_pitch_so101_v1/mesh",
+      "point_count": 53016,
+      "local_min": [
+        -0.05979999899864197,
+        0.00019999999494757503,
+        -0.023000000044703484
+      ],
+      "local_max": [
+        8.673617379884035e-19,
+        0.0843999981880188,
+        0.023000000044703484
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/upper_arm/collisions/sts3215_03a_v1/mesh",
+      "point_count": 57240,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/upper_arm/collisions/upper_arm_so101_v1/mesh",
+      "point_count": 78204,
+      "local_min": [
+        -0.06508498638868332,
+        -1.6566609195578508e-16,
+        -0.035599999129772186
+      ],
+      "local_max": [
+        0.0770849883556366,
+        0.02449999935925007,
+        0.031700000166893005
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/lower_arm/collisions/under_arm_so101_v1/mesh",
+      "point_count": 118548,
+      "local_min": [
+        -0.05384990572929382,
+        -0.04399999976158142,
+        -0.03420000150799751
+      ],
+      "local_max": [
+        0.07684990763664246,
+        -0.019999999552965164,
+        0.03020000085234642
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/lower_arm/collisions/motor_holder_so101_wrist_v1/mesh",
+      "point_count": 63126,
+      "local_min": [
+        -0.05384990572929382,
+        -0.05389999970793724,
+        -0.0301909651607275
+      ],
+      "local_max": [
+        -0.025849906727671623,
+        -0.017000000923871994,
+        0.026200000196695328
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/lower_arm/collisions/sts3215_03a_v1/mesh",
+      "point_count": 57240,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/wrist/collisions/sts3215_03a_no_horn_v1/mesh",
+      "point_count": 51948,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/wrist/collisions/wrist_roll_pitch_so101_v2/mesh",
+      "point_count": 161982,
+      "local_min": [
+        -0.02710000053048134,
+        -0.019999999552965164,
+        -0.03782838582992554
+      ],
+      "local_max": [
+        0.03519999980926514,
+        0.015659751370549202,
+        0.03999767825007439
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/gripper/collisions/sts3215_03a_v1/mesh",
+      "point_count": 57240,
+      "local_min": [
+        -0.022700000554323196,
+        -0.012400000356137753,
+        -0.01940000057220459
+      ],
+      "local_max": [
+        0.022700000554323196,
+        0.012400000356137753,
+        0.02019999921321869
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/gripper/collisions/wrist_roll_follower_so101_v1/mesh",
+      "point_count": 86388,
+      "local_min": [
+        -0.03519999980926514,
+        -0.02421821467578411,
+        -5.029354724683799e-05
+      ],
+      "local_max": [
+        0.029999999329447746,
+        0.027781786397099495,
+        0.10537499934434891
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/gripper/collisions/camera_mount/Cube",
+      "point_count": 164,
+      "local_min": [
+        -0.023266227915883064,
+        -0.03444722294807434,
+        -0.0012551740510389209
+      ],
+      "local_max": [
+        0.023266227915883064,
+        0.0081256665289402,
+        0.06189952418208122
+      ],
+      "enabled": null,
+      "approximation": null
+    },
+    {
+      "path": "/so101_new_calib/jaw/collisions/moving_jaw_so101_v1/mesh",
+      "point_count": 84810,
+      "local_min": [
+        -0.012299999594688416,
+        -0.0820000022649765,
+        -0.024000000208616257
+      ],
+      "local_max": [
+        0.009997976943850517,
+        0.00999466422945261,
+        0.024000000208616257
+      ],
+      "enabled": null,
+      "approximation": null
+    }
+  ],
+  "official_urdf_mjcf_bodies": [
+    {
+      "name": "base",
+      "urdf_mass_kg": 0.147,
+      "mjcf_mass_kg": 0.147,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 1.3860865958822767e-15,
+      "urdf_collisions": 4,
+      "mjcf_collision_geoms": 0
+    },
+    {
+      "name": "shoulder",
+      "urdf_mass_kg": 0.100006,
+      "mjcf_mass_kg": 0.100006,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 5.87025961704864e-16,
+      "urdf_collisions": 3,
+      "mjcf_collision_geoms": 3
+    },
+    {
+      "name": "upper_arm",
+      "urdf_mass_kg": 0.103,
+      "mjcf_mass_kg": 0.103,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 1.2248208928863493e-15,
+      "urdf_collisions": 2,
+      "mjcf_collision_geoms": 2
+    },
+    {
+      "name": "lower_arm",
+      "urdf_mass_kg": 0.104,
+      "mjcf_mass_kg": 0.104,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 1.0866537248605845e-15,
+      "urdf_collisions": 3,
+      "mjcf_collision_geoms": 3
+    },
+    {
+      "name": "wrist",
+      "urdf_mass_kg": 0.079,
+      "mjcf_mass_kg": 0.079,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 4.137591952223076e-15,
+      "urdf_collisions": 2,
+      "mjcf_collision_geoms": 2
+    },
+    {
+      "name": "gripper",
+      "urdf_mass_kg": 0.087,
+      "mjcf_mass_kg": 0.087,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 1.517320587284688e-15,
+      "urdf_collisions": 2,
+      "mjcf_collision_geoms": 2
+    },
+    {
+      "name": "jaw",
+      "urdf_mass_kg": 0.012,
+      "mjcf_mass_kg": 0.012,
+      "com_error_m": 0.0,
+      "inertia_relative_error": 1.4059025759619774e-15,
+      "urdf_collisions": 1,
+      "mjcf_collision_geoms": 1
+    }
+  ],
+  "collision_source_mesh_comparison": [
+    {
+      "name": "base",
+      "official_mjcf_collision_present": false
+    },
+    {
+      "name": "shoulder",
+      "usd_points": 178014,
+      "mjcf_points": 29579,
+      "bidirectional_vertex_max_distance_m": 3.7829155097983585e-07,
+      "bidirectional_vertex_95_percentile_distance_m": 3.604228609527247e-07,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/shoulder/collisions/sts3215_03a_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 3.1869417375222196e-07
+        },
+        {
+          "path": "/so101_new_calib/shoulder/collisions/motor_holder_so101_base_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 3.7829155097983585e-07
+        },
+        {
+          "path": "/so101_new_calib/shoulder/collisions/rotation_pitch_so101_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 3.0552734786324523e-07
+        }
+      ]
+    },
+    {
+      "name": "upper_arm",
+      "usd_points": 135444,
+      "mjcf_points": 22502,
+      "bidirectional_vertex_max_distance_m": 1.0791476547338878e-06,
+      "bidirectional_vertex_95_percentile_distance_m": 9.581806014867285e-07,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/upper_arm/collisions/sts3215_03a_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.0715338391277758e-06
+        },
+        {
+          "path": "/so101_new_calib/upper_arm/collisions/upper_arm_so101_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.0791476547338878e-06
+        }
+      ]
+    },
+    {
+      "name": "lower_arm",
+      "usd_points": 238914,
+      "mjcf_points": 39727,
+      "bidirectional_vertex_max_distance_m": 1.7474855311090558e-06,
+      "bidirectional_vertex_95_percentile_distance_m": 1.6465405402447516e-06,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/lower_arm/collisions/under_arm_so101_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.6795709299400315e-06
+        },
+        {
+          "path": "/so101_new_calib/lower_arm/collisions/motor_holder_so101_wrist_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.7474855311090558e-06
+        },
+        {
+          "path": "/so101_new_calib/lower_arm/collisions/sts3215_03a_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.7396686529632525e-06
+        }
+      ]
+    },
+    {
+      "name": "wrist",
+      "usd_points": 213930,
+      "mjcf_points": 35619,
+      "bidirectional_vertex_max_distance_m": 1.775352767239124e-06,
+      "bidirectional_vertex_95_percentile_distance_m": 1.716265651464042e-06,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/wrist/collisions/sts3215_03a_no_horn_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.7714727695619173e-06
+        },
+        {
+          "path": "/so101_new_calib/wrist/collisions/wrist_roll_pitch_so101_v2/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.775352767239124e-06
+        }
+      ]
+    },
+    {
+      "name": "gripper",
+      "usd_points": 143792,
+      "mjcf_points": 23880,
+      "bidirectional_vertex_max_distance_m": 0.06856551401963355,
+      "bidirectional_vertex_95_percentile_distance_m": 1.7219347649456046e-06,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/gripper/collisions/sts3215_03a_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.664057540946419e-06
+        },
+        {
+          "path": "/so101_new_calib/gripper/collisions/wrist_roll_follower_so101_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 1.7416826127117142e-06
+        },
+        {
+          "path": "/so101_new_calib/gripper/collisions/camera_mount/Cube",
+          "maximum_vertex_distance_to_official_mjcf_m": 0.06856551401963355
+        }
+      ]
+    },
+    {
+      "name": "jaw",
+      "usd_points": 84810,
+      "mjcf_points": 14103,
+      "bidirectional_vertex_max_distance_m": 2.369876398478733e-06,
+      "bidirectional_vertex_95_percentile_distance_m": 2.3616144063665983e-06,
+      "usd_parts": [
+        {
+          "path": "/so101_new_calib/jaw/collisions/moving_jaw_so101_v1/mesh",
+          "maximum_vertex_distance_to_official_mjcf_m": 2.369876398478733e-06
+        }
+      ]
+    }
+  ],
+  "official_mjcf_effort_limits_nm": [
+    [
+      -3.35,
+      3.35
+    ],
+    [
+      -3.35,
+      3.35
+    ],
+    [
+      -3.35,
+      3.35
+    ],
+    [
+      -3.35,
+      3.35
+    ],
+    [
+      -3.35,
+      3.35
+    ],
+    [
+      -3.35,
+      3.35
+    ]
+  ],
+  "official_mjcf_armature": [
+    0.028,
+    0.028,
+    0.028,
+    0.028,
+    0.028,
+    0.028
+  ],
+  "official_mjcf_frictionloss": [
+    0.052,
+    0.052,
+    0.052,
+    0.052,
+    0.052,
+    0.052
+  ],
+  "source_trajectories": {
+    "lift": {
+      "trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+      "table_height_root_m": 0.03008144721388817,
+      "object_bottom_minus_table_m": {
+        "minimum": -0.0030170776412993053,
+        "maximum": 5.960464517784647e-10,
+        "last_mean": -0.0030005610714706763
+      },
+      "maximum_object_tilt_rad": 0.0008143411868237344,
+      "minimum_grasp_center_distance_m": 0.029372996250980637,
+      "minimum_jaw_position_rad": 0.7997173070907593,
+      "jaw_target_range_rad": [
+        0.800000011920929,
+        0.800000011920929
+      ],
+      "bilateral_contact_samples": 0,
+      "material_shape": [
+        500,
+        4,
+        82,
+        3
+      ],
+      "material_minimum": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "material_maximum": [
+        1.5,
+        1.2000000476837158,
+        0.0
+      ]
+    },
+    "pick_place": {
+      "trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+      "table_height_root_m": 0.03008144721388817,
+      "object_bottom_minus_table_m": {
+        "minimum": -0.0035112243775247236,
+        "maximum": 5.960464517784647e-10,
+        "last_mean": -0.003000338720566863
+      },
+      "maximum_object_tilt_rad": 0.023287602138803938,
+      "minimum_grasp_center_distance_m": 0.0435414090987629,
+      "minimum_jaw_position_rad": 0.7996719479560852,
+      "jaw_target_range_rad": [
+        0.800000011920929,
+        0.800000011920929
+      ],
+      "bilateral_contact_samples": 0,
+      "material_shape": [
+        500,
+        4,
+        82,
+        3
+      ],
+      "material_minimum": [
+        0.5,
+        0.5,
+        0.0
+      ],
+      "material_maximum": [
+        1.5,
+        1.2000000476837158,
+        0.0
+      ]
+    }
+  }
+}

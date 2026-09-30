@@ -4,6 +4,8 @@
 
 `rl export` 使用 Isaac Lab exporter 保存包含观测归一化的 TorchScript actor，从实际环境读取观测顺序、默认关节状态、动作 scale/offset、binary 开合参数、关节限位、控制周期、nominal PD 和任务参数。
 
+导出包含机器人 USD SHA256、原生桌面 collision mesh 的有限 box 位置、quaternion、half size 与 collider 路径。`table_height_root` 表示实际碰撞表面，`task_reference_height_root` 表示任务使用的环境参考高度。MuJoCo 使用记录的 box；旧 metadata 的 plane 保持其记录的高度。`sim2sim compare` 保存 metadata SHA256 与 MuJoCo 桌面参数读取结果，`sim2sim mujoco` 恢复记录的物体初始线速度与角速度。实际测量、原生检查与图表见 [SO-101 专项报告](../validation/2026-09-30/model_debug/README.md)。
+
 ```bash
 openso101 rl export --task OpenSO101-Lift-v0 \
   --checkpoint outputs/rl_progress/lift_seed42 \

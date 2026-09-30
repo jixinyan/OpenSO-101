@@ -1,0 +1,36 @@
+{
+  "checks": [
+    {
+      "task": "lift",
+      "paired_no_contact_maximum_difference": 0.0,
+      "paired_effort_limit_maximum_difference": 0.0,
+      "baseline_maximum_object_error_m": 0.0028910392726872176,
+      "measured_table_maximum_object_error_m": 0.0014677615272992944,
+      "measured_table_final_object_error_m": 0.00010919583263596773,
+      "raw_gripper_action_minimum": 1.2760816812515259,
+      "raw_gripper_action_maximum": 1.6065754890441895,
+      "processed_gripper_target_minimum_rad": 0.800000011920929,
+      "processed_gripper_target_maximum_rad": 0.800000011920929
+    },
+    {
+      "task": "pick_place",
+      "paired_no_contact_maximum_difference": 0.0,
+      "paired_effort_limit_maximum_difference": 0.0,
+      "baseline_maximum_object_error_m": 0.002890896051301376,
+      "measured_table_maximum_object_error_m": 0.0014990454379548068,
+      "measured_table_final_object_error_m": 0.00010956783081814298,
+      "raw_gripper_action_minimum": 1.3660436868667603,
+      "raw_gripper_action_maximum": 1.7582226991653442,
+      "processed_gripper_target_minimum_rad": 0.800000011920929,
+      "processed_gripper_target_maximum_rad": 0.800000011920929
+    }
+  ],
+  "dynamics_report_sha256": "d0896d7c3ad1763af53493bfc7d77b852b1bd18b68e0debb8e40e5a1d0fe3ff7",
+  "table_report_sha256": "43432cf4fef1befae098faa77b859734e248b7b58b38ee5b826f4215165d75c0",
+  "source_code_sha256": "a57d907a172ffd971e40fe94c537a066b5cf3b51d924445106146365580b458e",
+  "figures": {
+    "policy_gripper.png": "1b4213e2ca82699001209bd81ccc24519881d1117c88fd59b4a72bb01782e830",
+    "table_geometry.png": "62364182d417a59397bee988f95fa439c860f57e246c163e019cf03c4af8202f",
+    "velocity_constraint.png": "5e844b469c766f6d44dd9efc4d65229d065b22afb31610356db11a940743664f"
+  }
+}
