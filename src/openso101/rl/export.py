@@ -80,6 +80,15 @@ def export(args):
             "reward_terms": [{"name": name, "weight": unwrapped.reward_manager.get_term_cfg(name).weight}
                              for name in unwrapped.reward_manager.active_terms],
             "hardware_observations_required": ["object_position_root", "goal_root", "grasp_state"],
+            "physics_recording": {
+                "robot_body_names": list(robot.body_names),
+                "inertia_frame": "body_prim_at_center_of_mass",
+                "inertia_matrix_order": "column_major",
+                "com_pose_frame": "body_prim", "com_quaternion_order": "xyzw",
+                "material_order": "native_PhysX_shape_order",
+                "material_components": ["static_friction", "dynamic_friction", "restitution"],
+                "gravity_frame": "world", "gravity_scope": "shared_physics_scene",
+            },
         }
         if args.task == "OpenSO101-PickPlace-v0":
             command_cfg = unwrapped.command_manager.get_term("object_pose").cfg
@@ -103,6 +112,10 @@ def export(args):
             "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
             "joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits",
             "object_linear_velocity_root", "object_angular_velocity_root",
+            "robot_body_mass", "robot_body_inertia", "robot_body_com", "robot_material_properties",
+            "robot_body_position_root", "robot_body_quaternion_root",
+            "object_body_mass", "object_body_inertia", "object_body_com", "object_material_properties",
+            "scene_gravity",
         )}
         for _ in range(args.validation_steps):
             with torch.inference_mode():
@@ -136,6 +149,16 @@ def export(args):
                 }
                 for name in ("joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits"):
                     before_step[name] = getattr(robot.data, name)[:, joint_ids]
+                for asset_name, asset in (("robot", robot), ("object", obj)):
+                    for field, getter in (("body_mass", "masses"), ("body_inertia", "inertias"),
+                                          ("body_com", "coms"), ("material_properties", "material_properties")):
+                        before_step[f"{asset_name}_{field}"] = getattr(asset.root_physx_view, f"get_{getter}")()
+                before_step["scene_gravity"] = torch.tensor(list(robot.data._physics_sim_view.get_gravity()))
+                body_positions, body_quaternions = subtract_frame_transforms(
+                    robot.data.root_pos_w[:, None], robot.data.root_quat_w[:, None],
+                    robot.data.body_pos_w, robot.data.body_quat_w,
+                )
+                before_step.update(robot_body_position_root=body_positions, robot_body_quaternion_root=body_quaternions)
                 gripper_id = robot.body_names.index("gripper")
                 gripper_position, gripper_quaternion = subtract_frame_transforms(
                     robot.data.root_pos_w, robot.data.root_quat_w,
@@ -143,6 +166,8 @@ def export(args):
                 )
                 before_step.update(gripper_position_root=gripper_position, gripper_quaternion_root=gripper_quaternion)
                 for name, value in before_step.items():
+                    if not torch.isfinite(value).all():
+                        raise RuntimeError(f"policy 实际记录包含非有限数值: {name}")
                     buffers[name].append(value.detach().cpu().numpy().copy())
                 observation, _, terminated, truncated, _ = env.step(actions)
                 processed_by_joint = {}
@@ -167,6 +192,7 @@ def export(args):
             trace.attrs["reward_sampling"] = "transition_reward"
             trace.attrs["reward_terms"] = json.dumps(unwrapped.reward_manager.active_terms)
             trace.attrs["joint_names"] = json.dumps(list(SO101_SIM_JOINT_NAMES))
+            trace.attrs["physics_recording"] = json.dumps(metadata["physics_recording"])
             for name, value in arrays.items():
                 trace.create_dataset(name, data=value)
         jaw_target = arrays["joint_targets"][..., -1]
@@ -181,6 +207,8 @@ def export(args):
             "weighted_reward_totals": dict(zip(unwrapped.reward_manager.active_terms,
                                                arrays["weighted_reward"].sum(axis=(0, 1)).tolist(), strict=True)),
             "trace_sha256": digest(output / "isaac_validation.hdf5"),
+            "export_source_sha256": digest(Path(__file__)),
+            "physics_recording": metadata["physics_recording"],
             "task_success_verified": False,
         }
         (output / "validation.json").write_text(json.dumps(summary, indent=2))
