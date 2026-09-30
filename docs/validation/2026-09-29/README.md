@@ -93,9 +93,14 @@ SSH 实际 TTY 输入经过 prompt_toolkit、KeyboardDevice、实际 Jacobian IK
 - [C/R 数值验证](keyboard_cli_restore_verified.json)
 - [2281 帧 LeRobot 读取报告](keyboard_lerobot_report.json)
 - [2281 帧 Isaac 关节与双相机回放](keyboard_replay_report.json)
+- [180 帧 PickPlace 状态采集与恢复](keyboard_state_report.json)
 - [键盘操作指南](../../guides/teleop.md)
 
 ## 重复运行
+
+PickPlace 的状态采集检查使用实际双相机、机器人、物体和 command，录制 180 帧后重置环境，再恢复第 120 帧并回放后续 60 帧。源动作来自已有键盘 HDF5，图像、关节和场景状态在本次真实运行中重新采集。报告中的六项场景状态与两项关节状态恢复误差均为 0，放置计时器为 0，任务成功为 `false`。物理随机化参数及接触求解状态的重现仍需独立验证。
+
+实际运行脚本为 `outputs/rl_progress/run_state_recording.sh` 与 `verify_state_recording.py`，HDF5 保存在 `outputs/rl_progress/keyboard_state_dataset/episodes/episode_000000.hdf5`，代码版本为 `539b22e`。采集器要求所有帧的状态字段与首帧一致；记录到的放置计时器随 HDF5 状态恢复。
 
 在上述主机仓库目录使用已配置环境执行。`TMPDIR` 指向 `outputs/tmp`，Isaac 使用已下载的 SO-101 USD；EULA 已得到用户授权接受。CUDA NVRTC 与图形库目录在 `LD_LIBRARY_PATH` 中设置为对应环境路径。
 

@@ -1,0 +1,24 @@
+{
+  "status": "pick_place_state_recording_and_replay_verified",
+  "recorded_frames": 180,
+  "episode": "outputs/rl_progress/keyboard_state_dataset/episodes/episode_000000.hdf5",
+  "restored_frame": 120,
+  "replayed_frames": 60,
+  "maximum_restore_errors": {
+    "command_goal_pos_w": 0.0,
+    "command_placement_hold_seconds": 0.0,
+    "object_root_state": 0.0,
+    "command_cube_spawn_xy_b": 0.0,
+    "command_stage": 0.0,
+    "command_goal_pos_b": 0.0,
+    "joint_position": 0.0,
+    "joint_velocity": 0.0
+  },
+  "recorded_placement_hold_seconds": 0.0,
+  "task_success": false,
+  "cameras": [
+    "overhead_camera",
+    "wrist_camera"
+  ],
+  "git_sha": "539b22e0971405e9d8f74157fb6d03bc916f88f7"
+}

@@ -146,6 +146,8 @@ prompt for unattended batch capture.
 
 录制 HDF5 后，可以导出本地 LeRobot 数据集：
 
+每个 episode 的首帧确定 `sim` 状态字段，后续帧必须包含相同字段和形状。PickPlace 记录物体状态、任务阶段、任务目标、物体初始位置和 `command_placement_hold_seconds`；回放时恢复已有记录字段。数据写入和状态恢复中的错误会立即报告并终止。
+
 ```bash
 openso101 il export \
   --repo-root outputs/my_dataset \
