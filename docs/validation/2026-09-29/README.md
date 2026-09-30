@@ -2,9 +2,11 @@
 
 ## 当前执行状态
 
-按用户指令，Lift 与 PickPlace 的 RL 训练均已停止，持续开发任务禁止启动或恢复 RL 训练。两项训练目录中的 `model_0.pt`、`model_50.pt`、`model_100.pt` 已重新读取，全部模型参数有限，文件 SHA256 保存于 [停止状态检查](training_stopped.json)。当前继续推进键盘采集、LeRobot 导出与回放、MuJoCo sim2sim、sim2real 和 agentic real2sim。
+定时任务 `openso-101` 已通过 Codex 应用删除。按用户最新指令，本轮完成实际物理参数记录与实体比较后停止；RL 训练保持停止，真机工作暂缓。
 
-当前优先推进 sim2sim，真机工作暂缓。`01f075e` 使用实际 Isaac 关节目标、初始位置和速度，在 MuJoCo 对 Lift 四环境各 250 步、PickPlace 四环境各 400 步进行动力学比较。两项最大关节位置差异为 0.71237 和 0.23731 rad，出现在 0.08 和 0.10 秒；实际速度及参数来源见 [动力学比较说明](../../guides/sim2sim.md#相同动作的动力学比较)。此比较保持任务成功与物理等价未验证。
+按用户指令，Lift 与 PickPlace 的 RL 训练均已停止，启动或恢复 RL 训练需要用户重新授权。两项训练目录中的 `model_0.pt`、`model_50.pt`、`model_100.pt` 已重新读取，全部模型参数有限，文件 SHA256 保存于 [停止状态检查](training_stopped.json)。已有记录覆盖键盘采集、LeRobot 导出与回放、MuJoCo sim2sim、sim2real 和 agentic real2sim。
+
+sim2sim 的已有记录包括 `01f075e` 使用实际 Isaac 关节目标、初始位置和速度，在 MuJoCo 对 Lift 四环境各 250 步、PickPlace 四环境各 400 步进行动力学比较。两项最大关节位置差异为 0.71237 和 0.23731 rad，出现在 0.08 和 0.10 秒；实际速度及参数来源见 [动力学比较说明](../../guides/sim2sim.md#相同动作的动力学比较)。此比较保持任务成功与物理等价未验证。
 
 - [Lift 原始比较报告](lift_dynamics_comparison_report.json)
 - [PickPlace 原始比较报告](pick_place_dynamics_comparison_report.json)
@@ -50,6 +52,22 @@ Lift 的最大关节位置误差由 0.63094 减少至 0.16383 rad，PickPlace �
 - [配对输入与原生力矩检查](velocity_servo_pairs_report.json)
 - [四项输入拒绝检查](velocity_servo_guards_report.json)
 - [运行方式](../../guides/sim2sim.md#mujoco-受限速度目标驱动)
+
+## 实际实体物理参数记录与比较
+
+`2c8a990` 在 `jd_B300` 使用两项保存模型，各完成四环境、500 个控制步骤，观测重建误差为 0，策略与动作目标误差分别小于 `8.4e-7` 和 `3e-7`。每步记录机器人与物体的原生质量、惯性、COM、材质、实体姿态和场景重力。代码、实体顺序与坐标定义保存在导出报告和 HDF5 metadata 中。
+
+本地 MuJoCo 3.14.0 的 `sim2sim physics` 对每个任务比较 2000 个关节状态、14,000 个实体状态。COM 最大位置差异为 2.72／2.62 μm，按质量归一化后的惯性相对差异低于 `9.3e-6`；完整惯性差异最高为 0.18805，实际质量与名义 MJCF 质量之比为 0.81195–1.18196。报告使用共同 robot-root 坐标系比较完整惯性，保留局部坐标方向差异。实际 armature、关节摩擦、物体质量、重力与材质均已记录；它们对运动的单独影响和接触等价需要后续实验。
+
+原始输出保存在本地和主机的 `outputs/rl_progress/lift_body_physics_verified_50/`、`pick_place_body_physics_verified_50/`，比较报告为 `lift_body_physics_verified_report.json` 和 `pick_place_body_physics_verified_report.json`。执行脚本为 `run_body_physics_export.sh`，原生日志为主机的 `body_physics_verified_export.log`；检查脚本为 `check_body_physics_results.py` 与 `check_body_physics_guards.py`。已有输出、缺少物理字段的旧记录通过真实 CLI 请求拒绝检查。
+
+- [Lift 实际导出报告](lift_body_physics_export_report.json)
+- [PickPlace 实际导出报告](pick_place_body_physics_export_report.json)
+- [Lift 实体比较](lift_body_physics_report.json)
+- [PickPlace 实体比较](pick_place_body_physics_report.json)
+- [数量、有限值与来源检查](body_physics_records_report.json)
+- [两项实际输入拒绝检查](body_physics_guards_report.json)
+- [入口与当前后续目标](../../guides/sim2sim.md#实体物理参数比较)
 
 ## 运行环境与模型
 

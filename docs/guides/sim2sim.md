@@ -46,7 +46,7 @@ openso101 sim2sim mujoco --policy outputs/lift_portable \
 
 ## 相同动作的动力学比较
 
-当前优先推进 sim2sim，真机工作暂缓，RL 训练保持停止。验证使用已保存的策略与实际 Isaac 动作记录。
+sim2sim 验证使用已保存的策略与实际 Isaac 动作记录。真机工作暂缓，RL 训练保持停止。
 
 `sim2sim compare` 将 Isaac 验证轨迹中每步已检查的关节目标发送给 MuJoCo，初始关节位置与速度保持一致，比较每个控制步骤之前的关节、物体与夹爪接触数据。源记录发生 episode 终止时结束对应连续片段。该入口使用记录动作，不执行策略反馈计算。
 
@@ -124,7 +124,7 @@ PYTHONPATH=src /home/jixin/workspace/envs/openso101-v2/bin/python \
 
 该实验确认速度限制会明显改变这些动作的实际运动。每组的物理参数和 PD 一致性检查通过；新场景的随机物理参数没有完整恢复为源记录参数，因此 `source_physics_reproduction_verified=false`。1000 rad/s 仅用于本次因素控制实验。跨模拟器物理等价与任务成功仍未验证。
 
-MuJoCo 的受限速度目标驱动及实际比较见下节。当前继续记录机器人质量、惯性与接触参数，检查实际速度超过目标限制的行为。
+MuJoCo 的受限速度目标驱动及实际比较见下节。机器人质量、惯性与接触参数的记录见实体参数比较；实际速度超过目标限制的行为需要独立验证。
 
 六项实际无效输入检查均在启动 Isaac 前终止，覆盖单步骤、无效或非有限速度限制、源轨迹数量不足、episode 边界和已有输出目录。
 
@@ -157,7 +157,7 @@ openso101 sim2sim compare --policy outputs/rl_progress/lift_physics_portable_50 
 
 速度目标公式与全部物理步骤记录的误差为 0；原生 actuator 力矩与速度误差反馈公式的最大差异小于 `4.5e-16` N·m。全部速度目标与力矩范围检查通过。两个任务均减少了这些记录动作的最大关节位置差异，仍存在实际速度超过目标限制的情况。该结果的范围为已记录动作的动力学比较；PhysX solver 速度约束等价、质量与接触等价，以及任务迁移均待验证。
 
-下一项检查使用实际 Isaac 质量、惯性、COM 与材质数据，与 MuJoCo 对应机器人实体逐项比较，继续定位速度响应和接触差异。
+实际 Isaac 质量、惯性、COM 与材质数据的逐项比较见下节。后续速度响应与接触实验需要使用这些实际参数。
 
 - [Lift velocity servo](../validation/2026-09-29/lift_velocity_servo_report.json)
 - [PickPlace velocity servo](../validation/2026-09-29/pick_place_velocity_servo_report.json)
@@ -165,6 +165,42 @@ openso101 sim2sim compare --policy outputs/rl_progress/lift_physics_portable_50 
 - [PickPlace position PD 控制组](../validation/2026-09-29/pick_place_position_pd_control_report.json)
 - [相同输入与原生力矩检查](../validation/2026-09-29/velocity_servo_pairs_report.json)
 - [四项实际输入拒绝检查](../validation/2026-09-29/velocity_servo_guards_report.json)
+
+## 实体物理参数比较
+
+`rl export` 在每个控制步骤之前记录机器人和物体的原生质量、惯性、COM、接触材质，以及机器人实体姿态和实际场景重力。`physics_recording` 保存七个机器人实体的顺序、惯性坐标系与 column-major 矩阵顺序、COM quaternion 的 xyzw 顺序和原生材质参数顺序。物体质量随 episode reset 变化，记录保持每步的实际值。
+
+`sim2sim physics` 校验源轨迹 SHA256 与实体列表，使用同一关节状态计算 MuJoCo 姿态，将 COM 和惯性转换到共同 robot-root 坐标系。USD 的 `jaw` 对应 MJCF 的 `moving_jaw_so101_v1`。报告分别比较质量、主惯性矩、COM、实体姿态、完整惯性和按质量归一化的惯性，同时保留实际 armature、关节摩擦、重力及两种模拟器的材质数据。
+
+```bash
+openso101 sim2sim physics \
+  --policy outputs/rl_progress/lift_body_physics_verified_50 \
+  --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --output outputs/lift_body_physics_report.json
+```
+
+两项已保存模型分别完成四环境、500 步实际 Isaac 推理，观测重建误差为 0，策略动作误差小于 `8.4e-7`，动作目标误差小于 `3e-7`。每项 MuJoCo 参数比较覆盖 2000 个关节状态与 14,000 个实体状态，七个实体的名称对应检查通过。
+
+| 指标 | Lift | PickPlace |
+|---|---:|---:|
+| 最大实体位置差异 | 2.40 μm | 2.27 μm |
+| 最大 COM 位置差异 | 2.72 μm | 2.62 μm |
+| 实际质量／MJCF 质量范围 | 0.81195–1.18196 | 0.81195–1.18196 |
+| 完整惯性最大相对差异 | 0.18805 | 0.18805 |
+| 按质量归一化后的惯性最大相对差异 | `9.22e-6` | `8.83e-6` |
+
+部分实体的局部坐标方向存在约 π/2 的差异，共同坐标系中的 COM 与按质量归一化的惯性保持上述误差范围。实际惯性差异与本次质量随机化同时存在；这项参数比较没有测量它们对任务轨迹的单独影响。
+
+六个关节的 Isaac armature 均为 0，MJCF 为 0.028；Isaac 关节摩擦系数均为 0，MJCF 的 frictionloss 为 0.052 N·m。摩擦系数与 frictionloss 使用各自的物理含义。实际重力为 `[0, 0, -9.943255]` m/s²，当前 MuJoCo 使用 `[0, 0, -9.81]`。物体实际质量分别覆盖 0.01426–0.02545 kg、0.01573–0.02588 kg，MuJoCo 名义值为 0.02 kg。原生静态／动态摩擦与 restitution、MuJoCo 滑动／扭转／滚动摩擦均保存于报告，接触等价保持未验证。
+
+后续工作是将每环境实际质量、惯性、COM、重力和 armature 用于相同动作的 MuJoCo 实验，分别测量速度、关节轨迹与接触变化。当前参数记录、共同坐标系比较和来源检查已完成；物理等价及任务迁移仍未验证。
+
+- [Lift 实际物理记录](../validation/2026-09-29/lift_body_physics_export_report.json)
+- [PickPlace 实际物理记录](../validation/2026-09-29/pick_place_body_physics_export_report.json)
+- [Lift 实体参数比较](../validation/2026-09-29/lift_body_physics_report.json)
+- [PickPlace 实体参数比较](../validation/2026-09-29/pick_place_body_physics_report.json)
+- [数量、有限值与来源检查](../validation/2026-09-29/body_physics_records_report.json)
+- [已有输出与旧记录拒绝检查](../validation/2026-09-29/body_physics_guards_report.json)
 
 ## sim2real 视觉策略检查
 

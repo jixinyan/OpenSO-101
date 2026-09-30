@@ -1,0 +1,574 @@
+{
+  "status": "actual_body_physics_comparison_completed",
+  "task": "OpenSO101-Lift-v0",
+  "state_samples": 2000,
+  "steps": 500,
+  "environments": 4,
+  "bodies": [
+    {
+      "body_name": "base",
+      "mujoco_body_name": "base",
+      "mujoco_body_id": 1,
+      "isaac_mass_range_kg": [
+        0.12037566304206848,
+        0.1557106077671051
+      ],
+      "mujoco_mass_kg": 0.147,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.81888206151067,
+        1.059255835150375
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          9.272436727769673e-05,
+          0.00010793463297886774,
+          0.0001114718834287487
+        ],
+        [
+          0.00011994257511105388,
+          0.0001396176521666348,
+          0.00014419323997572064
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        0.00011323284320021723,
+        0.0001318072790403244,
+        0.0001361268777594588
+      ],
+      "maximum_body_position_difference_m": 4.470348358154297e-08,
+      "maximum_body_rotation_difference_rad": 2.7964919983570086e-07,
+      "maximum_com_position_difference_m": 4.145728819989467e-08,
+      "maximum_root_frame_inertia_relative_difference": 0.18111777071155594,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 4.433859724331982e-07
+    },
+    {
+      "body_name": "shoulder",
+      "mujoco_body_name": "shoulder",
+      "mujoco_body_id": 2,
+      "isaac_mass_range_kg": [
+        0.08119972795248032,
+        0.11820326745510101
+      ],
+      "mujoco_mass_kg": 0.100006,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.8119485626110465,
+        1.1819617568455993
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          1.945042095030658e-05,
+          6.579935143236071e-05,
+          6.802793359383941e-05
+        ],
+        [
+          2.831417259585578e-05,
+          9.578478784533218e-05,
+          9.902892634272575e-05
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        2.3955239835030708e-05,
+        8.103880894259979e-05,
+        8.378355122236964e-05
+      ],
+      "maximum_body_position_difference_m": 1.7228931692775886e-07,
+      "maximum_body_rotation_difference_rad": 5.0482756245508485e-06,
+      "maximum_com_position_difference_m": 2.7059292831169947e-07,
+      "maximum_root_frame_inertia_relative_difference": 0.1880514307536712,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 2.0712940548431254e-06
+    },
+    {
+      "body_name": "upper_arm",
+      "mujoco_body_name": "upper_arm",
+      "mujoco_body_id": 3,
+      "isaac_mass_range_kg": [
+        0.08544773608446121,
+        0.11310435831546783
+      ],
+      "mujoco_mass_kg": 0.103,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.8295896707229244,
+        1.0981005661695906
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          3.0898121622158214e-05,
+          0.00011820577492471784,
+          0.00012516281276475638
+        ],
+        [
+          4.089881986146793e-05,
+          0.00015646510291844606,
+          0.0001656739041209221
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        3.724505629277979e-05,
+        0.0001424869834021271,
+        0.0001508731603050935
+      ],
+      "maximum_body_position_difference_m": 3.8782985736791046e-07,
+      "maximum_body_rotation_difference_rad": 1.5708025097829406,
+      "maximum_com_position_difference_m": 1.043062627808572e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.17041016314852767,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 5.333321071318365e-06
+    },
+    {
+      "body_name": "lower_arm",
+      "mujoco_body_name": "lower_arm",
+      "mujoco_body_id": 4,
+      "isaac_mass_range_kg": [
+        0.09342692047357559,
+        0.11804763972759247
+      ],
+      "mujoco_mass_kg": 0.104,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.8983357737843808,
+        1.1350734589191585
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          2.5434093913645484e-05,
+          0.00013053145084995776,
+          0.00014396884944289923
+        ],
+        [
+          3.213672243873589e-05,
+          0.00016493030125275254,
+          0.00018190877744928002
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        2.831245691225359e-05,
+        0.00014530364353121709,
+        0.0001602616995565297
+      ],
+      "maximum_body_position_difference_m": 1.2153520726344423e-06,
+      "maximum_body_rotation_difference_rad": 1.5707978719955875,
+      "maximum_com_position_difference_m": 1.8863721662821809e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.1350733774998165,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 6.209320397005744e-06
+    },
+    {
+      "body_name": "wrist",
+      "mujoco_body_name": "wrist",
+      "mujoco_body_id": 5,
+      "isaac_mass_range_kg": [
+        0.07012097537517548,
+        0.0882154032588005
+      ],
+      "mujoco_mass_kg": 0.079,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.8876072832300693,
+        1.1166506741620317
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          1.6814343325677328e-05,
+          2.4362492695217952e-05,
+          3.268743967055343e-05
+        ],
+        [
+          2.1153213310753927e-05,
+          3.064913835260086e-05,
+          4.112230453756638e-05
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        1.8943443443779355e-05,
+        2.7447377208972472e-05,
+        3.682647934724824e-05
+      ],
+      "maximum_body_position_difference_m": 2.138364223739056e-06,
+      "maximum_body_rotation_difference_rad": 1.0287872912945572e-05,
+      "maximum_com_position_difference_m": 2.127141708636199e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.11665062958061782,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 3.1202126010595215e-06
+    },
+    {
+      "body_name": "gripper",
+      "mujoco_body_name": "gripper",
+      "mujoco_body_id": 6,
+      "isaac_mass_range_kg": [
+        0.07287555932998657,
+        0.08778505772352219
+      ],
+      "mujoco_mass_kg": 0.087,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.837650107241225,
+        1.009023651994508
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          2.0341431081760675e-05,
+          3.159858533763327e-05,
+          3.633181768236682e-05
+        ],
+        [
+          2.450306055834517e-05,
+          3.8063291867729276e-05,
+          4.376488504931331e-05
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        2.4283921793302324e-05,
+        3.7722885168249654e-05,
+        4.3373493038447843e-05
+      ],
+      "maximum_body_position_difference_m": 2.0727614920206616e-06,
+      "maximum_body_rotation_difference_rad": 1.2427802670023146e-05,
+      "maximum_com_position_difference_m": 2.1378219582102585e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.16234972923032548,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 4.1051047863814334e-06
+    },
+    {
+      "body_name": "jaw",
+      "mujoco_body_name": "moving_jaw_so101_v1",
+      "mujoco_body_id": 7,
+      "isaac_mass_range_kg": [
+        0.011061066761612892,
+        0.012259585782885551
+      ],
+      "mujoco_mass_kg": 0.012,
+      "isaac_to_mujoco_mass_ratio_range": [
+        0.921755563467741,
+        1.021632148573796
+      ],
+      "isaac_principal_moment_range_kg_m2": [
+        [
+          1.719282067824679e-06,
+          4.876936145592481e-06,
+          6.116608346928842e-06
+        ],
+        [
+          1.9055745497098542e-06,
+          5.4053753046900965e-06,
+          6.7793721427733544e-06
+        ]
+      ],
+      "mujoco_principal_moments_kg_m2": [
+        1.8652259035967696e-06,
+        5.290920121455264e-06,
+        6.635823974947973e-06
+      ],
+      "maximum_body_position_difference_m": 2.4023679378936004e-06,
+      "maximum_body_rotation_difference_rad": 1.425555740733993e-05,
+      "maximum_com_position_difference_m": 2.7158431306239464e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.07824431336637826,
+      "maximum_mass_normalized_root_frame_inertia_relative_difference": 9.216650897544064e-06
+    }
+  ],
+  "kinematics": {
+    "poses": 2000,
+    "maximum_position_error_m": 2.0727614920206616e-06,
+    "maximum_rotation_error_rad": 1.2427802670023146e-05
+  },
+  "joint_parameters": {
+    "isaac_armature_range": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "mujoco_armature": [
+      0.028,
+      0.028,
+      0.028,
+      0.028,
+      0.028,
+      0.028
+    ],
+    "isaac_friction_coefficient_range": [
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "mujoco_frictionloss_nm": [
+      0.052,
+      0.052,
+      0.052,
+      0.052,
+      0.052,
+      0.052
+    ]
+  },
+  "gravity": {
+    "isaac_min_m_s2": [
+      0.0,
+      0.0,
+      -9.943255424499512
+    ],
+    "isaac_max_m_s2": [
+      0.0,
+      0.0,
+      -9.943255424499512
+    ],
+    "mujoco_m_s2": [
+      0.0,
+      0.0,
+      -9.81
+    ]
+  },
+  "object_mass": {
+    "isaac_range_kg": [
+      0.014256308786571026,
+      0.02545156329870224
+    ],
+    "mujoco_kg": 0.02
+  },
+  "object_inertia": {
+    "isaac_principal_moment_range_kg_m2": [
+      [
+        2.138446006938466e-06,
+        2.138446006938466e-06,
+        2.138446006938466e-06
+      ],
+      [
+        3.81773406843422e-06,
+        3.81773406843422e-06,
+        3.81773406843422e-06
+      ]
+    ],
+    "mujoco_principal_moments_kg_m2": [
+      3e-06,
+      3e-06,
+      3e-06
+    ],
+    "isaac_com_translation_range_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ]
+  },
+  "materials": {
+    "isaac_components": [
+      "static_friction",
+      "dynamic_friction",
+      "restitution"
+    ],
+    "isaac_native_ranges": {
+      "robot": {
+        "minimum": [
+          0.5,
+          0.5,
+          0.0
+        ],
+        "maximum": [
+          1.5,
+          1.2000000476837158,
+          0.0
+        ]
+      },
+      "object": {
+        "minimum": [
+          0.7587882876396179,
+          0.37862569093704224,
+          0.0012185812229290605
+        ],
+        "maximum": [
+          1.4811253547668457,
+          1.1726016998291016,
+          0.23168078064918518
+        ]
+      }
+    },
+    "mujoco_components": [
+      "sliding_friction",
+      "torsional_friction",
+      "rolling_friction"
+    ],
+    "mujoco_geoms": [
+      {
+        "geom_id": 0,
+        "name": "table",
+        "body": "world",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 6,
+        "name": "",
+        "body": "shoulder",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 8,
+        "name": "",
+        "body": "shoulder",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 10,
+        "name": "",
+        "body": "shoulder",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 12,
+        "name": "",
+        "body": "upper_arm",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 14,
+        "name": "",
+        "body": "upper_arm",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 16,
+        "name": "",
+        "body": "lower_arm",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 18,
+        "name": "",
+        "body": "lower_arm",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 20,
+        "name": "",
+        "body": "lower_arm",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 22,
+        "name": "",
+        "body": "wrist",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 24,
+        "name": "",
+        "body": "wrist",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 26,
+        "name": "",
+        "body": "gripper",
+        "friction": [
+          1.2,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 28,
+        "name": "",
+        "body": "gripper",
+        "friction": [
+          1.2,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 30,
+        "name": "",
+        "body": "moving_jaw_so101_v1",
+        "friction": [
+          1.2,
+          0.005,
+          0.0001
+        ]
+      },
+      {
+        "geom_id": 31,
+        "name": "object",
+        "body": "object",
+        "friction": [
+          1.0,
+          0.005,
+          0.0001
+        ]
+      }
+    ],
+    "contact_equivalence_verified": false
+  },
+  "isaac_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+  "policy_metadata_sha256": "4891bf73e0f9a718fb256b5640084fd7ce418c88bafd4f26e6ad47eaae09ce46",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "comparison_source_sha256": "82ead1cf9bdb9da937b1aa0b20148d8a3c9525bbaf7730c3ef83f26c451591c9",
+  "model_builder_sha256": "f33e0e1d9067268023fca92f4fa914d3c36b5f16c60492e08a4bd015ee064845",
+  "mujoco_version": "3.14.0",
+  "physics_equivalence_verified": false,
+  "task_success_verified": false
+}

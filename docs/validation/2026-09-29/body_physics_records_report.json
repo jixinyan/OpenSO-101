@@ -1,0 +1,198 @@
+{
+  "status": "actual_body_physics_records_verified",
+  "tasks": [
+    {
+      "task": "OpenSO101-Lift-v0",
+      "state_samples": 2000,
+      "body_samples": 14000,
+      "maximum_body_position_difference_m": 2.4023679378936004e-06,
+      "maximum_com_position_difference_m": 2.7158431306239464e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.1880514307536712,
+      "maximum_mass_normalized_inertia_relative_difference": 9.216650897544064e-06,
+      "mass_ratio_range": [
+        0.8119485626110465,
+        1.1819617568455993
+      ],
+      "joint_parameters": {
+        "isaac_armature_range": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "mujoco_armature": [
+          0.028,
+          0.028,
+          0.028,
+          0.028,
+          0.028,
+          0.028
+        ],
+        "isaac_friction_coefficient_range": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "mujoco_frictionloss_nm": [
+          0.052,
+          0.052,
+          0.052,
+          0.052,
+          0.052,
+          0.052
+        ]
+      },
+      "gravity": {
+        "isaac_min_m_s2": [
+          0.0,
+          0.0,
+          -9.943255424499512
+        ],
+        "isaac_max_m_s2": [
+          0.0,
+          0.0,
+          -9.943255424499512
+        ],
+        "mujoco_m_s2": [
+          0.0,
+          0.0,
+          -9.81
+        ]
+      },
+      "object_mass": {
+        "isaac_range_kg": [
+          0.014256308786571026,
+          0.02545156329870224
+        ],
+        "mujoco_kg": 0.02
+      },
+      "report_sha256": "ffcba51f6df0abe7b6ede05b2743393df9321fb693d9507f303d7995c47502df",
+      "source_trace_sha256": "845ea060c31db5432f483e16a3b03ced7fc1658717fc5aacb36b973a80a8bd52",
+      "source_and_finite_records_verified": true,
+      "physics_equivalence_verified": false,
+      "task_success_verified": false
+    },
+    {
+      "task": "OpenSO101-PickPlace-v0",
+      "state_samples": 2000,
+      "body_samples": 14000,
+      "maximum_body_position_difference_m": 2.266831920516418e-06,
+      "maximum_com_position_difference_m": 2.6214870123247746e-06,
+      "maximum_root_frame_inertia_relative_difference": 0.188051430753476,
+      "maximum_mass_normalized_inertia_relative_difference": 8.829273007858616e-06,
+      "mass_ratio_range": [
+        0.8119485626110465,
+        1.1819617568455993
+      ],
+      "joint_parameters": {
+        "isaac_armature_range": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "mujoco_armature": [
+          0.028,
+          0.028,
+          0.028,
+          0.028,
+          0.028,
+          0.028
+        ],
+        "isaac_friction_coefficient_range": [
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "mujoco_frictionloss_nm": [
+          0.052,
+          0.052,
+          0.052,
+          0.052,
+          0.052,
+          0.052
+        ]
+      },
+      "gravity": {
+        "isaac_min_m_s2": [
+          0.0,
+          0.0,
+          -9.943255424499512
+        ],
+        "isaac_max_m_s2": [
+          0.0,
+          0.0,
+          -9.943255424499512
+        ],
+        "mujoco_m_s2": [
+          0.0,
+          0.0,
+          -9.81
+        ]
+      },
+      "object_mass": {
+        "isaac_range_kg": [
+          0.01572946459054947,
+          0.025880765169858932
+        ],
+        "mujoco_kg": 0.02
+      },
+      "report_sha256": "e6f5a86983df5fe0dedcf3d15e6b25a58401ed4597bd979d6abf2faea045ca6c",
+      "source_trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+      "source_and_finite_records_verified": true,
+      "physics_equivalence_verified": false,
+      "task_success_verified": false
+    }
+  ],
+  "checker_sha256": "6c521bd7dea20dff0edb95eaa3d4aab1ab0f584a6cc7dd7212567f689c497e21"
+}

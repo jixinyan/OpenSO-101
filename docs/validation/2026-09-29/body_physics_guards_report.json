@@ -1,0 +1,17 @@
+{
+  "status": "actual_body_physics_guards_verified",
+  "cases": [
+    {
+      "name": "existing_output",
+      "returncode": 1,
+      "expected_error": "FileExistsError"
+    },
+    {
+      "name": "missing_physics_record",
+      "returncode": 1,
+      "expected_error": "KeyError: 'physics_recording'"
+    }
+  ],
+  "comparison_source_sha256": "82ead1cf9bdb9da937b1aa0b20148d8a3c9525bbaf7730c3ef83f26c451591c9",
+  "checker_sha256": "16d233a77175553b2dc553ecbda8284c28f63e728e71e3a82f3aa9fbf66eb65b"
+}

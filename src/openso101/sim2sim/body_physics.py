@@ -23,6 +23,8 @@ def compare_body_physics(args):
     recording = metadata["physics_recording"]
     if recording["inertia_frame"] != "body_prim_at_center_of_mass" or recording["inertia_matrix_order"] != "column_major":
         raise ValueError("需要原生 body COM 处的 column-major 惯性记录")
+    if recording["com_pose_frame"] != "body_prim" or metadata["quaternion_order"] != "wxyz":
+        raise ValueError("需要 body COM 坐标与 wxyz 实体姿态记录")
     body_names = recording["robot_body_names"]
     robot_model = Path(args.robot_model).resolve()
     model = build_model(robot_model, metadata)
@@ -36,7 +38,7 @@ def compare_body_physics(args):
         fields = {name: trace[name][:] for name in (
             "joint_position", "robot_body_mass", "robot_body_inertia", "robot_body_com",
             "robot_body_position_root", "robot_body_quaternion_root", "robot_material_properties",
-            "joint_armature", "joint_friction_coeff", "object_body_mass", "object_body_inertia",
+            "joint_armature", "joint_friction_coeff", "object_body_mass", "object_body_inertia", "object_body_com",
             "object_material_properties", "scene_gravity",
         )}
     if any(not np.isfinite(value).all() for value in fields.values()):
@@ -62,6 +64,7 @@ def compare_body_physics(args):
     position_errors = np.empty_like(com_errors)
     rotation_errors = np.empty_like(com_errors)
     inertia_relative_errors = np.empty_like(com_errors)
+    normalized_inertia_errors = np.empty_like(com_errors)
     for step in range(steps):
         for environment in range(environments):
             data.qpos[qpos_ids] = fields["joint_position"][step, environment] + JOINT_OFFSETS
@@ -77,6 +80,9 @@ def compare_body_physics(args):
             inertia_rotations = data.ximat[body_ids].reshape(bodies, 3, 3)
             mujoco_root_inertia = (inertia_rotations * model.body_inertia[body_ids, None, :]) @ inertia_rotations.swapaxes(-1, -2)
             inertia_relative_errors[step, environment] = np.linalg.norm(native_root_inertia - mujoco_root_inertia, axis=(-1, -2)) / np.linalg.norm(mujoco_root_inertia, axis=(-1, -2))
+            native_normalized = native_root_inertia / fields["robot_body_mass"][step, environment, :, None, None]
+            mujoco_normalized = mujoco_root_inertia / model.body_mass[body_ids, None, None]
+            normalized_inertia_errors[step, environment] = np.linalg.norm(native_normalized - mujoco_normalized, axis=(-1, -2)) / np.linalg.norm(mujoco_normalized, axis=(-1, -2))
     records = []
     for index, name in enumerate(body_names):
         mass = fields["robot_body_mass"][..., index]
@@ -91,10 +97,12 @@ def compare_body_physics(args):
             "maximum_body_rotation_difference_rad": float(rotation_errors[..., index].max()),
             "maximum_com_position_difference_m": float(com_errors[..., index].max()),
             "maximum_root_frame_inertia_relative_difference": float(inertia_relative_errors[..., index].max()),
+            "maximum_mass_normalized_root_frame_inertia_relative_difference": float(normalized_inertia_errors[..., index].max()),
         })
     native_materials = {name: {"minimum": fields[f"{name}_material_properties"].min(axis=tuple(range(fields[f"{name}_material_properties"].ndim - 1))).tolist(),
                                "maximum": fields[f"{name}_material_properties"].max(axis=tuple(range(fields[f"{name}_material_properties"].ndim - 1))).tolist()}
                         for name in ("robot", "object")}
+    object_moments = np.linalg.eigvalsh(fields["object_body_inertia"].reshape(steps, environments, 3, 3).swapaxes(-1, -2))
     report = {
         "status": "actual_body_physics_comparison_completed", "task": metadata["task_id"],
         "state_samples": steps * environments, "steps": steps, "environments": environments,
@@ -107,9 +115,12 @@ def compare_body_physics(args):
         },
         "gravity": {"isaac_min_m_s2": fields["scene_gravity"].min(axis=0).tolist(), "isaac_max_m_s2": fields["scene_gravity"].max(axis=0).tolist(), "mujoco_m_s2": model.opt.gravity.tolist()},
         "object_mass": {"isaac_range_kg": [float(fields["object_body_mass"].min()), float(fields["object_body_mass"].max())], "mujoco_kg": float(model.body_mass[model.body("object").id])},
+        "object_inertia": {"isaac_principal_moment_range_kg_m2": [object_moments.min(axis=(0, 1)).tolist(), object_moments.max(axis=(0, 1)).tolist()],
+                           "mujoco_principal_moments_kg_m2": model.body_inertia[model.body("object").id].tolist(),
+                           "isaac_com_translation_range_m": [fields["object_body_com"][..., :3].min(axis=(0, 1)).tolist(), fields["object_body_com"][..., :3].max(axis=(0, 1)).tolist()]},
         "materials": {"isaac_components": recording["material_components"], "isaac_native_ranges": native_materials,
                       "mujoco_components": ["sliding_friction", "torsional_friction", "rolling_friction"],
-                      "mujoco_geoms": [{"name": model.geom(index).name, "body": model.body(int(model.geom_bodyid[index])).name, "friction": model.geom_friction[index].tolist()}
+                      "mujoco_geoms": [{"geom_id": index, "name": model.geom(index).name, "body": model.body(int(model.geom_bodyid[index])).name, "friction": model.geom_friction[index].tolist()}
                                         for index in range(model.ngeom) if model.geom_contype[index] or model.geom_conaffinity[index]],
                       "contact_equivalence_verified": False},
         "isaac_trace_sha256": digest(trace_path), "policy_metadata_sha256": digest(folder / "policy.json"),

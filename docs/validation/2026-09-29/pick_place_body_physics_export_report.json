@@ -1,0 +1,55 @@
+{
+  "status": "portable_policy_numerically_verified_in_isaac",
+  "git_sha": "2c8a990e5d5aa18557bfa38023f3011dca001bca",
+  "validation_steps": 500,
+  "num_envs": 4,
+  "maximum_errors": {
+    "observation": 0.0,
+    "policy_action": 7.152557373046875e-07,
+    "processed_targets": 2.384185791015625e-07
+  },
+  "close_command_fraction": 0.0,
+  "jaw_sign_changes": 0,
+  "dual_contact_fraction": 0.0,
+  "mean_ee_object_distance_m": 0.04697148874402046,
+  "weighted_reward_totals": {
+    "approach": 30.805734634399414,
+    "alignment": 3.7473714351654053,
+    "closure": 0.0,
+    "closure_away": 0.0,
+    "grasp_hold": 0.0,
+    "held_height": 0.0,
+    "held_goal": 0.0,
+    "processed_action_change": -0.0007164767594076693,
+    "joint_vel": -0.0013941377401351929,
+    "success_bonus": 0.0,
+    "release": 0.0,
+    "stable_placement": 0.0
+  },
+  "trace_sha256": "398a9cb0a580c165105780f9e06ddad9a4744094f4aab82d0f54b6cccde84632",
+  "export_source_sha256": "eea63a920e5b64507393f76a9fe921dde8f52a549edeac11bb64f9fa9205e2a6",
+  "physics_recording": {
+    "robot_body_names": [
+      "base",
+      "shoulder",
+      "upper_arm",
+      "lower_arm",
+      "wrist",
+      "gripper",
+      "jaw"
+    ],
+    "inertia_frame": "body_prim_at_center_of_mass",
+    "inertia_matrix_order": "column_major",
+    "com_pose_frame": "body_prim",
+    "com_quaternion_order": "xyzw",
+    "material_order": "native_PhysX_shape_order",
+    "material_components": [
+      "static_friction",
+      "dynamic_friction",
+      "restitution"
+    ],
+    "gravity_frame": "world",
+    "gravity_scope": "shared_physics_scene"
+  },
+  "task_success_verified": false
+}
