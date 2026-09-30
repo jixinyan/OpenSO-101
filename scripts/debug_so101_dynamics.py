@@ -15,7 +15,9 @@ from openso101.sim2sim.recorded_physics import COMPONENT_FIELDS, RecordedPhysics
 from openso101.sim2sim.velocity_servo import VelocityLimitedServo
 
 
-def experiment(robot_path, metadata, fields, timestep, velocity_servo, contacts, effort, table_delta):
+def experiment(robot_path, metadata, fields, timestep, velocity_servo, contacts, effort, table_geometry):
+    if table_geometry is not None:
+        metadata = metadata | {"table_geometry": table_geometry, "table_height_root": table_geometry["top_height_root"]}
     model = build_model(robot_path, metadata)
     ids = [model.joint(name).id for name in JOINT_NAMES]
     qids = [int(model.jnt_qposadr[index]) for index in ids]
@@ -33,7 +35,6 @@ def experiment(robot_path, metadata, fields, timestep, velocity_servo, contacts,
         model = build_model(robot_path, metadata)
         model.opt.timestep = timestep
         model.actuator_forcerange[aids] = [-effort, effort]
-        model.geom_pos[model.geom("table").id, 2] += table_delta
         if not contacts:
             robot_geoms = np.flatnonzero(model.geom_contype == 1)
             model.geom_contype[robot_geoms] = 0
@@ -102,19 +103,24 @@ def experiment(robot_path, metadata, fields, timestep, velocity_servo, contacts,
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
-parser.add_argument("--table-delta", type=float, default=0)
+parser.add_argument("--scene-report", type=Path)
+parser.add_argument("--measured-table-only", action="store_true")
 args = parser.parse_args()
-if args.output.exists() or not np.isfinite(args.table_delta):
-    raise ValueError("输出目录需要尚未存在，table-delta 需要有限值")
+if args.output.exists() or (args.measured_table_only and args.scene_report is None):
+    raise ValueError("输出目录需要尚未存在，桌面专项检查需要原生场景报告")
 root = Path(__file__).resolve().parents[1]
 args.output.mkdir(parents=True, exist_ok=False)
-conditions = [(f"velocity_dt_{dt:g}", dt, True, True, 30., 0.) for dt in (.01, .002, .001, .0005)]
-conditions += [("position_dt_0.002", .002, False, True, 30., 0.),
-               ("position_dt_0.0005", .0005, False, True, 30., 0.),
-               ("velocity_no_contact", .002, True, False, 30., 0.),
-               ("velocity_effort_3.35", .002, True, True, 3.35, 0.)]
-if args.table_delta:
-    conditions.append(("velocity_measured_table", .002, True, True, 30., args.table_delta))
+conditions = [(f"velocity_dt_{dt:g}", dt, True, True, 30., None) for dt in (.01, .002, .001, .0005)]
+conditions += [("position_dt_0.002", .002, False, True, 30., None),
+               ("position_dt_0.0005", .0005, False, True, 30., None),
+               ("velocity_no_contact", .002, True, False, 30., None),
+               ("velocity_effort_3.35", .002, True, True, 3.35, None)]
+if args.scene_report:
+    scene = json.loads(args.scene_report.read_text())
+    if scene["status"] != "native_scene_geometry_and_settling_checked":
+        raise ValueError("桌面检查需要原生场景报告")
+    measured = ("velocity_measured_table", .002, True, True, 30., scene["table_geometry"])
+    conditions = [measured] if args.measured_table_only else [*conditions, measured]
 reports = []
 for task in ("lift", "pick_place"):
     folder = root / f"outputs/rl_progress/{task}_body_physics_verified_50"
@@ -132,11 +138,12 @@ for task in ("lift", "pick_place"):
         records, arrays = experiment(root / "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", metadata, fields, dt, servo, contact, effort, table)
         np.savez_compressed(args.output / f"{task}_{name}.npz", **arrays)
         result = {"task": task, "condition": name, "physics_dt": dt, "velocity_servo": servo,
-                  "robot_contacts_enabled": contact, "effort_limit_nm": effort, "table_delta_m": table,
+                  "robot_contacts_enabled": contact, "effort_limit_nm": effort, "table_geometry": table,
                   "source_trace_sha256": digest(trace_path), "environments": records}
         reports.append(result)
         print(f"{task} {name}: RMSE={np.sqrt(np.mean([record['joint_position_rmse_rad']**2 for record in records])):.6f}, speed={max(record['maximum_speed_rad_s'] for record in records):.6f}", flush=True)
 report = {"status": "actual_action_trace_dynamics_checked", "conditions": reports,
+          "native_scene_report_sha256": digest(args.scene_report) if args.scene_report else None,
           "source_code_sha256": digest(Path(__file__)), "physics_equivalence_verified": False, "task_success_verified": False}
 (args.output / "dynamics_report.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
 fig, axes = plt.subplots(3, 1, figsize=(13, 11), layout="constrained")

@@ -34,8 +34,6 @@ try:
     robot = runtime.scene["robot"]
     obj = runtime.scene["object"]
     stage = runtime.sim.stage
-    table_geometry = table_collision_geometry(stage, "/World/envs/env_0/Table",
-                                              robot.data.root_pos_w[0].cpu().numpy(), robot.data.root_quat_w[0].cpu().numpy())
     bounds = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.render, UsdGeom.Tokens.proxy])
     colliders = []
     materials = []
@@ -52,6 +50,10 @@ try:
         if prim.HasAPI(UsdPhysics.MaterialAPI):
             materials.append({"path": path, "attributes": {attr.GetName(): str(attr.Get()) for attr in prim.GetAttributes()
                                                            if attr.GetName().startswith(("physics:", "physx"))}})
+    print(json.dumps({"robot_root_position": robot.data.root_pos_w[0].tolist(), "robot_root_quaternion": robot.data.root_quat_w[0].tolist(),
+                      "table_colliders": [item for item in colliders if "/Table/" in item["path"]]}), flush=True)
+    table_geometry = table_collision_geometry(stage, "/World/envs/env_0/Table",
+                                              robot.data.root_pos_w[0].cpu().numpy(), robot.data.root_quat_w[0].cpu().numpy())
     physics = {}
     for name, asset in (("robot", robot), ("object", obj)):
         view = asset.root_physx_view
@@ -80,4 +82,4 @@ try:
 finally:
     if env is not None:
         env.close()
-    app.close()
+app.close()
