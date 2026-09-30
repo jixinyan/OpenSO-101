@@ -633,6 +633,11 @@ def _tensor_to_numpy(value):
     return value
 
 
+_REPLAY_COMMAND_FIELDS = (
+    "stage", "goal_pos_b", "goal_pos_w", "cube_spawn_xy_b", "placement_hold_seconds",
+)
+
+
 def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
     """Collect optional simulator state that lets HDF5 teleop frames be replayed from checkpoints."""
 
@@ -641,18 +646,13 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
         from openso101.scenes.runtime import scene_states
 
         return {"scene_entity_states": _tensor_to_numpy(scene_states(unwrapped_env)[0])}
-    try:
+    if "object" in scene.rigid_objects:
         sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
-    except Exception:
-        pass
-    try:
+    if "object_pose" in unwrapped_env.command_manager.active_terms:
         command = unwrapped_env.command_manager.get_term("object_pose")
-        sim_state["command_stage"] = _tensor_to_numpy(command.stage[0])
-        sim_state["command_goal_pos_b"] = _tensor_to_numpy(command.goal_pos_b[0])
-        sim_state["command_goal_pos_w"] = _tensor_to_numpy(command.goal_pos_w[0])
-        sim_state["command_cube_spawn_xy_b"] = _tensor_to_numpy(command.cube_spawn_xy_b[0])
-    except Exception:
-        pass
+        for field in _REPLAY_COMMAND_FIELDS:
+            if hasattr(command, field):
+                sim_state[f"command_{field}"] = _tensor_to_numpy(getattr(command, field)[0])
     return sim_state
 
 
@@ -1698,30 +1698,16 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
         root_state = _replay_to_tensor_like(object_root_state[None, ...], obj.data.root_state_w)
         obj.write_root_state_to_sim(root_state)
 
-    try:
+    command_values = {
+        field: _replay_optional_frame(h5, f"sim/command_{field}", frame_index)
+        for field in _REPLAY_COMMAND_FIELDS
+    }
+    if any(value is not None for value in command_values.values()):
         command = unwrapped_env.command_manager.get_term("object_pose")
-        command_values = {
-            "command_stage": _replay_optional_frame(h5, "sim/command_stage", frame_index),
-            "command_goal_pos_b": _replay_optional_frame(h5, "sim/command_goal_pos_b", frame_index),
-            "command_goal_pos_w": _replay_optional_frame(h5, "sim/command_goal_pos_w", frame_index),
-            "command_cube_spawn_xy_b": _replay_optional_frame(h5, "sim/command_cube_spawn_xy_b", frame_index),
-        }
-        if command_values["command_stage"] is not None:
-            command.stage[0] = _replay_to_tensor_like(command_values["command_stage"], command.stage[0])
-        if command_values["command_goal_pos_b"] is not None:
-            command.goal_pos_b[0] = _replay_to_tensor_like(
-                command_values["command_goal_pos_b"], command.goal_pos_b[0]
-            )
-        if command_values["command_goal_pos_w"] is not None:
-            command.goal_pos_w[0] = _replay_to_tensor_like(
-                command_values["command_goal_pos_w"], command.goal_pos_w[0]
-            )
-        if command_values["command_cube_spawn_xy_b"] is not None:
-            command.cube_spawn_xy_b[0] = _replay_to_tensor_like(
-                command_values["command_cube_spawn_xy_b"], command.cube_spawn_xy_b[0]
-            )
-    except Exception as exc:
-        print(f"[WARN]: Could not restore command state from episode: {exc}")
+        for field, value in command_values.items():
+            if value is not None:
+                target = getattr(command, field)
+                target[0] = _replay_to_tensor_like(value, target[0])
 
 
 def _replay_copy_targets_to_actions(actions, targets) -> None:

@@ -43,6 +43,7 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "command_goal_pos_b",
     "command_goal_pos_w",
     "command_cube_spawn_xy_b",
+    "command_placement_hold_seconds",
 )
 
 
@@ -428,10 +429,12 @@ class OpenSO101HDF5TeleopRecorder:
                 raise ValueError(f"camera {camera_name!r} must contain finite numeric pixels")
         frame_sim: dict[str, np.ndarray] = {}
         if sim_state:
+            unknown = set(sim_state) - set(SIM_STATE_KEYS)
+            if unknown:
+                raise ValueError(f"未知 sim state 字段: {sorted(unknown)}")
             frame_sim = {
                 key: np.asarray(value)
                 for key, value in sim_state.items()
-                if key in SIM_STATE_KEYS and value is not None
             }
             for key, value in frame_sim.items():
                 if value.dtype.kind not in "biuf" or not np.isfinite(value).all():
@@ -447,19 +450,12 @@ class OpenSO101HDF5TeleopRecorder:
                             )
         if self.scene_metadata and "scene_entity_states" not in frame_sim:
             raise ValueError("自定义场景的每个采集帧都必须包含全部实体状态")
-        # First frame with sim_state pins the schema; lazily create datasets.
-        if frame_sim and self._sim_keys is None:
+        if self._sim_keys is not None and set(frame_sim) != set(self._sim_keys):
+            raise ValueError("每个采集帧的 sim state 字段必须与首帧一致")
+        if self._sim_keys is None:
             self._sim_keys = tuple(key for key in SIM_STATE_KEYS if key in frame_sim)
-            self._create_sim_datasets(frame_sim)
-            # Back-fill any frames already flushed without sim_state with
-            # zero-valued rows so dataset lengths stay consistent. In normal
-            # callers the very first frame either provides sim_state or no
-            # frame does, so this is a defensive edge case.
-            if self._flushed_frames > 0 and self._h5 is not None:
-                sim = self._h5["sim"]
-                for key in self._sim_keys:
-                    ds = sim[key]
-                    ds.resize((self._flushed_frames, *ds.shape[1:]))
+            if self._sim_keys:
+                self._create_sim_datasets(frame_sim)
         self._buffer.append(
             {
                 "action": np.asarray(action, dtype=np.float32),
@@ -536,21 +532,11 @@ class OpenSO101HDF5TeleopRecorder:
             ds.resize((end, *ds.shape[1:]))
             ds[start:end] = cam_arr
 
-        if self._sim_keys is not None:
+        if self._sim_keys:
             sim = h5["sim"]
             for key in self._sim_keys:
                 ds = sim[key]
-                samples = []
-                for frame in buffer:
-                    if key in frame["sim_state"]:
-                        samples.append(np.asarray(frame["sim_state"][key]))
-                    else:
-                        # Missing sim_state for an established key: zero-fill
-                        # to keep length consistent. This preserves the
-                        # implicit "all frames have sim_state" contract that
-                        # the previous batched recorder relied on.
-                        samples.append(np.zeros(ds.shape[1:], dtype=ds.dtype))
-                arr = np.stack(samples, axis=0) if samples else np.empty((0, *ds.shape[1:]), dtype=ds.dtype)
+                arr = np.stack([frame["sim_state"][key] for frame in buffer], axis=0)
                 ds.resize((end, *ds.shape[1:]))
                 ds[start:end] = arr
 
