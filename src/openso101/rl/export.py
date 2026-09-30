@@ -35,6 +35,8 @@ def export(args):
         from .execution import build_environment
         from .portable import PortablePolicy
         from .vision_distillation import action_mapping
+        from .scene_geometry import table_collision_geometry
+        from openso101.robots.so101.so_arm101 import so101_usd_path
 
         args.seed = meta.config.seed
         args.task_profile = meta.task_profile
@@ -57,6 +59,10 @@ def export(args):
             raise ValueError("policy 观测定义不支持 portable 导出")
         if robot.num_joints != 6:
             raise ValueError("policy 导出需要六个 SO-101 关节")
+        table_geometry = table_collision_geometry(
+            unwrapped.sim.stage, "/World/envs/env_0/Table",
+            robot.data.root_pos_w[0].cpu().numpy(), robot.data.root_quat_w[0].cpu().numpy(),
+        )
         metadata = {
             "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile, "training_git_sha": meta.git_sha,
             "export_git_sha": revision, "checkpoint_sha256": digest(folder / meta.checkpoint),
@@ -69,7 +75,9 @@ def export(args):
             "nominal_stiffness": robot.data.default_joint_stiffness[0, joint_ids].tolist(),
             "nominal_damping": robot.data.default_joint_damping[0, joint_ids].tolist(),
             "effort_limits": robot.data.joint_effort_limits[0, joint_ids].tolist(),
-            "table_height_root": float(unwrapped.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2]),
+            "table_height_root": table_geometry["top_height_root"], "table_geometry": table_geometry,
+            "task_reference_height_root": float(unwrapped.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2]),
+            "robot_usd_sha256": digest(so101_usd_path()),
             "object_size": list(unwrapped.cfg.scene.object.spawn.size),
             "object_mass": unwrapped.cfg.scene.object.spawn.mass_props.mass,
             "episode_length_s": unwrapped.cfg.episode_length_s,

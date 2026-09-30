@@ -26,6 +26,7 @@ try:
 
     from openso101.rl.execution import build_environment
     from openso101.rl.config import digest
+    from openso101.rl.scene_geometry import table_collision_geometry
 
     env = build_environment(args, training=False)
     env.reset()
@@ -33,6 +34,8 @@ try:
     robot = runtime.scene["robot"]
     obj = runtime.scene["object"]
     stage = runtime.sim.stage
+    table_geometry = table_collision_geometry(stage, "/World/envs/env_0/Table",
+                                              robot.data.root_pos_w[0].cpu().numpy(), robot.data.root_quat_w[0].cpu().numpy())
     bounds = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.render, UsdGeom.Tokens.proxy])
     colliders = []
     materials = []
@@ -45,7 +48,7 @@ try:
             colliders.append({"path": path, "type": prim.GetTypeName(), "schemas": list(prim.GetAppliedSchemas()),
                               "world_min_m": list(box.GetMin()), "world_max_m": list(box.GetMax()),
                               "attributes": {attr.GetName(): str(attr.Get()) for attr in prim.GetAttributes()
-                                             if attr.GetName().startswith(("physics:", "physx"))}})
+                                             if attr.GetName().startswith(("physics:", "physx")) and "buffer" not in attr.GetName()}})
         if prim.HasAPI(UsdPhysics.MaterialAPI):
             materials.append({"path": path, "attributes": {attr.GetName(): str(attr.Get()) for attr in prim.GetAttributes()
                                                            if attr.GetName().startswith(("physics:", "physx"))}})
@@ -67,6 +70,7 @@ try:
     report = {"status": "native_scene_geometry_and_settling_checked", "task": args.task,
               "physics_dt": runtime.physics_dt, "control_dt": runtime.step_dt,
               "robot_root_world": robot.data.root_pos_w.cpu().numpy().tolist(),
+              "table_geometry": table_geometry,
               "colliders": colliders, "materials": materials, "physics": physics,
               "object_positions_world": positions, "settled_cube_center_world_z_m": float(np.asarray(positions)[-20:, :, 2].mean()),
               "source_code_sha256": digest(Path(__file__)), "task_success_verified": False}

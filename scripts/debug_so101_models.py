@@ -8,8 +8,11 @@ import mujoco
 import numpy as np
 from pxr import Usd, UsdGeom, UsdPhysics
 from scipy.spatial.transform import Rotation
+from scipy.spatial import cKDTree
 
 from openso101.rl.config import digest
+from openso101.sim2sim.mujoco import build_model
+from openso101.sim2sim.recorded_physics import RecordedPhysics, COMPONENT_FIELDS
 
 
 def value_json(value):
@@ -88,10 +91,52 @@ def audit(root, output):
                              "material_shape": list(trace["robot_material_properties"].shape),
                              "material_minimum": trace["robot_material_properties"][:].min(axis=(0, 1, 2)).tolist(),
                              "material_maximum": trace["robot_material_properties"][:].max(axis=(0, 1, 2)).tolist()}
+    folder = root / "outputs/rl_progress/lift_body_physics_verified_50"
+    metadata = json.loads((folder / "policy.json").read_text())
+    with h5py.File(folder / "isaac_validation.hdf5", "r") as trace:
+        fields = {name: trace[name][:1] for name in COMPONENT_FIELDS["bodies"]}
+        fields.update({name: trace[name][:1] for name in ("joint_position", "object_position_root", "object_quaternion_root")})
+    geometry_model = build_model(model_path, metadata)
+    converter = RecordedPhysics(geometry_model, metadata, fields, ["bodies"], 0)
+    cache = UsdGeom.XformCache()
+    geometry = []
+    for index, name in enumerate(metadata["physics_recording"]["robot_body_names"]):
+        link = stage.GetPrimAtPath(f"/so101_new_calib/{name}")
+        inverse = np.linalg.inv(np.asarray(cache.GetLocalToWorldTransform(link)))
+        native_points = []
+        native_parts = []
+        for prim in Usd.PrimRange(link, Usd.TraverseInstanceProxies()):
+            if prim.IsA(UsdGeom.Mesh) and "/collisions/" in str(prim.GetPath()):
+                points = np.asarray(UsdGeom.Mesh(prim).GetPointsAttr().Get(), dtype=float)
+                homogeneous = np.column_stack((points, np.ones(len(points))))
+                local = (homogeneous @ np.asarray(cache.GetLocalToWorldTransform(prim)) @ inverse)[:, :3]
+                converted = local @ converter.frame_rotation[index].T + converter.frame_translation[index]
+                native_points.append(converted)
+                native_parts.append((str(prim.GetPath()), converted))
+        body_id = converter.body_ids[index]
+        mj_points = []
+        reference = converter.reference
+        for geom_id in np.flatnonzero((geometry_model.geom_bodyid == body_id) & (geometry_model.geom_contype == 1)):
+            mesh_id = geometry_model.geom_dataid[geom_id]
+            start = geometry_model.mesh_vertadr[mesh_id]
+            points = geometry_model.mesh_vert[start:start+geometry_model.mesh_vertnum[mesh_id]]
+            world = points @ reference.geom_xmat[geom_id].reshape(3, 3).T + reference.geom_xpos[geom_id]
+            mj_points.append((world-reference.xpos[body_id]) @ reference.xmat[body_id].reshape(3, 3))
+        if not mj_points:
+            geometry.append({"name": name, "official_mjcf_collision_present": False})
+            continue
+        native_points = np.concatenate(native_points)
+        mj_points = np.concatenate(mj_points)
+        distances = np.concatenate((cKDTree(native_points).query(mj_points)[0], cKDTree(mj_points).query(native_points)[0]))
+        geometry.append({"name": name, "usd_points": len(native_points), "mjcf_points": len(mj_points),
+                         "bidirectional_vertex_max_distance_m": float(distances.max()),
+                         "bidirectional_vertex_95_percentile_distance_m": float(np.quantile(distances, .95)),
+                         "usd_parts": [{"path": path, "maximum_vertex_distance_to_official_mjcf_m": float(cKDTree(mj_points).query(points)[0].max())}
+                                       for path, points in native_parts]})
     report = {"usd_sha256": digest(usd), "mjcf_sha256": digest(model_path), "urdf_sha256": digest(urdf_path),
               "usd_meters_per_unit": UsdGeom.GetStageMetersPerUnit(stage), "usd_up_axis": str(UsdGeom.GetStageUpAxis(stage)),
               "usd_physics_prims": prims, "usd_collision_meshes": collision_meshes,
-              "official_urdf_mjcf_bodies": nominal_bodies,
+              "official_urdf_mjcf_bodies": nominal_bodies, "collision_source_mesh_comparison": geometry,
               "official_mjcf_effort_limits_nm": model.actuator_forcerange.tolist(),
               "official_mjcf_armature": model.dof_armature.tolist(),
               "official_mjcf_frictionloss": model.dof_frictionloss.tolist(), "source_trajectories": sources}

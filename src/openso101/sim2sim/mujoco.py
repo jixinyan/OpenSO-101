@@ -66,9 +66,20 @@ def build_model(robot_model, metadata):
             geom.conaffinity = 6
             if geom.parent.name in ("gripper", "moving_jaw_so101_v1"):
                 geom.friction = [1.2, 0.005, 0.0001]
-    spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[1, 1, 0.05],
-                           pos=[0, 0, metadata["table_height_root"]], contype=4, conaffinity=3,
-                           friction=[1, 0.005, 0.0001])
+    if "table_geometry" in metadata:
+        geometry = metadata["table_geometry"]
+        position = np.asarray(geometry["position_root"], dtype=float)
+        size = np.asarray(geometry["half_size"], dtype=float)
+        if (geometry["type"] != "box" or position.shape != (3,) or size.shape != (3,)
+                or not np.isfinite(position).all() or not np.isfinite(size).all() or (size <= 0).any()
+                or not np.isclose(position[2]+size[2], metadata["table_height_root"], atol=1e-8, rtol=0)):
+            raise ValueError("记录的桌面 box geometry 无效")
+        spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_BOX, size=size,
+                               pos=position, contype=4, conaffinity=3, friction=[1, 0.005, 0.0001])
+    else:
+        spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[1, 1, 0.05],
+                               pos=[0, 0, metadata["table_height_root"]], contype=4, conaffinity=3,
+                               friction=[1, 0.005, 0.0001])
     cube = spec.worldbody.add_body(name="object", pos=[0.02, -0.3, metadata["table_height_root"] + 0.015])
     cube.add_freejoint(name="object_free")
     cube.add_geom(name="object", type=mujoco.mjtGeom.mjGEOM_BOX, size=np.asarray(metadata["object_size"]) / 2,
@@ -123,6 +134,7 @@ def evaluate(args):
     if not np.isclose(substeps * model.opt.timestep, control_dt):
         raise ValueError("MuJoCo physics_dt 无法表示 policy control_dt")
     parameters = metadata["task_parameters"]
+    task_height = metadata["task_reference_height_root"] if "task_reference_height_root" in metadata else metadata["table_height_root"]
     records = []
     with h5py.File(output / "trajectory.hdf5", "w") as trajectory:
         for episode in range(args.episodes):
@@ -168,9 +180,9 @@ def evaluate(args):
                 ee_position = data.xpos[gripper_id] + gripper_rotation.apply([0.01, 0, -0.09])
                 progress["reached"] |= np.linalg.norm(ee_position - object_position) < 0.08
                 progress["grasped"] |= grasped
-                progress["held_above_table"] |= grasped and object_position[2] > metadata["table_height_root"] + 0.04
+                progress["held_above_table"] |= grasped and object_position[2] > task_height + 0.04
                 if metadata["task_id"] == "OpenSO101-Lift-v0":
-                    eligible = bool(object_position[2] > metadata["table_height_root"] + parameters["minimal_height"]
+                    eligible = bool(object_position[2] > task_height + parameters["minimal_height"]
                                     and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
                     if metadata.get("task_profile", "default") == "grasp_v2":
                         eligible = eligible and grasped
@@ -194,7 +206,7 @@ def evaluate(args):
                     success = hold_seconds >= parameters["settle_seconds"]
                     progress["carry_stage"] |= stage >= 1
                     progress["place_stage"] |= stage >= 2
-                if success or object_position[2] < metadata["table_height_root"] - 0.05:
+                if success or object_position[2] < task_height - 0.05:
                     break
             group = trajectory.create_group(f"episode_{episode:06d}")
             for name, values in buffers.items():
