@@ -1,0 +1,686 @@
+{
+  "status": "saved_training_records_audited",
+  "rl_training_started": false,
+  "squint_git_sha": "7086fd516eda7df585a5261c541e0670a6d916b4",
+  "squint_defaults": {
+    "exp_name": "baseline",
+    "agent_name": "squint",
+    "seed": 1,
+    "torch_deterministic": true,
+    "cuda": true,
+    "track": false,
+    "wandb_entity": null,
+    "wandb_project_name": "maniskill-so101",
+    "wandb_group": "SQUINT",
+    "capture_video": true,
+    "save_trajectory": false,
+    "save_model": true,
+    "evaluate": false,
+    "checkpoint": null,
+    "env_id": "SO101LiftCube-v1",
+    "env_domain_randomization": true,
+    "num_envs": 1024,
+    "num_eval_envs": 16,
+    "partial_reset": false,
+    "eval_partial_reset": false,
+    "reconfiguration_freq": null,
+    "eval_reconfiguration_freq": 1,
+    "eval_freq": 100000,
+    "save_train_video_freq": null,
+    "control_mode": null,
+    "obs_mode": "rgb+segmentation",
+    "render_mode": "all",
+    "render_size": 128,
+    "image_size": 16,
+    "apply_jitter": true,
+    "total_timesteps": 1500000,
+    "buffer_size": 1000000,
+    "batch_size": 512,
+    "num_updates": 256,
+    "learning_starts": 5000,
+    "policy_lr": 0.0003,
+    "q_lr": 0.0003,
+    "alpha_lr": 0.0003,
+    "policy_frequency": 4,
+    "target_network_frequency": 1,
+    "alpha": 0.2,
+    "autotune": true,
+    "bootstrap_at_done": "always",
+    "gamma": 0.9,
+    "tau": 0.01,
+    "num_q": 2,
+    "num_atoms": 101,
+    "v_min": -20.0,
+    "v_max": 20.0,
+    "compile": true,
+    "cudagraphs": true,
+    "num_total_iterations": 0
+  },
+  "squint_public_results_independently_reproduced": false,
+  "squint_published_lift_final_success_percent": {
+    "1": 100.0,
+    "2": 100.0,
+    "3": 100.0,
+    "4": 100.0,
+    "5": 100.0
+  },
+  "squint_critic_updates_per_transition": 0.25,
+  "squint_replay_sample_draws_per_transition": 128.0,
+  "squint_gamma_at_50hz_for_equal_time_discount": 0.9791483623609768,
+  "tasks": {
+    "lift": {
+      "baseline_config": {
+        "backend": "rsl_rl",
+        "algo": "ppo",
+        "seed": 42,
+        "iterations": 200,
+        "rollout_steps": 96,
+        "epochs": 5,
+        "mini_batches": 4,
+        "learning_rate": 0.0001,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip": 0.2,
+        "entropy_coef": 0.005,
+        "max_grad_norm": 1.0,
+        "hidden_dims": [
+          256,
+          128,
+          64
+        ],
+        "normalize_observations": true,
+        "replay_size": 100000,
+        "learning_starts": 1000
+      },
+      "baseline_scalar_summary": {
+        "Episode_Reward/reaching_object_coarse": {
+          "count": 200,
+          "first": 0.03506061062216759,
+          "last": 0.38541409373283386,
+          "minimum": 0.03506061062216759,
+          "maximum": 0.40220874547958374
+        },
+        "Episode_Reward/reaching_object_fine": {
+          "count": 200,
+          "first": 0.0015287294518202543,
+          "last": 0.18423980474472046,
+          "minimum": 0.0015287294518202543,
+          "maximum": 0.22065696120262146
+        },
+        "Episode_Reward/grasped": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.06026645004749298,
+          "minimum": 0.0,
+          "maximum": 0.07091723382472992
+        },
+        "Episode_Reward/lifting_object": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0029604164883494377,
+          "minimum": 0.0,
+          "maximum": 0.0149141326546669
+        },
+        "Episode_Reward/object_goal_tracking": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.00159618747420609,
+          "minimum": 0.0,
+          "maximum": 0.00978132989257574
+        },
+        "Episode_Reward/success_bonus_in_air": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 6.25000029685907e-05
+        },
+        "Episode_Reward/action_rate": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Episode_Reward/joint_vel": {
+          "count": 200,
+          "first": -0.0003652388695627451,
+          "last": -0.014115674421191216,
+          "minimum": -0.0147218257188797,
+          "maximum": -0.0003652388695627451
+        },
+        "Episode_Reward/joint_pos_delta": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Curriculum/action_rate": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Metrics/object_pose/position_error": {
+          "count": 200,
+          "first": 0.13810493052005768,
+          "last": 0.16002094745635986,
+          "minimum": 0.09613591432571411,
+          "maximum": 0.1604905128479004
+        },
+        "Metrics/object_pose/orientation_error": {
+          "count": 200,
+          "first": 1.629559874534607,
+          "last": 1.3945186138153076,
+          "minimum": 1.3492544889450073,
+          "maximum": 1.7295669317245483
+        },
+        "Episode_Termination/time_out": {
+          "count": 200,
+          "first": 0.2053934782743454,
+          "last": 0.98626708984375,
+          "minimum": 0.2053934782743454,
+          "maximum": 1.0
+        },
+        "Episode_Termination/object_dropping": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.01373291015625,
+          "minimum": 0.0,
+          "maximum": 0.033599853515625
+        },
+        "Episode_Termination/success": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0021464030724018812
+        },
+        "Loss/value_function": {
+          "count": 200,
+          "first": 0.0025797849521040916,
+          "last": 0.013860371895134449,
+          "minimum": 0.0005343083757907152,
+          "maximum": 0.014054295606911182
+        },
+        "Loss/surrogate": {
+          "count": 200,
+          "first": -0.006763176992535591,
+          "last": -0.0013878120807930827,
+          "minimum": -0.006763176992535591,
+          "maximum": 0.0015708241844549775
+        },
+        "Loss/entropy": {
+          "count": 200,
+          "first": 4.355535507202148,
+          "last": 4.355043888092041,
+          "minimum": 4.352743625640869,
+          "maximum": 4.506727695465088
+        },
+        "Loss/learning_rate": {
+          "count": 200,
+          "first": 9.999999747378752e-05,
+          "last": 9.999999747378752e-05,
+          "minimum": 9.999999747378752e-05,
+          "maximum": 9.999999747378752e-05
+        },
+        "Policy/mean_noise_std": {
+          "count": 200,
+          "first": 0.5001426339149475,
+          "last": 0.5019632577896118,
+          "minimum": 0.5001426339149475,
+          "maximum": 0.5130717754364014
+        },
+        "Perf/total_fps": {
+          "count": 200,
+          "first": 2225.0,
+          "last": 10552.0,
+          "minimum": 2225.0,
+          "maximum": 24028.0
+        },
+        "Perf/collection time": {
+          "count": 200,
+          "first": 23.822845458984375,
+          "last": 9.2213134765625,
+          "minimum": 3.9822144508361816,
+          "maximum": 23.822845458984375
+        },
+        "Perf/learning_time": {
+          "count": 200,
+          "first": 20.340850830078125,
+          "last": 0.09416985511779785,
+          "minimum": 0.07723307609558105,
+          "maximum": 20.340850830078125
+        },
+        "Train/mean_reward": {
+          "count": 200,
+          "first": 0.3030410408973694,
+          "last": 3.0924928188323975,
+          "minimum": 0.3030410408973694,
+          "maximum": 3.307814598083496
+        },
+        "Train/mean_episode_length": {
+          "count": 200,
+          "first": 83.33999633789062,
+          "last": 245.47000122070312,
+          "minimum": 83.33999633789062,
+          "maximum": 250.0
+        },
+        "Train/mean_reward/time": {
+          "count": 200,
+          "first": 0.3030410408973694,
+          "last": 3.0924928188323975,
+          "minimum": 0.3030410408973694,
+          "maximum": 3.307814598083496
+        },
+        "Train/mean_episode_length/time": {
+          "count": 200,
+          "first": 83.33999633789062,
+          "last": 245.47000122070312,
+          "minimum": 83.33999633789062,
+          "maximum": 250.0
+        }
+      },
+      "grasp_v2_backend": {
+        "seed": 42,
+        "device": "cuda:0",
+        "num_steps_per_env": 96,
+        "save_interval": 50,
+        "logger": "tensorboard",
+        "obs_groups": {
+          "policy": [
+            "policy"
+          ],
+          "critic": [
+            "policy"
+          ]
+        },
+        "policy": {
+          "class_name": "ActorCritic",
+          "init_noise_std": 0.5,
+          "noise_std_type": "log",
+          "actor_obs_normalization": true,
+          "critic_obs_normalization": true,
+          "actor_hidden_dims": [
+            256,
+            128,
+            64
+          ],
+          "critic_hidden_dims": [
+            256,
+            128,
+            64
+          ],
+          "activation": "elu"
+        },
+        "algorithm": {
+          "class_name": "PPO",
+          "num_learning_epochs": 5,
+          "num_mini_batches": 4,
+          "learning_rate": 0.0001,
+          "schedule": "fixed",
+          "gamma": 0.995,
+          "lam": 0.95,
+          "entropy_coef": 0.005,
+          "clip_param": 0.2,
+          "max_grad_norm": 1.0,
+          "value_loss_coef": 1.0,
+          "use_clipped_value_loss": true
+        }
+      },
+      "grasp_v2_success_rate": 0.0,
+      "grasp_v2_progress_rates": {
+        "reached": 0.53,
+        "grasped": 0.0,
+        "lifted": 0.0,
+        "held_above_table": 0.0
+      },
+      "completed_transitions": 5013504,
+      "checkpoint_sha256": "15897309e0b46a2c63cacb9dc98d339864da14d7680215c8ebff69c2cf988f31",
+      "control_dt": 0.02,
+      "episode_length_s": 5.0,
+      "discount_time_constant_s": 3.9899916457671227,
+      "jaw_raw_action_range": [
+        1.2760816812515259,
+        1.6065754890441895
+      ],
+      "jaw_open_clip_fraction": 1.0,
+      "jaw_close_clip_fraction": 0.0,
+      "jaw_target_range_rad": [
+        0.800000011920929,
+        0.800000011920929
+      ],
+      "jaw_mapping_maximum_error_rad": 0.0,
+      "bilateral_contact_fraction": 0.0,
+      "weighted_reward_totals": {
+        "approach": 26.16427474981174,
+        "alignment": 5.002568073105042,
+        "closure": 0.0,
+        "closure_away": 0.0,
+        "grasp_hold": 0.0,
+        "held_height": 0.0,
+        "held_goal": 0.0,
+        "processed_action_change": -0.09793066557949182,
+        "joint_vel": -0.017174136530030637,
+        "success_bonus": 0.0
+      }
+    },
+    "pick_place": {
+      "baseline_config": {
+        "backend": "rsl_rl",
+        "algo": "ppo",
+        "seed": 42,
+        "iterations": 200,
+        "rollout_steps": 96,
+        "epochs": 5,
+        "mini_batches": 4,
+        "learning_rate": 0.0001,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip": 0.2,
+        "entropy_coef": 0.005,
+        "max_grad_norm": 1.0,
+        "hidden_dims": [
+          256,
+          128,
+          64
+        ],
+        "normalize_observations": true,
+        "replay_size": 100000,
+        "learning_starts": 1000
+      },
+      "baseline_scalar_summary": {
+        "Episode_Reward/pregrasp_approach": {
+          "count": 200,
+          "first": -0.0002033789351116866,
+          "last": 0.0062256427481770515,
+          "minimum": -0.0029326602816581726,
+          "maximum": 0.0062256427481770515
+        },
+        "Episode_Reward/grasp_hold": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 4.166666985838674e-05
+        },
+        "Episode_Reward/grasp_onset": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.00026041665114462376
+        },
+        "Episode_Reward/carry_to_goal": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": -3.4477993722248357e-06,
+          "maximum": 6.649144324910594e-06
+        },
+        "Episode_Reward/success_bonus": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Episode_Reward/action_rate": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Episode_Reward/joint_vel": {
+          "count": 200,
+          "first": -0.00022036672453396022,
+          "last": -0.002050987211987376,
+          "minimum": -0.0024376751389354467,
+          "maximum": -0.00022036672453396022
+        },
+        "Curriculum/action_rate": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Metrics/object_pose/stage": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.010416666977107525
+        },
+        "Metrics/object_pose/distance_to_goal": {
+          "count": 200,
+          "first": 0.08708266913890839,
+          "last": 0.09618311375379562,
+          "minimum": 0.08708266913890839,
+          "maximum": 0.18005983531475067
+        },
+        "Metrics/object_pose/surface_distance_to_goal": {
+          "count": 200,
+          "first": 0.04255140945315361,
+          "last": 0.051183104515075684,
+          "minimum": 0.04255140945315361,
+          "maximum": 0.13505983352661133
+        },
+        "Episode_Termination/time_out": {
+          "count": 200,
+          "first": 0.113555908203125,
+          "last": 0.9970703125,
+          "minimum": 0.113555908203125,
+          "maximum": 1.0
+        },
+        "Episode_Termination/object_dropping": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0029296875,
+          "minimum": 0.0,
+          "maximum": 0.0140380859375
+        },
+        "Episode_Termination/success": {
+          "count": 200,
+          "first": 0.0,
+          "last": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        },
+        "Loss/value_function": {
+          "count": 200,
+          "first": 0.0013978022616356611,
+          "last": 7.205139354482526e-06,
+          "minimum": 7.205139354482526e-06,
+          "maximum": 0.0024314431939274073
+        },
+        "Loss/surrogate": {
+          "count": 200,
+          "first": -0.005464635789394379,
+          "last": -0.0016517553012818098,
+          "minimum": -0.005464635789394379,
+          "maximum": 0.05254722759127617
+        },
+        "Loss/entropy": {
+          "count": 200,
+          "first": 4.356274604797363,
+          "last": 4.07576847076416,
+          "minimum": 4.07576847076416,
+          "maximum": 4.368988513946533
+        },
+        "Loss/learning_rate": {
+          "count": 200,
+          "first": 9.999999747378752e-05,
+          "last": 9.999999747378752e-05,
+          "minimum": 9.999999747378752e-05,
+          "maximum": 9.999999747378752e-05
+        },
+        "Policy/mean_noise_std": {
+          "count": 200,
+          "first": 0.5002027153968811,
+          "last": 0.4798109233379364,
+          "minimum": 0.4798109233379364,
+          "maximum": 0.5012069940567017
+        },
+        "Perf/total_fps": {
+          "count": 200,
+          "first": 2128.0,
+          "last": 11745.0,
+          "minimum": 2128.0,
+          "maximum": 20155.0
+        },
+        "Perf/collection time": {
+          "count": 200,
+          "first": 26.69129753112793,
+          "last": 8.253508567810059,
+          "minimum": 4.791990280151367,
+          "maximum": 26.69129753112793
+        },
+        "Perf/learning_time": {
+          "count": 200,
+          "first": 19.48641014099121,
+          "last": 0.11576533317565918,
+          "minimum": 0.07887125015258789,
+          "maximum": 19.48641014099121
+        },
+        "Train/mean_reward": {
+          "count": 200,
+          "first": -0.003809674410149455,
+          "last": 0.03109685145318508,
+          "minimum": -0.053285229951143265,
+          "maximum": 0.03498115763068199
+        },
+        "Train/mean_episode_length": {
+          "count": 200,
+          "first": 78.4000015258789,
+          "last": 400.0,
+          "minimum": 78.4000015258789,
+          "maximum": 400.0
+        },
+        "Train/mean_reward/time": {
+          "count": 200,
+          "first": -0.003809674410149455,
+          "last": 0.03109685145318508,
+          "minimum": -0.053285229951143265,
+          "maximum": 0.03498115763068199
+        },
+        "Train/mean_episode_length/time": {
+          "count": 200,
+          "first": 78.4000015258789,
+          "last": 400.0,
+          "minimum": 78.4000015258789,
+          "maximum": 400.0
+        }
+      },
+      "grasp_v2_backend": {
+        "seed": 42,
+        "device": "cuda:0",
+        "num_steps_per_env": 96,
+        "save_interval": 50,
+        "logger": "tensorboard",
+        "obs_groups": {
+          "policy": [
+            "policy"
+          ],
+          "critic": [
+            "policy"
+          ]
+        },
+        "policy": {
+          "class_name": "ActorCritic",
+          "init_noise_std": 0.5,
+          "noise_std_type": "log",
+          "actor_obs_normalization": true,
+          "critic_obs_normalization": true,
+          "actor_hidden_dims": [
+            256,
+            128,
+            64
+          ],
+          "critic_hidden_dims": [
+            256,
+            128,
+            64
+          ],
+          "activation": "elu"
+        },
+        "algorithm": {
+          "class_name": "PPO",
+          "num_learning_epochs": 5,
+          "num_mini_batches": 4,
+          "learning_rate": 0.0001,
+          "schedule": "fixed",
+          "gamma": 0.995,
+          "lam": 0.95,
+          "entropy_coef": 0.005,
+          "clip_param": 0.2,
+          "max_grad_norm": 1.0,
+          "value_loss_coef": 1.0,
+          "use_clipped_value_loss": true
+        }
+      },
+      "grasp_v2_success_rate": 0.0,
+      "grasp_v2_progress_rates": {
+        "reached": 1.0,
+        "grasped": 0.0,
+        "lifted": 0.0,
+        "held_above_table": 0.0,
+        "carry_stage": 0.0,
+        "place_stage": 0.0
+      },
+      "completed_transitions": 5013504,
+      "checkpoint_sha256": "aa7696cb346eeba2c4d5757b2fff3b786d502d6409bb7e5abc7dca548f74c240",
+      "control_dt": 0.02,
+      "episode_length_s": 8.0,
+      "discount_time_constant_s": 3.9899916457671227,
+      "jaw_raw_action_range": [
+        1.3660436868667603,
+        1.7582226991653442
+      ],
+      "jaw_open_clip_fraction": 1.0,
+      "jaw_close_clip_fraction": 0.0,
+      "jaw_target_range_rad": [
+        0.800000011920929,
+        0.800000011920929
+      ],
+      "jaw_mapping_maximum_error_rad": 0.0,
+      "bilateral_contact_fraction": 0.0,
+      "weighted_reward_totals": {
+        "approach": 30.805758559145033,
+        "alignment": 3.747361147487709,
+        "closure": 0.0,
+        "closure_away": 0.0,
+        "grasp_hold": 0.0,
+        "held_height": 0.0,
+        "held_goal": 0.0,
+        "processed_action_change": -0.000716477098895493,
+        "joint_vel": -0.0013941337151663902,
+        "success_bonus": 0.0,
+        "release": 0.0,
+        "stable_placement": 0.0
+      }
+    }
+  },
+  "source_sha256": {
+    "outputs/research/squint/train_squint.py": "ed2a076dd66ffc7b34ae9fde7dd8e2ddc8dc8e8e73a5718e0769da5957dd5653",
+    "outputs/research/squint/results/SO101LiftCube-v1.csv": "d063564ec08393376f1b6268c88325abfbe0e2db35f3f138796f3133f221bf8f",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/lift_seed42/train.json": "f741af671a7eba7f1a3c9750e32692082912211b3852b0c4def5ae00b9fc624e",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/lift_seed42/learning_curves.json": "c59c35f012a177360fa58bd0fa0df23c23bb4be55da20dfca0d820db65d6fa14",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/evaluation-20260930T010530915791Z.json": "6f8d4773465a4added216b601712c0c17696335df2f89ae6af3dc80f2b209f6f",
+    "outputs/research/lift_grasp_v2_backend.json": "96ae99bf45871305a4a7c43e5152f889d3469866d08eef515bba7ae266daac88",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/lift_grasp_v2_portable_50/policy.json": "68b2d3c9775e9942f0fca78254fcfcd2d7abe2cc2bf6b7c919059ef3ff39bda2",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/lift_grasp_v2_portable_50/validation.json": "324d2f258b7751db2d6f920088794f3cece3eeae838cff4379683ede8b66f82a",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/lift_grasp_v2_portable_50/isaac_validation.hdf5": "4b1d84fc20a66826d1f1103fd8ebd43f02783864996df43667d47ba82a0eee9a",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/pick_place_seed42/train.json": "f741af671a7eba7f1a3c9750e32692082912211b3852b0c4def5ae00b9fc624e",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/pick_place_seed42/learning_curves.json": "605af5ce570ccf734b078fdd597e6fb6c64b2341f884333f9773fba3c88d7f45",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/docs/validation/2026-09-29/evaluation-20260930T010445856266Z.json": "3be431655fcbe0ec579f5c4c73ea44f144d757a3ae5897f2192bda81a9a8281b",
+    "outputs/research/pick_place_grasp_v2_backend.json": "96ae99bf45871305a4a7c43e5152f889d3469866d08eef515bba7ae266daac88",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/pick_place_grasp_v2_portable_50/policy.json": "81752e0a92ec5781b7b91c4b00bc32247d22146e054b9858807b16957ef555d0",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/pick_place_grasp_v2_portable_50/validation.json": "e42f0960620ac445190bd5f4597596597a942f192041ba6d7eefa065f69e9d3c",
+    "/Users/yanjixin/Documents/Obsidian Vault/04 Extracurricular/Research and Project Ideas/OpenSO-101/code/outputs/rl_progress/pick_place_grasp_v2_portable_50/isaac_validation.hdf5": "7b3a038491c946e0f95398bd3d54802b549070abfe62db3639f7023bbd31c4ce"
+  },
+  "audit_source_sha256": "c25750aecce793090db8847a7a9fd5b534a1a143d4052d2e77ff43760702df52"
+}
