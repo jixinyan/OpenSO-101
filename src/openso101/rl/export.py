@@ -65,6 +65,13 @@ def export(args):
             "physical_joint_limits": robot.data.joint_pos_limits[0, joint_ids].tolist(),
             "default_joint_positions": robot.data.default_joint_pos[0].tolist(),
             "default_joint_velocities": robot.data.default_joint_vel[0].tolist(),
+            "nominal_stiffness": robot.data.default_joint_stiffness[0, joint_ids].tolist(),
+            "nominal_damping": robot.data.default_joint_damping[0, joint_ids].tolist(),
+            "effort_limits": robot.data.joint_effort_limits[0, joint_ids].tolist(),
+            "table_height_root": float(unwrapped.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2]),
+            "object_size": list(unwrapped.cfg.scene.object.spawn.size),
+            "object_mass": unwrapped.cfg.scene.object.spawn.mass_props.mass,
+            "episode_length_s": unwrapped.cfg.episode_length_s,
             "observation_terms": observation_terms, "normalization": "embedded_in_policy.pt",
             "position_frame": "robot_root", "quaternion_order": "wxyz", "joint_unit": "radian",
             "last_action": "raw_policy_action", "action_mapping": action_mapping(unwrapped),
@@ -73,19 +80,33 @@ def export(args):
                              for name in unwrapped.reward_manager.active_terms],
             "hardware_observations_required": ["object_position_root", "goal_root", "grasp_state"],
         }
+        if args.task == "OpenSO101-PickPlace-v0":
+            command_cfg = unwrapped.command_manager.get_term("object_pose").cfg
+            metadata["task_parameters"] = {
+                "carry_height": command_cfg.carry_height, "place_goal": list(command_cfg.place_goal),
+                "advance_threshold": command_cfg.advance_threshold, "object_contact_radius": command_cfg.object_contact_radius,
+                "place_radius": 0.03, "linear_speed_max": 0.02, "angular_speed_max": 0.1,
+                "jaw_open_min": 0.4,
+                "settle_seconds": unwrapped.termination_manager.get_term_cfg("success").params["settle_seconds"],
+            }
+        else:
+            metadata["task_parameters"] = unwrapped.termination_manager.get_term_cfg("success").params.copy()
+            metadata["task_parameters"].pop("command_name")
         (output / "policy.json").write_text(json.dumps(metadata, indent=2))
         portable = PortablePolicy(output)
         observation, _ = env.reset()
         maximum_errors = {"observation": 0., "policy_action": 0., "processed_targets": 0.}
         buffers = {name: [] for name in (
-            "joint_position", "joint_velocity", "object_position_root", "goal_root", "jaw_forces",
+            "joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "goal_root", "jaw_forces",
             "ee_object_distance", "gripper_position_root", "gripper_quaternion_root",
             "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
         )}
         for _ in range(args.validation_steps):
             with torch.inference_mode():
                 obj = unwrapped.scene["object"]
-                object_root, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
+                object_root, object_quaternion = subtract_frame_transforms(
+                    robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w, obj.data.root_quat_w,
+                )
                 goal = unwrapped.command_manager.get_command("object_pose")
                 grasp = object_grasped_by_jaws(unwrapped).float().unsqueeze(-1)
                 rebuilt = portable.observation(robot.data.joint_pos, robot.data.joint_vel, object_root, goal,
@@ -101,7 +122,7 @@ def export(args):
                         raise RuntimeError(f"policy 数值检查失败：{name}={error}")
                 before_step = {
                     "joint_position": robot.data.joint_pos[:, joint_ids], "joint_velocity": robot.data.joint_vel[:, joint_ids],
-                    "object_position_root": object_root, "goal_root": goal,
+                    "object_position_root": object_root, "object_quaternion_root": object_quaternion, "goal_root": goal,
                     "jaw_forces": torch.stack([_jaw_force_magnitude(unwrapped.scene[name])
                                                for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
                     "ee_object_distance": torch.linalg.vector_norm(
