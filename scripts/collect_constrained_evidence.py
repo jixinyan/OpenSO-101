@@ -15,6 +15,7 @@ parser.add_argument("--linux-reports", type=Path, required=True)
 parser.add_argument("--gripper", type=Path, required=True)
 parser.add_argument("--linux-gripper", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--native-gripper", type=Path)
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=False)
 root = Path(__file__).resolve().parents[1]
@@ -112,5 +113,32 @@ result = {"status": "physical_drive_and_gripper_acceptance_verified", "tasks": r
           "maximum_cross_host_gripper_target_difference_rad": plan_error,
           "physics_equivalence_verified": False, "rl_policy_success_verified": False,
           "rl_training_started": False, "validation_source_sha256": digest(Path(__file__))}
+if args.native_gripper:
+    native = json.loads((args.native_gripper / "report.json").read_text())
+    plan = json.loads((args.gripper / "plan.json").read_text())
+    if (digest(args.native_gripper / "trajectory.hdf5") != native["trajectory_sha256"]
+            or native["plan_sha256"] != gripper_records[0]["source"]["plan_sha256"]):
+        raise ValueError("原生夹爪检查的轨迹或共享计划校验失败")
+    with h5py.File(args.native_gripper / "trajectory.hdf5", "r") as trace:
+        velocity = trace["physics_steps/joint_velocity"][:]
+        height = trace["object_position_root"][:, :, 2] - plan["object_position_root"][2]
+        forces = trace["jaw_forces"][:]
+        hold = np.asarray(plan["phases"]) == "hold"
+        if (not np.isfinite(velocity).all() or not np.isfinite(height).all() or not np.isfinite(forces).all()
+                or height.shape != (native["control_steps"], len(native["environments"]))
+                or len(velocity) != native["physics_steps_per_environment"]):
+            raise RuntimeError("原生夹爪记录数量或数值检查失败")
+        result["native_gripper"] = {"status": "native_contact_measured", "physics_dt": native["physics_dt"],
+                                    "solver_velocity_iterations": native["solver_velocity_iterations"],
+                                    "maximum_depenetration_velocity_m_s": native["maximum_depenetration_velocity_m_s"],
+                                    "minimum_hold_height_m": height[hold].min(axis=0).tolist(),
+                                    "minimum_hold_jaw_forces_n": forces[hold].min(axis=0).tolist(),
+                                    "bilateral_lift_hold_verified": bool(np.all(height[hold] > .04) and np.all(forces[hold] > .5)),
+                                    "maximum_joint_speed_rad_s": np.abs(velocity).max(axis=(0, 1)).tolist(),
+                                    "expected_speed_limit_rad_s": 2.,
+                                    "actual_velocity_limits_verified": bool(np.all(np.abs(velocity) <= 2 + 1e-8)),
+                                    "trajectory_sha256": native["trajectory_sha256"], "source_code_sha256": native["source_code_sha256"],
+                                    "plan_sha256": native["plan_sha256"], "physics_equivalence_verified": False}
+    shutil.copyfile(args.native_gripper / "report.json", args.output / "native_gripper.json")
 (args.output / "report.json").write_text(json.dumps(result, indent=2) + "\n")
 print(json.dumps({"status": result["status"], "tasks": records, "gripper_target_difference_rad": plan_error}), flush=True)

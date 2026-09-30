@@ -36,14 +36,18 @@
     {
       "file": "outputs/rl_progress/gripper_shared_mac/trajectory.hdf5",
       "sha256": "11829c87825d3535dfe573a3dde5379dac214b9df93d77ee616a48b187d0890b"
+    },
+    {
+      "file": "outputs/rl_progress/native_gripper_bounded_contact/trajectory.hdf5",
+      "sha256": "a8d95d0728718dce50934552403809fb8fbd68cde00eeaadfac1d961f1b53a65"
     }
   ],
   "images": {
     "gripper_mechanics.png": {
-      "sha256": "f2733a474bfe0f6b37e94c34cf672e0e0e6cf8ca8e910018877acad9b23304af",
+      "sha256": "62ba6a43bf36cdc94386e0d4345912b6c9add34eec3e8c894ac7c90beb03a0a8",
       "size": [
         1920,
-        1440
+        1920
       ]
     },
     "constrained_drive.png": {

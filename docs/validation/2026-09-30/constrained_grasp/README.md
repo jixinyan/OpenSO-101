@@ -4,6 +4,8 @@ MuJoCo 使用实际 Isaac 质量、COM、完整惯性、重力、armature、零�
 
 官方模型采用 SO-ARM100 仓库 `5f6d2b876a53a4872e405b991dd925556c9e38a4` 的 SO-101 old-calibration MJCF 和 STL。六个关节的坐标定义保持经过实际 Isaac 末端姿态检查的转换。机器人质量、COM 与完整惯性使用实际记录，桌面使用原生 USD collision mesh 测量的有限 box。
 
+Jaw 的 0、0.1、0.125、0.35 和 0.8 rad 五个姿态完成独立检查。使用 USD 实际 joint transforms 与 MuJoCo forward kinematics，实体位置最大差异为 0.176 μm，旋转最大差异为 `6.47e-6` rad。该检查核查关节连接、轴向与零位转换，接触表示使用独立验证。原始数据见 [Jaw 关节坐标](jaw_joint_frames.json)。
+
 ## 碰撞与参数更新
 
 CoACD 1.0.7 将两个官方夹爪 STL 生成 326 和 237 个 convex parts。每个部件单独建立 collision geom，保持原始 mesh 的位置、quaternion、collision masks 和接触参数。编译后检查七个机器人实体的质量、COM、惯性矩与惯性 quaternion 保持一致。生成参数、全部文件和源 STL SHA256 保存在 collision bundle manifest。
@@ -40,6 +42,8 @@ Linux 使用完全相同的共享计划，文件 SHA256 相同，全部目标的
 相同控制器的原始 convex mesh 场景完成全部物理步骤，最大提升为 3.815 mm，超过 40 mm 的持续提升步骤为零。图表使用两项实际 HDF5 记录。
 
 ![实际夹爪接触与提升](gripper_mechanics.png)
+
+Isaac 的同一共享计划在 0.002 秒物理周期、四次 velocity solver iterations 和 0.1 m/s depenetration 配置下完成四个环境、每环境 3500 个物理步骤。最后一秒均保持双侧接触和超过 40 mm 的提升；接触期间最大实际关节速度为 38.163 rad/s，实际速度限制检查未通过。原生参数包含独立的物理随机化，第三方 USD 使用 SDF 并包含 camera mount collider。接触形状、材质、物理参数与速度约束的共同验收仍待完成；本次保留项目默认 Isaac 配置。完整测量见 [原生夹爪记录](native_gripper.json)和 [验收字段](report.json)。
 
 `render_gripper_trace.py` 使用实际记录的关节和物体 quaternion 渲染 MP4。视频恢复的机器人姿态与源记录误差为零，全部 350 帧解码检查通过，尺寸为 1280×720、50 FPS、时长为 7 秒。原始视频保存在 `outputs/rl_progress/gripper_bvh_verified_coacd/OpenSO101-MuJoCo-grasp.mp4`，视频与轨迹 SHA256 保存在 [视频检查报告](gripper_video.json)。视频展示 scripted IK 物理检查，RL 策略使用独立成功条件。
 

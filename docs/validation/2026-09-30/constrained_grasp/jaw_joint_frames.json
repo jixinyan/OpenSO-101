@@ -1,0 +1,35 @@
+{
+  "status": "USD_MJCF_jaw_joint_frames_verified",
+  "states": [
+    {
+      "jaw_position_rad": 0.0,
+      "body_position_error_m": 1.7534960346694725e-07,
+      "body_rotation_error_rad": 6.468455110702072e-06
+    },
+    {
+      "jaw_position_rad": 0.1,
+      "body_position_error_m": 1.5573188314446918e-07,
+      "body_rotation_error_rad": 5.680285535949206e-06
+    },
+    {
+      "jaw_position_rad": 0.125,
+      "body_position_error_m": 1.5098133546702352e-07,
+      "body_rotation_error_rad": 5.48095780730781e-06
+    },
+    {
+      "jaw_position_rad": 0.35,
+      "body_position_error_m": 1.1341222638790795e-07,
+      "body_rotation_error_rad": 3.6525940343858156e-06
+    },
+    {
+      "jaw_position_rad": 0.8,
+      "body_position_error_m": 1.0624489759917074e-07,
+      "body_rotation_error_rad": 1.8650491431085598e-07
+    }
+  ],
+  "usd_sha256": "11f5f0bb5f2fae3eefebbcd07dfafc6b14602f6c4e5dae8f21a4a46892991006",
+  "mjcf_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "source_code_sha256": "f6dc6473ab1584b3d5ae15f3a23e20b2e214703d0f95ba22fd5f734ac1526394",
+  "scope": "authored_USD_joint_transforms_and_real_MuJoCo_forward_kinematics",
+  "contact_equivalence_verified": false
+}

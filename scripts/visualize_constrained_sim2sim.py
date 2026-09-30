@@ -91,7 +91,7 @@ plt.close(fig)
 if args.gripper:
     if args.baseline_gripper is None:
         raise ValueError("夹爪图表需要同一控制器的基础碰撞记录")
-    fig, axes = plt.subplots(3, 1, figsize=(12, 9), layout="constrained")
+    fig, axes = plt.subplots(4, 1, figsize=(12, 12), layout="constrained")
     cases = [("MuJoCo upstream convex", args.baseline_gripper, "#888888"),
              ("MuJoCo CoACD parts", args.gripper, "#2471a3")]
     for label, folder, color in cases:
@@ -105,6 +105,9 @@ if args.gripper:
             axes[0].plot(time, 1000*(trace["object_position_root"][:, 2]-plan["object_position_root"][2]), label=label, color=color)
             axes[1].plot(time, np.min(trace["jaw_forces"][:], axis=-1), label=label, color=color)
             axes[2].plot(time, trace["joint_position"][:, -1], label=label, color=color)
+            velocity = trace["physics_steps/joint_velocity"][:]
+            physics_time = (np.arange(len(velocity))+1)*plan["control_dt"]*len(time)/len(velocity)
+            axes[3].plot(physics_time, np.abs(velocity).max(axis=-1), label=label, color=color)
         evidence.append({"file": str(trace_path), "sha256": digest(trace_path)})
     if args.native_gripper:
         report = json.loads((args.native_gripper / "report.json").read_text())
@@ -118,15 +121,19 @@ if args.gripper:
                 axes[0].plot(time, 1000*(trace["object_position_root"][:, environment, 2]-plan["object_position_root"][2]), label=label, color="#239b56", alpha=.6)
                 axes[1].plot(time, np.min(trace["jaw_forces"][:, environment], axis=-1), label=label, color="#239b56", alpha=.6)
                 axes[2].plot(time, trace["joint_position"][:, environment, -1], label=label, color="#239b56", alpha=.6)
+                velocity = trace["physics_steps/joint_velocity"][:, environment]
+                physics_time = (np.arange(len(velocity))+1)*report["physics_dt"]
+                axes[3].plot(physics_time, np.abs(velocity).max(axis=-1), label=label, color="#239b56", alpha=.6)
         evidence.append({"file": str(trace_path), "sha256": digest(trace_path)})
-    for axis, title in zip(axes, ("Object height above initial center (mm)", "Minimum of two jaw contact forces (N)", "Actual jaw position (rad)"), strict=True):
+    for axis, title in zip(axes, ("Object height above initial center (mm)", "Minimum of two jaw contact forces (N)", "Actual jaw position (rad)", "Maximum actual joint speed at each physics step (rad/s)"), strict=True):
         axis.set_title(title)
         axis.set_xlabel("Time (s)")
         axis.grid(alpha=.2)
     axes[0].axhline(40, color="black", linestyle=":")
     axes[1].axhline(.5, color="black", linestyle=":")
+    axes[3].axhline(2, color="black", linestyle=":")
     axes[0].legend()
-    fig.suptitle("Scripted physical grasp: identical joint-target plan, real contact and lifting")
+    fig.suptitle("Scripted grasp: shared targets, measured contact and actual velocity\nNative physical parameters recorded independently")
     fig.savefig(args.output / "gripper_mechanics.png", dpi=160)
     plt.close(fig)
 images = {}

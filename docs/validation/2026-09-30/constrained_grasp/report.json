@@ -242,5 +242,50 @@
   "physics_equivalence_verified": false,
   "rl_policy_success_verified": false,
   "rl_training_started": false,
-  "validation_source_sha256": "46110cef25614ddc0b54aec7380552e65dbd2f01e5393bb4523a051b194fec32"
+  "validation_source_sha256": "6a9f406e515a02960dce925892ee9d87fd24125fb90f40260db79ebefc3a4027",
+  "native_gripper": {
+    "status": "native_contact_measured",
+    "physics_dt": 0.002,
+    "solver_velocity_iterations": 4,
+    "maximum_depenetration_velocity_m_s": 0.1,
+    "minimum_hold_height_m": [
+      0.0572536438703537,
+      0.05791112780570984,
+      0.060297854244709015,
+      0.060542210936546326
+    ],
+    "minimum_hold_jaw_forces_n": [
+      [
+        15.602035522460938,
+        20.61627197265625
+      ],
+      [
+        38.58778762817383,
+        17.86062240600586
+      ],
+      [
+        35.1848258972168,
+        22.414888381958008
+      ],
+      [
+        22.181264877319336,
+        38.173545837402344
+      ]
+    ],
+    "bilateral_lift_hold_verified": true,
+    "maximum_joint_speed_rad_s": [
+      0.3879678547382355,
+      0.5981741547584534,
+      1.2795422077178955,
+      2.161982297897339,
+      3.627767562866211,
+      38.16282272338867
+    ],
+    "expected_speed_limit_rad_s": 2.0,
+    "actual_velocity_limits_verified": false,
+    "trajectory_sha256": "a8d95d0728718dce50934552403809fb8fbd68cde00eeaadfac1d961f1b53a65",
+    "source_code_sha256": "7c3e739527ea30a350342ab9afb3ed207338548d49a01206ad07cba4dccff433",
+    "plan_sha256": "bfc1d2ef4ae2a2a595cf42dd9ce53e4310a4cfbcac970438a3ecdd9ed71f4945",
+    "physics_equivalence_verified": false
+  }
 }
