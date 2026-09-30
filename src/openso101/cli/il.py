@@ -142,6 +142,7 @@ class _TeleopSimCheckpoint:
     command_goal_pos_b: Any | None = None
     command_goal_pos_w: Any | None = None
     command_cube_spawn_xy_b: Any | None = None
+    command_placement_hold_seconds: Any | None = None
 
 
 def _clone_value(value):
@@ -353,6 +354,7 @@ class _TeleopCheckpointStore:
                 checkpoint.command_goal_pos_b = command.goal_pos_b.clone()
                 checkpoint.command_goal_pos_w = command.goal_pos_w.clone()
                 checkpoint.command_cube_spawn_xy_b = command.cube_spawn_xy_b.clone()
+                checkpoint.command_placement_hold_seconds = command.placement_hold_seconds.clone()
             except Exception:
                 pass
 
@@ -406,6 +408,8 @@ class _TeleopCheckpointStore:
                     command.goal_pos_w[:] = checkpoint.command_goal_pos_w
                 if checkpoint.command_cube_spawn_xy_b is not None:
                     command.cube_spawn_xy_b[:] = checkpoint.command_cube_spawn_xy_b
+                if checkpoint.command_placement_hold_seconds is not None:
+                    command.placement_hold_seconds[:] = checkpoint.command_placement_hold_seconds
             except Exception:
                 pass
         print("[INFO]: Restored teleop checkpoint.")
@@ -1058,8 +1062,8 @@ def _cmd_record(args: argparse.Namespace) -> int:
                 restore_requested = keyboard.restore_checkpoint
                 if _handle_recording_key_events(keyboard, recorder, checkpoints, resume_hold):
                     break
-                if restore_requested and args.teleop_device == "keyboard":
-                    leader.reset_reference()
+                if restore_requested and args.teleop_device == "keyboard" and checkpoints.has_checkpoint:
+                    leader.reset_reference(restore_gripper=True)
                 if args.teleop_device == "keyboard":
                     remaining = unwrapped_env.step_dt - (time.perf_counter() - loop_start)
                     if remaining > 0:

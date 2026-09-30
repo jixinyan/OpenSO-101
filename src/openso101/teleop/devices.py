@@ -134,8 +134,14 @@ class KeyboardDevice:
         raw = {f"{name}.pos": float(torch.rad2deg(targets[0, i])) for i, name in enumerate(SO101_TELEOP_CONTROL_JOINT_NAMES)}
         return raw, targets[0]
 
-    def reset_reference(self):
+    def reset_reference(self, *, restore_gripper=False):
         self.arm_target = self.robot.data.joint_pos[:, self.arm_ids].clone()
+        if restore_gripper:
+            jaw_id = self.robot.joint_names.index(SO101_SIM_JOINT_NAMES[-1])
+            self.gripper = float(self.robot.data.joint_pos[0, jaw_id])
+            self.pressed.clear()
+            if self.terminal is not None:
+                self.terminal.expires.clear()
 
     def disconnect(self):
         self.arm_target = None
