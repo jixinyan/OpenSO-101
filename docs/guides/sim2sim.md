@@ -35,18 +35,20 @@ export OPENSO101_SKIP_ISAAC=1 PYTHONPATH="$PWD/src" TMPDIR="$PWD/outputs/tmp"
 ```bash
 openso101 sim2sim mujoco --policy outputs/lift_portable \
   --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --recorded-physics --constrained-drive \
+  --collision-bundle outputs/rl_progress/gripper_collision \
   --episodes 4 --output outputs/mujoco_lift
 ```
 
-入口由 MuJoCo MjSpec 加载官方 MJCF，添加桌面和 3cm 物体，使用导出的 nominal PD 和 effort limits。`Pitch` 的 MuJoCo 坐标为 Isaac 坐标减去 π/2，`Elbow` 加上 π/2，其余关节坐标相同。policy 的控制周期保持为 0.02 秒，MuJoCo 物理周期为 0.002 秒。
+入口由 MuJoCo MjSpec 加载官方 MJCF，添加实际桌面和任务物体。上述参数启用源初始环境的实际物理参数、受限力矩控制，以及经过 SHA256 检查的夹爪 convex parts。碰撞部件的生成方法见本页“夹爪碰撞与实际抓取检查”。`Pitch` 的 MuJoCo 坐标为 Isaac 坐标减去 π/2，`Elbow` 加上 π/2，其余关节坐标相同。policy 的控制周期保持为 0.02 秒，MuJoCo 物理周期为 0.002 秒。
 
 运行前对 Isaac HDF5 中的全部关节状态检查末端位置与 quaternion；位置误差超过 1mm 或旋转误差超过 0.001rad 时终止。评估使用记录第一帧的实际关节位置、速度、物体姿态和任务目标，每个 Isaac 环境对应一个配对初始场景。`episodes` 数量必须不超过该记录的环境数量。
 
 输出 `trajectory.hdf5` 与 `report.json`，包含实际任务结果、关节坐标误差、模型与 mesh hashes、策略 hash、初始数据 hash、控制周期及轨迹 hash。Lift 使用导出的高度和目标距离条件；PickPlace 检查实际双夹爪接触、抬升与搬运阶段，以及释放后的稳定放置。
 
-两种模拟器的接触求解、碰撞网格、速度限制、惯性和摩擦行为仍需独立比较。MuJoCo 保留官方 MJCF 的惯性与 frictionloss，使用其 convex meshes；Isaac 的 2rad/s 关节速度限制及物理随机化尚未在 MuJoCo 复现。`physics_equivalence_verified=false` 保留在报告中。
+两种模拟器的接触求解、碰撞网格与材质行为需要独立比较。`--recorded-physics` 恢复实际质量、COM、完整惯性、重力、armature 和经过验证的零关节摩擦；`--constrained-drive` 每个物理步骤检查实际速度与力矩。省略这些参数时，入口使用名义 PD、官方 MJCF 惯性和 frictionloss。`physics_equivalence_verified=false` 保留在报告中。
 
-本次 MuJoCo 在本地 Mac CPU 运行，Isaac 轨迹来自 `jd_B300`。Lift 和 PickPlace 各运行四个完整 episode，均为 0/4。每项坐标检查覆盖 2000 个状态；最大位置误差分别约 2.37μm、2.03μm，最大旋转误差约 `1.2e-5`rad。该结果验证策略接口与实际控制运行，任务迁移能力仍需通过成功策略和更多配对场景评估。
+2026-09-29 的名义参数评估在本地 Mac CPU 运行，Isaac 轨迹来自 `jd_B300`。Lift 和 PickPlace 各运行四个完整 episode，均为 0/4。每项坐标检查覆盖 2000 个状态；最大位置误差分别约 2.37μm、2.03μm，最大旋转误差约 `1.2e-5`rad。该结果验证策略接口与实际控制运行，任务迁移能力需要成功策略和更多配对场景评估。
 
 - [Lift MuJoCo 报告](../validation/2026-09-29/mujoco_lift/report.json)
 - [PickPlace MuJoCo 报告](../validation/2026-09-29/mujoco_pick_place/report.json)
@@ -295,3 +297,28 @@ OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
 ```
 
 运行需要 `requirements-mujoco.txt` 的 OSQP 依赖，以及原生导出目录 `outputs/rl_progress/{lift,pick_place}_scene_geometry_oriented_verified`。检查使用已有模型进行推理。实际速度限制验收、PhysX 接触等价和任务成功分别记录。
+
+## 夹爪碰撞与实际抓取检查
+
+CoACD 根据官方 STL 生成独立 convex parts。每个部件分别成为 MuJoCo collision geom，保持原始部件坐标、collision masks 和接触参数；编译后核查机器人质量、COM、惯性矩与惯性 quaternion。manifest 保存源 STL、生成参数、CoACD 版本和全部部件 SHA256。`--collision-bundle` 可用于配对动作比较与策略反馈评估。
+
+```bash
+OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
+  .venv/bin/python scripts/build_gripper_collision.py \
+  --output outputs/rl_progress/gripper_collision
+
+OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
+  .venv/bin/python scripts/run_constrained_sim2sim.py --run-id acceptance \
+  --collision-bundle outputs/rl_progress/gripper_collision
+
+OPENSO101_SKIP_ISAAC=1 TMPDIR="$PWD/outputs/tmp" PYTHONPATH=src \
+  .venv/bin/python scripts/check_gripper_mechanics.py \
+  --collision-bundle outputs/rl_progress/gripper_collision \
+  --output outputs/gripper_acceptance
+```
+
+实际质量和完整惯性写入后，body BVH 的包围盒转换到当前 COM 和惯性坐标。转换始终使用初始化保存的包围盒，mesh 三角形 BVH 保持原值。重复更新检查核查实际接触、几何与运行状态保持一致。
+
+夹爪检查使用真实 MuJoCo 动力学，执行接近、关闭、提升与保持。机器人和物体在初始化时设置姿态，随后每步只通过 actuator 力矩控制。报告保存双侧接触力、实际物体高度、每个物理步骤的速度和力矩、控制计划及源数据 SHA256。持续保持检查要求最后一秒的每个控制步骤均有超过 0.5 N 的双侧接触，物体提升超过 40 mm。该检查的控制方式为 scripted IK；保存的 RL 模型通过独立反馈评估验收。
+
+实际配对记录、跨主机检查、图表和视频来源见 [动力学与夹爪验收](../validation/2026-09-30/constrained_grasp/README.md)。
