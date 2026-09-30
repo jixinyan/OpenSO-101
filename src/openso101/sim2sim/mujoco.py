@@ -70,12 +70,16 @@ def build_model(robot_model, metadata):
         geometry = metadata["table_geometry"]
         position = np.asarray(geometry["position_root"], dtype=float)
         size = np.asarray(geometry["half_size"], dtype=float)
-        if (geometry["type"] != "box" or position.shape != (3,) or size.shape != (3,)
+        quaternion = np.asarray(geometry["quaternion_root"], dtype=float)
+        if (geometry["type"] != "box" or position.shape != (3,) or size.shape != (3,) or quaternion.shape != (4,)
                 or not np.isfinite(position).all() or not np.isfinite(size).all() or (size <= 0).any()
-                or not np.isclose(position[2]+size[2], metadata["table_height_root"], atol=1e-8, rtol=0)):
+                or not np.isfinite(quaternion).all() or not np.isclose(np.linalg.norm(quaternion), 1, atol=1e-6, rtol=0)):
             raise ValueError("记录的桌面 box geometry 无效")
+        top = position[2] + np.abs(Rotation.from_quat(quaternion, scalar_first=True).as_matrix()[2]) @ size
+        if not np.isclose(top, metadata["table_height_root"], atol=1e-8, rtol=0):
+            raise ValueError("桌面高度与记录的 box geometry 不一致")
         spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_BOX, size=size,
-                               pos=position, contype=4, conaffinity=3, friction=[1, 0.005, 0.0001])
+                               pos=position, quat=quaternion, contype=4, conaffinity=3, friction=[1, 0.005, 0.0001])
     else:
         spec.worldbody.add_geom(name="table", type=mujoco.mjtGeom.mjGEOM_PLANE, size=[1, 1, 0.05],
                                pos=[0, 0, metadata["table_height_root"]], contype=4, conaffinity=3,

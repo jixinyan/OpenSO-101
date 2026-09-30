@@ -26,14 +26,24 @@ def table_collision_geometry(stage, table_path, root_position, root_quaternion):
     if points.ndim != 2 or points.shape[1] != 3 or not len(points) or not np.isfinite(points).all():
         raise ValueError("桌面 collision mesh points 无效")
     matrix = np.asarray(UsdGeom.XformCache().GetLocalToWorldTransform(collider))
-    world = (np.column_stack((points, np.ones(len(points)))) @ matrix)[:, :3]
-    local = rotation.inv().apply(world - root_position)
-    minimum, maximum = local.min(axis=0), local.max(axis=0)
+    minimum, maximum = points.min(axis=0), points.max(axis=0)
     if (maximum <= minimum).any():
         raise ValueError("桌面 collision mesh 需要正数尺寸")
-    if not np.all(np.minimum(np.abs(local-minimum), np.abs(local-maximum)) <= 1e-6):
-        raise ValueError("桌面 collision mesh 需要与 robot root 坐标平行的 box")
-    return {"type": "box", "position_root": ((minimum+maximum)/2).tolist(),
-            "half_size": ((maximum-minimum)/2).tolist(), "top_height_root": float(maximum[2]),
+    if not np.all(np.minimum(np.abs(points-minimum), np.abs(points-maximum)) <= 1e-8):
+        raise ValueError("桌面 collision mesh 需要 box 顶点")
+    scales = np.linalg.norm(matrix[:3, :3], axis=1)
+    axes = matrix[:3, :3] / scales[:, None]
+    if not np.allclose(axes @ axes.T, np.eye(3), atol=1e-8, rtol=0) or np.linalg.det(axes) <= 0:
+        raise ValueError("桌面 box transform 需要正数 scale 与正交坐标")
+    local_axes = rotation.inv().apply(axes).T
+    if np.max(np.abs(local_axes[2, :2])) > 1e-4 or local_axes[2, 2] <= 0:
+        raise ValueError("当前任务要求水平桌面")
+    world_center = (np.append((minimum+maximum)/2, 1) @ matrix)[:3]
+    position = rotation.inv().apply(world_center-root_position)
+    half_size = (maximum-minimum)/2 * scales
+    top = position[2] + np.abs(local_axes[2]) @ half_size
+    return {"type": "box", "position_root": position.tolist(),
+            "quaternion_root": Rotation.from_matrix(local_axes).as_quat(scalar_first=True).tolist(),
+            "half_size": half_size.tolist(), "top_height_root": float(top),
             "collider_paths": [str(collider.GetPath())], "approximation": approximation,
             "source": "native_USD_collision_mesh"}

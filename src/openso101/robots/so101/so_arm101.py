@@ -191,7 +191,6 @@ SO_ARM101_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
     actuators={
-        # ROTATION (Gear: 1/191, Torque: 34.4 N-m)
         "rotation": ImplicitActuatorCfg(
             joint_names_expr=["Rotation"],
             effort_limit_sim=30,
@@ -199,7 +198,6 @@ SO_ARM101_CFG = ArticulationCfg(
             stiffness=55,
             damping=0.7,
         ),
-        # PITCH (Gear: 1/345, Torque: 62.1 N-m - HIGHEST)
         "pitch": ImplicitActuatorCfg(
             joint_names_expr=["Pitch"],
             effort_limit_sim=30,
@@ -207,7 +205,6 @@ SO_ARM101_CFG = ArticulationCfg(
             stiffness=30,
             damping=0.8,
         ),
-        # ELBOW (Gear: 1/191, Torque: 34.4 N-m)
         "elbow": ImplicitActuatorCfg(
             joint_names_expr=["Elbow"],
             effort_limit_sim=30,
@@ -215,7 +212,6 @@ SO_ARM101_CFG = ArticulationCfg(
             stiffness=25,
             damping=0.7,
         ),
-        # WRIST PITCH (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_pitch": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Pitch"],
             effort_limit_sim=30,
@@ -223,7 +219,6 @@ SO_ARM101_CFG = ArticulationCfg(
             stiffness=12,
             damping=0.5,
         ),
-        # WRIST ROLL (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_roll": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Roll"],
             effort_limit_sim=30,
@@ -231,11 +226,6 @@ SO_ARM101_CFG = ArticulationCfg(
             stiffness=7,
             damping=0.5,
         ),
-        # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
-        # Stiffness bumped from Lior's k=4 (teleop) to k=15 for RL: k=4 closes
-        # too slowly to pin a moving cube during exploration, so the policy
-        # never gets credit for "close gripper". Still well below the URDF-era
-        # k=60 that hammered the cube.
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
             effort_limit_sim=30,
@@ -281,42 +271,36 @@ SO_ARM101_TELEOP_CFG = ArticulationCfg(
         joint_vel={".*": 0.0},
     ),
     actuators={
-        # ROTATION (Gear: 1/191, Torque: 34.4 N-m)
         "rotation": ImplicitActuatorCfg(
             joint_names_expr=["Rotation"],
             effort_limit_sim=30,
             stiffness=55,
             damping=0.7,
         ),
-        # PITCH (Gear: 1/345, Torque: 62.1 N-m - HIGHEST)
         "pitch": ImplicitActuatorCfg(
             joint_names_expr=["Pitch"],
             effort_limit_sim=30,
             stiffness=30,
             damping=0.8,
         ),
-        # ELBOW (Gear: 1/191, Torque: 34.4 N-m)
         "elbow": ImplicitActuatorCfg(
             joint_names_expr=["Elbow"],
             effort_limit_sim=30,
             stiffness=25,
             damping=0.7,
         ),
-        # WRIST PITCH (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_pitch": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Pitch"],
             effort_limit_sim=30,
             stiffness=12,
             damping=0.5,
         ),
-        # WRIST ROLL (Gear: 1/147, Torque: 26.5 N-m)
         "wrist_roll": ImplicitActuatorCfg(
             joint_names_expr=["Wrist_Roll"],
             effort_limit_sim=30,
             stiffness=7,
             damping=0.5,
         ),
-        # GRIPPER (Gear: 1/147, Torque: 26.5 N-m)
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=list(SO101_GRIPPER_JOINT_NAMES),
             effort_limit_sim=30,
