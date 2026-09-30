@@ -28,6 +28,7 @@ throughout `openso101.cli.*`.
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
 import time
 from pathlib import Path
 from typing import Any, Mapping
@@ -57,10 +58,28 @@ def deploy(args: argparse.Namespace) -> int:
     ``send_action`` expects motor units, and that inverse (motor -> sim
     radians) is only for the SIM env.
     """
+    _validate_camera_arguments(args)
+    if args.max_steps is not None and args.max_steps <= 0:
+        raise ValueError("max_steps 必须为正数")
+    if args.profile_interval <= 0:
+        raise ValueError("profile_interval 必须为正数")
+    for name in ("wrist", "overhead"):
+        source = _camera_source(args, name)
+        if isinstance(source, Path) and source.is_file():
+            raise ValueError("机器人部署需要实际相机设备")
+    stop_file = Path(args.stop_file).expanduser().resolve() if args.stop_file else None
+    if _stop_requested(stop_file):
+        print("[INFO]: 停止文件存在，部署已终止。")
+        return 0
     policy = _load_lerobot_policy(args.policy_path, device=args.device)
     if hasattr(policy, "metadata") and "control_dt" in policy.metadata:
         if not np.isclose(1.0 / args.fps, policy.metadata["control_dt"], atol=1e-6):
             raise ValueError("部署 fps 必须与 student 训练控制频率一致")
+    preprocessor = getattr(policy, "openso101_preprocessor", None)
+    postprocessor = getattr(policy, "openso101_postprocessor", None)
+    if preprocessor is None or postprocessor is None:
+        raise RuntimeError("部署需要 checkpoint 的 LeRobot preprocessor 与 postprocessor")
+    reset_action_dict = _reset_posture_action_dict()
     follower, cameras = None, None
     try:
         follower = _connect_so101_follower(
@@ -73,10 +92,11 @@ def deploy(args: argparse.Namespace) -> int:
         )
 
         cameras = _open_cameras(
-            wrist_index=args.wrist_camera_index,
-            overhead_index=args.overhead_camera_index,
+            wrist_index=_camera_source(args, "wrist"),
+            overhead_index=_camera_source(args, "overhead"),
             width=args.camera_width,
             height=args.camera_height,
+            fps=args.fps,
         )
         print(f"[INFO]: Opened cameras: {list(cameras)}.")
 
@@ -84,32 +104,14 @@ def deploy(args: argparse.Namespace) -> int:
         if hasattr(policy, "reset"):
             policy.reset()
 
-        # Pull the LeRobot pre/post-processor pipelines the loader stashed on
-        # the policy (see openso101.il.policies.factory.load_policy). These
-        # carry the dataset normalization stats. A real-robot session must
-        # NEVER run unnormalized: unnormalized observations produce a policy
-        # output near the normalized-action mean, which on hardware is a
-        # near-stationary / drifting command — at best the arm sits still, at
-        # worst it lurches to a calibration midpoint. Fail loudly instead.
-        preprocessor = getattr(policy, "openso101_preprocessor", None)
-        postprocessor = getattr(policy, "openso101_postprocessor", None)
-        if preprocessor is None or postprocessor is None:
-            raise RuntimeError(
-                "Refusing to deploy on real hardware without LeRobot "
-                "pre/post-processors (normalization stats). "
-                f"preprocessor={'set' if preprocessor is not None else 'None'}, "
-                f"postprocessor={'set' if postprocessor is not None else 'None'}. "
-                "The checkpoint must contain policy_preprocessor.json + "
-                "policy_postprocessor.json. Re-export the checkpoint or load "
-                "with allow_unnormalized=True ONLY for an unpowered dry run."
-            )
-
         policy_device = args.device
 
         # Startup safety: drive the follower to the canonical reset posture
         # and pause briefly before live control. Starting inference from an
         # arbitrary power-on pose can command a large first-step jump.
-        reset_action_dict = _reset_posture_action_dict(follower)
+        if _stop_requested(stop_file):
+            print("[INFO]: 停止文件存在，部署已终止。")
+            return 0
         if reset_action_dict is not None:
             print(f"[INFO]: Commanding canonical reset posture: {reset_action_dict}")
             follower.send_action(reset_action_dict)
@@ -136,6 +138,9 @@ def deploy(args: argparse.Namespace) -> int:
 
         while True:
             loop_start = time.perf_counter()
+            if _stop_requested(stop_file):
+                print("[INFO]: 停止文件存在，部署已终止。")
+                break
 
             obs = _build_real_observation(follower, cameras)
             # Move obs to the policy device, then apply the preprocessor
@@ -162,6 +167,9 @@ def deploy(args: argparse.Namespace) -> int:
             prev_command = action_np
             action_dict = _action_array_to_lerobot_dict(action_np)
 
+            if _stop_requested(stop_file):
+                print("[INFO]: 停止文件存在，部署已终止。")
+                break
             follower.send_action(action_dict)
 
             step += 1
@@ -181,17 +189,12 @@ def deploy(args: argparse.Namespace) -> int:
     except KeyboardInterrupt:
         print("\n[INFO]: Ctrl+C received; shutting down.")
     finally:
-        if follower is not None:
-            try:
-                follower.disconnect()
-            except Exception as exc:  # noqa: BLE001
-                print(f"[WARN]: follower.disconnect() raised: {exc}")
-        if cameras is not None:
-            for cam in cameras.values():
-                try:
-                    cam.disconnect()
-                except Exception as exc:  # noqa: BLE001
-                    print(f"[WARN]: camera.disconnect() raised: {exc}")
+        with ExitStack() as cleanup:
+            if cameras is not None:
+                for cam in cameras.values():
+                    cleanup.callback(_disconnect_camera, cam)
+            if follower is not None and follower.is_connected:
+                cleanup.callback(follower.disconnect)
     return 0
 
 
@@ -202,28 +205,31 @@ def deploy(args: argparse.Namespace) -> int:
 
 def _connect_so101_follower(*, port: str, robot_id: str):
     """Build + connect a LeRobot SO101 follower over the Feetech bus."""
-    try:
-        from lerobot.robots import make_robot_from_config
-        from lerobot.robots.so101_follower import SO101FollowerConfig
-    except ImportError as exc:
-        raise RuntimeError(
-            "LeRobot's SO101 follower support is required. Install it via "
-            "`bash scripts/install.sh` from the repo root."
-        ) from exc
+    from lerobot.robots import make_robot_from_config
+    from lerobot.robots.so101_follower import SO101FollowerConfig
 
     follower = make_robot_from_config(
         SO101FollowerConfig(port=port, id=robot_id)
     )
-    follower.connect()
+    with ExitStack() as cleanup:
+        cleanup.callback(_disconnect_follower, follower)
+        follower.connect()
+        cleanup.pop_all()
     return follower
+
+
+def _disconnect_follower(follower) -> None:
+    if follower.is_connected:
+        follower.disconnect()
 
 
 def _open_cameras(
     *,
-    wrist_index: int,
-    overhead_index: int,
+    wrist_index: int | Path,
+    overhead_index: int | Path,
     width: int,
     height: int,
+    fps: int = 30,
 ) -> dict[str, Any]:
     """Open the two USB cameras LeRobot expects in our dataset schema.
 
@@ -231,38 +237,62 @@ def _open_cameras(
     upstream training datasets are recorded with — same backend, same
     color-space conventions, same uint8 RGB layout.
     """
-    try:
-        from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
-    except ImportError as exc:
-        raise RuntimeError(
-            "LeRobot's OpenCV camera support is required. Install LeRobot "
-            "via `bash scripts/install.sh`."
-        ) from exc
+    from lerobot.cameras.opencv import OpenCVCamera, OpenCVCameraConfig
 
     cameras: dict[str, Any] = {}
-    try:
+    with ExitStack() as cleanup:
         for name, index in (
-            ("wrist_camera", int(wrist_index)),
-            ("overhead_camera", int(overhead_index)),
+            ("wrist_camera", wrist_index),
+            ("overhead_camera", overhead_index),
         ):
             cam = OpenCVCamera(
                 OpenCVCameraConfig(
                     index_or_path=index,
                     width=int(width),
                     height=int(height),
-                    fps=30,
+                    fps=int(fps),
                 )
             )
-            cam.connect()
+            cleanup.callback(_disconnect_camera, cam)
+            # 视频输入从首帧开始；设备输入执行 LeRobot warmup。
+            cam.connect(warmup=not (isinstance(index, Path) and index.is_file()))
             cameras[name] = cam
-    except Exception:
-        for cam in cameras.values():
-            try:
-                cam.disconnect()
-            except Exception:
-                pass
-        raise
+        cleanup.pop_all()
     return cameras
+
+
+def _disconnect_camera(camera) -> None:
+    if camera.is_connected:
+        camera.disconnect()
+
+
+def _camera_source(args, name: str) -> int | Path:
+    path = getattr(args, f"{name}_camera_path", None)
+    return Path(path).expanduser().resolve() if path is not None else getattr(args, f"{name}_camera_index")
+
+
+def _validate_camera_arguments(args) -> None:
+    if args.fps <= 0 or args.camera_width <= 0 or args.camera_height <= 0:
+        raise ValueError("fps 与相机尺寸必须为正数")
+    if _camera_source(args, "wrist") == _camera_source(args, "overhead"):
+        raise ValueError("wrist 与 overhead 必须使用不同相机来源")
+
+
+def _stop_requested(path: Path | None) -> bool:
+    if path is None:
+        return False
+    if path.exists() and not path.is_file():
+        raise ValueError(f"停止路径必须为文件: {path}")
+    return path.is_file()
+
+
+def _camera_frame_tensor(frame: np.ndarray):
+    import torch
+
+    frame = np.asarray(frame)
+    if frame.dtype != np.uint8 or frame.ndim != 3 or frame.shape[-1] != 3 or min(frame.shape[:2]) <= 0:
+        raise ValueError("相机帧必须为 uint8 H×W×3 RGB")
+    return torch.from_numpy(frame).permute(2, 0, 1).unsqueeze(0).float() / 255.0
 
 
 # ---------------------------------------------------------------------------
@@ -306,46 +336,19 @@ def _run_policy(policy, obs: Mapping[str, Any], preprocessor, postprocessor):
     return action
 
 
-def _reset_posture_action_dict(follower) -> dict[str, float] | None:
-    """Return the canonical reset posture as a LeRobot motor-unit action dict.
+def _reset_posture_action_dict() -> dict[str, float]:
+    """使用共享初始姿态生成 LeRobot motor-unit 动作。"""
+    import torch
 
-    Prefers :data:`SO101_CANONICAL_INIT_JOINT_POS` (radians, keyed by sim
-    USD joint names) mapped through the sim-radian -> motor-unit conversion.
-    The sim joint order ``(Rotation, Pitch, Elbow, Wrist_Pitch, Wrist_Roll,
-    Jaw)`` is 1:1 with both :data:`_LEROBOT_JOINT_KEYS` and the mapping's
-    ``JOINT_ORDER``, so a positional remap is exact.
+    from openso101.robots.so101.constants import SO101_CANONICAL_INIT_JOINT_POS, SO101_SIM_JOINT_NAMES
+    from openso101.teleop.so101_mapping import batched_action_to_motor_units
 
-    Falls back to reading the follower's current observation (i.e. "stay
-    where you are") if the canonical pose or the conversion is unavailable,
-    so deploy never hard-fails on a missing optional dependency. Returns
-    ``None`` only if no reset pose can be determined at all.
-    """
-    try:
-        import torch
-
-        from openso101.robots import SO101_SIM_JOINT_NAMES
-        from openso101.robots.so101.so_arm101 import SO101_CANONICAL_INIT_JOINT_POS
-        from openso101.teleop.so101_mapping import batched_action_to_motor_units
-
-        rad = torch.tensor(
-            [float(SO101_CANONICAL_INIT_JOINT_POS[name]) for name in SO101_SIM_JOINT_NAMES],
-            dtype=torch.float32,
-        )
-        motor = batched_action_to_motor_units(rad).cpu().numpy().reshape(-1)
-        motor = _clamp_motor_units(np.asarray(motor, dtype=np.float32))
-        return _action_array_to_lerobot_dict(motor)
-    except Exception as exc:  # noqa: BLE001 — fall back to current pose
-        print(
-            f"[WARN]: Could not build canonical reset posture ({exc}); "
-            "falling back to the follower's current pose as the reset target."
-        )
-        try:
-            raw = follower.get_observation()
-            motor = _clamp_motor_units(_lerobot_joint_dict_to_array(raw))
-            return _action_array_to_lerobot_dict(motor)
-        except Exception as exc2:  # noqa: BLE001
-            print(f"[WARN]: Could not read follower pose for reset: {exc2}.")
-            return None
+    rad = torch.tensor(
+        [float(SO101_CANONICAL_INIT_JOINT_POS[name]) for name in SO101_SIM_JOINT_NAMES],
+        dtype=torch.float32,
+    )
+    motor = batched_action_to_motor_units(rad).cpu().numpy().reshape(-1)
+    return _action_array_to_lerobot_dict(_clamp_motor_units(motor))
 
 
 # Calibrated commanded-target range for the real follower, in LeRobot motor
@@ -404,15 +407,11 @@ def _build_real_observation(follower, cameras: Mapping[str, Any]) -> dict:
     obs: dict = {
         "observation.state": torch.from_numpy(qpos_motor).unsqueeze(0).float(),
     }
+    if set(cameras) != set(_REAL_CAMERA_NAMES):
+        raise ValueError("部署需要 wrist_camera 与 overhead_camera")
     for cam_name, cam in cameras.items():
         frame = cam.read()  # H, W, 3 uint8
-        tensor = (
-            torch.from_numpy(np.asarray(frame, dtype=np.uint8))
-            .permute(2, 0, 1)
-            .unsqueeze(0)
-            .float()
-            / 255.0
-        )
+        tensor = _camera_frame_tensor(frame)
         obs[f"observation.images.{cam_name}"] = tensor
     return obs
 
@@ -435,10 +434,13 @@ _LEROBOT_JOINT_KEYS: tuple[str, ...] = (
 
 def _lerobot_joint_dict_to_array(raw: Mapping[str, float]) -> np.ndarray:
     """Extract joint positions in the canonical 6-dim order."""
-    return np.asarray(
+    values = np.asarray(
         [float(raw[key]) for key in _LEROBOT_JOINT_KEYS],
         dtype=np.float32,
     )
+    if not np.isfinite(values).all():
+        raise ValueError("机器人关节观测必须为有限数值")
+    return values
 
 
 def _action_array_to_lerobot_dict(action: np.ndarray) -> dict[str, float]:

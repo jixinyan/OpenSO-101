@@ -37,6 +37,18 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     validation.add_argument("--batch-size", type=int, default=16)
     validation.set_defaults(func=_cmd_validate)
 
+    cameras = sub.add_parser("camera-check", help="检查实际双相机读取与部署图像格式")
+    cameras.add_argument("--wrist-camera-index", type=int, default=0)
+    cameras.add_argument("--overhead-camera-index", type=int, default=2)
+    cameras.add_argument("--wrist-camera-path", default=None)
+    cameras.add_argument("--overhead-camera-path", default=None)
+    cameras.add_argument("--camera-width", type=int, default=128)
+    cameras.add_argument("--camera-height", type=int, default=128)
+    cameras.add_argument("--fps", type=int, default=30)
+    cameras.add_argument("--frames", type=int, default=60)
+    cameras.add_argument("--output", required=True)
+    cameras.set_defaults(func=_cmd_camera_check)
+
     p_dep = sub.add_parser(
         "deploy",
         help="Roll out a trained IL policy on the real SO-101 follower.",
@@ -76,6 +88,9 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         help="Width to which camera frames are resized before inference. "
              "Must match what the dataset was recorded with.",
     )
+    p_dep.add_argument("--wrist-camera-path", default=None, help="wrist OpenCV 设备路径，优先于设备索引")
+    p_dep.add_argument("--overhead-camera-path", default=None, help="overhead OpenCV 设备路径，优先于设备索引")
+    p_dep.add_argument("--stop-file", default=None, help="文件存在时停止发送动作并关闭连接")
     p_dep.add_argument(
         "--camera-height",
         type=int,
@@ -120,3 +135,9 @@ def _cmd_validate(args):
     from openso101.sim2real.validation import validate
 
     return validate(args)
+
+
+def _cmd_camera_check(args):
+    from openso101.sim2real.cameras import check_cameras
+
+    return check_cameras(args)

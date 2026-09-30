@@ -18,6 +18,7 @@ from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 
 from openso101.robots.so101.constants import (
+    SO101_CANONICAL_INIT_JOINT_POS,
     SO101_GRIPPER_JOINT_NAME,
     SO101_GRIPPER_JOINT_NAMES,
     SO101_GRIPPER_OPEN_POS,
@@ -53,28 +54,6 @@ Computed at import time from the USD's base-prim bbox via
 pxr is not available (e.g. unit tests without the Omniverse app), falls
 back to a baked constant; see ``_usd_bounds._BAKED_BASE_PRIM_LOCAL_Z_MIN``.
 """
-
-SO101_CANONICAL_INIT_JOINT_POS: dict[str, float] = {
-    # All horizontal rotation is expressed on the base (SO101_BASE_INIT_ROT)
-    # so we don't fight the Rotation joint's ±110° hard limit on reset.
-    # Joint stays at zero — base yaw alone determines where the arm points.
-    "Rotation": 0.0,
-    "Pitch": 0.0,
-    "Elbow": 0.0,
-    "Wrist_Pitch": 1.5708,  # π/2 — gripper pointing straight down at table.
-    "Wrist_Roll": 0.0,
-    SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
-}
-"""Canonical SO101 reset posture used by both RL training and teleop.
-
-Identity base orientation; arm joints at zero except Wrist_Pitch (π/2)
-which points the gripper straight down at the table. The Rotation joint
-is intentionally zero — the base sits in its USD-canonical orientation
-with the arm extending along the base's natural front. RL policies move
-away from this pose within a few timesteps; teleop operators see the
-arm at its mechanically neutral pose with the gripper ready to descend.
-"""
-
 
 # 90° yaw about +Z, expressed in Isaac Lab's (w, x, y, z) quaternion order.
 # This is the math-clean equivalent of "base 270° + Rotation joint 180°"

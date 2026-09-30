@@ -24,6 +24,15 @@ full open), but for a 5cm cube the parallel-jaw operational range is
 pinches the jaws parallel. The smaller per-step jaw swing keeps the
 ``BinaryJointPositionAction`` open<->close transition under the gripper
 actuator's ``effort_limit_sim`` cap."""
+SO101_CANONICAL_INIT_JOINT_POS: dict[str, float] = {
+    "Rotation": 0.0,
+    "Pitch": 0.0,
+    "Elbow": 0.0,
+    "Wrist_Pitch": 1.5708,
+    "Wrist_Roll": 0.0,
+    SO101_GRIPPER_JOINT_NAME: SO101_GRIPPER_OPEN_POS,
+}
+
 SO101_DEFAULT_JOINT_POS: dict[str, float] = {
     "Rotation": -0.2736,
     "Pitch": -0.6109,
