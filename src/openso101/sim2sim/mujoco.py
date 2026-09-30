@@ -121,12 +121,21 @@ def evaluate(args):
         starts = {name: reference[name][0, :args.episodes] for name in (
             "joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "goal_root",
         )}
+        velocity_fields = ("object_linear_velocity_root", "object_angular_velocity_root")
+        velocity_available = all(name in reference for name in velocity_fields)
+        if any(name in reference for name in velocity_fields) and not velocity_available:
+            raise ValueError("物体线速度与角速度需要同时记录")
+        if velocity_available:
+            starts.update({name: reference[name][0, :args.episodes] for name in velocity_fields})
+            if any(starts[name].shape != (args.episodes, 3) or not np.isfinite(starts[name]).all() for name in velocity_fields):
+                raise ValueError("记录的物体速度无效")
     model = build_model(robot_model, metadata)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
     actuator_ids = [model.actuator(name).id for name in JOINT_NAMES]
     object_qpos_id = int(model.joint("object_free").qposadr[0])
+    object_dof_id = int(model.joint("object_free").dofadr[0])
     object_id = model.body("object").id
     gripper_id = model.body("gripper").id
     control_dt = metadata["control_dt"]
@@ -143,6 +152,11 @@ def evaluate(args):
             data.qvel[joint_dof_ids] = starts["joint_velocity"][episode]
             data.qpos[object_qpos_id:object_qpos_id + 3] = starts["object_position_root"][episode]
             data.qpos[object_qpos_id + 3:object_qpos_id + 7] = starts["object_quaternion_root"][episode]
+            if velocity_available:
+                data.qvel[object_dof_id:object_dof_id+3] = starts["object_linear_velocity_root"][episode]
+                data.qvel[object_dof_id+3:object_dof_id+6] = Rotation.from_quat(
+                    starts["object_quaternion_root"][episode], scalar_first=True,
+                ).inv().apply(starts["object_angular_velocity_root"][episode])
             mujoco.mj_forward(model, data)
             goal = starts["goal_root"][episode].copy()
             last_action = np.zeros((1, 6), dtype=np.float32)
@@ -225,6 +239,9 @@ def evaluate(args):
         "physics_dt": model.opt.timestep, "joint_offsets": JOINT_OFFSETS.tolist(),
         "dynamics": "nominal_isaac_PD_and_effort_limits_with_upstream_MJCF_inertia_and_frictionloss",
         "contact_geometry": "upstream_MJCF_convex_meshes", "initial_states": "first_frame_of_actual_Isaac_trace",
+        "source_object_velocity_available": velocity_available,
+        "table_geometry_source": "native_USD_collision_mesh" if "table_geometry" in metadata else "legacy_metadata_plane",
+        "task_reference_height_root": task_height,
         "physics_equivalence_verified": False,
     }
     (output / "report.json").write_text(json.dumps(report, indent=2))
