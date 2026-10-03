@@ -32,7 +32,7 @@ try:
     from isaaclab.managers import RecorderManagerBaseCfg, RecorderTerm, RecorderTermCfg
     from isaaclab.managers.recorder_manager import DatasetExportMode
     from isaaclab.utils import configclass
-    from isaaclab.utils.math import subtract_frame_transforms
+    from isaaclab.utils.math import quat_apply_inverse, subtract_frame_transforms
 
     from openso101.rl.config import digest
     from openso101.rl.execution import build_environment
@@ -148,6 +148,39 @@ try:
         "robot_collision_extras": robot_collision_extras(runtime.sim.stage, "/World/envs/env_0/Robot"),
         "task_goal_radius": runtime.termination_manager.get_term_cfg("success").params["goal_radius"],
     }
+    body_positions, body_quaternions = subtract_frame_transforms(
+        robot.data.root_pos_w[:, None].expand_as(robot.data.body_pos_w),
+        robot.data.root_quat_w[:, None].expand_as(robot.data.body_quat_w),
+        robot.data.body_pos_w, robot.data.body_quat_w,
+    )
+    initial_physics = {
+        "joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
+        "object_position_root": object_position, "object_quaternion_root": object_rotation,
+        "object_linear_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_lin_vel_w),
+        "object_angular_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_ang_vel_w),
+        "robot_body_position_root": body_positions, "robot_body_quaternion_root": body_quaternions,
+        "scene_gravity": torch.tensor(list(robot.data._physics_sim_view.get_gravity())),
+    }
+    for name in ("joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits"):
+        initial_physics[name] = getattr(robot.data, name)[:, ids]
+    for asset_name, asset in (("robot", robot), ("object", obj)):
+        for field, getter in (("body_mass", "masses"), ("body_inertia", "inertias"), ("body_com", "coms")):
+            initial_physics[f"{asset_name}_{field}"] = getattr(asset.root_physx_view, f"get_{getter}")()
+    if any(not torch.isfinite(value).all() for value in initial_physics.values()):
+        raise RuntimeError("原生初始物理参数包含无效数值")
+    physics_path = args.output / "initial_physics.hdf5"
+    with h5py.File(physics_path, "x") as stream:
+        for name, value in initial_physics.items():
+            stream.create_dataset(name, data=value.detach().cpu().numpy()[None])
+    states["physics_recording"] = {
+        "robot_body_names": list(robot.body_names), "inertia_frame": "body_prim_at_center_of_mass",
+        "inertia_matrix_order": "column_major", "com_pose_frame": "body_prim", "com_quaternion_order": "xyzw",
+    }
+    states["quaternion_order"] = "wxyz"
+    states["task_parameters"] = runtime.termination_manager.get_term_cfg("success").params.copy()
+    states["task_parameters"].pop("command_name")
+    states["task_reference_height_root"] = float(runtime.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2])
+    states["initial_physics_sha256"] = digest(physics_path)
     states_path = args.output / "initial_states.json"
     with states_path.open("x") as stream:
         json.dump(states, stream, indent=2)
@@ -248,6 +281,7 @@ try:
               "planned_joint_speed_rad_s": .75 if paths is not None else None,
               "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
+              "initial_physics_sha256": digest(physics_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),
               "rl_policy_success_verified": False}
