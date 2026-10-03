@@ -43,10 +43,13 @@ class Backend:
         if (cfg.action_distribution == "tanh_gaussian"
                 and isinstance(env.unwrapped.action_manager.get_term("arm_action"), NormalizedJointPositionAction)):
             from openso101.rl.vision_distillation import action_mapping
+            from openso101.robots import SO101_ARM_JOINT_NAMES
 
             robot = env.unwrapped.scene["robot"]
             initial = [0.] * env.unwrapped.action_manager.total_action_dim
             for item in action_mapping(env.unwrapped):
+                if item["joint_name"] not in SO101_ARM_JOINT_NAMES:
+                    continue
                 position = robot.data.default_joint_pos[0, robot.joint_names.index(item["joint_name"])]
                 initial[item["action_index"]] = float(((position - item["offset"]) / item["scale"]).clamp(-.98, .98))
             config["policy"]["initial_action_mean"] = initial

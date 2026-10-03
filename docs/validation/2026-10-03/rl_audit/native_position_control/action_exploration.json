@@ -1,0 +1,33 @@
+{
+  "status": "conditional_action_distribution_measured",
+  "checkpoint_sha256": "501048c0dc2b82695c512d6d3c4467f519be67ad0379bec329fcdb7e96902168",
+  "native_trace_sha256": "0d2b05adaa07a62a2138ab75db45bb53b6e781a03b0076e1ca11f0cdc58e907d",
+  "samples": 1200,
+  "latent_jaw_std": 0.7984001040458679,
+  "deterministic_jaw_target_min_rad": 0.7920180559158325,
+  "deterministic_jaw_target_max_rad": 0.7922478318214417,
+  "thresholds": [
+    {
+      "jaw_target_below_rad": 0.4,
+      "conditional_probability_mean": 0.001972811296582222,
+      "conditional_probability_min": 0.0018801689147949219,
+      "conditional_probability_max": 0.001993924379348755
+    },
+    {
+      "jaw_target_below_rad": 0.2,
+      "conditional_probability_mean": 0.00017819296044763178,
+      "conditional_probability_min": 0.00016817450523376465,
+      "conditional_probability_max": 0.0001804828643798828
+    },
+    {
+      "jaw_target_below_rad": 0.1,
+      "conditional_probability_mean": 2.0569290427374654e-05,
+      "conditional_probability_min": 1.9252300262451172e-05,
+      "conditional_probability_max": 2.086162567138672e-05
+    }
+  ],
+  "probability_scope": "\u5b9e\u9645\u786e\u5b9a\u6027\u8f68\u8ff9\u6240\u8bbf\u95ee\u72b6\u6001\u4e2d\u7684\u4fdd\u5b58\u6a21\u578b\u52a8\u4f5c\u5206\u5e03",
+  "training_sample_frequency_verified": false,
+  "task_success_verified": false,
+  "source_sha256": "c4dbfb3517085b276bd54ad8e6ce28a676392643d5fb40108838baf34e995fa6"
+}
