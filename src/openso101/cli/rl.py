@@ -185,26 +185,8 @@ def _cmd_train(args: argparse.Namespace) -> int:
     ):
         args.resume = True
 
-    # Auto-fallback when the user picked wandb but it isn't importable in
-    # this env (wandb lives in [project.optional-dependencies] and a fresh
-    # scripts/install.sh does not pull it). Falling through to wandb here
-    # would crash rsl_rl deep in the runner on `import wandb`.
     if args.logger == "wandb":
-        try:
-            import wandb  # noqa: F401
-        except ImportError:
-            print(
-                "[WARN] --logger wandb requested but wandb is not installed. "
-                "Falling back to tensorboard. Install with `pip install wandb` "
-                "and re-run for browser-based monitoring."
-            )
-            args.logger = "tensorboard"
-        else:
-            print(
-                f"[INFO] Logging to W&B project '{args.log_project_name}'. "
-                "If WANDB_API_KEY is unset, wandb will prompt or fall back to "
-                "anonymous mode."
-            )
+        import wandb  # noqa: F401
 
     # Distillation: the teacher checkpoint flag is the only user-facing
     # way to point at a teacher. Internally rsl_rl reads it from
@@ -249,13 +231,7 @@ def _cmd_train(args: argparse.Namespace) -> int:
         if getattr(args, "with_cameras", False):
             env_cfg.configure_cameras(True)
         if getattr(args, "visual_dr", False):
-            if hasattr(env_cfg, "configure_visual_dr"):
-                env_cfg.configure_visual_dr(True)
-            else:
-                print(
-                    "[WARN]: --visual-dr requested but this task lacks a "
-                    "configure_visual_dr() hook; skipping."
-                )
+            env_cfg.configure_visual_dr(True)
 
         env_cfg.scene.num_envs = args.num_envs if args.num_envs is not None else env_cfg.scene.num_envs
         agent_cfg.max_iterations = (
@@ -1298,6 +1274,12 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_campaign.add_argument("--seeds", type=int, nargs=3, default=[42, 43, 44])
     p_campaign.add_argument("--gpus", type=int, nargs="+", required=True)
     p_campaign.add_argument("--num-envs", dest="num_envs", type=int, default=2048)
+    p_campaign.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v4")
+    p_campaign.add_argument("--validate-loop", action="store_true", help="对每个通过训练验收的 seed 执行完整闭环验证")
+    p_campaign.add_argument("--robot-model")
+    p_campaign.add_argument("--collision-bundle")
+    p_campaign.add_argument("--mujoco-python")
+    p_campaign.add_argument("--distillation-iterations", type=int, default=1500)
     p_campaign.set_defaults(func=_cmd_campaign)
 
     p_play = sub.add_parser("play", help="Replay a trained checkpoint")

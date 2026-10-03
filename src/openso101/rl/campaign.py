@@ -23,6 +23,14 @@ def campaign(args):
     if config.evaluation_episodes != 100 or config.evaluation_interval != 100:
         raise ValueError("campaign 需要每 100 iterations 评估 100 episodes")
     config.batch_size(args.num_envs)
+    profile = args.task_profile
+    if args.validate_loop:
+        for name in ("robot_model", "collision_bundle", "mujoco_python"):
+            value = getattr(args, name)
+            if value is None or not Path(value).exists():
+                raise ValueError(f"完整闭环需要有效的 {name}")
+        if args.distillation_iterations <= 0:
+            raise ValueError("完整闭环需要有效的 distillation_iterations")
     root = Path(args.output).resolve()
     root.mkdir(parents=True, exist_ok=False)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -30,10 +38,11 @@ def campaign(args):
     jobs = []
     handles = []
     processes = []
-    receipt = {"schema_version": 1, "training_git_sha": revision, "config_sha256": digest(config_path),
-               "created_at": datetime.now(UTC).isoformat(), "task_profile": "grasp_v3",
+    receipt = {"schema_version": 2, "training_git_sha": revision, "config_sha256": digest(config_path),
+               "created_at": datetime.now(UTC).isoformat(), "task_profile": profile,
                "environment_mode": config.environment_mode, "num_envs": args.num_envs,
-               "required_seeds": args.seeds, "jobs": jobs, "multi_seed_acceptance_verified": False}
+               "required_seeds": args.seeds, "jobs": jobs, "multi_seed_acceptance_verified": False,
+               "validation_loop_requested": args.validate_loop, "multi_seed_loop_verified": False}
 
     def write_receipt():
         (root / "campaign.json").write_text(json.dumps(receipt, indent=2) + "\n")
@@ -44,7 +53,7 @@ def campaign(args):
             folder = root / f"{task}_seed_{seed}"
             command = [sys.executable, "-m", "openso101.cli.main", "rl", "train", "--task", task,
                        "--algo", "ppo", "--backend", "rsl_rl", "--train-config", str(config_path),
-                       "--task-profile", "grasp_v3", "--seed", str(seed), "--num_envs", str(args.num_envs),
+                       "--task-profile", profile, "--seed", str(seed), "--num_envs", str(args.num_envs),
                        "--output", str(folder), "--headless", "--no-video", "--logger", "tensorboard"]
             log_path = root / f"{folder.name}.log"
             jobs.append({"task": task, "seed": seed, "gpu": None, "pid": None,
@@ -91,9 +100,34 @@ def campaign(args):
                            seed_converged=accepted, checkpoint_sha256=meta.files[meta.checkpoint],
                            selected_policy=str(best_folder), completed_transitions=meta.completed_transitions)
                 write_receipt()
+                if accepted and args.validate_loop:
+                    loop_folder = root / f"{folder.name}_validation_loop"
+                    command = [sys.executable, "-u", "-m", "openso101.cli.main", "rl", "validate-loop",
+                               "--teacher-run", str(best_folder), "--output", str(loop_folder),
+                               "--robot-model", str(Path(args.robot_model).resolve()),
+                               "--collision-bundle", str(Path(args.collision_bundle).resolve()),
+                               "--mujoco-python", str(Path(args.mujoco_python).resolve()),
+                               "--distillation-iterations", str(args.distillation_iterations),
+                               "--seed", str(30000 + job["seed"])]
+                    job.update(validation_loop_status="running", validation_loop_command=command)
+                    write_receipt()
+                    with (root / f"{folder.name}_validation_loop.log").open("x") as log:
+                        completed = subprocess.run(command, env=os.environ | {"CUDA_VISIBLE_DEVICES": str(job["gpu"])},
+                                                   stdout=log, stderr=subprocess.STDOUT)
+                    report = loop_folder / "validation_loop.json"
+                    job.update(validation_loop_exit_code=completed.returncode,
+                               validation_loop_report=str(report), validation_loop_report_sha256=digest(report))
+                    loop_receipt = json.loads(report.read_text())
+                    job["validation_loop_status"] = loop_receipt["status"]
+                    job["single_policy_loop_verified"] = loop_receipt["single_policy_loop_verified"]
+                    write_receipt()
+                    if completed.returncode or not job["single_policy_loop_verified"]:
+                        raise RuntimeError(f"独立闭环验收未通过：{loop_folder}")
                 print(json.dumps(job), flush=True)
             time.sleep(10)
         receipt["multi_seed_acceptance_verified"] = all(job["status"] == "accepted" for job in jobs)
+        receipt["multi_seed_loop_verified"] = receipt["multi_seed_acceptance_verified"] and all(
+            job.get("single_policy_loop_verified", False) for job in jobs)
         receipt["completed_at"] = datetime.now(UTC).isoformat()
         write_receipt()
         return 0 if receipt["multi_seed_acceptance_verified"] else 1
