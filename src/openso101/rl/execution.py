@@ -46,6 +46,13 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
     if getattr(args, "recorder_cfg", None) is not None:
         cfg.recorders = args.recorder_cfg
     cfg.configure_cameras(bool(getattr(args, "with_cameras", False)))
+    resolution = getattr(args, "camera_resolution", None)
+    if getattr(args, "with_cameras", False) and resolution is not None:
+        if not isinstance(resolution, int) or resolution <= 0 or resolution % 2:
+            raise ValueError("camera_resolution 需要正的偶数")
+        for name in ("overhead_camera", "wrist_camera"):
+            camera = getattr(cfg.scene, name)
+            camera.width = camera.height = resolution
     from openso101.tasks.shared.grasp_v3 import configure_environment_mode
 
     configure_environment_mode(cfg, getattr(args, "environment_mode", "randomized"))

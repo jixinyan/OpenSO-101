@@ -11,18 +11,19 @@ parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--num-envs", type=int, default=4)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v3")
+parser.add_argument("--with-cameras", action="store_true")
+parser.add_argument("--camera-resolution", type=int, default=256)
 args = parser.parse_args()
 if args.output.exists() or args.num_envs <= 0:
     raise ValueError("任务检查需要新的输出目录和有效环境数量")
 args.output.mkdir(parents=True, exist_ok=False)
 args.task = "OpenSO101-Lift-v0"
 args.environment_mode = "nominal"
-args.with_cameras = False
 args.visual_dr = False
 
 from isaaclab.app import AppLauncher
 
-app = AppLauncher(headless=True).app
+app = AppLauncher(headless=True, enable_cameras=args.with_cameras).app
 env = None
 try:
     import h5py
@@ -71,6 +72,12 @@ try:
             values["jaw_object_force_vectors"] = torch.stack([
                 runtime.scene[name].data.force_matrix_w.sum(dim=(1, 2))
                 for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1)
+            if args.with_cameras:
+                for name in ("overhead_camera", "wrist_camera"):
+                    rgb = runtime.scene[name].data.output["rgb"][0, :, :, :3]
+                    if rgb.shape != (args.camera_resolution, args.camera_resolution, 3) or rgb.dtype != torch.uint8:
+                        raise ValueError("原生相机的实际图像形状或数据类型不一致")
+                    values[f"cameras/{name}"] = rgb
             if any(not torch.isfinite(value).all() for value in values.values()):
                 raise RuntimeError("任务检查产生无效状态")
             trace.append({name: value.cpu().numpy().copy() for name, value in values.items()})
@@ -216,7 +223,8 @@ try:
     trajectory = args.output / "trajectory.hdf5"
     with h5py.File(trajectory, "x") as stream:
         for name in trace[0]:
-            stream.create_dataset(name, data=np.stack([item[name] for item in trace]))
+            stream.create_dataset(name, data=np.stack([item[name] for item in trace]),
+                                  compression="gzip" if name.startswith("cameras/") else None)
         stream.create_dataset("physics_steps/joint_velocity", data=np.asarray(physics))
         stream.attrs["control_dt"] = runtime.step_dt
         stream.attrs["physics_dt"] = runtime.physics_dt
@@ -252,6 +260,35 @@ try:
         "frames_exceeding_stationary_effort_budget": (np.abs(gravity) > holding_budget).sum(axis=(0, 1)).tolist(),
         "measured_frames": len(trace) * args.num_envs,
     }
+    if args.with_cameras:
+        import av
+        from fractions import Fraction
+
+        fps = Fraction(1 / runtime.step_dt).limit_denominator(10000)
+        selected = [item for item in trace if item["active"][0]]
+        video_path = args.output / "native_grasp.mp4"
+        with av.open(str(video_path), "w") as movie:
+            video = movie.add_stream("libx264", rate=fps)
+            video.width, video.height = args.camera_resolution * 2, args.camera_resolution
+            video.pix_fmt = "yuv420p"
+            video.options = {"crf": "18", "preset": "fast"}
+            for item in selected:
+                image = np.concatenate([item[f"cameras/{name}"] for name in ("overhead_camera", "wrist_camera")], axis=1)
+                if np.std(image) <= 0:
+                    raise ValueError("原生视频的相机图像缺少变化")
+                for packet in video.encode(av.VideoFrame.from_ndarray(image, format="rgb24")):
+                    movie.mux(packet)
+            for packet in video.encode():
+                movie.mux(packet)
+        with av.open(str(video_path)) as movie:
+            decoded = sum(1 for _ in movie.decode(video=0))
+            if decoded != len(selected) or movie.streams.video[0].average_rate != fps:
+                raise ValueError("原生视频的编码帧数或频率不一致")
+        report["video"] = {"path": str(video_path.resolve()), "sha256": digest(video_path),
+                           "frames": decoded, "fps": float(fps), "environment": 0,
+                           "resolution": [args.camera_resolution * 2, args.camera_resolution],
+                           "camera_order": ["overhead_camera", "wrist_camera"],
+                           "scripted_task_success": bool(finished_success[0]), "rl_policy_success_verified": False}
     with (args.output / "report.json").open("x") as stream:
         json.dump(report, stream, indent=2)
     print(json.dumps(report), flush=True)
