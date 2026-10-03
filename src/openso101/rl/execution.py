@@ -3,6 +3,7 @@
 
 import json
 import shutil
+import signal
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -144,6 +145,10 @@ def train(args):
     from isaaclab.app import AppLauncher
 
     app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras or args.video).app
+    def terminate_training(signum, frame):
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, terminate_training)
     env = None
     try:
         from isaaclab.utils.io import dump_yaml
@@ -204,7 +209,7 @@ def train(args):
     finally:
         if env is not None:
             env.close()
-    app.close()
+        app.close()
     return 0
 
 
