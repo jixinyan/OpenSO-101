@@ -11,13 +11,16 @@ parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--num-envs", type=int, default=4)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v3")
+parser.add_argument("--task", choices=("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0"), default="OpenSO101-Lift-v0")
 parser.add_argument("--with-cameras", action="store_true")
 parser.add_argument("--camera-resolution", type=int, default=256)
 args = parser.parse_args()
 if args.output.exists() or args.num_envs <= 0:
     raise ValueError("任务检查需要新的输出目录和有效环境数量")
 args.output.mkdir(parents=True, exist_ok=False)
-args.task = "OpenSO101-Lift-v0"
+pick_place = args.task == "OpenSO101-PickPlace-v0"
+if pick_place and args.task_profile != "grasp_v4":
+    raise ValueError("完整 PickPlace 检查需要 grasp_v4 控制配置")
 args.environment_mode = "nominal"
 args.visual_dr = False
 
@@ -66,6 +69,10 @@ try:
                       "phase": phase.clone(), "active": active.clone()}
             values["path_cursor"] = path_cursor.clone()
             values["desired_joint_position"] = desired.clone()
+            if pick_place:
+                command = runtime.command_manager.get_term("object_pose")
+                values["task_stage"] = command.stage.clone()
+                values["placement_hold_seconds"] = command.placement_hold_seconds.clone()
             values["jaw_net_force_vectors"] = torch.stack([
                 runtime.scene[name].data.net_forces_w.sum(dim=1)
                 for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1)
@@ -146,8 +153,15 @@ try:
         "table_geometry": geometry, "table_height_root": geometry["top_height_root"],
         "object_size": list(runtime.cfg.scene.object.spawn.size), "object_mass": runtime.cfg.scene.object.spawn.mass_props.mass,
         "robot_collision_extras": robot_collision_extras(runtime.sim.stage, "/World/envs/env_0/Robot"),
-        "task_goal_radius": runtime.termination_manager.get_term_cfg("success").params["goal_radius"],
+        "task_goal_radius": (runtime.command_manager.get_term("object_pose").cfg.advance_threshold
+                             + runtime.command_manager.get_term("object_pose").cfg.object_contact_radius)
+                            if pick_place else runtime.termination_manager.get_term_cfg("success").params["goal_radius"],
     }
+    if pick_place:
+        command = runtime.command_manager.get_term("object_pose")
+        for index, item in enumerate(states["environments"]):
+            item["carry_goal_position_root"] = command.goal_for_stage(1)[index].cpu().tolist()
+            item["place_goal_position_root"] = command.goal_for_stage(2)[index].cpu().tolist()
     body_positions, body_quaternions = subtract_frame_transforms(
         robot.data.root_pos_w[:, None].expand_as(robot.data.body_pos_w),
         robot.data.root_quat_w[:, None].expand_as(robot.data.body_quat_w),
@@ -178,7 +192,7 @@ try:
     }
     states["quaternion_order"] = "wxyz"
     states["task_parameters"] = runtime.termination_manager.get_term_cfg("success").params.copy()
-    states["task_parameters"].pop("command_name")
+    states["task_parameters"].pop("command_name", None)
     states["task_reference_height_root"] = float(runtime.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2])
     states["initial_physics_sha256"] = digest(physics_path)
     states_path = args.output / "initial_states.json"
@@ -203,8 +217,8 @@ try:
                            for environment in plan["environments"]], device=runtime.device)
              if args.task_profile == "grasp_v4" else None)
     if paths is not None:
-        starts = torch.stack((torch.tensor([item["joint_position"][:5] for item in states["environments"]],
-                                          device=runtime.device), paths[:, 0, -1], paths[:, 1, -1]), dim=1)
+        starts = torch.cat((torch.tensor([item["joint_position"][:5] for item in states["environments"]],
+                                         device=runtime.device)[:, None], paths[:, :-1, -1]), dim=1)
         paths = torch.cat((starts.unsqueeze(2), paths), dim=2)
         lengths = torch.cat((torch.zeros_like(paths[:, :, :1, 0]),
                              torch.abs(paths[:, :, 1:] - paths[:, :, :-1]).amax(dim=-1).cumsum(dim=-1)), dim=-1)
@@ -212,23 +226,25 @@ try:
     finished_success = torch.zeros_like(active)
     contact_hold_steps = torch.zeros_like(phase)
     for step in range(runtime.max_episode_length - settling_steps):
-        target_index = torch.where(phase < 2, phase, 2).clamp(0, 2)
-        target_index = torch.where(phase == 2, 1, target_index)
+        target_index = (phase - (phase >= 2).long()).clamp(0, targets.shape[1] - 1)
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
         if paths is not None:
             rows = torch.arange(args.num_envs, device=runtime.device)
             selected_paths, selected_lengths = paths[rows, target_index], lengths[rows, target_index]
             tracking_error = (robot.data.joint_pos[:, ids[:5]] - desired[:, :5]).abs().amax(dim=-1)
             moving = (phase != 2) & active & (tracking_error < .08)
+            if pick_place:
+                moving &= phase < 6
             path_distance = torch.minimum(path_distance + moving * .75 * runtime.step_dt, selected_lengths[:, -1])
-            distance = torch.where(phase == 2, selected_lengths[:, -1], path_distance)
+            holding = (phase == 2) | ((phase >= 6) if pick_place else torch.zeros_like(active))
+            distance = torch.where(holding, selected_lengths[:, -1], path_distance)
             upper = torch.searchsorted(selected_lengths.contiguous(), distance[:, None].contiguous(), right=True)[:, 0]
             upper = upper.clamp(1, paths.shape[2] - 1)
             fraction = ((distance - selected_lengths[rows, upper - 1]) /
                         (selected_lengths[rows, upper] - selected_lengths[rows, upper - 1]).clamp_min(1e-8))
             arm_target = torch.lerp(selected_paths[rows, upper - 1], selected_paths[rows, upper], fraction[:, None])
             path_cursor = upper - 1
-        jaw_target = torch.where(phase < 2, .8, 0.).unsqueeze(-1)
+        jaw_target = torch.where((phase < 2) | ((phase >= 6) if pick_place else torch.zeros_like(active)), .8, 0.).unsqueeze(-1)
         desired = torch.cat((arm_target, jaw_target), dim=-1)
         actions = control_actions(desired)
         actions[~active] = 0
@@ -240,6 +256,14 @@ try:
         if paths is not None:
             reached_sample = (errors < .015) & active & (phase != 2)
             advanced = (phase < 2) & reached_sample & (path_distance >= selected_lengths[:, -1])
+            if pick_place:
+                command = runtime.command_manager.get_term("object_pose")
+                path_finished = reached_sample & (path_distance >= selected_lengths[:, -1])
+                advanced |= (phase == 3) & path_finished & (command.stage >= 1)
+                advanced |= (phase == 4) & path_finished & (command.stage >= 2)
+                object_root = torch.as_tensor(sample["object_position_root"], device=runtime.device)
+                at_place = torch.linalg.vector_norm(object_root - command.goal_for_stage(2), dim=-1) <= .03
+                advanced |= (phase == 5) & path_finished & at_place
         forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
         contact_hold_steps = torch.where((phase == 2) & (forces > .5).all(dim=-1), contact_hold_steps + 1, 0)
         advanced |= (phase == 2) & (contact_hold_steps * runtime.step_dt >= .1) & active
@@ -279,6 +303,7 @@ try:
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
               "settling_steps": settling_steps, "bilateral_hold_before_lift_s": .1,
               "planned_joint_speed_rad_s": .75 if paths is not None else None,
+              "planned_phases": [item["phase"] for item in plan["environments"][0]["targets"]],
               "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "initial_physics_sha256": digest(physics_path),

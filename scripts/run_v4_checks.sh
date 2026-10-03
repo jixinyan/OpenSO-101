@@ -17,6 +17,7 @@ if [[ "$check_kind" == task ]]; then
         camera_arguments=(--with-cameras --camera-resolution 256)
     fi
     "$task_python" -u scripts/check_grasp_task.py --task-profile grasp_v4 \
+        --task "${OPENSO101_TASK:-OpenSO101-Lift-v0}" \
         --output "outputs/rl_progress/${prefix}_task" \
         --num-envs "${4:-4}" \
         --planner-python /home/jixin/workspace/envs/openso101-mujoco/bin/python \
