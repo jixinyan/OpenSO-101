@@ -47,14 +47,21 @@ with (output / "training.log").open("x") as log:
         os.killpg(process.pid, signal.SIGTERM)
         exit_code = process.wait(timeout=30)
         stopped_seconds = time.monotonic() - stop_started
-        if exit_code != 128 + signal.SIGTERM:
+        if exit_code not in (0, 128 + signal.SIGTERM):
             raise RuntimeError(f"训练停止的实际 exit_code 不一致：{exit_code}")
+        stop_record = json.loads((run / "training_stop.json").read_text())
+        if (stop_record["status"] != "stop_requested" or stop_record["signal"] != signal.SIGTERM
+                or stop_record["worker_pid"] != process.pid or stop_record["training_git_sha"] != metadata.git_sha
+                or (run / "checkpoint.json").exists()):
+            raise RuntimeError("停止检查的实际 signal 来源与训练状态不一致")
         checked = CheckpointMeta.read(preserved)
         if checked != metadata or digest(checkpoint) != metadata.files[checkpoint.name]:
             raise RuntimeError("停止后的实际保存模型或副本发生变化")
         report = {"status": "native_training_sigterm_verified", "created_at": datetime.now(UTC).isoformat(),
                   "training_command": command, "worker_pid": process.pid, "signal": "SIGTERM",
                   "exit_code": exit_code, "stop_seconds": stopped_seconds,
+                  "stop_record_sha256": digest(run / "training_stop.json"),
+                  "training_completed": False,
                   "preserved_checkpoint_sha256": metadata.files[checkpoint.name],
                   "preserved_transitions": metadata.completed_transitions,
                   "training_git_sha": metadata.git_sha, "source_sha256": digest(Path(__file__)),

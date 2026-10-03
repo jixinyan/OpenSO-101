@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import os
 import shutil
 import signal
 import subprocess
@@ -147,9 +148,15 @@ def train(args):
 
     app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras or args.video).app
     def terminate_training(signum, frame):
+        (output / "training_stop.json").write_text(json.dumps({
+            "status": "stop_requested", "signal": signum, "worker_pid": os.getpid(),
+            "training_git_sha": git_sha, "task": args.task, "seed": config.seed,
+            "requested_at": datetime.now(UTC).isoformat(),
+        }, indent=2) + "\n")
         raise SystemExit(128 + signum)
 
     signal.signal(signal.SIGTERM, terminate_training)
+    signal.signal(signal.SIGINT, terminate_training)
     env = None
     try:
         from isaaclab.utils.io import dump_yaml
