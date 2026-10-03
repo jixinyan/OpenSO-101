@@ -18,7 +18,12 @@ def plan_collision_grasp(model, states, environment, rng):
     limits = np.asarray(states["soft_joint_limits"])[:5] + JOINT_OFFSETS[:5, None]
     lower, upper = limits[:, 0] + 1e-5, limits[:, 1] - 1e-5
     center = np.array([.01, 0., -.09])
-    positions = [start + [0., 0., .03], start + [0., 0., .25 * states["planner_physics"]["object_size"][2]]]
+    goal = np.asarray(environment["goal_position_root"])
+    object_offset = .25 * states["planner_physics"]["object_size"][2]
+    lift_radius = states["planner_physics"]["task_goal_radius"] - object_offset - .005
+    if not np.isfinite(lift_radius) or lift_radius <= .003:
+        raise ValueError("原生任务目标范围无法容纳抓取中心与跟踪误差")
+    positions = [start + [0., 0., .03], start + [0., 0., .25 * states["planner_physics"]["object_size"][2]], goal]
 
     def pose(arm, jaw=.8, allow_grasp_contact=False):
         data.qpos[ids[:5]] = arm
@@ -39,24 +44,30 @@ def plan_collision_grasp(model, states, environment, rng):
         return position, rotation, depth
 
     def coupled_residual(joints):
-        poses = [pose(arm) for arm in joints.reshape(2, 5)]
-        return np.concatenate((*(20 * (value[0] - target) for value, target in zip(poses, positions, strict=True)),
+        poses = [pose(arm, jaw=0. if index == 2 else .8, allow_grasp_contact=index == 2)
+                 for index, arm in enumerate(joints.reshape(3, 5))]
+        lift_error = poses[2][0] - goal
+        lift_violation = lift_error * max(0., 1 - lift_radius / max(np.linalg.norm(lift_error), 1e-12))
+        return np.concatenate((20 * (poses[0][0] - positions[0]), 20 * (poses[1][0] - positions[1]),
+                               20 * lift_violation, .01 * lift_error,
                                (poses[0][1] - poses[1][1]).ravel(),
-                               [max(0., np.cos(np.pi / 4) - value[1][2, 2]) for value in poses],
+                               (poses[1][1] - poses[2][1]).ravel(),
                                [.05 * (1 - value[1][2, 2]) for value in poses],
                                [100 * value[2] for value in poses]))
 
-    starts = [np.tile(np.clip(initial, lower, upper), 2)]
-    starts.extend(np.tile(arm, 2) for arm in rng.uniform(lower, upper, size=(31, 5)))
-    solutions = [least_squares(coupled_residual, guess, bounds=(np.tile(lower, 2), np.tile(upper, 2)),
+    starts = [np.tile(np.clip(initial, lower, upper), 3)]
+    starts.extend(np.tile(arm, 3) for arm in rng.uniform(lower, upper, size=(31, 5)))
+    solutions = [least_squares(coupled_residual, guess, bounds=(np.tile(lower, 3), np.tile(upper, 3)),
                                ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=1000) for guess in starts]
 
     def feasible(solution):
-        poses = [pose(arm) for arm in solution.x.reshape(2, 5)]
-        return (solution.success and all(np.linalg.norm(value[0] - target) <= .003 and value[2] <= .0001
-                                        and value[1][2, 2] >= np.cos(np.pi / 4) - .01
-                                        for value, target in zip(poses, positions, strict=True))
-                and np.linalg.norm(poses[0][1] - poses[1][1]) <= .02)
+        poses = [pose(arm, jaw=0. if index == 2 else .8, allow_grasp_contact=index == 2)
+                 for index, arm in enumerate(solution.x.reshape(3, 5))]
+        return (solution.success and all(np.linalg.norm(value[0] - target) <= (.003 if index < 2 else lift_radius)
+                                        and value[2] <= .0001
+                                        for index, (value, target) in enumerate(zip(poses, positions, strict=True)))
+                and np.linalg.norm(poses[0][1] - poses[1][1]) <= .02
+                and np.linalg.norm(poses[1][1] - poses[2][1]) <= .02)
 
     def path_safe(start_arm, end_arm, jaw=.8, allow_grasp_contact=False):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
@@ -88,53 +99,39 @@ def plan_collision_grasp(model, states, environment, rng):
 
     candidates = sorted((item for item in solutions if feasible(item) and path_safe(initial, item.x[:5])),
                         key=lambda item: np.linalg.norm(item.x[:5] - initial)
-                        + np.linalg.norm(item.x[5:] - item.x[:5]))
+                        + np.linalg.norm(np.diff(item.x.reshape(3, 5), axis=0)))
     result = min(solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
     grasp_path = None
-    pair_accepted = False
+    lift_path = None
+    paths_accepted = False
     for candidate in candidates:
-        candidate_path, valid = cartesian_path(candidate.x[:5], candidate.x[5:])
-        if valid:
-            result, grasp_path, pair_accepted = candidate, candidate_path, True
+        candidate_path, valid = cartesian_path(candidate.x[:5], candidate.x[5:10])
+        candidate_lift, lift_valid = cartesian_path(candidate_path[-1], candidate.x[10:], jaw=0., allow_grasp_contact=True)
+        if valid and lift_valid:
+            result, grasp_path, lift_path, paths_accepted = candidate, candidate_path, candidate_lift, True
             break
-    arms = [result.x[:5], grasp_path[-1] if grasp_path is not None else result.x[5:]]
-    previous = arms[-1]
-    goal = np.asarray(environment["goal_position_root"])
-    grasp_rotation = pose(previous)[1]
-
-    def lift_residual(arm):
-        position, rotation, depth = pose(arm, jaw=0., allow_grasp_contact=True)
-        return np.concatenate((20 * (position - goal), (rotation - grasp_rotation).ravel(),
-                               .0001 * (arm - previous), [100 * depth]))
-
-    lift_starts = [np.clip(previous, lower, upper), *rng.uniform(lower, upper, size=(15, 5))]
-    lift_solutions = [least_squares(lift_residual, guess, bounds=(lower, upper),
-                                    ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=500) for guess in lift_starts]
-    lift_feasible = [item for item in lift_solutions if item.success and np.linalg.norm(lift_residual(item.x)[:3]) <= .06
-                    and np.linalg.norm(lift_residual(item.x)[3:12]) <= .02
-                    and lift_residual(item.x)[-1] <= .01
-                    ]
-    lift = min(lift_feasible, key=lambda item: np.linalg.norm(item.x - previous)) if lift_feasible else min(
-        lift_solutions, key=lambda item: np.linalg.norm(lift_residual(item.x)))
-    arms.append(lift.x)
-    lift_path, lift_path_accepted = cartesian_path(previous, lift.x, jaw=0., allow_grasp_contact=True)
+    arms = [result.x[:5], grasp_path[-1] if grasp_path is not None else result.x[5:10],
+            lift_path[-1] if lift_path is not None else result.x[10:]]
     targets = []
     previous = initial
-    for index, (name, arm, target) in enumerate(zip(("approach", "grasp", "lift"), arms, [*positions, goal], strict=True)):
-        path = (lift_path if name == "lift" else grasp_path if name == "grasp" and grasp_path is not None
+    for index, (name, arm, target) in enumerate(zip(("approach", "grasp", "lift"), arms, positions, strict=True)):
+        path = (lift_path if name == "lift" and lift_path is not None else grasp_path if name == "grasp" and grasp_path is not None
                 else np.linspace(previous, arm, 65)[1:])
         samples = [pose(point, jaw=0. if name == "lift" else .8, allow_grasp_contact=name == "lift") for point in path]
         position, rotation, depth = samples[-1]
         maximum_depth = max(value[2] for value in samples)
-        accepted = (pair_accepted if index < 2 else bool(lift_feasible) and lift_path_accepted) and maximum_depth <= .0001
+        accepted = paths_accepted and maximum_depth <= .0001
         targets.append({"phase": name, "target_position_root": target.tolist(),
                         "joint_position": (arm - JOINT_OFFSETS[:5]).tolist(),
                         "path_joint_positions": (path - JOINT_OFFSETS[:5]).tolist(),
                         "position_error_m": float(np.linalg.norm(position - target)),
-                        "inclination_limit_violation": max(0., float(np.cos(np.pi / 4) - rotation[2, 2])) if index < 2 else None,
+                        "gripper_inclination_rad": float(np.arccos(np.clip(rotation[2, 2], -1, 1))),
                         "maximum_penetration_m": depth, "sampled_path_maximum_penetration_m": maximum_depth,
-                        "path_samples": len(samples), "accepted": bool(accepted), "attempts": len(solutions) if index < 2 else len(lift_solutions)})
+                        "path_samples": len(samples), "accepted": bool(accepted), "attempts": len(solutions)})
         previous = arm
     return {"environment": environment["environment"], "targets": targets,
             "accepted": all(item["accepted"] for item in targets),
-            "approach_grasp_rotation_difference": float(np.linalg.norm(pose(arms[0])[1] - pose(arms[1])[1]))}
+            "approach_grasp_rotation_difference": float(np.linalg.norm(pose(arms[0])[1] - pose(arms[1])[1])),
+            "grasp_lift_rotation_difference": float(np.linalg.norm(pose(arms[1])[1] - pose(arms[2])[1])),
+            "coupled_waypoints": 3, "native_task_goal_radius_m": states["planner_physics"]["task_goal_radius"],
+            "planned_lift_center_radius_m": lift_radius}

@@ -82,6 +82,10 @@ report = {"status": "kinematic_plan_verified" if all(item["accepted"] for item i
           "sampled_collision_path_verified": bool(args.collision_bundle) and all(item["accepted"] for item in records),
           "continuous_collision_path_verified": False,
           "task_success_verified": False}
+if args.collision_bundle:
+    report["maximum_grasp_inclination_rad"] = None
+    report["orientation_constraint"] = "coupled_waypoints_rotation_matrix_difference_norm_below_0.02"
+    report["native_task_goal_radius_m"] = states["planner_physics"]["task_goal_radius"]
 with args.output.open("x") as stream:
     json.dump(report, stream, indent=2)
 print(json.dumps({name: value for name, value in report.items() if name != "environments"}), flush=True)

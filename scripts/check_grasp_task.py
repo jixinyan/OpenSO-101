@@ -139,6 +139,7 @@ try:
         "table_geometry": geometry, "table_height_root": geometry["top_height_root"],
         "object_size": list(runtime.cfg.scene.object.spawn.size), "object_mass": runtime.cfg.scene.object.spawn.mass_props.mass,
         "robot_collision_extras": robot_collision_extras(runtime.sim.stage, "/World/envs/env_0/Robot"),
+        "task_goal_radius": runtime.termination_manager.get_term_cfg("success").params["goal_radius"],
     }
     states_path = args.output / "initial_states.json"
     with states_path.open("x") as stream:
