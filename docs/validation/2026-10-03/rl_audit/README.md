@@ -101,6 +101,12 @@ CPU 检查为 44 项通过，四项使用替代服务或对象的测试未执行
 
 `portable.json` 与 `mujoco.json` 使用同一个完整范围位置策略。原生观测重建误差为零，策略最大误差为 `5.96e-8`，位置目标最大误差为 `1.19e-7`。MuJoCo 完成四个 episode、20,000 个物理步骤，实际速度与力矩检查通过，任务成功为 `0/4`。
 
+`neutral_jaw_exploration.json` 使用最终模型和 1,200 个实际原生状态。确定性 jaw 目标为 0.401250–0.404060 rad，小于 0.4 rad 与 0.2 rad 目标的条件概率为 49.65% 与 24.31%。模型 SHA256 为 `5d7510ffc0e1136f814467bc030692970903896d311b2c5cb383453e4ff6ddf8`，参数与独立评估模型逐项一致。
+
+`neutral_jaw_portable.json` 与 `camera_mujoco.json` 保存同一最终模型的导出和 MuJoCo 检查。MuJoCo 包含原生 camera mount 的 48 个 CoACD convex parts，各自独立设置四个实际初始环境；共 20,000 个物理步骤，速度与力矩检查通过，任务成功为 `0/4`。末端坐标最大位置误差为 `1.929104 µm`，最大旋转误差为 `1.09035e-5 rad`。
+
+`checkpoint_selection.json` 使用 `5ec65c2` 的原生环境完成四次更新、1,536 transitions。训练日志成功率为零；依据训练日志成功率和 reward 选择的文件分别保存，全部参数为有效数值。报告包含文件、检查脚本与 runner 的 SHA256，独立任务成功尚未通过。
+
 ## 完整闭环的任务验收
 
 `validation_loop/report.json` 来自真实 teacher 模型的独立 100 episodes 检查，seed 为 `30042`，模型 SHA256 为 `863e4671996ae4e4294eea419461f905fbd60a9690eedf38482e00227eb525af`。实际成功率为 `0/100`，状态为 `task_threshold_not_met`。teacher、MuJoCo 与 student 的各项任务评估均要求至少 `90/100`；成功策略的完整流程尚未通过。
