@@ -29,8 +29,8 @@ def task_state(env):
 def configure_grasp_v3(cfg, task_id):
     configure_grasp_profile(cfg, task_id)
     cfg.scene.robot.init_state.joint_pos["Wrist_Pitch"] = 1.4
-    cfg.sim.dt = .002
-    cfg.decimation = 10
+    cfg.sim.dt = .001
+    cfg.decimation = 20
     cfg.sim.render_interval = cfg.decimation
     cfg.sim.physx.solve_articulation_contact_last = True
     cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count = 8

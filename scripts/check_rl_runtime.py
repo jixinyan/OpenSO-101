@@ -38,12 +38,14 @@ try:
     from openso101.tasks.shared import grasp_v3
 
     physics_samples = []
+    physics_positions = []
 
     class PhysicsSpeedRecorder(RecorderTerm):
         def record_post_physics_decimation_step(self):
             asset = self._env.scene["robot"]
             joint_ids = [asset.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
             physics_samples.append(asset.root_physx_view.get_dof_velocities()[:, joint_ids].clone())
+            physics_positions.append(asset.root_physx_view.get_dof_positions()[:, joint_ids].clone())
             return None, None
 
     @configclass
@@ -121,6 +123,7 @@ try:
         for column, name in enumerate(("raw_action", "joint_position_before", "reward", "success_event")):
             trace.create_dataset(name, data=torch.stack([record[column] for record in records]).numpy())
         trace.create_dataset("physics_steps/joint_velocity", data=physics_velocity.numpy())
+        trace.create_dataset("physics_steps/joint_position", data=torch.stack(physics_positions).cpu().numpy())
     report = {"task": args.task, "task_profile": args.task_profile, "environment_mode": args.environment_mode,
               "steps": args.steps, "num_envs": 4, "resets": resets,
               "observation_dim": observation["policy"].shape[-1], "maximum_target_error_rad": maximum_target_error,

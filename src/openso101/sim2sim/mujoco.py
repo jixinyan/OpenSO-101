@@ -46,7 +46,10 @@ def build_model(robot_model, metadata, collision_bundle=None):
     expected_limits = np.asarray(metadata["physical_joint_limits"]) + JOINT_OFFSETS[:, None]
     if not np.allclose(model.jnt_range, expected_limits, atol=1e-5, rtol=0):
         raise ValueError("MJCF 关节限位与 policy 定义不一致")
-    spec.option.timestep = 0.002
+    physics_dt = metadata.get("physics_dt", .002)
+    if not np.isfinite(physics_dt) or physics_dt <= 0:
+        raise ValueError("policy physics_dt 必须为正数有限数值")
+    spec.option.timestep = physics_dt
     spec.option.integrator = mujoco.mjtIntegrator.mjINT_IMPLICITFAST
     spec.option.gravity = [0, 0, -9.81]
     for index, name in enumerate(JOINT_NAMES):
@@ -298,11 +301,6 @@ def evaluate(args):
                     else:
                         success = eligible
                 else:
-                    if stage < 2 and grasped and np.linalg.norm(object_position - goal) <= parameters["advance_threshold"] + parameters["object_contact_radius"]:
-                        stage += 1
-                        goal = np.asarray(parameters["place_goal"]).copy()
-                        if stage == 1:
-                            goal[2] = parameters["carry_height"]
                     velocity = np.zeros(6)
                     mujoco.mj_objectVelocity(model, data, mujoco.mjtObj.mjOBJ_BODY, object_id, velocity, 0)
                     released = (stage == 2 and not grasped and data.qpos[joint_qpos_ids[-1]] > parameters["jaw_open_min"]
@@ -311,6 +309,11 @@ def evaluate(args):
                                 and np.linalg.norm(velocity[:3]) <= parameters["angular_speed_max"])
                     hold_seconds = hold_seconds + control_dt if released else 0.
                     success = hold_seconds >= parameters["settle_seconds"]
+                    if stage < 2 and grasped and np.linalg.norm(object_position - goal) <= parameters["advance_threshold"] + parameters["object_contact_radius"]:
+                        stage += 1
+                        goal = np.asarray(parameters["place_goal"]).copy()
+                        if stage == 1:
+                            goal[2] = parameters["carry_height"]
                     progress["carry_stage"] |= stage >= 1
                     progress["place_stage"] |= stage >= 2
                 if success or object_position[2] < task_height - 0.05:
