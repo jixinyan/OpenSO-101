@@ -7,6 +7,16 @@ from .checked_ppo import CheckedPPO
 
 
 class BoundedActorCritic(ActorCritic):
+    def __init__(self, *args, initial_action_mean=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if initial_action_mean is not None:
+            mean = torch.as_tensor(initial_action_mean, dtype=self.actor[-1].bias.dtype)
+            if mean.shape != self.actor[-1].bias.shape or not torch.isfinite(mean).all() or (mean.abs() >= 1).any():
+                raise ValueError("初始动作均值需要有效的归一化关节位置")
+            torch.nn.init.orthogonal_(self.actor[-1].weight, gain=.01)
+            with torch.no_grad():
+                self.actor[-1].bias.copy_(mean.atanh())
+
     def act(self, obs, **kwargs):
         observation = self.actor_obs_normalizer(self.get_actor_obs(obs))
         self.update_distribution(observation)

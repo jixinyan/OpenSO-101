@@ -38,6 +38,18 @@ class Backend:
         config = configuration(cfg, env.unwrapped.device)
         config["diagnostic_dir"] = str(output.resolve())
         config["save_interval"] = 1
+        from openso101.tasks.shared.position_action import NormalizedJointPositionAction
+
+        if (cfg.action_distribution == "tanh_gaussian"
+                and isinstance(env.unwrapped.action_manager.get_term("arm_action"), NormalizedJointPositionAction)):
+            from openso101.rl.vision_distillation import action_mapping
+
+            robot = env.unwrapped.scene["robot"]
+            initial = [0.] * env.unwrapped.action_manager.total_action_dim
+            for item in action_mapping(env.unwrapped):
+                position = robot.data.default_joint_pos[0, robot.joint_names.index(item["joint_name"])]
+                initial[item["action_index"]] = float(((position - item["offset"]) / item["scale"]).clamp(-.98, .98))
+            config["policy"]["initial_action_mean"] = initial
         if resume:
             previous = CheckpointMeta.read(resume)
             if (cfg.hidden_dims, cfg.normalize_observations, cfg.action_distribution, cfg.environment_mode) != (
