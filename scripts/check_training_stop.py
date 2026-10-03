@@ -43,6 +43,9 @@ with (output / "training.log").open("x") as log:
         metadata = CheckpointMeta.read(preserved)
         if process.poll() is not None or os.getpgid(process.pid) != process.pid:
             raise RuntimeError("停止检查需要仍在运行的独立训练进程")
+        gpu_report = output / "gpu_scope.json"
+        subprocess.run([sys.executable, str(Path(__file__).with_name("check_gpu_scope.py")),
+                        "--pid", str(process.pid), "--output", str(gpu_report)], check=True)
         stop_started = time.monotonic()
         os.killpg(process.pid, signal.SIGTERM)
         exit_code = process.wait(timeout=30)
@@ -61,6 +64,7 @@ with (output / "training.log").open("x") as log:
                   "training_command": command, "worker_pid": process.pid, "signal": "SIGTERM",
                   "exit_code": exit_code, "stop_seconds": stopped_seconds,
                   "stop_record_sha256": digest(run / "training_stop.json"),
+                  "gpu_scope_report_sha256": digest(gpu_report),
                   "training_completed": False,
                   "preserved_checkpoint_sha256": metadata.files[checkpoint.name],
                   "preserved_transitions": metadata.completed_transitions,
