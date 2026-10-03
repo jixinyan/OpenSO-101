@@ -294,7 +294,7 @@ def evaluate(args):
                 if metadata["task_id"] == "OpenSO101-Lift-v0":
                     eligible = bool(object_position[2] > task_height + parameters["minimal_height"]
                                     and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
-                    if metadata.get("task_profile", "default") in ("grasp_v2", "grasp_v3"):
+                    if metadata.get("task_profile", "default") in ("grasp_v2", "grasp_v3", "grasp_v4"):
                         eligible = eligible and grasped
                         lift_hold_seconds = lift_hold_seconds + control_dt if eligible else 0.
                         success = lift_hold_seconds >= parameters["settle_seconds"]

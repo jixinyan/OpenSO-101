@@ -33,6 +33,11 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
 
         configure_grasp_v3(cfg, args.task)
         cfg.reward_discount = getattr(args, "reward_discount", .99)
+    elif getattr(args, "task_profile", "default") == "grasp_v4":
+        from openso101.tasks.shared.grasp_v4 import configure_grasp_v4
+
+        configure_grasp_v4(cfg, args.task)
+        cfg.reward_discount = getattr(args, "reward_discount", .99)
     cfg.configure_play(not training)
     cfg.scene.num_envs = args.num_envs or 16
     if scene:
@@ -82,8 +87,8 @@ def train(args):
     args.task_profile = getattr(args, "task_profile", None) or (previous.task_profile if previous else "default")
     args.environment_mode = config.environment_mode
     args.reward_discount = config.gamma
-    if args.task_profile == "grasp_v3" and config.action_distribution != "tanh_gaussian":
-        raise ValueError("grasp_v3 的 RSL PPO 需要 tanh_gaussian 动作分布")
+    if args.task_profile in ("grasp_v3", "grasp_v4") and config.action_distribution != "tanh_gaussian":
+        raise ValueError("当前 grasp profile 的 RSL PPO 需要 tanh_gaussian 动作分布")
     if previous and previous.task_profile != args.task_profile:
         raise ValueError("继续训练需要保持 task_profile")
     if args.resume and resume is None:

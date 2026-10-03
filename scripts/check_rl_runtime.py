@@ -7,10 +7,10 @@ parser.add_argument("--task", required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--environment-mode", choices=("nominal", "randomized"), default="nominal")
 parser.add_argument("--steps", type=int, default=300)
+parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v3")
 args = parser.parse_args()
 if args.output.exists() or args.steps <= 0:
     raise ValueError("检查需要新的输出目录和正数 steps")
-args.task_profile = "grasp_v3"
 args.num_envs = 4
 args.seed = 42
 args.with_cameras = False
@@ -52,7 +52,9 @@ try:
             applied = runtime.action_manager.action
             decoded = decode_joint_targets(applied, mapping, joint_position=before)
             error = float((decoded - actual).abs().max())
-            unconstrained = before + applied.clamp(-1, 1) * (2 * runtime.step_dt)
+            unconstrained = (before + applied.clamp(-1, 1) * (2 * runtime.step_dt) if args.task_profile == "grasp_v3"
+                             else torch.stack([applied[:, item["action_index"]].clamp(-1, 1) * item["scale"] + item["offset"]
+                                               for item in mapping], dim=-1))
             correction = float((actual - unconstrained).abs().max())
             if error > 1e-6:
                 raise RuntimeError(f"关节目标检查失败：error={error}")
@@ -158,7 +160,7 @@ try:
               "completed_episode_shaping_returns": completed_shaping_returns,
               "completed_episode_activity_returns": completed_activity_returns,
               "trace_sha256": digest(args.output / "runtime.hdf5"), "source_sha256": digest(Path(__file__)),
-              "profile_sha256": digest(Path(grasp_v3.__file__))}
+              "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py"))}
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report), flush=True)
 finally:

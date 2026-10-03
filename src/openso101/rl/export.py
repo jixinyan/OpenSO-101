@@ -61,7 +61,7 @@ def export(args):
                                    unwrapped.observation_manager.group_obs_term_dim["policy"], strict=True)
         ]
         expected_names = ["joint_pos", "joint_vel", "object_position", "target_object_position", "grasp_state", "actions"]
-        if meta.task_profile == "grasp_v3":
+        if meta.task_profile in ("grasp_v3", "grasp_v4"):
             expected_names.extend(("object_velocity", "task_state"))
         if [term["name"] for term in observation_terms] != expected_names:
             raise ValueError("policy 观测定义不支持 portable 导出")
@@ -144,7 +144,7 @@ def export(args):
                 goal = unwrapped.command_manager.get_command("object_pose")
                 grasp = object_grasped_by_jaws(unwrapped).float().unsqueeze(-1)
                 extras = {}
-                if meta.task_profile == "grasp_v3":
+                if meta.task_profile in ("grasp_v3", "grasp_v4"):
                     from openso101.tasks.shared.grasp_v3 import object_velocity, task_state
 
                     extras = {"object_velocity": object_velocity(unwrapped), "task_state": task_state(unwrapped)}

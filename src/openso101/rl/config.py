@@ -66,7 +66,7 @@ class CheckpointMeta(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     schema_version: Literal[1] = 1
     task_id: str
-    task_profile: Literal["default", "grasp_v2", "grasp_v3"] = "default"
+    task_profile: Literal["default", "grasp_v2", "grasp_v3", "grasp_v4"] = "default"
     config: TrainCfg
     observation_format: str = "state"
     git_sha: str

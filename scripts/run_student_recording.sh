@@ -17,5 +17,5 @@ prefix=${3:?请指定新的输出名称}
     > "outputs/rl_progress/${prefix}.log" 2>&1
 "$task_python" -u -m openso101.cli.main sim2real validate \
     --policy-path "$student" --episode "outputs/rl_progress/$prefix/episodes/episode_000000.hdf5" \
-    --output "outputs/rl_progress/${prefix}_validation.json" \
+    --output "outputs/rl_progress/${prefix}_validation" \
     > "outputs/rl_progress/${prefix}_validation.log" 2>&1

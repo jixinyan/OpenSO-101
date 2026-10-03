@@ -10,12 +10,12 @@ parser.add_argument("--planner-python", type=Path, required=True)
 parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--num-envs", type=int, default=4)
 parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v3")
 args = parser.parse_args()
 if args.output.exists() or args.num_envs <= 0:
     raise ValueError("任务检查需要新的输出目录和有效环境数量")
 args.output.mkdir(parents=True, exist_ok=False)
 args.task = "OpenSO101-Lift-v0"
-args.task_profile = "grasp_v3"
 args.environment_mode = "nominal"
 args.with_cameras = False
 args.visual_dr = False
@@ -35,6 +35,8 @@ try:
 
     from openso101.rl.config import digest
     from openso101.rl.execution import build_environment
+    from openso101.rl.scene_geometry import table_collision_geometry
+    from openso101.rl.vision_distillation import action_mapping
     from openso101.robots import SO101_SIM_JOINT_NAMES
     from openso101.tasks.shared.grasp import _jaw_force_magnitude
 
@@ -80,24 +82,38 @@ try:
     env.reset()
     runtime = env.unwrapped
     robot = runtime.scene["robot"]
+    mappings = action_mapping(runtime)
     ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
     obj = runtime.scene["object"]
     object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
     states = {"seed": args.seed, "task": args.task, "control_dt": runtime.step_dt, "physics_dt": runtime.physics_dt,
               "joint_stiffness": robot.root_physx_view.get_dof_stiffnesses()[0, ids].cpu().tolist(),
+              "effort_limits": robot.data.joint_effort_limits[0, ids].cpu().tolist(),
               "soft_joint_limits": robot.data.soft_joint_pos_limits[0, ids].cpu().tolist(),
               "environments": [{"environment": index,
                                 "joint_position": robot.data.joint_pos[index, ids].cpu().tolist(),
                                 "object_position_root": object_position[index].cpu().tolist(),
                                 "goal_position_root": runtime.command_manager.get_command("object_pose")[index, :3].cpu().tolist()}
                                for index in range(args.num_envs)]}
+    geometry = table_collision_geometry(runtime.sim.stage, "/World/envs/env_0/Table",
+                                         robot.data.root_pos_w[0].cpu().numpy(), robot.data.root_quat_w[0].cpu().numpy())
+    states["planner_physics"] = {
+        "physical_joint_limits": robot.data.joint_pos_limits[0, ids].cpu().tolist(),
+        "physics_dt": runtime.physics_dt, "nominal_stiffness": states["joint_stiffness"],
+        "nominal_damping": robot.data.joint_damping[0, ids].cpu().tolist(), "effort_limits": states["effort_limits"],
+        "table_geometry": geometry, "table_height_root": geometry["top_height_root"],
+        "object_size": list(runtime.cfg.scene.object.spawn.size), "object_mass": runtime.cfg.scene.object.spawn.mass_props.mass,
+    }
     states_path = args.output / "initial_states.json"
     with states_path.open("x") as stream:
         json.dump(states, stream, indent=2)
     plan_path = args.output / "plan.json"
     with (args.output / "planning.log").open("x") as log:
-        subprocess.run([str(args.planner_python), "scripts/plan_grasp_task.py", "--states", str(states_path),
-                        "--robot-model", str(args.robot_model), "--output", str(plan_path)],
+        command = [str(args.planner_python), "scripts/plan_grasp_task.py", "--states", str(states_path),
+                   "--robot-model", str(args.robot_model), "--output", str(plan_path)]
+        if args.task_profile == "grasp_v4":
+            command.extend(["--collision-bundle", "outputs/rl_progress/gripper_collision"])
+        subprocess.run(command,
                        stdout=log, stderr=subprocess.STDOUT, check=True)
     plan = json.loads(plan_path.read_text())
     if plan["states_sha256"] != digest(states_path):
@@ -113,7 +129,11 @@ try:
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
         jaw_target = torch.where(phase < 2, .8, 0.).unsqueeze(-1)
         desired = torch.cat((arm_target, jaw_target), dim=-1)
-        actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
+        if args.task_profile == "grasp_v3":
+            actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
+        else:
+            actions = torch.stack([(desired[:, index] - item["offset"]) / item["scale"]
+                                   for index, item in enumerate(mappings)], dim=-1).clamp(-1, 1)
         actions[~active] = 0
         _, _, terminated, truncated, _ = env.step(actions)
         sample = trace[-1]
@@ -149,17 +169,19 @@ try:
     report = {"status": "native_task_completed", "task": args.task, "task_profile": args.task_profile,
               "environment_mode": args.environment_mode, "seed": args.seed, "environments": records,
               "successes": int(finished_success.sum()), "episodes": args.num_envs,
-              "controller": "scripted_IK_measured_reference_delta", "control_dt": runtime.step_dt,
+              "controller": "scripted_IK_measured_reference_delta" if args.task_profile == "grasp_v3"
+                            else "scripted_IK_absolute_joint_targets", "control_dt": runtime.step_dt,
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
-              "profile_sha256": digest(Path("src/openso101/tasks/shared/grasp_v3.py")),
+              "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),
               "rl_policy_success_verified": False}
     gravity = np.stack([item["gravity_compensation"] for item in trace])
-    holding_budget = np.asarray(states["joint_stiffness"]) * .04
+    holding_budget = (np.asarray(states["joint_stiffness"]) * .04 if args.task_profile == "grasp_v3"
+                      else np.asarray(states["effort_limits"]))
     report["gravity_diagnostics"] = {
         "maximum_required_holding_effort_nm": np.abs(gravity).max(axis=(0, 1)).tolist(),
-        "measured_reference_stationary_effort_budget_nm": holding_budget.tolist(),
+        "stationary_effort_budget_nm": holding_budget.tolist(),
         "frames_exceeding_stationary_effort_budget": (np.abs(gravity) > holding_budget).sum(axis=(0, 1)).tolist(),
         "measured_frames": len(trace) * args.num_envs,
     }

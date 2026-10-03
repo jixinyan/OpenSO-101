@@ -1184,7 +1184,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
-    p_train.add_argument("--task-profile", choices=("default", "grasp_v2", "grasp_v3"), help="训练使用的任务配置版本")
+    p_train.add_argument("--task-profile", choices=("default", "grasp_v2", "grasp_v3", "grasp_v4"), help="训练使用的任务配置版本")
     p_train.add_argument("--backend", choices=("rsl_rl", "sb3", "skrl", "rl_games"))
     p_train.add_argument("--train-config", help="Backend-neutral TrainCfg JSON")
     p_train.add_argument("--output", help="New run directory")
