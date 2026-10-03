@@ -29,6 +29,9 @@ def _launch_isaac_app(args: argparse.Namespace, enable_cameras: bool = True):
     side-effects bootstrap the Omniverse kit/extensions that those imports
     require.
     """
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     # AppLauncher reads attributes off the args namespace (headless, device,

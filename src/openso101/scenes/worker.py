@@ -11,9 +11,13 @@ def main():
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
 
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    physical_gpu = configure_visible_gpu()
     from isaacsim import SimulationApp
 
-    app = SimulationApp({"headless": True, "multi_gpu": False})
+    app = SimulationApp({"headless": True, "multi_gpu": False,
+                         "active_gpu": physical_gpu, "physics_gpu": 0, "max_gpu_count": 1})
     from openso101.scenes.usd import compile_bundle
 
     compile_bundle(args.bundle, args.output)

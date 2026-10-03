@@ -65,6 +65,9 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
     # AppLauncher must launch BEFORE any isaaclab / isaaclab_tasks / isaaclab_rl
     # / rsl_rl Isaac-Sim-bound imports.
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     # Vision tasks instantiate the SO-101 overhead and wrist cameras. State-only
@@ -332,6 +335,9 @@ def _cmd_play(args: argparse.Namespace) -> int:
 
         return evaluate(args, play=True)
     # AppLauncher must launch BEFORE any isaaclab / rsl_rl imports.
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     enable_cameras = bool(
@@ -556,6 +562,9 @@ def _cmd_eval(args: argparse.Namespace) -> int:
         from openso101.rl.execution import evaluate
 
         return evaluate(args)
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     enable_cameras = bool(

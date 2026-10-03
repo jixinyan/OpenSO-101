@@ -16,7 +16,6 @@ def _launch_isaac_app(headless: bool = True, enable_cameras: bool = False):
     """Launch Isaac Sim's SimulationApp and import OpenSO-101 tasks.
 
     Returns the `SimulationApp` handle (caller is responsible for `.close()`).
-    Returns None if `isaaclab` is unavailable (skeleton-only test envs).
 
     `enable_cameras` MUST be True whenever the env config has any camera
     sensor attached (e.g. `envs preview`, `envs random/zero --with-cameras`).
@@ -24,10 +23,10 @@ def _launch_isaac_app(headless: bool = True, enable_cameras: bool = False):
     silently fails after the first call — symptom is the script exiting in
     under a second regardless of `--steps`.
     """
-    try:
-        from isaaclab.app import AppLauncher
-    except ModuleNotFoundError:
-        return None
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
+    from isaaclab.app import AppLauncher
     launcher = AppLauncher(headless=headless, enable_cameras=enable_cameras)
     # Trigger gym.register calls for the built-in tasks.
     import openso101.tasks  # noqa: F401

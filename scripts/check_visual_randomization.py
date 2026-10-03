@@ -17,6 +17,9 @@ args.seed = 42
 args.with_cameras = True
 args.visual_dr = True
 
+from openso101.rl.gpu_scope import configure_visible_gpu
+
+configure_visible_gpu()
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True, enable_cameras=True).app

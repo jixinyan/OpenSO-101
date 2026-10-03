@@ -1,10 +1,10 @@
 import argparse
 import csv
 from datetime import UTC, datetime
-import io
 import json
 from pathlib import Path
 import subprocess
+from xml.etree import ElementTree
 
 import psutil
 
@@ -19,12 +19,18 @@ args = parser.parse_args()
 if args.output.exists() or len(set(args.pid)) != len(args.pid):
     raise ValueError("GPU 检查需要新的报告文件与唯一的进程 identifier")
 scope = gpu_scope()
-inventory = subprocess.check_output(["nvidia-smi", "--query-gpu=index,uuid", "--format=csv,noheader"], text=True)
-gpu_indices = {row[1].strip(): int(row[0]) for row in csv.reader(io.StringIO(inventory))}
-computing = subprocess.check_output(["nvidia-smi", "--query-compute-apps=pid,gpu_uuid", "--format=csv,noheader"], text=True)
+inventory = ElementTree.fromstring(subprocess.check_output(["nvidia-smi", "-q", "-x"], text=True))
 allocations = {}
-for row in csv.reader(io.StringIO(computing)):
-    allocations.setdefault(int(row[0]), set()).add(gpu_indices[row[1].strip()])
+allocation_details = {}
+for gpu in inventory.findall("gpu"):
+    index = int(gpu.findtext("minor_number"))
+    for process in gpu.findall("processes/process_info"):
+        pid = int(process.findtext("pid"))
+        allocations.setdefault(pid, set()).add(index)
+        allocation_details.setdefault(pid, []).append({
+            "gpu": index, "type": process.findtext("type"),
+            "used_memory": process.findtext("used_memory"), "gpu_uuid": gpu.findtext("uuid"),
+        })
 records = []
 for pid in args.pid:
     process = psutil.Process(pid)
@@ -41,8 +47,10 @@ for pid in args.pid:
         if set(actual) != set(devices):
             raise ValueError("实际 GPU 与进程指定的 GPU 不一致")
     records.append({"pid": pid, "command": command, "cwd": str(cwd),
-                    "requested_gpus": devices, "actual_gpus": actual})
+                    "requested_gpus": devices, "actual_gpus": actual,
+                    "allocations": allocation_details.get(pid, [])})
 result = {"status": "actual_gpu_scope_verified", "created_at": datetime.now(UTC).isoformat(),
+          "checked_process_types": ["compute", "graphics"],
           "allowed_gpus": scope.allowed_gpus, "processes": records, "source_sha256": digest(Path(__file__))}
 args.output.parent.mkdir(parents=True, exist_ok=True)
 args.output.write_text(json.dumps(result, indent=2) + "\n")

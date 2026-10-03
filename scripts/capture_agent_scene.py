@@ -13,6 +13,9 @@ if args.steps <= 0:
     raise ValueError("steps 必须为正数")
 args.output.mkdir(parents=True, exist_ok=False)
 
+from openso101.rl.gpu_scope import configure_visible_gpu
+
+configure_visible_gpu()
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True, enable_cameras=True).app

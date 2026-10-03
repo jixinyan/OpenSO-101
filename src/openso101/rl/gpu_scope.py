@@ -1,6 +1,8 @@
+import argparse
 import csv
 import os
 from pathlib import Path
+import sys
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -35,4 +37,22 @@ def configure_visible_gpu():
     if len(devices) != 1:
         raise ValueError("单个 Isaac 进程需要指定一个物理 GPU")
     os.environ["CUDA_VISIBLE_DEVICES"] = value
-    return devices[0]
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    physical_gpu = devices[0]
+    # CUDA 使用可见设备编号，renderer 使用主机的物理设备编号。
+    settings = {
+        "--/renderer/activeGpu": str(physical_gpu),
+        "--/renderer/multiGpu/enabled": "false",
+        "--/renderer/multiGpu/autoEnable": "false",
+        "--/renderer/multiGpu/maxGpuCount": "1",
+        "--/physics/cudaDevice": "0",
+    }
+    parser = argparse.ArgumentParser(add_help=False)
+    for name, expected in settings.items():
+        parser.add_argument(name, choices=(expected,), default=expected)
+    parser.parse_known_args()
+    for name, expected in settings.items():
+        argument = f"{name}={expected}"
+        if argument not in sys.argv:
+            sys.argv.append(argument)
+    return physical_gpu

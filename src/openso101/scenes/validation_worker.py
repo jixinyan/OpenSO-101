@@ -20,6 +20,9 @@ def main():
     if args.output.exists():
         raise FileExistsError(args.output)
 
+    from openso101.rl.gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     app = AppLauncher(headless=True, enable_cameras=args.cameras).app

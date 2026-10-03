@@ -17,6 +17,9 @@ args.with_cameras = False
 args.visual_dr = False
 args.output.mkdir(parents=True, exist_ok=False)
 
+from openso101.rl.gpu_scope import configure_visible_gpu
+
+configure_visible_gpu()
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True).app

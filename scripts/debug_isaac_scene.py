@@ -18,6 +18,9 @@ args.task_profile = "grasp_v2"
 args.seed = 42
 args.with_cameras = False
 
+from openso101.rl.gpu_scope import configure_visible_gpu
+
+configure_visible_gpu()
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True).app

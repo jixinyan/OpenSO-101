@@ -30,14 +30,14 @@ Lift 要求双侧接触力均超过 0.5 N、物体高度超过 4 cm、目标距�
 
 `model_best.pt` 按独立成功率选择。`model.pt` 保存最后完成的 iteration。每个 seed 的连续三次评估均达到 90% 时，该 seed 完成训练验收。
 
-`rl campaign` 管理 Lift 和 PickPlace 各三个 seed，使用指定的一到六个 GPU 运行训练队列；`campaign.json` 保存进程、配置、来源与独立验收状态。各任务的三个 seed 都满足条件后，多个 seed 验收才能成立。选定模型保存为独立 `selected_policy` snapshot。
+`rl campaign` 管理 Lift 和 PickPlace 各三个 seed，使用 GPU 2、3、4 范围内指定的设备运行训练队列；`campaign.json` 保存进程、配置、来源与独立验收状态。各任务的三个 seed 都满足条件后，多个 seed 验收才能成立。选定模型保存为独立 `selected_policy` snapshot。`configs/runtime/gpu_scope.json` 保存允许范围，单个 Isaac 进程使用其中一个物理 GPU，默认使用 GPU 4。CUDA 与 renderer 分别设置设备编号，并关闭多个 GPU 的渲染。
 
 `--initial-runs` 接受包含 `task`、`seed` 与 `run` 的 JSON 数组；每项模型必须通过内容校验，并对应当前任务、seed 与 profile。训练目录保留完整 `parent/` 模型、optimizer、元数据和来源文件，`resume.json` 记录其 SHA256 与先前累计 transitions。Lift 的三个 seed 优先启动，PickPlace 随后进入队列。
 
 ```bash
 openso101 rl campaign --train-config configs/rl/grasp_v3.json \
   --output outputs/rl_progress/grasp_v3_campaign \
-  --seeds 42 43 44 --gpus 0 5 6 --num-envs 2048
+  --seeds 42 43 44 --gpus 2 3 4 --num-envs 2048
 ```
 
 训练、导出、MuJoCo 任务成功和视觉 student 任务成功分别使用各自的真实运行报告。程序启动、有限数值和动作转换检查各自记录其范围。
