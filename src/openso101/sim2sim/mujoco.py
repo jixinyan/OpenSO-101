@@ -2,6 +2,9 @@ import json
 import copy
 from pathlib import Path
 
+# PyTorch 必须在 CoACD 之前初始化。
+from openso101.rl.portable import PortablePolicy
+
 import h5py
 import coacd
 import mujoco
@@ -10,7 +13,6 @@ import trimesh
 from scipy.spatial.transform import Rotation
 
 from openso101.rl.config import digest
-from openso101.rl.portable import PortablePolicy
 
 JOINT_NAMES = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
 JOINT_OFFSETS = np.array([0., -np.pi / 2, np.pi / 2, 0., 0., 0.])
