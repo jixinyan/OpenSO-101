@@ -90,6 +90,8 @@ try:
     shaping_returns = torch.zeros(4, device=runtime.device, dtype=torch.float64)
     episode_steps = torch.zeros(4, device=runtime.device, dtype=torch.int64)
     completed_shaping_returns = []
+    activity_returns = torch.zeros_like(shaping_returns)
+    completed_activity_returns = []
     records = []
     for index in range(args.steps):
         with torch.no_grad():
@@ -108,10 +110,15 @@ try:
             progress_index = runtime.reward_manager.active_terms.index("progress")
             shaping = runtime.reward_manager._step_reward[:, progress_index] * runtime.step_dt
             shaping_returns += runtime.cfg.reward_discount ** episode_steps * shaping.double()
+            if "task_activity" in runtime.reward_manager.active_terms:
+                activity_index = runtime.reward_manager.active_terms.index("task_activity")
+                activity_returns += runtime.reward_manager._step_reward[:, activity_index].double() * runtime.step_dt
             episode_steps += 1
             done = terminated | truncated
             completed_shaping_returns.extend(shaping_returns[done].cpu().tolist())
+            completed_activity_returns.extend(activity_returns[done].cpu().tolist())
             shaping_returns[done] = 0
+            activity_returns[done] = 0
             episode_steps[done] = 0
             speed = float(robot.data.joint_vel[:, ids].abs().max())
             maximum_speed = max(maximum_speed, speed)
@@ -129,6 +136,9 @@ try:
         raise RuntimeError("物理步骤的实际速度记录不完整或含有无效数值")
     if completed_shaping_returns and max(abs(value) for value in completed_shaping_returns) > 1e-4:
         raise RuntimeError("完整 episode 的 shaping 累计检查失败")
+    if completed_activity_returns and (min(completed_activity_returns) < 0
+                                       or max(completed_activity_returns) > .25 * runtime.cfg.episode_length_s + 1e-5):
+        raise RuntimeError("完整 episode 的 task_activity 累计超出配置范围")
     with h5py.File(args.output / "runtime.hdf5", "w") as trace:
         for column, name in enumerate(("raw_action", "joint_position_before", "reward", "success_event")):
             trace.create_dataset(name, data=torch.stack([record[column] for record in records]).numpy())
@@ -146,6 +156,7 @@ try:
               "maximum_target_limit_correction_rad": maximum_limit_correction,
               "distribution_and_target_mapping_verified": True, "task_success_verified": False,
               "completed_episode_shaping_returns": completed_shaping_returns,
+              "completed_episode_activity_returns": completed_activity_returns,
               "trace_sha256": digest(args.output / "runtime.hdf5"), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path(grasp_v3.__file__))}
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")

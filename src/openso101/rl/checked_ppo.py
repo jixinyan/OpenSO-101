@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 
 import torch
@@ -90,6 +91,9 @@ class CheckedPPO(PPO):
     def update(self):
         self.update_count += 1
         result = super().update()
+        if any(not math.isfinite(value) for value in result.values()):
+            self.capture_failure("PPO loss 含有无效数值")
+            raise FloatingPointError("PPO loss 含有无效数值")
         if self.diagnostic_dir is not None:
             record = {"update": self.update_count, "gradient_steps": self.gradient_steps,
                       "learning_rate": self.learning_rate, "losses": result}

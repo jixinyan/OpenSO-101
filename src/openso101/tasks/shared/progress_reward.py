@@ -25,6 +25,14 @@ def task_potential(env):
     return approaching + closing * (command.stage < 2) + carrying + command.stage * 4 + placing * 2
 
 
+def task_activity(env):
+    maximum = 9. if env.cfg.task_profile_task == "lift" else 18.
+    score = task_potential(env) / maximum
+    if not torch.isfinite(score).all() or (score < 0).any() or (score > 1 + 1e-6).any():
+        raise RuntimeError("任务进展数值超出配置范围")
+    return score
+
+
 class TaskProgressReward(ManagerTermBase):
     def __init__(self, cfg, env):
         super().__init__(cfg, env)
@@ -45,6 +53,7 @@ class TaskProgressReward(ManagerTermBase):
 @configclass
 class ProgressRewardsCfg:
     progress = RewardTermCfg(func=TaskProgressReward, weight=1.)
+    task_activity = RewardTermCfg(func=task_activity, weight=.25)
     processed_action_change = RewardTermCfg(func=processed_action_change, weight=-.1)
     joint_vel = RewardTermCfg(func=mdp.joint_vel_l2, weight=-1e-4)
     success_bonus = RewardTermCfg(func=success_event, weight=1.)
