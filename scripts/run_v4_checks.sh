@@ -14,6 +14,7 @@ check_kind=${3:?请指定 task 或 physics}
 if [[ "$check_kind" == task ]]; then
     "$task_python" -u scripts/check_grasp_task.py --task-profile grasp_v4 \
         --output "outputs/rl_progress/${prefix}_task" \
+        --num-envs "${4:-4}" \
         --planner-python /home/jixin/workspace/envs/openso101-mujoco/bin/python \
         --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
         > "outputs/rl_progress/${prefix}_task.log" 2>&1

@@ -47,7 +47,7 @@ def plan_collision_grasp(model, states, environment, rng):
         poses = [pose(arm, jaw=0. if index == 2 else .8, allow_grasp_contact=index == 2)
                  for index, arm in enumerate(joints.reshape(3, 5))]
         lift_error = poses[2][0] - goal
-        lift_violation = lift_error * max(0., 1 - lift_radius / max(np.linalg.norm(lift_error), 1e-12))
+        lift_violation = lift_error * max(0., 1 - (lift_radius - .001) / max(np.linalg.norm(lift_error), 1e-12))
         return np.concatenate((20 * (poses[0][0] - positions[0]), 20 * (poses[1][0] - positions[1]),
                                20 * lift_violation, .01 * lift_error,
                                (poses[0][1] - poses[1][1]).ravel(),
