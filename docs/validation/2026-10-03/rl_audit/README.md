@@ -184,6 +184,16 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 
 `demonstration_initialization/report.json` 保存实际 behavior cloning 的 1,000 epochs。训练使用三个完整 episodes 的 660 个步骤，模型选择使用另外一个完整 episode 的 180 个步骤；最佳 epoch 为 66，留出关节目标 RMSE 为 `0.136746 rad`。模型 SHA256 为 `db95e371c7f2c922b451086c99232f339ecfada7e42805a50a98ac339ba90cc3`。模型的 RL transitions 为零，独立任务成功仍需运行验收。
 
+## 三个 seed 的实际训练曲线
+
+`training_curves/report.json` 保存三个继续训练进程的实际 TensorBoard 数值、事件文件 SHA256、父模型累计 transitions 和独立评估来源。记录截止 iteration 分别为 seed 42 的 355、seed 43 的 294、seed 44 的 270。横坐标包含父模型的累计训练 transitions；淡色线保存原始数值，深色线表示最近 10 次实际更新的移动平均。图表展示平均 episode return、目标距离、Gaussian 标准差、value function loss、训练速度与训练日志成功比例。
+
+![三个 seed 的实际训练曲线](training_curves/training_curves.png)
+
+独立评估圆点对应实际 checkpoint，每次包含 100 episodes。三个 seed 的最新评估 iteration 分别为 274、221、226；接近物体均为 `100/100`，双侧接触分别为 `17/100`、`18/100`、`54/100`，抬升分别为 `2/100`、`3/100`、`2/100`，任务成功均为 `0/100`。连线连接已记录的 checkpoint；训练 return 和任务成功分别表示。训练收敛尚未通过。
+
+![三个 seed 的独立任务评估](training_curves/independent_evaluation.png)
+
 ## 实际实体运动与夹爪接触表面
 
 `native_body_checks/native.json` 保存 `f1cdd56` 的原生 Lift `4/4`，包含七个机器人实体的实际位置和 quaternion。`kinematics.json` 在 800 个实际控制步骤中使用官方 MJCF 计算相同关节姿态，共 5,600 次比较。每个实体只使用其实际初始姿态确定一次坐标变换。两个夹爪的最大位置差为 `3.677386 µm`，最大旋转差为 `1.625966e-5 rad`。
