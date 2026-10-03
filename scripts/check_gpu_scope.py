@@ -32,8 +32,12 @@ for gpu in inventory.findall("gpu"):
             "used_memory": process.findtext("used_memory"), "gpu_uuid": gpu.findtext("uuid"),
         })
 records = []
+processes = {}
 for pid in args.pid:
-    process = psutil.Process(pid)
+    root = psutil.Process(pid)
+    for process in (root, *root.children(recursive=True)):
+        processes[process.pid] = process
+for pid, process in processes.items():
     command = process.cmdline()
     cwd = Path(process.cwd()).resolve()
     if not cwd.name.startswith("OpenSO-101"):
@@ -57,7 +61,10 @@ for pid in args.pid:
                     "cuda_visible_devices": visible,
                     "device_namespace": environment.get("OPENSO101_GPU_NAMESPACE") == "1",
                     "allocations": allocation_details.get(pid, [])})
+if not any(record["actual_gpus"] for record in records):
+    raise ValueError("实际 GPU 检查需要已建立设备上下文的进程")
 result = {"status": "actual_gpu_scope_verified", "created_at": datetime.now(UTC).isoformat(),
+          "requested_root_pids": args.pid,
           "checked_process_types": ["compute", "graphics"],
           "allowed_gpus": scope.allowed_gpus, "processes": records, "source_sha256": digest(Path(__file__))}
 args.output.parent.mkdir(parents=True, exist_ok=True)

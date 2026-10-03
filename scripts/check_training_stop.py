@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 
+import psutil
+
 from openso101.rl.config import CheckpointMeta, TrainCfg, digest
 from openso101.rl.snapshot import snapshot
 
@@ -43,25 +45,31 @@ with (output / "training.log").open("x") as log:
         metadata = CheckpointMeta.read(preserved)
         if process.poll() is not None or os.getpgid(process.pid) != process.pid:
             raise RuntimeError("停止检查需要仍在运行的独立训练进程")
+        root = psutil.Process(process.pid)
+        workers = [candidate for candidate in (root, *root.children(recursive=True))
+                   if candidate.cmdline() == command]
+        if len(workers) != 1 or os.getpgid(workers[0].pid) != process.pid:
+            raise RuntimeError("停止检查需要唯一且属于当前进程组的实际训练 worker")
+        worker = workers[0]
         gpu_report = output / "gpu_scope.json"
         subprocess.run([sys.executable, str(Path(__file__).with_name("check_gpu_scope.py")),
                         "--pid", str(process.pid), "--output", str(gpu_report)], check=True)
         stop_started = time.monotonic()
-        os.killpg(process.pid, signal.SIGTERM)
+        worker.send_signal(signal.SIGTERM)
         exit_code = process.wait(timeout=30)
         stopped_seconds = time.monotonic() - stop_started
         if exit_code not in (0, 128 + signal.SIGTERM):
             raise RuntimeError(f"训练停止的实际 exit_code 不一致：{exit_code}")
         stop_record = json.loads((run / "training_stop.json").read_text())
         if (stop_record["status"] != "stop_requested" or stop_record["signal"] != signal.SIGTERM
-                or stop_record["worker_pid"] != process.pid or stop_record["training_git_sha"] != metadata.git_sha
+                or stop_record["worker_pid"] != worker.pid or stop_record["training_git_sha"] != metadata.git_sha
                 or (run / "checkpoint.json").exists()):
             raise RuntimeError("停止检查的实际 signal 来源与训练状态不一致")
         checked = CheckpointMeta.read(preserved)
         if checked != metadata or digest(checkpoint) != metadata.files[checkpoint.name]:
             raise RuntimeError("停止后的实际保存模型或副本发生变化")
         report = {"status": "native_training_sigterm_verified", "created_at": datetime.now(UTC).isoformat(),
-                  "training_command": command, "worker_pid": process.pid, "signal": "SIGTERM",
+                  "training_command": command, "launcher_pid": process.pid, "worker_pid": worker.pid, "signal": "SIGTERM",
                   "exit_code": exit_code, "stop_seconds": stopped_seconds,
                   "stop_record_sha256": digest(run / "training_stop.json"),
                   "gpu_scope_report_sha256": digest(gpu_report),
