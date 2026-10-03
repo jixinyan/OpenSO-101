@@ -45,6 +45,7 @@ def configure_visible_gpu():
         "--/renderer/multiGpu/enabled": "false",
         "--/renderer/multiGpu/autoEnable": "false",
         "--/renderer/multiGpu/maxGpuCount": "1",
+        "--/renderer/gpuEnumeration/glInterop/enabled": "false",
         "--/physics/cudaDevice": "0",
     }
     parser = argparse.ArgumentParser(add_help=False)
