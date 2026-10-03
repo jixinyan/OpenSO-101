@@ -51,6 +51,9 @@ try:
             grip_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
                                                          runtime.scene["ee_frame"].data.target_pos_w[:, 0])
             values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
+                      "gravity_compensation": robot.root_physx_view.get_gravity_compensation_forces()[:, ids],
+                      "joint_targets": torch.cat([runtime.action_manager.get_term(name).processed_actions
+                                                   for name in runtime.action_manager.active_terms], dim=-1),
                       "object_position_root": object_position, "grasp_position_root": grip_position,
                       "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])
                                                 for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
@@ -81,6 +84,7 @@ try:
     obj = runtime.scene["object"]
     object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
     states = {"seed": args.seed, "task": args.task, "control_dt": runtime.step_dt, "physics_dt": runtime.physics_dt,
+              "joint_stiffness": robot.root_physx_view.get_dof_stiffnesses()[0, ids].cpu().tolist(),
               "soft_joint_limits": robot.data.soft_joint_pos_limits[0, ids].cpu().tolist(),
               "environments": [{"environment": index,
                                 "joint_position": robot.data.joint_pos[index, ids].cpu().tolist(),
@@ -151,6 +155,14 @@ try:
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path("src/openso101/tasks/shared/grasp_v3.py")),
               "rl_policy_success_verified": False}
+    gravity = np.stack([item["gravity_compensation"] for item in trace])
+    holding_budget = np.asarray(states["joint_stiffness"]) * .04
+    report["gravity_diagnostics"] = {
+        "maximum_required_holding_effort_nm": np.abs(gravity).max(axis=(0, 1)).tolist(),
+        "measured_reference_stationary_effort_budget_nm": holding_budget.tolist(),
+        "frames_exceeding_stationary_effort_budget": (np.abs(gravity) > holding_budget).sum(axis=(0, 1)).tolist(),
+        "measured_frames": len(trace) * args.num_envs,
+    }
     with (args.output / "report.json").open("x") as stream:
         json.dump(report, stream, indent=2)
     print(json.dumps(report), flush=True)
