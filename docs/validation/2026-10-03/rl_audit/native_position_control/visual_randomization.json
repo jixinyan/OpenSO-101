@@ -1,0 +1,135 @@
+{
+  "status": "native_visual_randomization_verified",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "visual_dr": true,
+  "environments": 4,
+  "resets": 3,
+  "control_steps_per_reset": 10,
+  "samples": [
+    {
+      "reset": 0,
+      "light_intensity": 3977.600341796875,
+      "light_color": [
+        0.8188797831535339,
+        0.6358052492141724,
+        0.6153185367584229
+      ],
+      "object_colors": [
+        [
+          0.6127410531044006,
+          0.2099105417728424,
+          0.26102760434150696
+        ]
+      ],
+      "cameras": {
+        "overhead": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "98e2cfd1b8e95a6fafd31783cd233388c71520398e2c1ee02d5fb5718b038fe0",
+          "minimum": 4,
+          "maximum": 251
+        },
+        "wrist": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "16eba06bd3d00b7a475ca21918ad1880e3021e02126e24dbb0d8e6b3d859523e",
+          "minimum": 7,
+          "maximum": 250
+        }
+      }
+    },
+    {
+      "reset": 1,
+      "light_intensity": 2277.010009765625,
+      "light_color": [
+        0.8228349685668945,
+        0.8636422157287598,
+        0.6075925827026367
+      ],
+      "object_colors": [
+        [
+          0.3796885907649994,
+          0.8406292200088501,
+          0.3850889801979065
+        ]
+      ],
+      "cameras": {
+        "overhead": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "f72df6805d76f60376f646638fc5aabe8d0f2d9a913e63d54bc48587e14c8335",
+          "minimum": 4,
+          "maximum": 247
+        },
+        "wrist": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "d3d7cb23e6b3c2ea4c5b0991743359d2586992f9762bd03da89cd445ce3c2eb4",
+          "minimum": 4,
+          "maximum": 244
+        }
+      }
+    },
+    {
+      "reset": 2,
+      "light_intensity": 1905.1182861328125,
+      "light_color": [
+        0.8090142011642456,
+        0.6519734263420105,
+        0.6690094470977783
+      ],
+      "object_colors": [
+        [
+          0.7604743242263794,
+          0.4516564905643463,
+          0.3256838023662567
+        ]
+      ],
+      "cameras": {
+        "overhead": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "60384a1814d9cffe43bcf1d2f97710975e4191cbb7a153753f0320d63f0cf4da",
+          "minimum": 4,
+          "maximum": 245
+        },
+        "wrist": {
+          "shape": [
+            4,
+            128,
+            128,
+            3
+          ],
+          "sha256": "2663c64dd839e01dc8dfcc15d6c1d5fddc6e74e981d46b268052ee8f0652be39",
+          "minimum": 1,
+          "maximum": 241
+        }
+      }
+    }
+  ],
+  "nominal_mass_and_stiffness_unchanged": true,
+  "source_sha256": "1a05e40c831213e4ddb1c695604727d15abe9729850524a4b970990b7e633cbf",
+  "task_success_verified": false
+}

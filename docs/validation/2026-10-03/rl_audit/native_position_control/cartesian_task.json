@@ -1,0 +1,98 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    },
+    {
+      "environment": 1,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        71.6388168334961,
+        170.0117950439453
+      ],
+      "bilateral_contact_steps": 21,
+      "maximum_object_height_root_m": 0.07309077680110931
+    },
+    {
+      "environment": 2,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    },
+    {
+      "environment": 3,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        77.42570495605469,
+        76.35469818115234
+      ],
+      "bilateral_contact_steps": 59,
+      "maximum_object_height_root_m": 0.1384604275226593
+    }
+  ],
+  "successes": 0,
+  "episodes": 4,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.5000022649765015,
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "states_sha256": "c8b998a2082a48484ca797befe31c48fa8725b00afed0be96e27d51233dac952",
+  "plan_sha256": "4d09bf4f18a009e51f80c9a9e9aa8ce4113b516dc19f55ca7093bf9defe933ee",
+  "trace_sha256": "19bd3a451e4c8746e0701269b4bcc2a82bd600acfa352cdf7fa4c263a9017ebe",
+  "source_sha256": "385ccadc5d8e2514e844505922566f8891c78c978d420d144f5f2d5c4b438d73",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "rl_policy_success_verified": false,
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.265175680804532e-06,
+      0.8144220113754272,
+      0.41903072595596313,
+      0.08319580554962158,
+      0.003560780081897974,
+      0.003067964455112815
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 1000
+  }
+}

@@ -88,7 +88,7 @@ Squint 训练使用物体尺寸与摩擦、夹爪 stiffness/damping、相机、�
 
 受控实验需要保存每个环境实际使用的参数，并使用明确的固定物理条件和完整随机化条件分别评估。物体位置随机化继续覆盖规定工作区。以相同输入检查控制、接触和任务路径，再解释不同条件下的学习结果。
 
-Squint SO101 controller 的 nominal stiffness/damping 为 1000/100，force limit 为 100；夹爪材质摩擦为 2，并使用自身 URDF 与碰撞几何。本项目保留经过检查的机器人模型和动作范围，PD、力矩、碰撞与摩擦通过实际物理记录验证。已有原生 Isaac 夹爪接触诊断的最大速度为 38.163 rad/s，2 rad/s 速度验收尚未通过。MuJoCo scripted IK 的持续抓取已通过，它单独证明对应 MuJoCo 场景的操作路径。
+Squint SO101 controller 的 nominal stiffness/damping 为 1000/100，force limit 为 100；夹爪材质摩擦为 2，并使用自身 URDF 与碰撞几何。本项目 `grasp_v4` 使用 17.8/0.6、3.35 N·m 和 1.5 rad/s，物理周期为 0.001 秒。两项任务、两种条件各完成四环境和 500 步原生检查，逐物理步骤最高速度为 1.500029 rad/s，动作转换和完整 episode reward 检查通过。原生脚本控制完成 1/4 Lift；成功策略及其 MuJoCo 迁移需要独立评估。
 
 ## 采纳与实验要求
 
@@ -102,4 +102,4 @@ Squint SO101 controller 的 nominal stiffness/damping 为 1000/100，force limit
 
 训练验收沿用 v2 Spec：三个 seed、每次 100 episode，连续三次独立评估成功率至少 90%。每种条件保存所有 checkpoint 和评估结果，模型选择依据成功率与保持指标。PPO、普通 SB3 SAC 与完整 Squint 使用各自准确的算法名称和配置；本项目现有 SB3 SAC 尚未包含 Squint 的 C51、视觉 encoder 和 GPU replay 设计。
 
-`grasp_v3` 提供六个关节的 measured-reference 增量控制、Tanh Gaussian PPO、有限时间 potential reward 和独立 checkpoint 评估。实际训练检查已经完成 6,144 transitions、模型保存、100 episodes 评估和 MuJoCo 运行。任务成功率为零，多个 seed 的收敛与成功策略迁移仍需验收。完整 Squint 上游训练尚未执行。
+当前训练使用 `grasp_v4`、官方完整关节范围内的绝对位置目标、Tanh Gaussian PPO、有限时间 potential reward 和独立 checkpoint 评估。手臂动作均值依据实际初始姿态计算，夹爪动作均值为零，对应 0.4 rad 目标。完整训练与验证使用固定提交和独立目录，三个 seed 的收敛与成功策略迁移沿用上述验收要求。完整 Squint 上游训练尚未执行。

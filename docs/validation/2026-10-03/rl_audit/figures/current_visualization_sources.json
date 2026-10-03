@@ -1,0 +1,44 @@
+{
+  "native_report_sha256": "beca755cc6e6efb81d781b59f5cbd2adeafa65c0887c6dce1fffdafbd0565978",
+  "native_trace_sha256": "19bd3a451e4c8746e0701269b4bcc2a82bd600acfa352cdf7fa4c263a9017ebe",
+  "evaluations": [
+    {
+      "label": "\u589e\u91cf\u63a7\u5236",
+      "report_sha256": "dcb25114c25f7802ac4a441c733ab2a5dc5ce6d0ed839b99e6595eebdc6a8b85",
+      "checkpoint_sha256": "b5644620b845fdd48e65e400c6517e9803ab21301b9eb1dcbecf6cbfe68da0ca",
+      "counts": {
+        "reached": 100,
+        "grasped": 28,
+        "held_above_table": 0,
+        "success": 0
+      }
+    },
+    {
+      "label": "\u6301\u7eed\u8fdb\u5c55\u5956\u52b1",
+      "report_sha256": "2f9c95f93197a2c07776745c6130de04c7d1b95a4bff77a3cc2721b355570c5d",
+      "checkpoint_sha256": "38dd7a6fda15221576b2685e8c52d6846e6d11f38c04fcfd957b957eb9777c2a",
+      "counts": {
+        "reached": 100,
+        "grasped": 32,
+        "held_above_table": 0,
+        "success": 0
+      }
+    },
+    {
+      "label": "\u5b8c\u6574\u8303\u56f4\u4f4d\u7f6e\u63a7\u5236",
+      "report_sha256": "2db3839ead28af6168e781d88369761d311f461e775c3e4b8cb4a69c43be3ab0",
+      "checkpoint_sha256": "7a9db2597762d214c7a724c96204a6dd30de6249eb99296fc4b5958f62fe5fb4",
+      "counts": {
+        "reached": 7,
+        "grasped": 0,
+        "held_above_table": 0,
+        "success": 0
+      }
+    }
+  ],
+  "source_sha256": "d536674eb287ff37fe99c1aa46199440dc8427caadeaece8703e57e3b74e900c",
+  "figures": {
+    "native_position_grasp.png": "7ce49980d8b06a0542d0e58b399a1344b10527c05b38e8d8d979250f169c6dac",
+    "independent_evaluations.png": "2109f8b11091f57ae2f1eeaf65ed7d7341d4b8f594b6cb7abc96acb1d33a6a58"
+  }
+}

@@ -86,6 +86,21 @@ CPU 检查为 44 项通过，四项使用替代服务或对象的测试未执行
 ![原生位置控制](figures/native_position_grasp.png)
 ![实际独立评估](figures/independent_evaluations.png)
 
+## 连续路径、夹爪探索与视觉随机化
+
+`native_position_control/cartesian_task.json` 记录 `a03a526` 的四个实际 reset，原生成功为 `0/4`。两个环境达到提升阶段，一个环境的物体中心最高为 robot root frame 的 `0.138460 m`。全部路径、实际位置、接触力与逐物理步骤速度通过报告中的轨迹 SHA256 关联。
+
+两个增量控制配置完成 200 次更新、39,321,600 transitions 后，各自的 100 episodes 独立评估中接近物体比例为 100%，双侧接触比例为 28% 与 32%，持物抬升与成功均为零。`neutral_jaw_evaluation.json` 对应 6,144 transitions 的完整范围位置控制检查，接近物体 7 次，任务成功为零。
+
+![实际路径执行](figures/current_native_grasp.png)
+![最新独立评估](figures/current_independent_evaluations.png)
+
+`camera_collision_geometry.json` 使用实际 USD 的 164 个 camera mount 顶点与 216 个多边形，生成 65 个 MuJoCo convex parts；机器人质量、COM 和惯性保持一致。记录保留原生 SDF 与 MuJoCo CoACD 的各自来源，物理等同性尚未确认。
+
+`visual_randomization.json` 记录四环境、三次 reset、每次十个控制步骤。照明强度与颜色、物体颜色和两个 128×128 RGB 相机的实际输出均发生变化，nominal 质量与 stiffness 保持一致。该记录证明请求的视觉随机化确实执行，任务成功尚未通过。
+
+`portable.json` 与 `mujoco.json` 使用同一个完整范围位置策略。原生观测重建误差为零，策略最大误差为 `5.96e-8`，位置目标最大误差为 `1.19e-7`。MuJoCo 完成四个 episode、20,000 个物理步骤，实际速度与力矩检查通过，任务成功为 `0/4`。
+
 ## 完整闭环的任务验收
 
 `validation_loop/report.json` 来自真实 teacher 模型的独立 100 episodes 检查，seed 为 `30042`，模型 SHA256 为 `863e4671996ae4e4294eea419461f905fbd60a9690eedf38482e00227eb525af`。实际成功率为 `0/100`，状态为 `task_threshold_not_met`。teacher、MuJoCo 与 student 的各项任务评估均要求至少 `90/100`；成功策略的完整流程尚未通过。
