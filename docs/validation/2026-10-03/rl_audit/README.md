@@ -110,3 +110,32 @@ CPU 检查为 44 项通过，四项使用替代服务或对象的测试未执行
 ## 完整闭环的任务验收
 
 `validation_loop/report.json` 来自真实 teacher 模型的独立 100 episodes 检查，seed 为 `30042`，模型 SHA256 为 `863e4671996ae4e4294eea419461f905fbd60a9690eedf38482e00227eb525af`。实际成功率为 `0/100`，状态为 `task_threshold_not_met`。teacher、MuJoCo 与 student 的各项任务评估均要求至少 `90/100`；成功策略的完整流程尚未通过。
+
+## 原生连续抓取与双相机
+
+`native_position_control/timed_native_lift.json` 保存 `5ec65c2` 的四个实际初始场景。原生任务成功为 `4/4`，成功步骤分别为 243、190、227、180；双侧接触步骤分别为 85、78、67、78。最高逐物理步骤速度为 `1.500002 rad/s`，重力保持力矩最大为 `0.806935 N·m`。实际接触记录中，两侧 jaw 的 net force 与 object filtered force 一致。
+
+![四个原生 Lift](figures/verified_native_lift.png)
+
+`native_position_control/dual_camera_lift.json` 保存 `4ec9f84` 的独立运行，原生任务成功为 `4/4`。实际 overhead 与 wrist 相机生成 243 帧、50 fps、512×256 MP4，视频 SHA256 为 `0d02d60675d78e4be077f43cc2d70d4a84dd9a8ad910370bc87e44a7f4a2317f`。HDF5、视频与逐步骤状态保存在 `outputs/rl_progress/v4_video_4ec9f84_task/`。脚本控制成功与 RL 策略成功分别记录。
+
+## Gaussian latent PPO
+
+rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log probability 使用 float64；每次更新前读取保存的 latent、mean 与 std，独立重建 Gaussian 概率。`latent_ppo/native_rollouts.jsonl` 中两轮各 3,072 transitions 的最大重建误差均为零。
+
+`latent_ppo/native_evaluation.json` 保存 `f5d5146` 完成 6,144 transitions、40 次梯度更新后的实际 100 episodes 独立评估，成功率为 `0/100`，接近物体比例为 7%。模型 SHA256 为 `eb532fc2c7e0637fdec61e0e9db153d3a4ed1363fd2d1303dde0e3baf1d5655e`。
+
+`latent_ppo/saved_rollout_precision.json` 使用保存的 196,608 transitions、实际模型与优势值，在 CPU 上计算 likelihood 和 loss gradient。原始状态 SHA256 为 `94ebfcd0c30f61b41c7a98c5a79d78927700d2d0ea9239addf68b73a65809980`。float64 ratio 与 surrogate gradient 的全部数值有效；完整状态文件保留于 `outputs/rl_progress/v3_activity_numerical_failure/`。
+
+## 多 backend 的实际初始化
+
+`backend_checks/` 保存 `57b3874` 的六项独立运行。每项执行 256 transitions，随后保存、加载模型并完成四个独立 episodes。请求初始 std 为 0.73，实际值全部为 `0.730000019`。这些记录验证配置与程序执行，完整学习比较需要相同任务条件的训练与评估。
+
+| Backend | Algorithm | transitions | 独立成功 |
+|---|---|---:|---:|
+| rsl_rl | PPO | 256 | 0/4 |
+| SB3 | PPO | 256 | 0/4 |
+| skrl | PPO | 256 | 0/4 |
+| rl_games | PPO | 256 | 0/4 |
+| SB3 | SAC | 256 | 0/4 |
+| SB3 | TQC | 256 | 0/4 |

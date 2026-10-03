@@ -1,0 +1,53 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "sb3",
+  "algo": "tqc",
+  "training_transitions": 256,
+  "initialization": {
+    "backend": "sb3",
+    "algo": "tqc",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      [
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863
+      ],
+      [
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863
+      ],
+      [
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863
+      ],
+      [
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863,
+        0.7300000190734863
+      ]
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "2a621f5ff7c9c3885429ffe261d6a25291fae649ea656dfb6d6921ccdb809932",
+  "source_sha256": "1ab34c764e93b156340d0b901708c6ca042d4caff1010025e1f6061e6babae26",
+  "evaluation_sha256": "91937bf8a74331b38dd0cef67a14266063360581e94961523af547f745bd00ed",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 4
+}

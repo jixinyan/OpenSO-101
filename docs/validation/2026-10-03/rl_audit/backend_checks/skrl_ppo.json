@@ -1,0 +1,27 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "skrl",
+  "algo": "ppo",
+  "training_transitions": 256,
+  "initialization": {
+    "backend": "skrl",
+    "algo": "ppo",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "ed23303344586819ce2c895dc46304f2e73fd3a266a34f598b50e030e52ac878",
+  "source_sha256": "1ab34c764e93b156340d0b901708c6ca042d4caff1010025e1f6061e6babae26",
+  "evaluation_sha256": "813c1b64c1f294252281150117823b941e214c8a67fc7f6d056bd7bc0c817ee5",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 4
+}

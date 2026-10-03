@@ -1,0 +1,27 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "rsl_rl",
+  "algo": "ppo",
+  "training_transitions": 256,
+  "initialization": {
+    "backend": "rsl_rl",
+    "algo": "ppo",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "ef882ff01138224e9abc0241e1f93ec56feebc8d5d01a7485337b38b5fd727f4",
+  "source_sha256": "1ab34c764e93b156340d0b901708c6ca042d4caff1010025e1f6061e6babae26",
+  "evaluation_sha256": "d8e70c8593368b4b47de2eb1003f8e76ca886e3b80d6946e71a5de66520f3af8",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 4
+}

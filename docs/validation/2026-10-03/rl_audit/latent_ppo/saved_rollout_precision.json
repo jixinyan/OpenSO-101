@@ -1,0 +1,560 @@
+{
+  "state_sha256": "94ebfcd0c30f61b41c7a98c5a79d78927700d2d0ea9239addf68b73a65809980",
+  "source_sha256": "5d2d3b236ecb2b3b4a933ab0255dde620ac6084fe679a16094a2adfcd84635a4",
+  "rollout_transitions": 196608,
+  "batches": [
+    {
+      "first_transition": 0,
+      "last_transition": 49152,
+      "observations": {
+        "shape": [
+          49152,
+          38
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -83.47057342529297,
+        "maximum_finite": 42.7713508605957
+      },
+      "mean": {
+        "shape": [
+          49152,
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -5.326991081237793,
+        "maximum_finite": 13.705692291259766
+      },
+      "log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -79.69084930419922,
+        "maximum_finite": 47.987022399902344
+      },
+      "old_log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -94.83961486816406,
+        "maximum_finite": 47.79655456542969
+      },
+      "log_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -1.690206527709961,
+        "maximum_finite": 15.148765563964844
+      },
+      "ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.1844814121723175,
+        "maximum_finite": 3793370.75
+      },
+      "advantages": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -13.060356140136719,
+        "maximum_finite": 9.61717700958252
+      },
+      "gradients": {
+        "surrogate": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": 0.00021901425498072058,
+          "maximum_finite": 0.039883822202682495
+        },
+        "entropy": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": 0.433275431394577,
+          "maximum_finite": 0.796056866645813
+        }
+      },
+      "float64_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.1844815785004416,
+        "maximum_finite": 3793394.897514856
+      },
+      "float64_surrogate_gradient": {
+        "shape": [
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.0002190165250794962,
+        "maximum_finite": 0.0398838147521019
+      },
+      "maximum_log_ratio_transition": 44908,
+      "maximum_log_ratio_advantage": 0.8282895088195801,
+      "maximum_log_ratio_normalized_observation": [
+        0.8126909732818604,
+        0.14371313154697418,
+        -0.3133106231689453,
+        0.6581205725669861,
+        1.290441632270813,
+        0.11478975415229797,
+        2.204447031021118,
+        -1.7322555780410767,
+        1.2537305355072021,
+        0.8337816596031189,
+        0.8807967901229858,
+        2.724149465560913,
+        -0.718072235584259,
+        0.16610293090343475,
+        0.3440246880054474,
+        -0.5595574378967285,
+        0.015682319179177284,
+        0.07273217290639877,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.16763894259929657,
+        1.3267993927001953,
+        -0.9756783246994019,
+        1.7554157972335815,
+        1.5693448781967163,
+        -0.2951187491416931,
+        2.5431442260742188,
+        -6.1382222175598145,
+        14.612665176391602,
+        5.390183448791504,
+        -63.86003112792969,
+        3.514626979827881,
+        -28.765060424804688,
+        0.0,
+        0.0,
+        0.954013466835022
+      ]
+    },
+    {
+      "first_transition": 49152,
+      "last_transition": 98304,
+      "observations": {
+        "shape": [
+          49152,
+          38
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -167.43023681640625,
+        "maximum_finite": 124.37254333496094
+      },
+      "mean": {
+        "shape": [
+          49152,
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -5.431937217712402,
+        "maximum_finite": 26.608848571777344
+      },
+      "log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -877.4383544921875,
+        "maximum_finite": 42.53181457519531
+      },
+      "old_log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -1004.241455078125,
+        "maximum_finite": 42.64805603027344
+      },
+      "log_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -1.1245169639587402,
+        "maximum_finite": 126.8031005859375
+      },
+      "ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 1,
+        "minimum_finite": 0.32480931282043457,
+        "maximum_finite": 441.61517333984375
+      },
+      "advantages": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -15.961986541748047,
+        "maximum_finite": 6.627170085906982
+      },
+      "gradients": {
+        "surrogate": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 6,
+          "minimum_finite": null,
+          "maximum_finite": null
+        },
+        "entropy": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": 0.36110174655914307,
+          "maximum_finite": 0.6934166550636292
+        }
+      },
+      "float64_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.32480928720839747,
+        "maximum_finite": 1.174749993168912e+55
+      },
+      "float64_surrogate_gradient": {
+        "shape": [
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -0.006130862981081009,
+        "maximum_finite": 0.02303503081202507
+      },
+      "maximum_log_ratio_transition": 54295,
+      "maximum_log_ratio_advantage": 2.5198144912719727,
+      "maximum_log_ratio_normalized_observation": [
+        -0.6958062648773193,
+        -0.6757014989852905,
+        0.9199141263961792,
+        0.38247373700141907,
+        0.8528522849082947,
+        0.03142295032739639,
+        2.135676145553589,
+        -0.9620152115821838,
+        0.5337055921554565,
+        0.2627362310886383,
+        0.8359695076942444,
+        -0.35251617431640625,
+        0.3959861099720001,
+        1.050976037979126,
+        -0.03190550208091736,
+        0.6521933674812317,
+        1.0297714471817017,
+        -0.14767569303512573,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        5.327591896057129,
+        1.493909239768982,
+        -0.34813621640205383,
+        0.20594985783100128,
+        0.5522185564041138,
+        0.681459367275238,
+        -0.2994863986968994,
+        -10.348005294799805,
+        22.96160125732422,
+        -2.7845489978790283,
+        -167.43023681640625,
+        -86.23117065429688,
+        13.898600578308105,
+        0.0,
+        0.0,
+        0.8870433568954468
+      ]
+    },
+    {
+      "first_transition": 98304,
+      "last_transition": 147456,
+      "observations": {
+        "shape": [
+          49152,
+          38
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -48.362342834472656,
+        "maximum_finite": 47.3765869140625
+      },
+      "mean": {
+        "shape": [
+          49152,
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -3.4580984115600586,
+        "maximum_finite": 7.781824588775635
+      },
+      "log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -12.964444160461426,
+        "maximum_finite": 44.00225067138672
+      },
+      "old_log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -13.160202980041504,
+        "maximum_finite": 44.10993957519531
+      },
+      "log_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -1.2036552429199219,
+        "maximum_finite": 0.7834815979003906
+      },
+      "ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.3000952899456024,
+        "maximum_finite": 2.1890804767608643
+      },
+      "advantages": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -8.202627182006836,
+        "maximum_finite": 6.282162666320801
+      },
+      "gradients": {
+        "surrogate": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": -0.002217403380200267,
+          "maximum_finite": 0.007985340431332588
+        },
+        "entropy": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": 0.3443050682544708,
+          "maximum_finite": 0.640270471572876
+        }
+      },
+      "float64_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.30009575855708653,
+        "maximum_finite": 2.189082563997016
+      },
+      "float64_surrogate_gradient": {
+        "shape": [
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -0.0022173987235873938,
+        "maximum_finite": 0.007985335774719715
+      },
+      "maximum_log_ratio_transition": 102954,
+      "maximum_log_ratio_advantage": 0.25327712297439575,
+      "maximum_log_ratio_normalized_observation": [
+        1.6013903617858887,
+        -0.1628657430410385,
+        0.3828529715538025,
+        0.390537828207016,
+        1.35548996925354,
+        -0.014823129400610924,
+        2.318601131439209,
+        -1.4012233018875122,
+        1.898902177810669,
+        1.8173432350158691,
+        1.020247459411621,
+        3.2889885902404785,
+        -1.9197509288787842,
+        1.6076183319091797,
+        0.02561710961163044,
+        -0.6859325170516968,
+        0.7910363078117371,
+        -0.24936127662658691,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.16763894259929657,
+        1.5136611461639404,
+        -1.3585578203201294,
+        1.6676933765411377,
+        1.7898932695388794,
+        1.0786019563674927,
+        2.1749768257141113,
+        -16.030609130859375,
+        4.564242839813232,
+        -9.303657531738281,
+        -11.016240119934082,
+        -20.169384002685547,
+        -1.0333088636398315,
+        0.0,
+        0.0,
+        0.5655864477157593
+      ]
+    },
+    {
+      "first_transition": 147456,
+      "last_transition": 196608,
+      "observations": {
+        "shape": [
+          49152,
+          38
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -59.682987213134766,
+        "maximum_finite": 68.59146118164062
+      },
+      "mean": {
+        "shape": [
+          49152,
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -4.165436267852783,
+        "maximum_finite": 11.587368965148926
+      },
+      "log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -11.558347702026367,
+        "maximum_finite": 39.32421875
+      },
+      "old_log_prob": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -11.532083511352539,
+        "maximum_finite": 39.627288818359375
+      },
+      "log_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -1.1736118793487549,
+        "maximum_finite": 0.9457302093505859
+      },
+      "ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.3092479705810547,
+        "maximum_finite": 2.574692726135254
+      },
+      "advantages": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -11.076552391052246,
+        "maximum_finite": 4.839968681335449
+      },
+      "gradients": {
+        "surrogate": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": -0.0010790310334414244,
+          "maximum_finite": 0.021968798711895943
+        },
+        "entropy": {
+          "shape": [
+            6
+          ],
+          "nonfinite_count": 0,
+          "minimum_finite": 0.3362548351287842,
+          "maximum_finite": 0.6445661783218384
+        }
+      },
+      "float64_ratio": {
+        "shape": [
+          49152
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": 0.30924800782653583,
+        "maximum_finite": 2.574690049096686
+      },
+      "float64_surrogate_gradient": {
+        "shape": [
+          6
+        ],
+        "nonfinite_count": 0,
+        "minimum_finite": -0.001079033361747861,
+        "maximum_finite": 0.02196880802512169
+      },
+      "maximum_log_ratio_transition": 180218,
+      "maximum_log_ratio_advantage": 0.5215879082679749,
+      "maximum_log_ratio_normalized_observation": [
+        2.026169776916504,
+        -0.5468541383743286,
+        0.5692040324211121,
+        -0.17266236245632172,
+        1.7560474872589111,
+        -0.770368754863739,
+        -0.8259212970733643,
+        -1.9357984066009521,
+        1.8827190399169922,
+        -1.6777180433273315,
+        -0.23542502522468567,
+        0.5304203629493713,
+        -1.1987640857696533,
+        1.24025297164917,
+        -0.02392255887389183,
+        -1.3209245204925537,
+        1.502341389656067,
+        0.662602961063385,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.16763894259929657,
+        -1.5463310480117798,
+        -1.3732097148895264,
+        1.217113733291626,
+        -1.0537030696868896,
+        -0.24267789721488953,
+        -0.3998621106147766,
+        -1.983784794807434,
+        -3.335232973098755,
+        -6.014664173126221,
+        -16.56238555908203,
+        -3.2585082054138184,
+        11.905455589294434,
+        0.0,
+        0.0,
+        0.07000721246004105
+      ]
+    }
+  ],
+  "scope": "loss_gradients_from_actual_saved_rollout_and_policy_on_cpu"
+}

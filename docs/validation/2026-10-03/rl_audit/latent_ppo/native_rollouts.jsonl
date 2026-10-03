@@ -1,0 +1,2 @@
+{"update": 1, "action_likelihood": "gaussian_latent", "log_probability_dtype": "torch.float64", "log_probability_maximum_error": 0.0, "latent_minimum": -3.2317285537719727, "latent_maximum": 3.944334030151367, "transitions": 3072}
+{"update": 2, "action_likelihood": "gaussian_latent", "log_probability_dtype": "torch.float64", "log_probability_maximum_error": 0.0, "latent_minimum": -3.089862108230591, "latent_maximum": 3.9460318088531494, "transitions": 3072}

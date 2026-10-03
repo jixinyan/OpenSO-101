@@ -1,0 +1,27 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "sb3",
+  "algo": "ppo",
+  "training_transitions": 256,
+  "initialization": {
+    "backend": "sb3",
+    "algo": "ppo",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "64b67bccbe66e982756b9ce9d107160f1d523414b4d826ab50f59659565c275d",
+  "source_sha256": "1ab34c764e93b156340d0b901708c6ca042d4caff1010025e1f6061e6babae26",
+  "evaluation_sha256": "d9a40a7d0fdbcfa6621e09bc4c80ed8fc03e93219b18ed059de294e4c8b3ad68",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 4
+}

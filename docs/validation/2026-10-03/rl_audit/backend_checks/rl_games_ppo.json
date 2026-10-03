@@ -1,0 +1,27 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "rl_games",
+  "algo": "ppo",
+  "training_transitions": 256,
+  "initialization": {
+    "backend": "rl_games",
+    "algo": "ppo",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "a3ae10796fd9585c8f9945734492498307a8c15556d7eb6d4b4ee04392f93ae7",
+  "source_sha256": "1ab34c764e93b156340d0b901708c6ca042d4caff1010025e1f6061e6babae26",
+  "evaluation_sha256": "f3e7ccc3f8b795f2fa1d8c56647a6d5d83982392c79ffe26ecc98fd2a55ddffa",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 4
+}

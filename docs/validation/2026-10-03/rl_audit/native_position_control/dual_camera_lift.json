@@ -1,0 +1,117 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 243,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        72.61186218261719,
+        76.30262756347656
+      ],
+      "bilateral_contact_steps": 85,
+      "maximum_object_height_root_m": 0.19868846237659454
+    },
+    {
+      "environment": 1,
+      "success": true,
+      "control_steps": 190,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        81.8809814453125,
+        96.83352661132812
+      ],
+      "bilateral_contact_steps": 78,
+      "maximum_object_height_root_m": 0.16316953301429749
+    },
+    {
+      "environment": 2,
+      "success": true,
+      "control_steps": 227,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        144.79884338378906,
+        114.61107635498047
+      ],
+      "bilateral_contact_steps": 67,
+      "maximum_object_height_root_m": 0.1673205941915512
+    },
+    {
+      "environment": 3,
+      "success": true,
+      "control_steps": 181,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        85.12946319580078,
+        100.77928924560547
+      ],
+      "bilateral_contact_steps": 80,
+      "maximum_object_height_root_m": 0.16339540481567383
+    }
+  ],
+  "successes": 4,
+  "episodes": 4,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.500002145767212,
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "planned_joint_speed_rad_s": 0.75,
+  "path_tracking_pause_error_rad": 0.08,
+  "states_sha256": "ea83b7be71337e4414be982fd44d23642ee88e84530d56f4f66e44e08ff0a540",
+  "plan_sha256": "6a9e2673c63b5dda2136390b4ddfdeef6161a4fcf503f0c35a17cf4b07d57518",
+  "trace_sha256": "261eb8d1dfb7bb9914cd4c8c395b593cb4b379a188411629f1651a31fa4d851c",
+  "source_sha256": "d879e19b87e547643972fa09129c0975874a7817cb58740635ebdfcfb663be65",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "rl_policy_success_verified": false,
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.175321242248174e-06,
+      0.8069348335266113,
+      0.45198172330856323,
+      0.11690675467252731,
+      0.0038006058894097805,
+      0.003539106110110879
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 972
+  },
+  "video": {
+    "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v4_video_4ec9f84_task/native_grasp.mp4",
+    "sha256": "0d02d60675d78e4be077f43cc2d70d4a84dd9a8ad910370bc87e44a7f4a2317f",
+    "frames": 243,
+    "fps": 50.0,
+    "environment": 0,
+    "resolution": [
+      512,
+      256
+    ],
+    "camera_order": [
+      "overhead_camera",
+      "wrist_camera"
+    ],
+    "scripted_task_success": true,
+    "rl_policy_success_verified": false
+  }
+}
