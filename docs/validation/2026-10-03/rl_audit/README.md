@@ -142,7 +142,19 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 
 ## grasp_v4 的多 backend 训练
 
-`backend_comparison/` 保存 `8ae2dda` 的 SB3 PPO、skrl PPO 和 rl_games PPO。每项使用相同的 nominal Lift、seed 42、32 个环境、32 个 rollout 步骤、初始 std 0.73、hidden dimensions `[32, 16]` 和 50 次更新，共 51,200 transitions。每项完成模型保存、加载及 seed 10042 的 100 episodes 独立评估，任务成功均为 `0/100`。这些模型使用各自框架的 Gaussian 策略，环境将位置动作限制到完整关节范围；RSL 的 bounded PPO 使用另外的分布配置。该记录覆盖各框架的当前任务执行，完整训练收敛仍需验收。
+`backend_comparison/` 保存 RSL PPO、SB3 PPO、skrl PPO 和 rl_games PPO。每项使用 nominal Lift、seed 42、32 个环境、32 个 rollout 步骤、初始 std 0.73、hidden dimensions `[32, 16]` 和 50 次更新，共 51,200 transitions。每项完成模型保存、加载及 seed 10042 的 100 episodes 独立评估，任务成功均为 `0/100`。RSL 使用 Tanh Gaussian 和原生初始姿态动作均值，其余 PPO 使用各自框架的 Gaussian 策略。SB3 SAC 与 TQC 在相同 `grasp_v4` 任务中各完成 256 transitions、模型保存加载与四个独立 episodes，成功均为 `0/4`。
+
+`backend_curves/report.json` 保存四项实际 TensorBoard 事件文件、模型、评估的 SHA256 与每个实际日志点。每个框架保留其日志单位与 episode 平均窗口，全部预算为 51,200 transitions。图表的日志窗口和横坐标各自注明。独立评估比较同一任务条件，记录如下。
+
+| Backend | 接近物体 | 双侧接触 | 持物抬升 | 任务成功 |
+|---|---:|---:|---:|---:|
+| RSL PPO | 35/100 | 0/100 | 0/100 | 0/100 |
+| SB3 PPO | 7/100 | 0/100 | 0/100 | 0/100 |
+| skrl PPO | 27/100 | 2/100 | 0/100 | 0/100 |
+| rl_games PPO | 35/100 | 1/100 | 0/100 | 0/100 |
+
+![实际训练日志](figures/backend_learning_curves.png)
+![实际独立评估](figures/backend_independent_evaluation.png)
 
 ## 原生动作的 MuJoCo 回放
 
@@ -157,3 +169,25 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 ## 训练停止与模型保存
 
 `training_stop/report.json` 保存 `2f0e735` 的实际原生训练检查。训练进程收到 SIGTERM 后于 `1.716817 秒`退出，保存明确的 `training_stop.json`，包含 signal、实际 PID 和源提交。Isaac framework 的退出码为零，训练状态为 `stop_requested`，没有完成训练的 metadata。全部原始模型继续保存，已经保存的 256 transitions 模型和 SHA256 保持一致。该检查使用独立的四环境训练进程，完整 campaign 继续运行。
+
+## 实际实体运动与夹爪接触表面
+
+`native_body_checks/native.json` 保存 `f1cdd56` 的原生 Lift `4/4`，包含七个机器人实体的实际位置和 quaternion。`kinematics.json` 在 800 个实际控制步骤中使用官方 MJCF 计算相同关节姿态，共 5,600 次比较。每个实体只使用其实际初始姿态确定一次坐标变换。两个夹爪的最大位置差为 `3.677386 µm`，最大旋转差为 `1.625966e-5 rad`。
+
+`contact_geometry.json` 读取 36 个实际双侧接触步骤的关节与物体姿态，在相同几何状态下计算 CoACD 夹爪与物体的 signed surface distance，测量范围约为 `−1.261 mm` 至 `+0.043 mm`。这些记录验证实际运动与碰撞表面的几何距离；接触物理等同性尚未通过。
+
+## 标准任务时间内的末步目标保持
+
+`native_terminal_hold/contact3.json` 回放上述实际 joint targets，在标准五秒任务时间内继续保持最后一个原生目标，最多增加一秒。原始回放期间成功为 `0/4`，完整检查成功为 `2/4`。环境 1、3 的最长连续符合成功条件时间为 1.16 秒、0.54 秒；环境 0、2 为零。实际速度、力矩及参数读回检查通过，控制状态没有直接修改。
+
+`contact6.json` 使用相同原生初始物理状态、动作与末步保持，仅将夹爪接触维度设为 6，摩擦系数维持 `[1.2, 0.005, 0.0001]`。原始回放期间成功为 `0/4`，完整检查成功为 `1/4`。默认模型的接触维度为 3。两项分别保留完整来源、轨迹和任务结果。
+
+![实际末步目标保持](figures/native_terminal_hold.png)
+
+## PickPlace 与双相机视频
+
+`pick_place/native.json` 使用 `1363bec`，依据实际 reset 状态规划接近、抓取、提升、搬运和放置路径。持物路径使用连续关节姿态及每步实际几何检查。原生执行使用重力补偿的位置控制，任务成功为 `1/1`，393 个控制步骤、7.86 秒，最高实际速度为 `1.500002 rad/s`。末步物体距离最终目标 `0.007012 m`，jaw 为 `0.796799 rad`，连续稳定时间为 `0.500000 秒`。
+
+`pick_place/visualization.json` 保存实际轨迹图表及视频核查。视频为 overhead 与 wrist 相机输出，393 帧、50 fps、512×256，SHA256 为 `f3bf983ce939574f7bbe31e88991fa5d57d6038cc086207fae8cf6d8053f1f97`。完整 MP4 与 HDF5 保存在 `outputs/rl_progress/v4_place_1363bec_task/`。该检查属于 scripted IK 控制，RL 和多个初始场景的验收分别记录。
+
+![实际 PickPlace](figures/native_pick_place.png)

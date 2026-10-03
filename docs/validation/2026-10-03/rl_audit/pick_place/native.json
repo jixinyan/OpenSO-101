@@ -1,0 +1,93 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 393,
+      "maximum_phase": 6,
+      "maximum_jaw_forces_n": [
+        67.06643676757812,
+        69.77296447753906
+      ],
+      "bilateral_contact_steps": 231,
+      "maximum_object_height_root_m": 0.1795889139175415
+    }
+  ],
+  "successes": 1,
+  "episodes": 1,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.5000019073486328,
+  "max_episode_steps": 400,
+  "reused_plan_sha256": "1d5425f34fbaa6a692336a23a845ebe1aefc3a4945ad537795dcd4614f7db411",
+  "reused_plan_states_sha256": "b815c55ae19bbee3ea5e4b8ba3abca60aa42c5270b807a27b7e5958017aef4c8",
+  "reused_plan_scope": "exact_kinematic_inputs_with_independent_physics_recording",
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "planned_joint_speed_rad_s": 0.75,
+  "planned_phases": [
+    "approach",
+    "grasp",
+    "lift",
+    "carry",
+    "place"
+  ],
+  "path_tracking_pause_error_rad": 0.08,
+  "states_sha256": "b815c55ae19bbee3ea5e4b8ba3abca60aa42c5270b807a27b7e5958017aef4c8",
+  "plan_sha256": "1d5425f34fbaa6a692336a23a845ebe1aefc3a4945ad537795dcd4614f7db411",
+  "initial_physics_sha256": "b756855bbb252cc2090d07f35765bd92d85b82dd258962b7f7847e41d028fc36",
+  "trace_sha256": "29aa247a1bd2cb2428a3b9503180fcbc2d305d802313e652c4a3796063400706",
+  "source_sha256": "15ed32f254f1960686e69787cb3547d56d2d1b9ba8b908eb2be2c99cd51774a4",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "rl_policy_success_verified": false,
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.143830897693988e-06,
+      0.6886601448059082,
+      0.3799590468406677,
+      0.052928030490875244,
+      0.0011167391203343868,
+      0.00312332296743989
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 393
+  },
+  "video": {
+    "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v4_place_1363bec_task/native_grasp.mp4",
+    "sha256": "f3bf983ce939574f7bbe31e88991fa5d57d6038cc086207fae8cf6d8053f1f97",
+    "frames": 393,
+    "fps": 50.0,
+    "environment": 0,
+    "resolution": [
+      512,
+      256
+    ],
+    "camera_order": [
+      "overhead_camera",
+      "wrist_camera"
+    ],
+    "scripted_task_success": true,
+    "rl_policy_success_verified": false
+  }
+}

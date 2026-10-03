@@ -1,0 +1,31 @@
+{
+  "status": "native_backend_initialization_verified",
+  "backend": "rsl_rl",
+  "algo": "ppo",
+  "task_profile": "grasp_v4",
+  "iterations": 50,
+  "num_envs": 32,
+  "action_distribution": "tanh_gaussian",
+  "training_transitions": 51200,
+  "initialization": {
+    "backend": "rsl_rl",
+    "algo": "ppo",
+    "distribution_scope": "gaussian_latent_standard_deviation",
+    "requested_initial_std": 0.73,
+    "actual_std": [
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863,
+      0.7300000190734863
+    ],
+    "resumed": false
+  },
+  "checkpoint_sha256": "028e1227940420aa03a08d6c4b58a1b3e9d0ab3daf57cd5d0eaa67c30ca13cc3",
+  "source_sha256": "31906abf928e59a6317bb2e07873261c18616546c48db5631edcd25d768e15ec",
+  "evaluation_sha256": "edae00fd6f8e6e452ac0ef5ef0bbcb9550cf1c5845c86c34414249204c6a5ec0",
+  "evaluation_success_rate": 0.0,
+  "task_success_threshold_verified": false,
+  "independent_evaluation_episodes": 100
+}

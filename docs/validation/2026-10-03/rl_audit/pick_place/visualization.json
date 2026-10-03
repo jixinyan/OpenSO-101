@@ -1,0 +1,37 @@
+{
+  "status": "actual_pick_place_visualization_recorded",
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 393,
+      "final_goal_distance_m": 0.007011985921768344,
+      "final_placement_hold_seconds": 0.5000000596046448,
+      "final_jaw_angle_rad": 0.7967992424964905,
+      "phase_steps": {
+        "-1": 10,
+        "0": 95,
+        "1": 11,
+        "2": 22,
+        "3": 33,
+        "4": 101,
+        "5": 91,
+        "6": 30
+      }
+    }
+  ],
+  "native_report_sha256": "716b0944087a71c904cdc7ad8d054e17e769cddc58cd6d0a6cae558d120accf2",
+  "trace_sha256": "29aa247a1bd2cb2428a3b9503180fcbc2d305d802313e652c4a3796063400706",
+  "source_sha256": "13aafd155b43212bec326b7fc720074c18e739f5bb354b48d27270a7783a0880",
+  "figure_sha256": "75ec247032d279aeb476ef81cdf2c056882c4991c5bfe39d1913e55744f086dd",
+  "video": {
+    "sha256": "f3bf983ce939574f7bbe31e88991fa5d57d6038cc086207fae8cf6d8053f1f97",
+    "decoded_frames": 393,
+    "fps": 50.0,
+    "camera_order": [
+      "overhead_camera",
+      "wrist_camera"
+    ]
+  },
+  "rl_policy_success_verified": false
+}

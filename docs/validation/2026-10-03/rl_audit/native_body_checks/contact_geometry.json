@@ -1,0 +1,517 @@
+{
+  "status": "native_contact_geometry_measured",
+  "environments": [
+    {
+      "environment": 0,
+      "sample_count": 10,
+      "minimum_distances_m": [
+        -0.00031725122253900464,
+        1.3942233856033197e-06
+      ],
+      "maximum_distances_m": [
+        4.297674217350776e-05,
+        2.168505320335133e-06
+      ],
+      "median_distances_m": [
+        4.2612394924373224e-05,
+        1.9083669206973695e-06
+      ],
+      "samples": [
+        {
+          "control_step": 158,
+          "native_forces_n": [
+            53.54548645019531,
+            76.30262756347656
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.00031725122253900464,
+            1.3942233856033197e-06
+          ],
+          "jaw_angle_rad": 0.36648356914520264
+        },
+        {
+          "control_step": 168,
+          "native_forces_n": [
+            45.15909194946289,
+            44.30519104003906
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.297674217350776e-05,
+            1.4342368613693533e-06
+          ],
+          "jaw_angle_rad": 0.37290242314338684
+        },
+        {
+          "control_step": 178,
+          "native_forces_n": [
+            46.38198471069336,
+            45.49678421020508
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.262018667029282e-05,
+            1.7597982522291253e-06
+          ],
+          "jaw_angle_rad": 0.37290066480636597
+        },
+        {
+          "control_step": 188,
+          "native_forces_n": [
+            45.88462448120117,
+            45.01405334472656
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.267877358206247e-05,
+            1.6991205855851333e-06
+          ],
+          "jaw_angle_rad": 0.37290093302726746
+        },
+        {
+          "control_step": 198,
+          "native_forces_n": [
+            46.914669036865234,
+            46.020591735839844
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.269538402460559e-05,
+            1.8546655008570256e-06
+          ],
+          "jaw_angle_rad": 0.37290170788764954
+        },
+        {
+          "control_step": 208,
+          "native_forces_n": [
+            46.80342102050781,
+            45.9167594909668
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.261455827302112e-05,
+            1.9620683405377136e-06
+          ],
+          "jaw_angle_rad": 0.37290292978286743
+        },
+        {
+          "control_step": 218,
+          "native_forces_n": [
+            47.26893615722656,
+            46.371334075927734
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.2475546866353995e-05,
+            2.0599745090071006e-06
+          ],
+          "jaw_angle_rad": 0.3729010224342346
+        },
+        {
+          "control_step": 228,
+          "native_forces_n": [
+            46.33823776245117,
+            45.460540771484375
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.260434277548381e-05,
+            1.986586763016746e-06
+          ],
+          "jaw_angle_rad": 0.3729024827480316
+        },
+        {
+          "control_step": 238,
+          "native_forces_n": [
+            45.899410247802734,
+            45.027462005615234
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.2610231575725325e-05,
+            1.98443486148027e-06
+          ],
+          "jaw_angle_rad": 0.3729022741317749
+        },
+        {
+          "control_step": 242,
+          "native_forces_n": [
+            46.62348556518555,
+            45.734886169433594
+          ],
+          "mujoco_signed_surface_distances_m": [
+            4.242828273841077e-05,
+            2.168505320335133e-06
+          ],
+          "jaw_angle_rad": 0.37290114164352417
+        }
+      ]
+    },
+    {
+      "environment": 1,
+      "sample_count": 9,
+      "minimum_distances_m": [
+        -0.0005170458905158448,
+        -3.398995925598957e-05
+      ],
+      "maximum_distances_m": [
+        -3.267980631745717e-05,
+        2.2903159972375591e-07
+      ],
+      "median_distances_m": [
+        -3.285115332208224e-05,
+        2.3767996659501147e-08
+      ],
+      "samples": [
+        {
+          "control_step": 111,
+          "native_forces_n": [
+            81.8809814453125,
+            96.83352661132812
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0005170458905158448,
+            -3.398995925598957e-05
+          ],
+          "jaw_angle_rad": 0.27307143807411194
+        },
+        {
+          "control_step": 122,
+          "native_forces_n": [
+            44.04087829589844,
+            52.54517364501953
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.3055711313690025e-05,
+            0.0
+          ],
+          "jaw_angle_rad": 0.24617253243923187
+        },
+        {
+          "control_step": 132,
+          "native_forces_n": [
+            42.9096565246582,
+            51.184715270996094
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.2758452449699424e-05,
+            1.515609839622044e-07
+          ],
+          "jaw_angle_rad": 0.24618062376976013
+        },
+        {
+          "control_step": 142,
+          "native_forces_n": [
+            43.02754211425781,
+            51.321800231933594
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.267980631745717e-05,
+            -3.135798996131401e-08
+          ],
+          "jaw_angle_rad": 0.24617716670036316
+        },
+        {
+          "control_step": 152,
+          "native_forces_n": [
+            43.490631103515625,
+            51.87126159667969
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.27159475472055e-05,
+            2.3767996659501147e-08
+          ],
+          "jaw_angle_rad": 0.2461748719215393
+        },
+        {
+          "control_step": 162,
+          "native_forces_n": [
+            44.24114227294922,
+            52.770599365234375
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.3064423555986265e-05,
+            2.0771672845593753e-07
+          ],
+          "jaw_angle_rad": 0.24617238342761993
+        },
+        {
+          "control_step": 172,
+          "native_forces_n": [
+            43.02378845214844,
+            51.31639099121094
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.285115332208224e-05,
+            1.1261977700312686e-07
+          ],
+          "jaw_angle_rad": 0.24617555737495422
+        },
+        {
+          "control_step": 182,
+          "native_forces_n": [
+            43.436187744140625,
+            51.80691909790039
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.2820977999767455e-05,
+            -4.5714994223658256e-08
+          ],
+          "jaw_angle_rad": 0.2461744248867035
+        },
+        {
+          "control_step": 189,
+          "native_forces_n": [
+            43.667354583740234,
+            52.089439392089844
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -3.302151539587753e-05,
+            2.2903159972375591e-07
+          ],
+          "jaw_angle_rad": 0.24617554247379303
+        }
+      ]
+    },
+    {
+      "environment": 2,
+      "sample_count": 8,
+      "minimum_distances_m": [
+        -0.0012609988110006591,
+        -2.6220199633286345e-05
+      ],
+      "maximum_distances_m": [
+        -0.0005235935430393422,
+        1.7568383736339512e-06
+      ],
+      "median_distances_m": [
+        -0.000993610199735034,
+        -2.6043535047845643e-05
+      ],
+      "samples": [
+        {
+          "control_step": 160,
+          "native_forces_n": [
+            81.80687713623047,
+            82.3776626586914
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0005235935430393422,
+            1.6963712171226362e-06
+          ],
+          "jaw_angle_rad": 0.36086800694465637
+        },
+        {
+          "control_step": 170,
+          "native_forces_n": [
+            74.9222412109375,
+            114.61107635498047
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0012609988110006591,
+            1.7568383736339512e-06
+          ],
+          "jaw_angle_rad": 0.35298657417297363
+        },
+        {
+          "control_step": 180,
+          "native_forces_n": [
+            58.13726043701172,
+            34.60173797607422
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0009935982550162222,
+            -2.6098152125928357e-05
+          ],
+          "jaw_angle_rad": 0.35477790236473083
+        },
+        {
+          "control_step": 190,
+          "native_forces_n": [
+            58.22900390625,
+            34.8765869140625
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.000993622144453846,
+            -2.6220199633286345e-05
+          ],
+          "jaw_angle_rad": 0.35477715730667114
+        },
+        {
+          "control_step": 200,
+          "native_forces_n": [
+            58.24113082885742,
+            34.7720947265625
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.000993799007357528,
+            -2.5936162659533622e-05
+          ],
+          "jaw_angle_rad": 0.3547767102718353
+        },
+        {
+          "control_step": 210,
+          "native_forces_n": [
+            58.22182846069336,
+            34.855953216552734
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.000993726953195345,
+            -2.6045112807330208e-05
+          ],
+          "jaw_angle_rad": 0.3547755181789398
+        },
+        {
+          "control_step": 220,
+          "native_forces_n": [
+            58.328819274902344,
+            34.577735900878906
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.000993465720194701,
+            -2.604195728836108e-05
+          ],
+          "jaw_angle_rad": 0.35477909445762634
+        },
+        {
+          "control_step": 226,
+          "native_forces_n": [
+            58.30506134033203,
+            34.488990783691406
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0009933707838086173,
+            -2.6142531997643226e-05
+          ],
+          "jaw_angle_rad": 0.3547789752483368
+        }
+      ]
+    },
+    {
+      "environment": 3,
+      "sample_count": 9,
+      "minimum_distances_m": [
+        -0.00028773917919713203,
+        -6.492280131633261e-06
+      ],
+      "maximum_distances_m": [
+        -8.234054267038164e-06,
+        -2.240335881176714e-06
+      ],
+      "median_distances_m": [
+        -8.565057754116328e-06,
+        -2.4095695146004895e-06
+      ],
+      "samples": [
+        {
+          "control_step": 99,
+          "native_forces_n": [
+            99.29427337646484,
+            129.87481689453125
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.0001932830899252229,
+            -6.492280131633261e-06
+          ],
+          "jaw_angle_rad": 0.26903361082077026
+        },
+        {
+          "control_step": 111,
+          "native_forces_n": [
+            46.20599365234375,
+            54.21546173095703
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -0.00028773917919713203,
+            -2.6041787177633683e-06
+          ],
+          "jaw_angle_rad": 0.24460570514202118
+        },
+        {
+          "control_step": 122,
+          "native_forces_n": [
+            44.39347839355469,
+            52.15899658203125
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.234054267038164e-06,
+            -2.4432489076013377e-06
+          ],
+          "jaw_angle_rad": 0.24663209915161133
+        },
+        {
+          "control_step": 132,
+          "native_forces_n": [
+            44.653053283691406,
+            52.479209899902344
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.454295810969989e-06,
+            -2.4188903294182913e-06
+          ],
+          "jaw_angle_rad": 0.24662739038467407
+        },
+        {
+          "control_step": 142,
+          "native_forces_n": [
+            44.533905029296875,
+            52.342594146728516
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.537878538479202e-06,
+            -2.2443538619564686e-06
+          ],
+          "jaw_angle_rad": 0.2466287463903427
+        },
+        {
+          "control_step": 152,
+          "native_forces_n": [
+            44.779205322265625,
+            52.62813949584961
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.49068533988999e-06,
+            -2.4095695146004895e-06
+          ],
+          "jaw_angle_rad": 0.24662698805332184
+        },
+        {
+          "control_step": 162,
+          "native_forces_n": [
+            45.25540542602539,
+            53.179359436035156
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.616883949176471e-06,
+            -2.2572153693183547e-06
+          ],
+          "jaw_angle_rad": 0.24662725627422333
+        },
+        {
+          "control_step": 172,
+          "native_forces_n": [
+            44.862884521484375,
+            52.736942291259766
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.643148604195632e-06,
+            -2.240335881176714e-06
+          ],
+          "jaw_angle_rad": 0.24662771821022034
+        },
+        {
+          "control_step": 179,
+          "native_forces_n": [
+            44.286624908447266,
+            52.04139709472656
+          ],
+          "mujoco_signed_surface_distances_m": [
+            -8.565057754116328e-06,
+            -2.264899672527705e-06
+          ],
+          "jaw_angle_rad": 0.24662885069847107
+        }
+      ]
+    }
+  ],
+  "sampling_stride": 10,
+  "scope": "MuJoCo_CoACD_surface_distances_at_actual_native_joint_and_object_poses",
+  "source_trace_sha256": "d6740cc3301b906d6a3165c3a5f94f9a345ea9abdefe81c671740f39ff6b090d",
+  "source_states_sha256": "8a526b1153ec5c590d47bef7b79eaac439b8761f5a6aa7ec6bbfb2aed8472d77",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841",
+  "source_sha256": "10954138c45313e77ea1c01a0643df33d98dd148f60a10af79c0ad96025d5696",
+  "contact_equivalence_verified": false
+}

@@ -1,0 +1,197 @@
+{
+  "status": "native_body_kinematics_verified",
+  "environments": [
+    {
+      "environment": 0,
+      "control_steps": 233,
+      "jaw_angle_range_rad": [
+        0.36648356914520264,
+        0.7999301552772522
+      ],
+      "bodies": [
+        {
+          "body": "base",
+          "maximum_position_error_m": 0.0,
+          "maximum_rotation_error_rad": 0.0
+        },
+        {
+          "body": "shoulder",
+          "maximum_position_error_m": 1.6179272775046033e-07,
+          "maximum_rotation_error_rad": 1.8495084893632427e-06
+        },
+        {
+          "body": "upper_arm",
+          "maximum_position_error_m": 2.384421826640802e-07,
+          "maximum_rotation_error_rad": 4.57921851589875e-06
+        },
+        {
+          "body": "lower_arm",
+          "maximum_position_error_m": 7.044723839477193e-07,
+          "maximum_rotation_error_rad": 4.884543236278835e-06
+        },
+        {
+          "body": "wrist",
+          "maximum_position_error_m": 1.0573724368273358e-06,
+          "maximum_rotation_error_rad": 6.314469206067506e-06
+        },
+        {
+          "body": "gripper",
+          "maximum_position_error_m": 3.061821352238875e-06,
+          "maximum_rotation_error_rad": 1.5916051127787223e-05
+        },
+        {
+          "body": "jaw",
+          "maximum_position_error_m": 3.338116584361799e-06,
+          "maximum_rotation_error_rad": 1.6244857262285707e-05
+        }
+      ],
+      "verified": true
+    },
+    {
+      "environment": 1,
+      "control_steps": 180,
+      "jaw_angle_range_rad": [
+        0.24262027442455292,
+        0.799895167350769
+      ],
+      "bodies": [
+        {
+          "body": "base",
+          "maximum_position_error_m": 0.0,
+          "maximum_rotation_error_rad": 0.0
+        },
+        {
+          "body": "shoulder",
+          "maximum_position_error_m": 1.6588368912817185e-07,
+          "maximum_rotation_error_rad": 6.510442044872364e-07
+        },
+        {
+          "body": "upper_arm",
+          "maximum_position_error_m": 2.10252822686168e-07,
+          "maximum_rotation_error_rad": 4.267796144376029e-06
+        },
+        {
+          "body": "lower_arm",
+          "maximum_position_error_m": 5.774397395769489e-07,
+          "maximum_rotation_error_rad": 4.208584273377175e-06
+        },
+        {
+          "body": "wrist",
+          "maximum_position_error_m": 6.412109288419006e-07,
+          "maximum_rotation_error_rad": 2.451837378083822e-06
+        },
+        {
+          "body": "gripper",
+          "maximum_position_error_m": 2.2016002602153623e-06,
+          "maximum_rotation_error_rad": 8.766546538091228e-06
+        },
+        {
+          "body": "jaw",
+          "maximum_position_error_m": 2.5568955796775795e-06,
+          "maximum_rotation_error_rad": 8.990121635742869e-06
+        }
+      ],
+      "verified": true
+    },
+    {
+      "environment": 2,
+      "control_steps": 217,
+      "jaw_angle_range_rad": [
+        0.3472122550010681,
+        0.7999399304389954
+      ],
+      "bodies": [
+        {
+          "body": "base",
+          "maximum_position_error_m": 0.0,
+          "maximum_rotation_error_rad": 0.0
+        },
+        {
+          "body": "shoulder",
+          "maximum_position_error_m": 1.6325175627648442e-07,
+          "maximum_rotation_error_rad": 1.595736724081436e-06
+        },
+        {
+          "body": "upper_arm",
+          "maximum_position_error_m": 2.8174430071177334e-07,
+          "maximum_rotation_error_rad": 7.632301117286471e-06
+        },
+        {
+          "body": "lower_arm",
+          "maximum_position_error_m": 8.027273541152743e-07,
+          "maximum_rotation_error_rad": 3.967974505588516e-06
+        },
+        {
+          "body": "wrist",
+          "maximum_position_error_m": 1.2220526407016614e-06,
+          "maximum_rotation_error_rad": 6.442560965743305e-06
+        },
+        {
+          "body": "gripper",
+          "maximum_position_error_m": 3.2646775769076803e-06,
+          "maximum_rotation_error_rad": 1.6024689301040967e-05
+        },
+        {
+          "body": "jaw",
+          "maximum_position_error_m": 3.677385660477839e-06,
+          "maximum_rotation_error_rad": 1.62596590503652e-05
+        }
+      ],
+      "verified": true
+    },
+    {
+      "environment": 3,
+      "control_steps": 170,
+      "jaw_angle_range_rad": [
+        0.24139384925365448,
+        0.799871563911438
+      ],
+      "bodies": [
+        {
+          "body": "base",
+          "maximum_position_error_m": 0.0,
+          "maximum_rotation_error_rad": 0.0
+        },
+        {
+          "body": "shoulder",
+          "maximum_position_error_m": 1.5008571743980287e-07,
+          "maximum_rotation_error_rad": 1.4371754809998106e-06
+        },
+        {
+          "body": "upper_arm",
+          "maximum_position_error_m": 2.0861159402483432e-07,
+          "maximum_rotation_error_rad": 2.689224500164195e-06
+        },
+        {
+          "body": "lower_arm",
+          "maximum_position_error_m": 5.67938681288105e-07,
+          "maximum_rotation_error_rad": 4.408954549076296e-06
+        },
+        {
+          "body": "wrist",
+          "maximum_position_error_m": 6.836811971694491e-07,
+          "maximum_rotation_error_rad": 3.0712034178478943e-06
+        },
+        {
+          "body": "gripper",
+          "maximum_position_error_m": 2.0023237624977596e-06,
+          "maximum_rotation_error_rad": 7.731986061604588e-06
+        },
+        {
+          "body": "jaw",
+          "maximum_position_error_m": 2.2063693579784466e-06,
+          "maximum_rotation_error_rad": 7.726935170039304e-06
+        }
+      ],
+      "verified": true
+    }
+  ],
+  "position_tolerance_m": 1e-05,
+  "rotation_tolerance_rad": 0.0001,
+  "source_trace_sha256": "d6740cc3301b906d6a3165c3a5f94f9a345ea9abdefe81c671740f39ff6b090d",
+  "source_states_sha256": "8a526b1153ec5c590d47bef7b79eaac439b8761f5a6aa7ec6bbfb2aed8472d77",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "source_sha256": "32425d8e8ace168f1b846a9b33705dd1282351c7b4e0d97dec54da915b4c1e97",
+  "scope": "actual_native_body_poses_at_actual_joint_states_with_fixed_initial_frame_conversion",
+  "contact_equivalence_verified": false
+}

@@ -1,0 +1,110 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 243,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        72.61186218261719,
+        76.30262756347656
+      ],
+      "bilateral_contact_steps": 85,
+      "maximum_object_height_root_m": 0.19868846237659454
+    },
+    {
+      "environment": 1,
+      "success": true,
+      "control_steps": 190,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        81.8809814453125,
+        96.83352661132812
+      ],
+      "bilateral_contact_steps": 78,
+      "maximum_object_height_root_m": 0.16316953301429749
+    },
+    {
+      "environment": 2,
+      "success": true,
+      "control_steps": 227,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        144.79884338378906,
+        114.61107635498047
+      ],
+      "bilateral_contact_steps": 67,
+      "maximum_object_height_root_m": 0.1673205941915512
+    },
+    {
+      "environment": 3,
+      "success": true,
+      "control_steps": 180,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        99.29427337646484,
+        129.87481689453125
+      ],
+      "bilateral_contact_steps": 78,
+      "maximum_object_height_root_m": 0.16518211364746094
+    }
+  ],
+  "successes": 4,
+  "episodes": 4,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.500002145767212,
+  "max_episode_steps": 250,
+  "reused_plan_sha256": "4d3615c2ac09fe183680a0165092d6c10fb83be89a369830caa357c79b4188e1",
+  "reused_plan_states_sha256": "445e6c204a5d9570310daf016192283fc1d2d5309d382ef84e78ef47eacb9895",
+  "reused_plan_scope": "exact_kinematic_inputs_with_independent_physics_recording",
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "planned_joint_speed_rad_s": 0.75,
+  "planned_phases": [
+    "approach",
+    "grasp",
+    "lift"
+  ],
+  "path_tracking_pause_error_rad": 0.08,
+  "states_sha256": "8a526b1153ec5c590d47bef7b79eaac439b8761f5a6aa7ec6bbfb2aed8472d77",
+  "plan_sha256": "4d3615c2ac09fe183680a0165092d6c10fb83be89a369830caa357c79b4188e1",
+  "initial_physics_sha256": "334a46c5ca705caae5ebfeb128f8a7e44ae5dbfe7ee10101f7e7ec8e3a60f124",
+  "trace_sha256": "d6740cc3301b906d6a3165c3a5f94f9a345ea9abdefe81c671740f39ff6b090d",
+  "source_sha256": "15ed32f254f1960686e69787cb3547d56d2d1b9ba8b908eb2be2c99cd51774a4",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "rl_policy_success_verified": false,
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.175321242248174e-06,
+      0.8069348335266113,
+      0.45198172330856323,
+      0.11690675467252731,
+      0.0038006058894097805,
+      0.003539106110110879
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 972
+  }
+}

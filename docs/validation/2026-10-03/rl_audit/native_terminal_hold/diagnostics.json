@@ -1,0 +1,139 @@
+{
+  "environments": [
+    {
+      "environment": 0,
+      "isaac": {
+        "height_steps": 67,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 85,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04265334420637976,
+        "final_jaw_angle_rad": 0.37290114164352417,
+        "final_contact_forces_n": [
+          46.62348556518555,
+          45.734886169433594
+        ]
+      },
+      "mujoco": {
+        "height_steps": 25,
+        "goal_steps": 0,
+        "bilateral_contact_steps": 38,
+        "eligible_steps": 0,
+        "longest_hold_seconds": 0.0,
+        "final_hold_seconds": 0.0,
+        "final_goal_distance_m": 0.1901076127013977,
+        "final_jaw_angle_rad": 5.278395310614164e-05,
+        "final_contact_forces_n": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "environment": 1,
+      "isaac": {
+        "height_steps": 58,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 78,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04174638376188104,
+        "final_jaw_angle_rad": 0.24617554247379303,
+        "final_contact_forces_n": [
+          43.667354583740234,
+          52.089439392089844
+        ]
+      },
+      "mujoco": {
+        "height_steps": 108,
+        "goal_steps": 58,
+        "bilateral_contact_steps": 128,
+        "eligible_steps": 58,
+        "longest_hold_seconds": 1.16,
+        "final_hold_seconds": 1.16,
+        "final_goal_distance_m": 0.04958973841599259,
+        "final_jaw_angle_rad": 0.10002937546852628,
+        "final_contact_forces_n": [
+          24.29550865239855,
+          24.238224137142772
+        ]
+      }
+    },
+    {
+      "environment": 2,
+      "isaac": {
+        "height_steps": 46,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 67,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04379213393778799,
+        "final_jaw_angle_rad": 0.3547789752483368,
+        "final_contact_forces_n": [
+          58.30506134033203,
+          34.488990783691406
+        ]
+      },
+      "mujoco": {
+        "height_steps": 0,
+        "goal_steps": 0,
+        "bilateral_contact_steps": 17,
+        "eligible_steps": 0,
+        "longest_hold_seconds": 0.0,
+        "final_hold_seconds": 0.0,
+        "final_goal_distance_m": 0.1594379674293889,
+        "final_jaw_angle_rad": 4.947405252577566e-05,
+        "final_contact_forces_n": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "environment": 3,
+      "isaac": {
+        "height_steps": 62,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 78,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.047184301500455945,
+        "final_jaw_angle_rad": 0.24662885069847107,
+        "final_contact_forces_n": [
+          44.286624908447266,
+          52.04139709472656
+        ]
+      },
+      "mujoco": {
+        "height_steps": 112,
+        "goal_steps": 27,
+        "bilateral_contact_steps": 130,
+        "eligible_steps": 27,
+        "longest_hold_seconds": 0.54,
+        "final_hold_seconds": 0.0,
+        "final_goal_distance_m": 0.05173828562854361,
+        "final_jaw_angle_rad": 0.10132771394917515,
+        "final_contact_forces_n": [
+          25.297027540368603,
+          25.25233271142498
+        ]
+      }
+    }
+  ],
+  "task_parameters": {
+    "minimal_height": 0.04,
+    "goal_radius": 0.05,
+    "settle_seconds": 0.25,
+    "force_threshold": 0.5
+  },
+  "native_report_sha256": "ec795ef1a093feea0e91d7614f43987e686ef5e840fff8380f3f45f9b13f57b1",
+  "replay_report_sha256": "a0eef27256079f2b44198a3c96b495f1a697ecfaf85541dd35e130175c1ec5a8",
+  "trajectory_sha256": "f689fe2e669092339dbd71da9eb36e2d94371cb581b1a91b4db27de65c9e8d3a",
+  "source_sha256": "dbb3c72d639c6e5d88e03126a591b8a623a49a27621184bb0909e8584a72409b",
+  "figure_sha256": "1b82452dfacbd79c0b18b5a294ff6055a9d012349b9b38dd9a1d381f499083aa"
+}
