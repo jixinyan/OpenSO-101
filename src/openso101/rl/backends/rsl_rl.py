@@ -4,8 +4,6 @@
 import json
 from pathlib import Path
 
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
-
 from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
 from openso101.rl.bounded_policy import runner_class
 from openso101.rl.initialization import record_initial_std
@@ -36,6 +34,8 @@ def configuration(cfg: TrainCfg, device: str):
 
 class Backend:
     def train(self, env, cfg: TrainCfg, output: Path, resume: Path | None = None) -> Path:
+        from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+
         cfg.batch_size(env.unwrapped.num_envs)
         config = configuration(cfg, env.unwrapped.device)
         config["diagnostic_dir"] = str(output.resolve())
@@ -95,6 +95,8 @@ class Backend:
         return output / "model.pt"
 
     def load(self, env, folder: Path):
+        from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+
         meta = CheckpointMeta.read(folder)
         config = json.loads((folder / "backend.json").read_text())
         runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=None, device=env.unwrapped.device)

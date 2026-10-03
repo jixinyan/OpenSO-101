@@ -11,6 +11,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from .config import CheckpointMeta, TrainCfg, digest
+from .gpu_scope import configure_visible_gpu
 
 
 def build_environment(args, *, training: bool, scene: Path | None = None, student: bool = False):
@@ -71,10 +72,15 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
             env, video_folder=str(args._video_dir), step_trigger=lambda step: step % args.video_interval == 0,
             video_length=args.video_length, disable_logger=True,
         )
+    if training and getattr(args, "_training_stop", None) is not None:
+        from .stopping import TrainingStopGuard
+
+        env = TrainingStopGuard(env, args._training_stop)
     return env
 
 
 def train(args):
+    configure_visible_gpu()
     if args.logger not in (None, "tensorboard"):
         raise ValueError("统一 backend 入口使用 --logger tensorboard；其他日志服务通过现有训练入口使用")
     config = TrainCfg.model_validate_json(Path(args.train_config).read_text()) if args.train_config else TrainCfg()
@@ -147,13 +153,16 @@ def train(args):
     from isaaclab.app import AppLauncher
 
     app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras or args.video).app
+    from .stopping import TrainingStopRequest
+
+    args._training_stop = TrainingStopRequest()
     def terminate_training(signum, frame):
         (output / "training_stop.json").write_text(json.dumps({
             "status": "stop_requested", "signal": signum, "worker_pid": os.getpid(),
             "training_git_sha": git_sha, "task": args.task, "seed": config.seed,
             "requested_at": datetime.now(UTC).isoformat(),
         }, indent=2) + "\n")
-        raise SystemExit(128 + signum)
+        args._training_stop.signal = signum
 
     signal.signal(signal.SIGTERM, terminate_training)
     signal.signal(signal.SIGINT, terminate_training)
@@ -222,6 +231,7 @@ def train(args):
 
 
 def evaluate(args, *, play=False, student_folder=None):
+    configure_visible_gpu()
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
     args.task_profile = meta.task_profile
@@ -365,6 +375,7 @@ def evaluate_student(args):
 
 
 def distill(args):
+    configure_visible_gpu()
     teacher = Path(args.teacher_run).resolve()
     meta = CheckpointMeta.read(teacher)
     if meta.config.backend != "rsl_rl" or meta.config.algo != "ppo":

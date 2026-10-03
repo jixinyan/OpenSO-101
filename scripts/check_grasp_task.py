@@ -17,6 +17,9 @@ parser.add_argument("--task", choices=("OpenSO101-Lift-v0", "OpenSO101-PickPlace
 parser.add_argument("--with-cameras", action="store_true")
 parser.add_argument("--camera-resolution", type=int, default=256)
 args = parser.parse_args()
+from openso101.rl.gpu_scope import configure_visible_gpu
+
+configure_visible_gpu()
 if args.output.exists() or args.num_envs <= 0:
     raise ValueError("任务检查需要新的输出目录和有效环境数量")
 if (args.verified_plan is None) != (args.plan_states is None):
@@ -66,6 +69,9 @@ try:
                 robot.data.body_pos_w, robot.data.body_quat_w,
             )
             values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
+                      "policy_observation": policy_observation,
+                      "policy_action": policy_action,
+                      "weighted_reward": runtime.reward_manager._step_reward * runtime.step_dt,
                       "robot_body_position_root": body_positions, "robot_body_quaternion_root": body_quaternions,
                       "gravity_compensation": robot.root_physx_view.get_gravity_compensation_forces()[:, ids],
                       "joint_targets": torch.cat([runtime.action_manager.get_term(name).processed_actions
@@ -112,7 +118,7 @@ try:
 
     args.recorder_cfg = TaskRecorderCfg()
     env = build_environment(args, training=True)
-    env.reset()
+    observation, _ = env.reset()
     runtime = env.unwrapped
     robot = runtime.scene["robot"]
     mappings = action_mapping(runtime)
@@ -137,7 +143,9 @@ try:
     settling_target[:, -1] = .8
     desired = settling_target
     for _ in range(settling_steps):
-        _, _, terminated, truncated, _ = env.step(control_actions(settling_target))
+        policy_observation = observation["policy"].detach().clone()
+        policy_action = control_actions(settling_target)
+        observation, _, terminated, truncated, _ = env.step(policy_action)
         if (terminated | truncated).any():
             raise RuntimeError("规划准备过程提前终止")
     obj = runtime.scene["object"]
@@ -273,7 +281,9 @@ try:
         desired = torch.cat((arm_target, jaw_target), dim=-1)
         actions = control_actions(desired)
         actions[~active] = 0
-        _, _, terminated, truncated, _ = env.step(actions)
+        policy_observation = observation["policy"].detach().clone()
+        policy_action = actions.detach().clone()
+        observation, _, terminated, truncated, _ = env.step(actions)
         sample = trace[-1]
         errors = torch.linalg.vector_norm(torch.as_tensor(sample["joint_position"], device=runtime.device)[:, :5]
                                          - arm_target, dim=-1)
@@ -338,6 +348,13 @@ try:
               "initial_physics_sha256": digest(physics_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),
+              "policy_observation_terms": [
+                  {"name": name, "size": int(np.prod(shape))}
+                  for name, shape in zip(runtime.observation_manager.active_terms["policy"],
+                                         runtime.observation_manager.group_obs_term_dim["policy"], strict=True)],
+              "policy_action_mapping": mappings,
+              "reward_terms": list(runtime.reward_manager.active_terms),
+              "state_action_sampling": "observation_before_action_with_transition_reward",
               "rl_policy_success_verified": False}
     gravity = np.stack([item["gravity_compensation"] for item in trace])
     holding_budget = (np.asarray(states["joint_stiffness"]) * .04 if args.task_profile == "grasp_v3"

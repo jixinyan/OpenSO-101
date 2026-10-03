@@ -7,6 +7,9 @@ from .config import CheckpointMeta, digest
 
 
 def export(args):
+    from .gpu_scope import configure_visible_gpu
+
+    configure_visible_gpu()
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
     if meta.task_id != args.task or meta.config.backend != "rsl_rl" or meta.config.algo != "ppo":
@@ -128,6 +131,7 @@ def export(args):
         maximum_errors = {"observation": 0., "policy_action": 0., "processed_targets": 0.}
         buffers = {name: [] for name in (
             "joint_position", "joint_velocity", "object_position_root", "object_quaternion_root", "goal_root", "jaw_forces",
+            "jaw_net_force_vectors", "jaw_object_force_vectors", "gravity_compensation",
             "ee_object_distance", "gripper_position_root", "gripper_quaternion_root",
             "raw_action", "joint_targets", "weighted_reward", "terminated", "truncated",
             "joint_stiffness", "joint_damping", "joint_armature", "joint_friction_coeff", "joint_vel_limits",
@@ -167,6 +171,13 @@ def export(args):
                     "object_position_root": object_root, "object_quaternion_root": object_quaternion, "goal_root": goal,
                     "jaw_forces": torch.stack([_jaw_force_magnitude(unwrapped.scene[name])
                                                for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
+                    "jaw_net_force_vectors": torch.stack([
+                        unwrapped.scene[name].data.net_forces_w.sum(dim=1)
+                        for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1),
+                    "jaw_object_force_vectors": torch.stack([
+                        unwrapped.scene[name].data.force_matrix_w.sum(dim=(1, 2))
+                        for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1),
+                    "gravity_compensation": robot.root_physx_view.get_gravity_compensation_forces()[:, joint_ids],
                     "ee_object_distance": torch.linalg.vector_norm(
                         obj.data.root_pos_w - unwrapped.scene["ee_frame"].data.target_pos_w[:, 0], dim=-1),
                     "raw_action": actions, "joint_targets": decoded,

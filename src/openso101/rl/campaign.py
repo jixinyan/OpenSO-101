@@ -20,6 +20,10 @@ class CampaignInitialRun(BaseModel):
 
 
 def campaign(args):
+    from .gpu_scope import gpu_scope
+
+    scope = gpu_scope()
+    scope.validate_allocation(args.gpus)
     config_path = Path(args.train_config).resolve()
     config = TrainCfg.model_validate_json(config_path.read_text())
     if config.backend != "rsl_rl" or config.algo != "ppo":
@@ -60,6 +64,7 @@ def campaign(args):
     handles = []
     processes = []
     receipt = {"schema_version": 2, "training_git_sha": revision, "config_sha256": digest(config_path),
+               "allowed_gpus": scope.allowed_gpus, "requested_gpus": args.gpus,
                "created_at": datetime.now(UTC).isoformat(), "task_profile": profile,
                "environment_mode": config.environment_mode, "num_envs": args.num_envs,
                "required_seeds": args.seeds, "jobs": jobs, "multi_seed_acceptance_verified": False,
@@ -69,6 +74,16 @@ def campaign(args):
         (root / "campaign.json").write_text(json.dumps(receipt, indent=2) + "\n")
 
     write_receipt()
+    stop_signal = None
+
+    def request_stop(signum, frame):
+        nonlocal stop_signal
+        stop_signal = signum
+        receipt.update(status="stop_requested", stop_signal=signum, stopped_at=datetime.now(UTC).isoformat())
+        write_receipt()
+
+    signal.signal(signal.SIGTERM, request_stop)
+    signal.signal(signal.SIGINT, request_stop)
     try:
         for task, seed in ((task, seed) for task in tasks for seed in args.seeds):
             folder = root / f"{task}_seed_{seed}"
@@ -87,6 +102,8 @@ def campaign(args):
                          "initial_completed_transitions": parent[1].completed_transitions if parent else 0})
             write_receipt()
         while any(job["status"] in ("queued", "running") for job in jobs):
+            if stop_signal is not None:
+                return 128 + stop_signal
             busy = {job["gpu"] for job in jobs if job["status"] == "running"}
             for gpu in args.gpus:
                 pending = next((job for job in jobs if job["status"] == "queued"), None)
