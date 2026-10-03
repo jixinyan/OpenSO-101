@@ -2,7 +2,7 @@
 
 ## 控制和观测
 
-`configs/rl/grasp_v3.json` 使用 RSL PPO、Tanh Gaussian、观测归一化和固定 learning rate `0.0001`。actor 的采样、确定性输出、log probability 和 entropy 共同采用 Tanh 变换。策略导出、MuJoCo 和视觉 student 使用相同动作转换。
+`configs/rl/grasp_v3.json` 使用 RSL PPO、Tanh Gaussian、观测归一化和固定 learning rate `0.0001`。actor 采样 Gaussian latent，Tanh 输出作为环境动作；rollout 保存原始 latent 和对应 Gaussian 参数。PPO 在 latent 空间计算 likelihood ratio，Tanh 的 Jacobian 在该 ratio 中消去。log probability 与存储使用 float64，entropy 包含 Tanh 的 Jacobian。策略导出、MuJoCo 和视觉 student 使用相同环境动作转换。
 
 每个控制步骤以当前测得的六个关节位置为参考，目标增量为 `clip(action, -1, 1) × 0.04 rad`。目标受关节范围与夹爪 `[0, 0.8] rad` 范围限制，全部物理步骤使用同一个位置目标。实际关节超出目标范围时，目标限制会增加修正量。实际速度使用每个物理步骤的测量值进行验收。
 
@@ -26,9 +26,13 @@ Lift 要求双侧接触力均超过 0.5 N、物体高度超过 4 cm、目标距�
 
 `CheckedPPO` 在记录 transition、计算 returns、反向传播和 optimizer 更新前检查有限数值。出现无效数值立即终止，并保存 `numerical_failure/state.pt` 与 `failure.json`，其中包含实际 rollout、模型、optimizer、梯度、失败数值和随机状态。`updates.jsonl` 记录每次更新的实际 learning rate 和 loss。
 
+`latent_rollouts.jsonl` 保存每次 rollout 的样本数量、latent 范围、log probability 数据类型与实际 Gaussian 重建误差。`policy_initialization.json` 保存实际初始 standard deviation；继续训练保留已保存分布的参数。
+
 `model_best.pt` 按独立成功率选择。`model.pt` 保存最后完成的 iteration。每个 seed 的连续三次评估均达到 90% 时，该 seed 完成训练验收。
 
 `rl campaign` 管理 Lift 和 PickPlace 各三个 seed，使用指定的一到六个 GPU 运行训练队列；`campaign.json` 保存进程、配置、来源与独立验收状态。各任务的三个 seed 都满足条件后，多个 seed 验收才能成立。选定模型保存为独立 `selected_policy` snapshot。
+
+`--initial-runs` 接受包含 `task`、`seed` 与 `run` 的 JSON 数组；每项模型必须通过内容校验，并对应当前任务、seed 与 profile。训练目录保留完整 `parent/` 模型、optimizer、元数据和来源文件，`resume.json` 记录其 SHA256 与先前累计 transitions。Lift 的三个 seed 优先启动，PickPlace 随后进入队列。
 
 ```bash
 openso101 rl campaign --train-config configs/rl/grasp_v3.json \

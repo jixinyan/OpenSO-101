@@ -70,7 +70,7 @@ def campaign(args):
 
     write_receipt()
     try:
-        for task, seed in ((task, seed) for seed in args.seeds for task in tasks):
+        for task, seed in ((task, seed) for task in tasks for seed in args.seeds):
             folder = root / f"{task}_seed_{seed}"
             command = [sys.executable, "-m", "openso101.cli.main", "rl", "train", "--task", task,
                        "--algo", "ppo", "--backend", "rsl_rl", "--train-config", str(config_path),
