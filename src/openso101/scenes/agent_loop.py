@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+import objaverse
 from pathlib import Path
 from typing import Any, Callable, Literal, Protocol, Sequence
 
@@ -272,20 +273,13 @@ class ObjaverseRetriever:
             return []
 
         candidates: list[AssetCandidate] = []
-        try:
-            categories = search_categories(request.query, request.limit)
-            if not categories:
-                categories = [category for token in sorted(tokens)
-                              for category in search_categories(token, request.limit)]
-        except Exception:
-            return []
+        categories = search_categories(request.query, request.limit)
+        if not categories:
+            categories = [category for token in sorted(tokens)
+                          for category in search_categories(token, request.limit)]
         for category in categories:
             uids = category["uids"]
-            try:
-                import objaverse
-                annotations = objaverse.load_annotations(uids)
-            except Exception:
-                annotations = {}
+            annotations = objaverse.load_annotations(uids)
             for uid in uids:
                 if not re.fullmatch(r"[a-f0-9]{32}", uid) or any(item.uid == uid for item in candidates):
                     continue
@@ -347,7 +341,7 @@ class TrimeshAssetGenerator:
         # Recipes are Z-up; glTF is Y-up. The compiler converts back to Z-up.
         mesh.apply_transform(trimesh.transformations.rotation_matrix(-np.pi / 2, (1, 0, 0)))
         recipe = [part.model_dump() for part in parts]
-        with tempfile.TemporaryDirectory(prefix="openso101-generated-") as temp:
+        with tempfile.TemporaryDirectory(prefix="openso101-generated-", dir=catalog.root) as temp:
             path = Path(temp) / "model.glb"
             mesh.export(path)
             return catalog.import_glb(
