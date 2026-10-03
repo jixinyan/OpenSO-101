@@ -16,8 +16,10 @@ def campaign(args):
     config = TrainCfg.model_validate_json(config_path.read_text())
     if config.backend != "rsl_rl" or config.algo != "ppo":
         raise ValueError("当前 campaign 使用 rsl_rl PPO")
-    if len(set(args.seeds)) != 3 or len(set(args.gpus)) != 6 or len(args.gpus) != 6:
-        raise ValueError("campaign 需要三个独立 seed 和六个独立 GPU")
+    if len(args.seeds) != 3 or len(set(args.seeds)) != 3:
+        raise ValueError("campaign 需要三个独立 seed")
+    if not 1 <= len(args.gpus) <= 6 or len(set(args.gpus)) != len(args.gpus) or min(args.gpus) < 0:
+        raise ValueError("campaign 需要一到六个独立 GPU 编号")
     if config.evaluation_episodes != 100 or config.evaluation_interval != 100:
         raise ValueError("campaign 需要每 100 iterations 评估 100 episodes")
     config.batch_size(args.num_envs)
@@ -38,24 +40,32 @@ def campaign(args):
 
     write_receipt()
     try:
-        for index, (task, seed) in enumerate((task, seed) for task in tasks for seed in args.seeds):
+        for task, seed in ((task, seed) for seed in args.seeds for task in tasks):
             folder = root / f"{task}_seed_{seed}"
             command = [sys.executable, "-m", "openso101.cli.main", "rl", "train", "--task", task,
                        "--algo", "ppo", "--backend", "rsl_rl", "--train-config", str(config_path),
                        "--task-profile", "grasp_v3", "--seed", str(seed), "--num_envs", str(args.num_envs),
                        "--output", str(folder), "--headless", "--no-video", "--logger", "tensorboard"]
-            environment = os.environ | {"CUDA_VISIBLE_DEVICES": str(args.gpus[index])}
             log_path = root / f"{folder.name}.log"
-            handle = log_path.open("x")
-            handles.append(handle)
-            process = subprocess.Popen(command, env=environment, stdout=handle, stderr=subprocess.STDOUT,
-                                       start_new_session=True)
-            processes.append(process)
-            jobs.append({"task": task, "seed": seed, "gpu": args.gpus[index], "pid": process.pid,
-                         "run": str(folder), "log": str(log_path), "command": command, "status": "running"})
+            jobs.append({"task": task, "seed": seed, "gpu": None, "pid": None,
+                         "run": str(folder), "log": str(log_path), "command": command, "status": "queued"})
             write_receipt()
-        while any(job["status"] == "running" for job in jobs):
-            for process, job in zip(processes, jobs, strict=True):
+        while any(job["status"] in ("queued", "running") for job in jobs):
+            busy = {job["gpu"] for job in jobs if job["status"] == "running"}
+            for gpu in args.gpus:
+                pending = next((job for job in jobs if job["status"] == "queued"), None)
+                if gpu in busy or pending is None:
+                    continue
+                handle = Path(pending["log"]).open("x")
+                handles.append(handle)
+                process = subprocess.Popen(pending["command"],
+                                           env=os.environ | {"CUDA_VISIBLE_DEVICES": str(gpu)},
+                                           stdout=handle, stderr=subprocess.STDOUT, start_new_session=True)
+                processes.append((process, pending))
+                pending.update(gpu=gpu, pid=process.pid, status="running",
+                               started_at=datetime.now(UTC).isoformat())
+                write_receipt()
+            for process, job in processes:
                 code = process.poll()
                 if code is None or job["status"] != "running":
                     continue
@@ -88,11 +98,11 @@ def campaign(args):
         write_receipt()
         return 0 if receipt["multi_seed_acceptance_verified"] else 1
     finally:
-        for process, job in zip(processes, jobs, strict=True):
+        for process, job in processes:
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGTERM)
                 job["status"] = "terminated"
-        for process in processes:
+        for process, job in processes:
             process.wait()
         for handle in handles:
             handle.close()

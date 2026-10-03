@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import base64
+import hashlib
 import json
 import math
 import mimetypes
@@ -12,6 +13,7 @@ from pathlib import Path
 from typing import Sequence
 
 import httpx
+from httpx_sse import EventSource
 from pydantic import BaseModel
 
 
@@ -25,6 +27,8 @@ class ModelService:
     max_retries: int = 2
     reasoning_effort: str = "xhigh"
     reasoning_summary: str = "auto"
+    max_requests: int | None = None
+    requests: list[dict] = field(default_factory=list, repr=False, compare=False)
 
     def __post_init__(self):
         if (
@@ -42,6 +46,9 @@ class ModelService:
             raise ValueError("max_retries 必须位于 0 到 5")
         if self.reasoning_effort not in ("low", "medium", "high", "xhigh"):
             raise ValueError("reasoning_effort 必须为 low、medium、high 或 xhigh")
+        if self.max_requests is not None and (not isinstance(self.max_requests, int)
+                                             or isinstance(self.max_requests, bool) or self.max_requests <= 0):
+            raise ValueError("max_requests 必须为正整数")
 
     def complete(
         self,
@@ -51,12 +58,9 @@ class ModelService:
         schema: type[BaseModel],
         images: Sequence[str | Path] = (),
     ) -> BaseModel:
-        system = system + "\nReturn only JSON conforming to this schema:\n" + schema_instruction(schema)
+        system = system + "\n仅返回符合以下 schema 的 JSON：\n" + schema_instruction(schema)
         headers = {}
-        # Empty/missing credentials are valid for local OpenAI-compatible
-        # servers.  Only send an Authorization header when a non-empty key is
-        # actually configured; this also avoids an unhelpful KeyError before
-        # the HTTP request is made.
+        # 本地兼容服务可以接受匿名请求；配置密钥后发送 Authorization。
         if self.api_key_env:
             api_key = os.environ.get(self.api_key_env, "").strip()
             if api_key:
@@ -73,10 +77,7 @@ class ModelService:
             )
             request_body = {
                 "model": self.model,
-                # Codex's Responses wire sends the system instruction as a
-                # developer input item.  The gateway requires streaming even
-                # for structured one-shot calls, so collect its SSE deltas
-                # below before validating the final JSON.
+                # 网关使用 developer input，并要求通过 SSE 完成 Responses 请求。
                 "input": [
                     {"role": "developer", "content": [{"type": "input_text", "text": system}]},
                     {"role": "user", "content": response_content},
@@ -93,7 +94,7 @@ class ModelService:
                     content.append({"type": "image_url", "image_url": {"url": _image_url(image)}})
                 user_message: dict = {"role": "user", "content": content}
             else:
-                # Keep the text-only shape for existing OpenAI-compatible servers.
+                # 文本请求保留兼容服务接受的字段格式。
                 user_message = {"role": "user", "content": prompt}
             request_body = {
                 "model": self.model,
@@ -106,6 +107,13 @@ class ModelService:
         with httpx.Client(timeout=self.timeout_seconds) as client:
             completion = None
             for attempt in range(self.max_retries + 1):
+                if self.max_requests is not None and len(self.requests) >= self.max_requests:
+                    raise RuntimeError("模型请求数量达到预算上限")
+                record = {"attempt": attempt, "model": self.model, "schema": schema.__name__,
+                          "wire_api": self.wire_api, "status": "requested", "usage": None,
+                          "request_sha256": hashlib.sha256(json.dumps(request_body, sort_keys=True).encode()).hexdigest()}
+                self.requests.append(record)
+                started = time.monotonic()
                 try:
                     if self.wire_api == "responses":
                         with client.stream("POST", endpoint, headers=headers, json=request_body) as response:
@@ -115,38 +123,48 @@ class ModelService:
                         response = client.post(endpoint, headers=headers, json=request_body)
                         response.raise_for_status()
                         completion = response.json()
+                    record.update(status="response_received", elapsed_seconds=time.monotonic() - started,
+                                  usage=completion.get("usage"),
+                                  response_sha256=hashlib.sha256(json.dumps(completion, sort_keys=True).encode()).hexdigest())
+                    result = (_parse_response_output(completion, schema) if self.wire_api == "responses"
+                              else _parse_chat_output(completion, schema))
+                    record["status"] = "validated"
                     break
                 except httpx.HTTPStatusError as exc:
+                    record.update(status="http_error", http_status=exc.response.status_code,
+                                  elapsed_seconds=time.monotonic() - started)
                     retryable = exc.response.status_code == 429 or exc.response.status_code >= 500
                     if not retryable or attempt >= self.max_retries:
                         raise
                 except httpx.TransportError:
+                    record.update(status="transport_error", elapsed_seconds=time.monotonic() - started)
                     if attempt >= self.max_retries:
                         raise
+                except (RuntimeError, ValueError, TypeError):
+                    record.update(status="invalid_response", elapsed_seconds=time.monotonic() - started)
+                    raise
                 time.sleep(min(2 ** attempt, 8))
             assert completion is not None
-        if self.wire_api == "responses":
-            return _parse_response_output(completion, schema)
-        try:
-            choice = completion["choices"][0]
-            finish_reason = choice.get("finish_reason", "stop")
-            message = choice["message"]
-        except (KeyError, IndexError, TypeError, AttributeError) as exc:
-            raise ValueError("模型服务返回缺少 choices[0].message") from exc
-        if not isinstance(message, dict):
-            raise ValueError("模型服务返回的 message 不是对象")
-        if finish_reason not in (None, "stop"):
-            raise ValueError(f"模型输出未完成：{finish_reason}")
-        if message.get("refusal"):
-            raise ValueError("模型服务拒绝了本次请求")
-        content = message.get("content")
-        if content is None:
-            raise ValueError("模型服务返回的 message.content 为空")
-        if isinstance(content, str):
-            return schema.model_validate_json(content)
-        # A few compatible servers decode JSON mode into an object before
-        # serialising the response.  Accept that representation as well.
-        return schema.model_validate(content)
+        return result
+
+
+def _parse_chat_output(completion: object, schema: type[BaseModel]) -> BaseModel:
+    try:
+        choice = completion["choices"][0]
+        finish_reason = choice.get("finish_reason", "stop")
+        message = choice["message"]
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        raise ValueError("模型服务返回缺少 choices[0].message") from exc
+    if not isinstance(message, dict):
+        raise ValueError("模型服务返回的 message 需要 JSON 对象")
+    if finish_reason not in (None, "stop"):
+        raise ValueError(f"模型输出未完成：{finish_reason}")
+    if message.get("refusal"):
+        raise ValueError("模型服务拒绝了本次请求")
+    content = message.get("content")
+    if content is None:
+        raise ValueError("模型服务返回的 message.content 为空")
+    return schema.model_validate_json(content) if isinstance(content, str) else schema.model_validate(content)
 
 
 @dataclass(frozen=True)
@@ -221,48 +239,31 @@ def _parse_response_output(completion: object, schema: type[BaseModel]) -> BaseM
 
 
 def _parse_response_stream(response: object) -> dict:
-    """Collect Responses API SSE deltas into a response-shaped dictionary."""
     headers = getattr(response, "headers", {})
     content_type = str(headers.get("content-type", ""))
     if "text/event-stream" not in content_type:
+        response.read()
         return response.json()
     deltas: list[str] = []
     completed: dict | None = None
-    for line in response.iter_lines():
-        if not isinstance(line, str) or not line.startswith("data:"):
+    for message in EventSource(response).iter_sse():
+        if not message.data or message.data == "[DONE]":
             continue
-        payload = line[5:].strip()
-        if not payload or payload == "[DONE]":
-            continue
-        try:
-            event = json.loads(payload)
-        except json.JSONDecodeError:
-            continue
+        event = message.json()
         if not isinstance(event, dict):
-            continue
+            raise ValueError("Responses 事件需要 JSON 对象")
         event_type = event.get("type")
         if event_type == "response.output_text.delta" and isinstance(event.get("delta"), str):
             deltas.append(event["delta"])
-            # Structured output is requested in the developer prompt.  Once a
-            # complete JSON object is available, stop consuming trailing
-            # reasoning/telemetry events and close the streamed response.
-            candidate = "".join(deltas).strip()
-            if candidate.startswith("{"):
-                try:
-                    json.loads(candidate)
-                except json.JSONDecodeError:
-                    pass
-                else:
-                    return {"output_text": candidate}
         elif event_type == "response.completed":
             response_value = event.get("response")
             if isinstance(response_value, dict):
                 completed = response_value
-        elif event_type == "response.failed":
-            response_value = event.get("response")
-            completed = response_value if isinstance(response_value, dict) else event
+                break
+        elif event_type in ("response.failed", "response.incomplete", "error"):
+            raise RuntimeError(f"Responses 流终止：{event_type}")
     if completed is None:
-        completed = {}
+        raise RuntimeError("Responses 流缺少 response.completed")
     if deltas:
         completed["output_text"] = "".join(deltas)
     return completed

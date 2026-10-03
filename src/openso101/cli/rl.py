@@ -1275,7 +1275,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_campaign.add_argument("--train-config", required=True)
     p_campaign.add_argument("--output", required=True)
     p_campaign.add_argument("--seeds", type=int, nargs=3, default=[42, 43, 44])
-    p_campaign.add_argument("--gpus", type=int, nargs=6, required=True)
+    p_campaign.add_argument("--gpus", type=int, nargs="+", required=True)
     p_campaign.add_argument("--num-envs", dest="num_envs", type=int, default=2048)
     p_campaign.set_defaults(func=_cmd_campaign)
 

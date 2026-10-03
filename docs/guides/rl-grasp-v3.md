@@ -24,12 +24,12 @@ Lift 要求双侧接触力均超过 0.5 N、物体高度超过 4 cm、目标距�
 
 `model_best.pt` 按独立成功率选择。`model.pt` 保存最后完成的 iteration。每个 seed 的连续三次评估均达到 90% 时，该 seed 完成训练验收。
 
-`rl campaign` 管理 Lift 和 PickPlace 各三个 seed，在六个独立 GPU 上运行；`campaign.json` 保存进程、配置、来源与独立验收状态。各任务的三个 seed 都满足条件后，多个 seed 验收才能成立。选定模型保存为独立 `selected_policy` snapshot。
+`rl campaign` 管理 Lift 和 PickPlace 各三个 seed，使用指定的一到六个 GPU 运行训练队列；`campaign.json` 保存进程、配置、来源与独立验收状态。各任务的三个 seed 都满足条件后，多个 seed 验收才能成立。选定模型保存为独立 `selected_policy` snapshot。
 
 ```bash
 openso101 rl campaign --train-config configs/rl/grasp_v3.json \
   --output outputs/rl_progress/grasp_v3_campaign \
-  --seeds 42 43 44 --gpus 0 1 2 3 4 5 --num-envs 2048
+  --seeds 42 43 44 --gpus 0 5 6 --num-envs 2048
 ```
 
 训练、导出、MuJoCo 任务成功和视觉 student 任务成功分别使用各自的真实运行报告。程序启动、有限数值和动作转换检查各自记录其范围。
