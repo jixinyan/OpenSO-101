@@ -39,8 +39,26 @@ try:
 
     physics_samples = []
     physics_positions = []
+    target_checks = []
 
     class PhysicsSpeedRecorder(RecorderTerm):
+        def record_pre_step(self):
+            runtime = self._env
+            robot = runtime.scene["robot"]
+            ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
+            before = robot.data.joint_pos[:, ids].clone()
+            actual = torch.cat([runtime.action_manager.get_term(name).processed_actions
+                                for name in runtime.action_manager.active_terms], dim=-1)
+            applied = runtime.action_manager.action
+            decoded = decode_joint_targets(applied, mapping, joint_position=before)
+            error = float((decoded - actual).abs().max())
+            unconstrained = before + applied.clamp(-1, 1) * (2 * runtime.step_dt)
+            correction = float((actual - unconstrained).abs().max())
+            if error > 1e-6:
+                raise RuntimeError(f"关节目标检查失败：error={error}")
+            target_checks.append((error, correction, before.cpu(), applied.cpu().clone()))
+            return None, None
+
         def record_post_physics_decimation_step(self):
             asset = self._env.scene["robot"]
             joint_ids = [asset.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
@@ -81,21 +99,12 @@ try:
             if (not torch.isfinite(log_probability).all() or not torch.isfinite(entropy).all()
                     or (actions.abs() >= 1).any()):
                 raise RuntimeError("bounded actor 的分布检查失败")
-            before = robot.data.joint_pos[:, ids].clone()
-            env.unwrapped.action_manager.process_action(actions)
-            actual = torch.cat([runtime.action_manager.get_term(name).processed_actions
-                                for name in runtime.action_manager.active_terms], dim=-1)
-            applied_actions = runtime.action_manager.action
-            decoded = decode_joint_targets(applied_actions, mapping, joint_position=before)
-            error = float((decoded - actual).abs().max())
-            maximum_target_error = max(maximum_target_error, error)
-            unconstrained = before + applied_actions.clamp(-1, 1) * (2 * runtime.step_dt)
-            maximum_limit_correction = max(maximum_limit_correction, float((actual - unconstrained).abs().max()))
-            if error > 1e-6:
-                raise RuntimeError(f"关节目标检查失败：step={index}, error={error}, "
-                                   f"maximum_delta={float((actual - before).abs().max())}, "
-                                   f"before={before.tolist()}, targets={actual.tolist()}")
             observation, reward, terminated, truncated, _ = env.step(actions)
+            if len(target_checks) != index + 1:
+                raise RuntimeError("控制步骤的动作记录数量不一致")
+            error, correction, before, applied_actions = target_checks[index]
+            maximum_target_error = max(maximum_target_error, error)
+            maximum_limit_correction = max(maximum_limit_correction, correction)
             progress_index = runtime.reward_manager.active_terms.index("progress")
             shaping = runtime.reward_manager._step_reward[:, progress_index] * runtime.step_dt
             shaping_returns += runtime.cfg.reward_discount ** episode_steps * shaping.double()
@@ -125,6 +134,7 @@ try:
             trace.create_dataset(name, data=torch.stack([record[column] for record in records]).numpy())
         trace.create_dataset("physics_steps/joint_velocity", data=physics_velocity.numpy())
         trace.create_dataset("physics_steps/joint_position", data=torch.stack(physics_positions).cpu().numpy())
+        trace.create_dataset("applied_action", data=torch.stack([record[3] for record in target_checks]).numpy())
     report = {"task": args.task, "task_profile": args.task_profile, "environment_mode": args.environment_mode,
               "steps": args.steps, "num_envs": 4, "resets": resets,
               "seed": args.seed,
