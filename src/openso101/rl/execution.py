@@ -196,6 +196,13 @@ def evaluate(args, *, play=False, student_folder=None):
 
         from .backends import get_backend
 
+        recording_output = getattr(args, "recording_output", None)
+        if recording_output is not None:
+            from .recording import first_episode_recorder
+
+            student_metadata = json.loads((student_folder / "student.json").read_text())
+            args.recorder_cfg = first_episode_recorder(Path(recording_output), args.task, meta.task_profile,
+                                                       student_metadata["files"]["student.pt"])
         env = build_environment(args, training=False, scene=scene)
         if student_folder is None:
             policy = get_backend(meta.config.backend).load(env, folder)
@@ -278,6 +285,16 @@ def evaluate(args, *, play=False, student_folder=None):
             result.update(student_sha256=student.metadata["files"]["student.pt"],
                           goal_input=student.metadata["goal_input"], camera_observation=True,
                           teacher_metadata_sha256=digest(folder / "checkpoint.json"))
+        if recording_output is not None:
+            from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+
+            episodes = list(Path(recording_output).rglob("episode_*.hdf5"))
+            if len(episodes) != 1:
+                raise RuntimeError("student 评估需要一份完整的首个环境 episode")
+            validate_hdf5_episode(episodes[0])
+            result["recorded_episode"] = {"path": str(episodes[0].resolve()),
+                                          "sha256": digest(episodes[0]),
+                                          "validation": "passed"}
         report_folder = folder if student_folder is None else student_folder
         report = report_folder / f"evaluation-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
         report.write_text(json.dumps(result, indent=2))

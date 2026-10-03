@@ -1179,6 +1179,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_student_eval.add_argument("--n-episodes", dest="n_episodes", type=int, default=100)
     p_student_eval.add_argument("--seed", type=int, default=10042)
     p_student_eval.add_argument("--headless", action="store_true")
+    p_student_eval.add_argument("--recording-output", help="保存首个环境完整 episode 的实际双相机与关节目标 HDF5")
     p_student_eval.set_defaults(func=_cmd_student_eval)
 
     p_train = sub.add_parser("train", help="Train an RL policy")
