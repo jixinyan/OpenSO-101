@@ -13,4 +13,6 @@ backend=${3:?请指定 backend}
 algo=${4:-ppo}
 /home/jixin/workspace/envs/openso101-v2/bin/python -u scripts/check_backend_initialization.py \
     --backend "$backend" --algo "$algo" --output "outputs/rl_progress/${prefix}_${backend}_${algo}" \
+    --task-profile "${OPENSO101_TASK_PROFILE:-default}" --iterations "${OPENSO101_CHECK_ITERATIONS:-2}" \
+    --num-envs "${OPENSO101_CHECK_ENVS:-4}" --episodes "${OPENSO101_CHECK_EPISODES:-4}" \
     > "outputs/rl_progress/${prefix}_${backend}_${algo}.log" 2>&1

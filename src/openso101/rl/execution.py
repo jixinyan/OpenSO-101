@@ -95,7 +95,8 @@ def train(args):
     args.task_profile = getattr(args, "task_profile", None) or (previous.task_profile if previous else "default")
     args.environment_mode = config.environment_mode
     args.reward_discount = config.gamma
-    if args.task_profile in ("grasp_v3", "grasp_v4") and config.action_distribution != "tanh_gaussian":
+    if (config.backend == "rsl_rl" and args.task_profile in ("grasp_v3", "grasp_v4")
+            and config.action_distribution != "tanh_gaussian"):
         raise ValueError("当前 grasp profile 的 RSL PPO 需要 tanh_gaussian 动作分布")
     if previous and previous.task_profile != args.task_profile:
         raise ValueError("继续训练需要保持 task_profile")
