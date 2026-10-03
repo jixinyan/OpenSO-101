@@ -32,6 +32,7 @@ def configure_grasp_v3(cfg, task_id):
     cfg.sim.dt = .002
     cfg.decimation = 10
     cfg.sim.render_interval = cfg.decimation
+    cfg.sim.physx.solve_articulation_contact_last = True
     cfg.scene.robot.spawn.articulation_props.solver_velocity_iteration_count = 8
     for asset in (cfg.scene.robot, cfg.scene.object):
         asset.spawn.rigid_props.max_depenetration_velocity = .1
