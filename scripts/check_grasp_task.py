@@ -133,7 +133,7 @@ try:
             actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
         else:
             gravity = robot.root_physx_view.get_gravity_compensation_forces()[:, ids]
-            stiffness = robot.root_physx_view.get_dof_stiffnesses()[:, ids]
+            stiffness = robot.root_physx_view.get_dof_stiffnesses()[:, ids].to(runtime.device)
             if (stiffness <= 0).any() or not torch.isfinite(gravity).all():
                 raise RuntimeError("绝对位置任务检查需要有效的重力保持力矩和 stiffness")
             compensated = desired + gravity / stiffness

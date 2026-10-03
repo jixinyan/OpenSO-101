@@ -12,7 +12,7 @@ task_python=/home/jixin/workspace/envs/openso101-v2/bin/python
 output="outputs/rl_progress/${2:?请指定输出名称}"
 "$task_python" -u -m openso101.cli.main rl train \
     --task OpenSO101-Lift-v0 --backend rsl_rl --algo ppo \
-    --train-config configs/rl/grasp_v3.json --task-profile grasp_v3 \
+    --train-config configs/rl/grasp_v3.json --task-profile "${5:-grasp_v3}" \
     --seed 42 --num_envs "${4:-32}" --max_iterations "${3:-2}" \
     --output "$output" --headless --no-video --logger tensorboard
 test -f "$output/checkpoint.json"
