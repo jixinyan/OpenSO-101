@@ -6,7 +6,7 @@
 
 每个控制步骤以当前测得的六个关节位置为参考，目标增量为 `clip(action, -1, 1) × 0.04 rad`。目标受关节范围与夹爪 `[0, 0.8] rad` 范围限制，全部物理步骤使用同一个位置目标。实际关节超出目标范围时，目标限制会增加修正量。实际速度使用每个物理步骤的测量值进行验收。
 
-控制周期为 0.02 秒，物理周期为 0.001 秒。机器人 actuator 使用官方 SO-101 MJCF 中的 armature `0.028`、stiffness `17.8`、damping `0.6` 和 effort limit `3.35`。这些是仿真参数，真机参数需要校准。actuator velocity limit 为 1.5 rad/s，实际物理速度的检查标准为 2 rad/s。solver velocity iterations 为 8，maximum depenetration velocity 为 0.1 m/s，`solve_articulation_contact_last=True`。MuJoCo 使用导出模型记录的物理周期。
+控制周期为 0.02 秒，物理周期为 0.001 秒。机器人 actuator 使用官方 SO-101 MJCF 中的 armature `0.028`、stiffness `17.8`、damping `0.6` 和 effort limit `3.35`。这些是仿真参数，真机参数需要校准。actuator velocity limit 为 1.5 rad/s，实际物理速度的检查标准为 2 rad/s。solver velocity iterations 为 8，maximum depenetration velocity 为 0.1 m/s，`solve_articulation_contact_last=False`。MuJoCo 使用导出模型记录的物理周期。运行中的 campaign 使用固定源码，其实际条件保存在 checkpoint 的 source 和环境记录中。
 
 policy 观测包含关节位置和速度、物体位置和速度、任务目标、双侧抓取状态、上一个实际动作、任务阶段、保持时间和剩余 episode 时间。Lift 为 38 个数值，PickPlace 为 34 个数值。达到 episode 时间上限作为有限时间任务的终止，critic 不执行 timeout bootstrap。
 
