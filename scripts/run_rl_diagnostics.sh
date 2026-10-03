@@ -9,10 +9,13 @@ export OMP_NUM_THREADS=4
 export OPENBLAS_NUM_THREADS=1
 export LD_LIBRARY_PATH="/home/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:/home/jixin/workspace/envs/edh-graphics/root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 task_python=/home/jixin/workspace/envs/openso101-v2/bin/python
-output="outputs/rl_progress/${2:?请指定输出名称}"
-"$task_python" -u -m openso101.cli.main rl train \
-    --task OpenSO101-Lift-v0 --backend rsl_rl --algo ppo \
-    --train-config configs/rl/grasp_v3.json --task-profile grasp_v3 \
-    --seed 42 --num_envs "${4:-32}" --max_iterations "${3:-2}" \
-    --output "$output" --headless --no-video --logger tensorboard
-test -f "$output/checkpoint.json"
+prefix=${2:?请指定独立输出名称}
+for condition in nominal randomized; do
+    for task in PickPlace Lift; do
+        output="outputs/rl_progress/${prefix}_${task}_${condition}"
+        "$task_python" -u scripts/check_rl_runtime.py \
+            --task "OpenSO101-${task}-v0" --environment-mode "$condition" \
+            --steps 500 --output "$output" > "${output}.log" 2>&1
+        test -f "$output/report.json"
+    done
+done

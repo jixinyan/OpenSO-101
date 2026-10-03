@@ -13,7 +13,7 @@
   "action_distribution": "tanh_gaussian",
   "initial_noise_std": 0.8,
   "environment_mode": "nominal",
-  "learning_rate_schedule": "adaptive",
+  "learning_rate_schedule": "fixed",
   "desired_kl": 0.01,
   "evaluation_interval": 100,
   "evaluation_episodes": 100

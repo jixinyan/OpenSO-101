@@ -36,6 +36,8 @@ class Backend:
     def train(self, env, cfg: TrainCfg, output: Path, resume: Path | None = None) -> Path:
         cfg.batch_size(env.unwrapped.num_envs)
         config = configuration(cfg, env.unwrapped.device)
+        config["diagnostic_dir"] = str(output.resolve())
+        config["save_interval"] = 1
         if resume:
             previous = CheckpointMeta.read(resume)
             if (cfg.hidden_dims, cfg.normalize_observations, cfg.action_distribution, cfg.environment_mode) != (
@@ -54,7 +56,12 @@ class Backend:
         remaining = cfg.iterations
         while remaining:
             count = min(remaining, cfg.evaluation_interval)
-            runner.learn(num_learning_iterations=count, init_at_random_ep_len=False)
+            try:
+                runner.learn(num_learning_iterations=count, init_at_random_ep_len=False)
+            except Exception as error:
+                if hasattr(runner.alg, "capture_failure"):
+                    runner.alg.capture_failure(f"{type(error).__name__}: {error}")
+                raise
             checkpoint = output / f"model_{runner.current_learning_iteration}.pt"
             runner.save(str(checkpoint))
             converged = evaluate_snapshot(output, checkpoint, runner.current_learning_iteration, cfg)

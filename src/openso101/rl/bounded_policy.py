@@ -1,8 +1,9 @@
 import torch
 from torch.distributions import Normal, TanhTransform, TransformedDistribution
-from rsl_rl.algorithms import PPO
 from rsl_rl.modules import ActorCritic
 from rsl_rl.runners import OnPolicyRunner
+
+from .checked_ppo import CheckedPPO
 
 
 class BoundedActorCritic(ActorCritic):
@@ -40,7 +41,8 @@ class BoundedOnPolicyRunner(OnPolicyRunner):
         if policy_cfg.pop("class_name") != "BoundedActorCritic" or algorithm_cfg.pop("class_name") != "PPO":
             raise ValueError("bounded runner 需要 BoundedActorCritic 与 PPO")
         policy = BoundedActorCritic(obs, self.cfg["obs_groups"], self.env.num_actions, **policy_cfg).to(self.device)
-        algorithm = PPO(policy, device=self.device, multi_gpu_cfg=self.multi_gpu_cfg, **algorithm_cfg)
+        algorithm = CheckedPPO(policy, diagnostic_dir=self.cfg.get("diagnostic_dir"),
+                               device=self.device, multi_gpu_cfg=self.multi_gpu_cfg, **algorithm_cfg)
         algorithm.init_storage("rl", self.env.num_envs, self.num_steps_per_env, obs, [self.env.num_actions])
         return algorithm
 
