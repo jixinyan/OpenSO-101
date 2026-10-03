@@ -1,27 +1,12 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""USD-geometry helpers for the SO-101 asset.
-
-Lazy-imports ``pxr`` because that library is bundled inside Isaac Sim's
-``extscache`` and is only importable after ``isaaclab.app.AppLauncher``
-has run. When called from standalone Python (e.g. unit tests without
-the sim app), the helpers fall back to a baked-in constant rather than
-raising, so import-time consumers degrade gracefully.
-"""
-
 from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
 
 _BASE_PRIM_NAME = "base"
-
-# Baked from `assets/so101/usd/SO-ARM101-USD.usd` on 2026-05-14
-# via the in-sim path of ``base_prim_local_z_min``. Used as a fallback when
-# pxr cannot be imported (i.e. outside the Omniverse app context).
-_BAKED_BASE_PRIM_LOCAL_Z_MIN: float = 0.03008
-
 
 @lru_cache(maxsize=8)
 def base_prim_local_z_min(usd_path: Path | str) -> float:
@@ -30,11 +15,6 @@ def base_prim_local_z_min(usd_path: Path | str) -> float:
     Walks the USD looking for the first prim named ``base`` and reads its
     world-aligned bounding box via ``UsdGeom.BBoxCache``. The stage has no
     upper xforms, so "world" here equals the asset's local frame.
-
-    If ``pxr`` cannot be imported (standalone Python without Isaac Sim
-    bootstrapped), returns ``_BAKED_BASE_PRIM_LOCAL_Z_MIN`` so module-import
-    consumers do not crash. Update the baked value by re-running this
-    function under the Omniverse app.
 
     Parameters
     ----------
@@ -53,10 +33,7 @@ def base_prim_local_z_min(usd_path: Path | str) -> float:
     LookupError
         If pxr is available but no prim named ``base`` is found.
     """
-    try:
-        from pxr import Usd, UsdGeom
-    except ImportError:
-        return _BAKED_BASE_PRIM_LOCAL_Z_MIN
+    from pxr import Usd, UsdGeom
 
     stage = Usd.Stage.Open(str(usd_path))
     if stage is None:

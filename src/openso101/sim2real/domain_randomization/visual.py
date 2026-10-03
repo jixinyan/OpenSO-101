@@ -25,6 +25,7 @@ Wiring example::
 
 from __future__ import annotations
 
+import colorsys
 from typing import TYPE_CHECKING
 
 import torch
@@ -94,12 +95,10 @@ def randomize_object_color(
     """
     rgb = _sample_jittered_hsv(env, hue_jitter, saturation_range, value_range)
     asset_prim = _scene_asset_prim(env, asset_name)
-    if asset_prim is None:
-        return
-    # The PreviewSurface shader lives one level below the asset prim in
-    # the canonical Isaac Lab spawn layout. We walk the prim tree to find
-    # it rather than hardcoding a sub-path so this works for any spawner.
-    for shader_path, attr_name in _iter_preview_surface_attributes(asset_prim):
+    attributes = list(_iter_preview_surface_attributes(asset_prim))
+    if not attributes:
+        raise ValueError(f"{asset_name} 缺少 UsdPreviewSurface diffuseColor")
+    for shader_path, attr_name in attributes:
         _set_usd_attr_absolute(shader_path, attr_name, rgb, value_type="color3f")
 
 
@@ -192,57 +191,23 @@ def _sample_jittered_hsv(
 
 
 def _hsv_to_rgb(h: float, s: float, v: float) -> tuple[float, float, float]:
-    # Standard HSV -> RGB; kept inline so we don't depend on colorsys
-    # for what is essentially a one-line conversion. Mirrors the math in
-    # ``matplotlib.colors.hsv_to_rgb`` for a single pixel.
-    i = int(h * 6.0)
-    f = h * 6.0 - i
-    p, q, t = v * (1 - s), v * (1 - f * s), v * (1 - (1 - f) * s)
-    table = ((v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q))
-    return table[i % 6]
+    return colorsys.hsv_to_rgb(h, s, v)
 
 
 def _scene_asset_prim(env, asset_name: str):
-    """Return the Usd.Prim for a scene asset, or None if the asset is missing.
-
-    The look-up goes through Isaac Lab's scene registry first (which
-    works for both single- and multi-env scenes), then falls back to a
-    direct USD stage query for assets that exist outside the regex
-    namespace (e.g. world-fixed assets).
-    """
-    try:
-        from pxr import Usd
-    except ImportError:
-        return None
     stage = _get_stage()
-    if stage is None:
-        return None
-    # Isaac Lab's InteractiveScene uses bracket subscript (raises KeyError
-    # on miss); it does NOT expose a dict-like `.get()`. Keep the None
-    # fallback behavior the rest of this function depends on by catching
-    # KeyError explicitly.
-    try:
-        asset = env.scene[asset_name]
-    except KeyError:
-        return None
-    if asset is None:
-        return None
-    prim_paths = asset.cfg.prim_path
-    # In multi-env scenes the prim_path contains "{ENV_REGEX_NS}"; touch
-    # the env-0 instance — material attrs are shared across envs via
-    # instancing so writing to env-0 propagates.
-    prim_path = prim_paths.replace("{ENV_REGEX_NS}", "/World/envs/env_0")
+    asset = env.scene[asset_name]
+    prim_path = asset.root_physx_view.prim_paths[0]
     prim = stage.GetPrimAtPath(prim_path)
-    return prim if prim and prim.IsValid() else None
+    if not prim.IsValid():
+        raise ValueError(f"visual DR 缺少 asset prim: {prim_path}")
+    return prim
 
 
 def _iter_preview_surface_attributes(root_prim):
     """Yield (prim_path, attr_name) for each PreviewSurface diffuseColor under root."""
-    try:
-        from pxr import Usd, UsdShade
-    except ImportError:
-        return
-    for descendant in Usd.PrimRange(root_prim):
+    from pxr import Usd, UsdShade
+    for descendant in Usd.PrimRange(root_prim, Usd.TraverseInstanceProxies()):
         if not descendant.IsA(UsdShade.Shader):
             continue
         shader = UsdShade.Shader(descendant)
@@ -253,12 +218,12 @@ def _iter_preview_surface_attributes(root_prim):
 
 
 def _get_stage():
-    try:
-        import omni.usd
-    except ImportError:
-        return None
+    import omni.usd
     ctx = omni.usd.get_context()
-    return ctx.get_stage() if ctx is not None else None
+    stage = ctx.get_stage()
+    if stage is None:
+        raise RuntimeError("visual DR 需要运行中的 USD stage")
+    return stage
 
 
 def _set_usd_attr(env, prim_path: str, attr_name: str, value, value_type: str = "float"):
@@ -269,17 +234,16 @@ def _set_usd_attr(env, prim_path: str, attr_name: str, value, value_type: str = 
 
 def _set_usd_attr_absolute(prim_path: str, attr_name: str, value, value_type: str = "float"):
     stage = _get_stage()
-    if stage is None:
-        return
     prim = stage.GetPrimAtPath(prim_path)
-    if not prim or not prim.IsValid():
-        return
+    if not prim.IsValid():
+        raise ValueError(f"visual DR 缺少 prim: {prim_path}")
     attr = prim.GetAttribute(attr_name)
-    if not attr:
-        return
+    if not attr.IsValid():
+        raise ValueError(f"visual DR 缺少 attribute: {prim_path}.{attr_name}")
     if value_type == "color3f" and not isinstance(value, tuple):
         value = tuple(value)
-    attr.Set(value)
+    if not attr.Set(value):
+        raise RuntimeError(f"visual DR attribute 写入失败: {prim_path}.{attr_name}")
 
 
 __all__ = [

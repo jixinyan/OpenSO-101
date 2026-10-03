@@ -46,11 +46,11 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
     if getattr(args, "recorder_cfg", None) is not None:
         cfg.recorders = args.recorder_cfg
     cfg.configure_cameras(bool(getattr(args, "with_cameras", False)))
-    if getattr(args, "visual_dr", False):
-        cfg.configure_visual_dr(True)
     from openso101.tasks.shared.grasp_v3 import configure_environment_mode
 
     configure_environment_mode(cfg, getattr(args, "environment_mode", "randomized"))
+    if getattr(args, "visual_dr", False):
+        cfg.configure_visual_dr(True)
     if student:
         from .vision_distillation import StudentObservationsCfg
 

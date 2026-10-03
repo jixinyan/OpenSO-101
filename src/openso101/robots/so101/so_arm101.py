@@ -50,9 +50,7 @@ SO101_USD_TABLETOP_ROOT_Z: float = tabletop_root_z(so101_usd_path())
 """``init_state.pos.z`` that places the SO101 base bottom on a table top at world z=0.
 
 Computed at import time from the USD's base-prim bbox via
-:func:`openso101.robots.so101._usd_bounds.tabletop_root_z`. When
-pxr is not available (e.g. unit tests without the Omniverse app), falls
-back to a baked constant; see ``_usd_bounds._BAKED_BASE_PRIM_LOCAL_Z_MIN``.
+:func:`openso101.robots.so101._usd_bounds.tabletop_root_z`.
 """
 
 # 90° yaw about +Z, expressed in Isaac Lab's (w, x, y, z) quaternion order.

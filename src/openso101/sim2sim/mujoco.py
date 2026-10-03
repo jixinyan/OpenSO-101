@@ -1,4 +1,5 @@
 import json
+import copy
 from pathlib import Path
 
 import h5py
@@ -212,7 +213,8 @@ def evaluate(args):
             if any(not np.isfinite(value).all() for value in fields.values()):
                 raise ValueError("实际初始环境参数含有无效数值")
     collision_bundle = getattr(args, "collision_bundle", None)
-    model = build_model(robot_model, metadata, collision_bundle)
+    template = build_model(robot_model, metadata, collision_bundle)
+    model = copy.copy(template)
     data = mujoco.MjData(model)
     joint_qpos_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     joint_dof_ids = [int(model.joint(name).dofadr[0]) for name in JOINT_NAMES]
@@ -231,7 +233,7 @@ def evaluate(args):
     output.mkdir(parents=True, exist_ok=False)
     with h5py.File(output / "trajectory.hdf5", "w") as trajectory:
         for episode in range(args.episodes):
-            model = build_model(robot_model, metadata, collision_bundle)
+            model = copy.copy(template)
             data = mujoco.MjData(model)
             mujoco.mj_resetData(model, data)
             data.qpos[joint_qpos_ids] = starts["joint_position"][episode] + JOINT_OFFSETS

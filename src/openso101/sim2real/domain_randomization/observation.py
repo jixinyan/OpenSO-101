@@ -42,16 +42,8 @@ def attach_observation_dr(
     ``cfg.observations.policy``). Other terms (object pose, ee frame,
     images) are left alone — they're handled by separate DR modules.
 
-    Silently no-ops on missing terms so this is safe to call across
-    tasks with heterogeneous observation specs.
     """
-    try:
-        from isaaclab.utils.noise import UniformNoiseCfg
-    except ImportError as exc:
-        raise RuntimeError(
-            "Isaac Lab must be installed for observation DR. Run "
-            "`bash scripts/install.sh` from the repo root."
-        ) from exc
+    from isaaclab.utils.noise import UniformNoiseCfg
 
     _set_noise_if_present(
         obs_group,
@@ -68,7 +60,7 @@ def attach_observation_dr(
 def _set_noise_if_present(obs_group: Any, term_name: str, noise_cfg) -> None:
     term = getattr(obs_group, term_name, None)
     if term is None:
-        return
+        raise ValueError(f"observation DR 缺少 term: {term_name}")
     # ObsTerm exposes a `noise` field that the observation manager
     # applies after func() is called. Setting it is enough — Isaac Lab
     # handles the per-step sampling.
