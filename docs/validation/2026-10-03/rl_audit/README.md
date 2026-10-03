@@ -168,7 +168,21 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 
 ## 训练停止与模型保存
 
-`training_stop/report.json` 保存 `2f0e735` 的实际原生训练检查。训练进程收到 SIGTERM 后于 `1.716817 秒`退出，保存明确的 `training_stop.json`，包含 signal、实际 PID 和源提交。Isaac framework 的退出码为零，训练状态为 `stop_requested`，没有完成训练的 metadata。全部原始模型继续保存，已经保存的 256 transitions 模型和 SHA256 保持一致。该检查使用独立的四环境训练进程，完整 campaign 继续运行。
+`training_stop/report.json` 保存 `2f0e735` 的实际原生训练检查。训练进程收到 SIGTERM 后于 `1.716817 秒`退出，保存明确的 `training_stop.json`，包含 signal、实际 PID 和源提交。Isaac framework 的退出码为零，训练状态为 `stop_requested`，没有完成训练的 metadata。全部原始模型继续保存，已经保存的 256 transitions 模型和 SHA256 保持一致。该检查使用独立的四环境训练进程。
+
+`training_stop/controlled_step.json` 保存 `858bc44` 的完整控制步骤边界停止检查，实际退出时间为 `2.572076 秒`。`training_stop/scoped_worker.json` 保存 `a7cab37` 的设备目录隔离检查，实际 worker 收到 SIGTERM 后于 `1.722954 秒`退出，launcher 返回码为零。全部模型保持保存，已保存模型 SHA256 为 `18b04a3bdb0e217605facfa40052ad3c3bfec7e1ed17b3a9c951b62999d1e80c`，累计 transitions 为 256。
+
+## GPU 设备范围
+
+`gpu_scope/training_workers.json` 使用 `a7cab37` 的实际 `nvidia-smi` XML，检查三个训练 launcher 及其子进程，包含 compute 与 graphics 占用。检查时间为 2026-10-03 15:11:39 UTC。seed 42 的 worker `469959` 使用 GPU 3，seed 43 的 worker `469985` 使用 GPU 4，seed 44 的 worker `469998` 使用 GPU 2；显存各为 5,800 MiB。每个进程使用独立设备目录与实际 NVIDIA UUID，允许 GPU 范围为 `[2, 3, 4]`。
+
+`gpu_scope/stopping_worker.json` 保存独立停止检查的实际 GPU 4 计算与渲染记录，其 SHA256 由 `training_stop/scoped_worker.json` 关联。44 项 CPU 检查通过，四项使用替代服务或对象的测试未执行；GPU 7 的训练请求在创建 Isaac 和输出目录之前终止。
+
+## 原生成功示范与模型初始化
+
+`native_position_control/state_action_demonstrations.json` 保存四个实际原生 Lift 成功 episodes，共 840 个观测、动作与 transition reward。轨迹 SHA256 为 `b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739`。
+
+`demonstration_initialization/report.json` 保存实际 behavior cloning 的 1,000 epochs。训练使用三个完整 episodes 的 660 个步骤，模型选择使用另外一个完整 episode 的 180 个步骤；最佳 epoch 为 66，留出关节目标 RMSE 为 `0.136746 rad`。模型 SHA256 为 `db95e371c7f2c922b451086c99232f339ecfada7e42805a50a98ac339ba90cc3`。模型的 RL transitions 为零，独立任务成功仍需运行验收。
 
 ## 实际实体运动与夹爪接触表面
 
