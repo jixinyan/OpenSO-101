@@ -1271,6 +1271,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_campaign.add_argument("--gpus", type=int, nargs="+", required=True)
     p_campaign.add_argument("--num-envs", dest="num_envs", type=int, default=2048)
     p_campaign.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v4")
+    p_campaign.add_argument("--initial-runs", type=Path, help="指定每个任务与 seed 的已校验初始模型 JSON")
     p_campaign.add_argument("--validate-loop", action="store_true", help="对每个通过训练验收的 seed 执行完整闭环验证")
     p_campaign.add_argument("--robot-model")
     p_campaign.add_argument("--collision-bundle")

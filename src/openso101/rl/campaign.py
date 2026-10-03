@@ -6,9 +6,17 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from .config import CheckpointMeta, TrainCfg, digest
 from .snapshot import snapshot
+
+
+class CampaignInitialRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+    task: str
+    seed: int = Field(ge=0)
+    run: Path
 
 
 def campaign(args):
@@ -24,6 +32,20 @@ def campaign(args):
         raise ValueError("campaign 需要每 100 iterations 评估 100 episodes")
     config.batch_size(args.num_envs)
     profile = args.task_profile
+    tasks = ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0")
+    initial_runs = {}
+    initial_runs_path = getattr(args, "initial_runs", None)
+    if initial_runs_path is not None:
+        entries = TypeAdapter(list[CampaignInitialRun]).validate_json(Path(initial_runs_path).read_text())
+        for entry in entries:
+            key = (entry.task, entry.seed)
+            if entry.task not in tasks or entry.seed not in args.seeds or key in initial_runs:
+                raise ValueError("initial_runs 需要唯一且属于当前 campaign 的任务和 seed")
+            parent = entry.run.resolve()
+            metadata = CheckpointMeta.read(parent)
+            if (metadata.task_id, metadata.config.seed, metadata.task_profile) != (entry.task, entry.seed, profile):
+                raise ValueError("initial_runs 的模型、任务、seed 或 profile 不一致")
+            initial_runs[key] = (parent, metadata)
     if args.validate_loop:
         for name in ("robot_model", "collision_bundle", "mujoco_python"):
             value = getattr(args, name)
@@ -34,7 +56,6 @@ def campaign(args):
     root = Path(args.output).resolve()
     root.mkdir(parents=True, exist_ok=False)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-    tasks = ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0")
     jobs = []
     handles = []
     processes = []
@@ -55,9 +76,15 @@ def campaign(args):
                        "--algo", "ppo", "--backend", "rsl_rl", "--train-config", str(config_path),
                        "--task-profile", profile, "--seed", str(seed), "--num_envs", str(args.num_envs),
                        "--output", str(folder), "--headless", "--no-video", "--logger", "tensorboard"]
+            parent = initial_runs.get((task, seed))
+            if parent is not None:
+                command.extend(["--load_run", str(parent[0])])
             log_path = root / f"{folder.name}.log"
             jobs.append({"task": task, "seed": seed, "gpu": None, "pid": None,
-                         "run": str(folder), "log": str(log_path), "command": command, "status": "queued"})
+                         "run": str(folder), "log": str(log_path), "command": command, "status": "queued",
+                         "initial_run": str(parent[0]) if parent else None,
+                         "initial_checkpoint_sha256": parent[1].files[parent[1].checkpoint] if parent else None,
+                         "initial_completed_transitions": parent[1].completed_transitions if parent else 0})
             write_receipt()
         while any(job["status"] in ("queued", "running") for job in jobs):
             busy = {job["gpu"] for job in jobs if job["status"] == "running"}

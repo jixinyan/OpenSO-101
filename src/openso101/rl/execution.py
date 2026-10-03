@@ -122,6 +122,20 @@ def train(args):
     if previous and previous.scene_sha256 != scene_sha:
         raise ValueError("继续训练的场景版本不匹配")
     (output / "train.json").write_text(config.model_dump_json(indent=2))
+    if previous:
+        parent = output / "parent"
+        parent.mkdir()
+        for name in (*previous.files, "checkpoint.json"):
+            target = parent / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(resume / name, target)
+        archived = CheckpointMeta.read(parent)
+        (output / "resume.json").write_text(json.dumps({
+            "parent_checkpoint_sha256": archived.files[archived.checkpoint],
+            "parent_metadata_sha256": digest(parent / "checkpoint.json"),
+            "parent_training_git_sha": archived.git_sha,
+            "prior_transitions": archived.completed_transitions,
+        }, indent=2) + "\n")
     package = Path(__file__).resolve().parents[1]
     with ZipFile(output / "source.zip", "w") as archive:
         for source in sorted(package.rglob("*.py")):
@@ -141,6 +155,10 @@ def train(args):
         from .snapshot import TrainingRunMeta
 
         source_files = {name: digest(output / name) for name in ("train.json", "source.zip", "environment.yaml")}
+        if previous:
+            source_files["resume.json"] = digest(output / "resume.json")
+            source_files.update({path.relative_to(output).as_posix(): digest(path)
+                                 for path in (output / "parent").rglob("*") if path.is_file()})
         if scene:
             source_files.update({path.relative_to(output).as_posix(): digest(path)
                                  for path in scene.rglob("*") if path.is_file()})
@@ -156,6 +174,10 @@ def train(args):
         ).write(output)
         checkpoint = get_backend(config.backend).train(env, config, output, resume)
         files = {checkpoint.name: digest(checkpoint), "train.json": digest(output / "train.json")}
+        if previous:
+            files["resume.json"] = digest(output / "resume.json")
+            files.update({path.relative_to(output).as_posix(): digest(path)
+                          for path in (output / "parent").rglob("*") if path.is_file()})
         for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json",
                      "model_best.pt", "best_evaluation.json", "evaluation_history.json", "convergence.json",
                      "policy_initialization.json"):
