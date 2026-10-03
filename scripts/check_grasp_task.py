@@ -48,8 +48,8 @@ try:
             runtime = self._env
             robot = runtime.scene["robot"]
             obj = runtime.scene["object"]
-            object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
-                                                           obj.data.root_pos_w)
+            object_position, object_rotation = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
+                                                                         obj.data.root_pos_w, obj.data.root_quat_w)
             grip_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
                                                          runtime.scene["ee_frame"].data.target_pos_w[:, 0])
             values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
@@ -57,6 +57,7 @@ try:
                       "joint_targets": torch.cat([runtime.action_manager.get_term(name).processed_actions
                                                    for name in runtime.action_manager.active_terms], dim=-1),
                       "object_position_root": object_position, "grasp_position_root": grip_position,
+                      "object_quaternion_root": object_rotation,
                       "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])
                                                 for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
                       "success": runtime.termination_manager.get_term("success"),
@@ -84,15 +85,39 @@ try:
     robot = runtime.scene["robot"]
     mappings = action_mapping(runtime)
     ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
+    phase = torch.full((args.num_envs,), -1, dtype=torch.long, device=runtime.device)
+    active = torch.ones(args.num_envs, dtype=torch.bool, device=runtime.device)
+
+    def control_actions(desired):
+        if args.task_profile == "grasp_v3":
+            return ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
+        gravity = robot.root_physx_view.get_gravity_compensation_forces()[:, ids]
+        stiffness = robot.root_physx_view.get_dof_stiffnesses()[:, ids].to(runtime.device)
+        if (stiffness <= 0).any() or not torch.isfinite(gravity).all():
+            raise RuntimeError("绝对位置任务检查需要有效的重力保持力矩和 stiffness")
+        compensated = desired + gravity / stiffness
+        return torch.stack([(compensated[:, index] - item["offset"]) / item["scale"]
+                            for index, item in enumerate(mappings)], dim=-1).clamp(-1, 1)
+
+    settling_steps = 10 if args.task_profile == "grasp_v4" else 0
+    settling_target = robot.data.joint_pos[:, ids].clone()
+    settling_target[:, -1] = .8
+    for _ in range(settling_steps):
+        _, _, terminated, truncated, _ = env.step(control_actions(settling_target))
+        if (terminated | truncated).any():
+            raise RuntimeError("规划准备过程提前终止")
     obj = runtime.scene["object"]
-    object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
+    object_position, object_rotation = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
+                                                                 obj.data.root_pos_w, obj.data.root_quat_w)
     states = {"seed": args.seed, "task": args.task, "control_dt": runtime.step_dt, "physics_dt": runtime.physics_dt,
+              "settling_steps": settling_steps,
               "joint_stiffness": robot.root_physx_view.get_dof_stiffnesses()[0, ids].cpu().tolist(),
               "effort_limits": robot.data.joint_effort_limits[0, ids].cpu().tolist(),
               "soft_joint_limits": robot.data.soft_joint_pos_limits[0, ids].cpu().tolist(),
               "environments": [{"environment": index,
                                 "joint_position": robot.data.joint_pos[index, ids].cpu().tolist(),
                                 "object_position_root": object_position[index].cpu().tolist(),
+                                "object_quaternion_root": object_rotation[index].cpu().tolist(),
                                 "goal_position_root": runtime.command_manager.get_command("object_pose")[index, :3].cpu().tolist()}
                                for index in range(args.num_envs)]}
     geometry = table_collision_geometry(runtime.sim.stage, "/World/envs/env_0/Table",
@@ -120,33 +145,37 @@ try:
         raise ValueError("规划与实际初始状态不一致")
     targets = torch.tensor([[item["joint_position"] for item in environment["targets"]]
                             for environment in plan["environments"]], device=runtime.device)
-    phase = torch.zeros(args.num_envs, dtype=torch.long, device=runtime.device)
-    active = torch.ones(args.num_envs, dtype=torch.bool, device=runtime.device)
+    phase.zero_()
+    path_cursor = torch.zeros_like(phase)
+    paths = (torch.tensor([[item["path_joint_positions"] for item in environment["targets"]]
+                           for environment in plan["environments"]], device=runtime.device)
+             if args.task_profile == "grasp_v4" else None)
     finished_success = torch.zeros_like(active)
-    for step in range(runtime.max_episode_length):
+    contact_hold_steps = torch.zeros_like(phase)
+    for step in range(runtime.max_episode_length - settling_steps):
         target_index = torch.where(phase < 2, phase, 2).clamp(0, 2)
         target_index = torch.where(phase == 2, 1, target_index)
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
+        if paths is not None:
+            sample_index = torch.where(phase == 2, paths.shape[2] - 1, path_cursor)
+            arm_target = paths[torch.arange(args.num_envs, device=runtime.device), target_index, sample_index]
         jaw_target = torch.where(phase < 2, .8, 0.).unsqueeze(-1)
         desired = torch.cat((arm_target, jaw_target), dim=-1)
-        if args.task_profile == "grasp_v3":
-            actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
-        else:
-            gravity = robot.root_physx_view.get_gravity_compensation_forces()[:, ids]
-            stiffness = robot.root_physx_view.get_dof_stiffnesses()[:, ids].to(runtime.device)
-            if (stiffness <= 0).any() or not torch.isfinite(gravity).all():
-                raise RuntimeError("绝对位置任务检查需要有效的重力保持力矩和 stiffness")
-            compensated = desired + gravity / stiffness
-            actions = torch.stack([(compensated[:, index] - item["offset"]) / item["scale"]
-                                   for index, item in enumerate(mappings)], dim=-1).clamp(-1, 1)
+        actions = control_actions(desired)
         actions[~active] = 0
         _, _, terminated, truncated, _ = env.step(actions)
         sample = trace[-1]
         errors = torch.linalg.vector_norm(torch.as_tensor(sample["joint_position"], device=runtime.device)[:, :5]
                                          - arm_target, dim=-1)
         advanced = (phase < 2) & (errors < .06) & active
+        if paths is not None:
+            reached_sample = (errors < .015) & active & (phase != 2)
+            advanced = (phase < 2) & reached_sample & (path_cursor == paths.shape[2] - 1)
+            path_cursor = torch.where(reached_sample, (path_cursor + 1).clamp_max(paths.shape[2] - 1), path_cursor)
         forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
-        advanced |= (phase == 2) & (forces > .5).all(dim=-1) & active
+        contact_hold_steps = torch.where((phase == 2) & (forces > .5).all(dim=-1), contact_hold_steps + 1, 0)
+        advanced |= (phase == 2) & (contact_hold_steps * runtime.step_dt >= .1) & active
+        path_cursor = torch.where(advanced, 0, path_cursor)
         phase += advanced.long()
         finished_success |= torch.as_tensor(sample["success"], device=runtime.device) & active
         active &= ~(terminated | truncated)
@@ -177,6 +206,7 @@ try:
               "controller": "scripted_IK_measured_reference_delta" if args.task_profile == "grasp_v3"
                             else "scripted_IK_gravity_compensated_joint_targets", "control_dt": runtime.step_dt,
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
+              "settling_steps": settling_steps, "bilateral_hold_before_lift_s": .1,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),
