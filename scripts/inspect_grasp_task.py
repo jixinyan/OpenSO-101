@@ -20,7 +20,7 @@ with h5py.File(args.folder / "trajectory.hdf5") as trace:
     for environment, item in enumerate(plan["environments"]):
         valid = np.flatnonzero(trace["active"][:, environment] & (trace["phase"][:, environment] >= 0))
         phases = trace["phase"][valid, environment]
-        target_indices = np.where(phases == 2, 1, phases).clip(0, 2)
+        target_indices = (phases - (phases >= 2)).clip(0, len(item["targets"]) - 1)
         target_joints = np.asarray([entry["joint_position"] for entry in item["targets"]])[target_indices]
         target_positions = np.asarray([entry["target_position_root"] for entry in item["targets"]])[target_indices]
         qpos = trace["joint_position"][valid, environment]

@@ -16,6 +16,10 @@ if [[ "$check_kind" == task ]]; then
     if [[ "${OPENSO101_CAPTURE_CAMERAS:-0}" == 1 ]]; then
         camera_arguments=(--with-cameras --camera-resolution 256)
     fi
+    plan_arguments=()
+    if [[ -n "${OPENSO101_VERIFIED_PLAN:-}" ]]; then
+        plan_arguments=(--verified-plan "$OPENSO101_VERIFIED_PLAN")
+    fi
     "$task_python" -u scripts/check_grasp_task.py --task-profile grasp_v4 \
         --task "${OPENSO101_TASK:-OpenSO101-Lift-v0}" \
         --output "outputs/rl_progress/${prefix}_task" \
@@ -23,6 +27,7 @@ if [[ "$check_kind" == task ]]; then
         --planner-python /home/jixin/workspace/envs/openso101-mujoco/bin/python \
         --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
         "${camera_arguments[@]}" \
+        "${plan_arguments[@]}" \
         > "outputs/rl_progress/${prefix}_task.log" 2>&1
 elif [[ "$check_kind" == physics ]]; then
     for task in OpenSO101-Lift-v0 OpenSO101-PickPlace-v0; do

@@ -43,8 +43,11 @@ with h5py.File(args.task / "trajectory.hdf5", "r") as trace:
 axes[0, 0].set(title="物体的实际高度", ylabel="robot root frame 高度（米）")
 axes[0, 1].axhline(.5, color="black", linestyle="--", label="双侧接触阈值")
 axes[0, 1].set(title="两个夹爪接触力的较小值", ylabel="接触力（N）")
-axes[1, 0].set(title="脚本控制的实际阶段", yticks=[-1, 0, 1, 2, 3],
-                yticklabels=["准备", "接近", "抓取", "闭合", "提升"])
+phase_labels = ["准备", "接近", "抓取", "闭合", "提升"]
+if report["task"] == "OpenSO101-PickPlace-v0":
+    phase_labels.extend(["搬运", "放置", "释放"])
+axes[1, 0].set(title="脚本控制的实际阶段", yticks=list(range(-1, len(phase_labels) - 1)),
+                yticklabels=phase_labels)
 axes[1, 1].set(title="逐物理步骤的最高关节速度", ylabel="速度（rad/s）")
 for axis in axes.flat:
     axis.set_xlabel("执行时间（秒）")

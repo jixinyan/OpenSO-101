@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--planner-python", type=Path, required=True)
 parser.add_argument("--robot-model", type=Path, required=True)
+parser.add_argument("--verified-plan", type=Path)
 parser.add_argument("--num-envs", type=int, default=4)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default="grasp_v3")
@@ -56,7 +57,13 @@ try:
                                                                          obj.data.root_pos_w, obj.data.root_quat_w)
             grip_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
                                                          runtime.scene["ee_frame"].data.target_pos_w[:, 0])
+            body_positions, body_quaternions = subtract_frame_transforms(
+                robot.data.root_pos_w[:, None].expand_as(robot.data.body_pos_w),
+                robot.data.root_quat_w[:, None].expand_as(robot.data.body_quat_w),
+                robot.data.body_pos_w, robot.data.body_quat_w,
+            )
             values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
+                      "robot_body_position_root": body_positions, "robot_body_quaternion_root": body_quaternions,
                       "gravity_compensation": robot.root_physx_view.get_gravity_compensation_forces()[:, ids],
                       "joint_targets": torch.cat([runtime.action_manager.get_term(name).processed_actions
                                                    for name in runtime.action_manager.active_terms], dim=-1),
@@ -199,13 +206,24 @@ try:
     with states_path.open("x") as stream:
         json.dump(states, stream, indent=2)
     plan_path = args.output / "plan.json"
-    with (args.output / "planning.log").open("x") as log:
-        command = [str(args.planner_python), "scripts/plan_grasp_task.py", "--states", str(states_path),
-                   "--robot-model", str(args.robot_model), "--output", str(plan_path)]
-        if args.task_profile == "grasp_v4":
-            command.extend(["--collision-bundle", "outputs/rl_progress/gripper_collision"])
-        subprocess.run(command,
-                       stdout=log, stderr=subprocess.STDOUT, check=True)
+    if args.verified_plan is not None:
+        plan = json.loads(args.verified_plan.read_text())
+        if (plan["status"] != "kinematic_plan_verified" or plan["states_sha256"] != digest(states_path)
+                or plan["robot_model_sha256"] != digest(args.robot_model)
+                or not all(item["accepted"] for item in plan["environments"])):
+            raise ValueError("已有规划必须通过检查并对应当前实际 reset 与机器人模型")
+        if args.task_profile == "grasp_v4" and plan["collision_bundle_sha256"] != digest(
+                Path("outputs/rl_progress/gripper_collision/manifest.json")):
+            raise ValueError("已有规划的 collision bundle 不一致")
+        plan_path.write_bytes(args.verified_plan.read_bytes())
+    else:
+        with (args.output / "planning.log").open("x") as log:
+            command = [str(args.planner_python), "scripts/plan_grasp_task.py", "--states", str(states_path),
+                       "--robot-model", str(args.robot_model), "--output", str(plan_path)]
+            if args.task_profile == "grasp_v4":
+                command.extend(["--collision-bundle", "outputs/rl_progress/gripper_collision"])
+            subprocess.run(command,
+                           stdout=log, stderr=subprocess.STDOUT, check=True)
     plan = json.loads(plan_path.read_text())
     if plan["states_sha256"] != digest(states_path):
         raise ValueError("规划与实际初始状态不一致")
@@ -301,6 +319,8 @@ try:
               "controller": "scripted_IK_measured_reference_delta" if args.task_profile == "grasp_v3"
                             else "scripted_IK_gravity_compensated_joint_targets", "control_dt": runtime.step_dt,
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
+              "max_episode_steps": runtime.max_episode_length,
+              "reused_plan_sha256": digest(args.verified_plan) if args.verified_plan else None,
               "settling_steps": settling_steps, "bilateral_hold_before_lift_s": .1,
               "planned_joint_speed_rad_s": .75 if paths is not None else None,
               "planned_phases": [item["phase"] for item in plan["environments"][0]["targets"]],
