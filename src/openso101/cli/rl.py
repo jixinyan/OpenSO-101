@@ -1182,6 +1182,18 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_student_eval.add_argument("--recording-output", help="保存首个环境完整 episode 的实际双相机与关节目标 HDF5")
     p_student_eval.set_defaults(func=_cmd_student_eval)
 
+    p_loop = sub.add_parser("validate-loop", help="执行 teacher、MuJoCo、student 与实际采集的闭环任务验证")
+    p_loop.add_argument("--teacher-run", required=True)
+    p_loop.add_argument("--output", required=True)
+    p_loop.add_argument("--robot-model", required=True)
+    p_loop.add_argument("--collision-bundle", required=True)
+    p_loop.add_argument("--mujoco-python", required=True)
+    p_loop.add_argument("--num-envs", type=int, default=64)
+    p_loop.add_argument("--student-num-envs", type=int, default=16)
+    p_loop.add_argument("--distillation-iterations", type=int, default=1500)
+    p_loop.add_argument("--seed", type=int, default=30042)
+    p_loop.set_defaults(func=_cmd_validate_loop)
+
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
     p_train.add_argument("--task-profile", choices=("default", "grasp_v2", "grasp_v3", "grasp_v4"), help="训练使用的任务配置版本")
@@ -1324,6 +1336,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_export.add_argument("--output", required=True)
     p_export.add_argument("--num-envs", dest="num_envs", type=int, default=4)
     p_export.add_argument("--validation-steps", type=int, default=256)
+    p_export.add_argument("--seed", type=int)
     p_export.add_argument("--headless", action="store_true")
     p_export.set_defaults(func=_cmd_export)
 
@@ -1347,6 +1360,12 @@ def _cmd_student_eval(args):
     from openso101.rl.execution import evaluate_student
 
     return evaluate_student(args)
+
+
+def _cmd_validate_loop(args):
+    from openso101.rl.validation_loop import validate_loop
+
+    return validate_loop(args)
 
 
 def _cmd_campaign(args):

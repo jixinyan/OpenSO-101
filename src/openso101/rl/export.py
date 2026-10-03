@@ -39,7 +39,7 @@ def export(args):
         from .scene_geometry import table_collision_geometry
         from openso101.robots.so101.so_arm101 import so101_usd_path
 
-        args.seed = meta.config.seed
+        args.seed = meta.config.seed if getattr(args, "seed", None) is None else args.seed
         args.task_profile = meta.task_profile
         args.environment_mode = meta.config.environment_mode
         args.reward_discount = meta.config.gamma
@@ -76,6 +76,7 @@ def export(args):
             "environment_mode": meta.config.environment_mode,
             "action_distribution": meta.config.action_distribution,
             "export_git_sha": revision, "checkpoint_sha256": digest(folder / meta.checkpoint),
+            "validation_seed": args.seed,
             "files": {"policy.pt": digest(output / "policy.pt")}, "control_dt": unwrapped.step_dt,
             "physics_dt": unwrapped.physics_dt, "joint_names": list(SO101_SIM_JOINT_NAMES),
             "observation_joint_names": robot.joint_names,
