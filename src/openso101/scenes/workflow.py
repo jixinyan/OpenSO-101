@@ -113,7 +113,9 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
             spec = tool("compose_scene", {"revision": revision, "intent_sha256": intent.digest()},
                         lambda: service.complete(
                             system=("生成 SO-101 桌面 SceneSpec。仅使用提供的资产 UID 与 SHA256。"
-                                    "完整保留 instruction、全部 TaskIntent 最终目标和稳定释放要求。"
+                                    "task.instruction 必须逐字复制 intent.instruction，禁止添加、改写或附加说明。"
+                                    "操作顺序和条件由 TaskProgram 保存，无需追加到 task.instruction。"
+                                    "完整保留全部 TaskIntent 最终目标和稳定释放要求。"
                                     "保留实体 identifier、尺寸和已确认的默认值，不能删减任务条件。"
                                     "质量摩擦估计使用 estimated provenance；所有长度使用米，Z 轴向上。"
                                     "根据实际 diagnostics 修复场景，不能更改 TaskIntent。"),
