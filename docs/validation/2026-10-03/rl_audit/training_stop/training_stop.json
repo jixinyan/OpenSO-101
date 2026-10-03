@@ -1,0 +1,9 @@
+{
+  "status": "stop_requested",
+  "signal": 15,
+  "worker_pid": 144350,
+  "training_git_sha": "2f0e735230744c28bc0904316cb5a288f488bfdb",
+  "task": "OpenSO101-Lift-v0",
+  "seed": 42,
+  "requested_at": "2026-10-03T12:54:13.379568+00:00"
+}

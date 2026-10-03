@@ -40,7 +40,7 @@ openso101 sim2sim mujoco --policy outputs/lift_portable \
   --episodes 4 --output outputs/mujoco_lift
 ```
 
-入口由 MuJoCo MjSpec 加载官方 MJCF，添加实际桌面和任务物体。上述参数启用源初始环境的实际物理参数、受限力矩控制，以及经过 SHA256 检查的夹爪 convex parts。碰撞部件的生成方法见本页“夹爪碰撞与实际抓取检查”。`Pitch` 的 MuJoCo 坐标为 Isaac 坐标减去 π/2，`Elbow` 加上 π/2，其余关节坐标相同。policy 的控制周期保持为 0.02 秒，MuJoCo 物理周期为 0.002 秒。
+入口由 MuJoCo MjSpec 加载官方 MJCF，添加实际桌面和任务物体。上述参数启用源初始环境的实际物理参数、受限力矩控制，以及经过 SHA256 检查的夹爪 convex parts。碰撞部件的生成方法见本页“夹爪碰撞与实际抓取检查”。`Pitch` 的 MuJoCo 坐标为 Isaac 坐标减去 π/2，`Elbow` 加上 π/2，其余关节坐标相同。控制周期和物理周期使用源 metadata；当前 `grasp_v4` 分别为 0.02 秒和 0.001 秒。
 
 运行前对 Isaac HDF5 中的全部关节状态检查末端位置与 quaternion；位置误差超过 1mm 或旋转误差超过 0.001rad 时终止。评估使用记录第一帧的实际关节位置、速度、物体姿态和任务目标，每个 Isaac 环境对应一个配对初始场景。`episodes` 数量必须不超过该记录的环境数量。
 
@@ -62,7 +62,7 @@ openso101 sim2sim mujoco --policy outputs/lift_portable \
 
 ## 相同动作的动力学比较
 
-sim2sim 验证使用已保存的策略与实际 Isaac 动作记录。真机工作暂缓，RL 训练保持停止。
+sim2sim 验证使用已保存的策略与实际 Isaac 动作记录。用户已授权新训练，全部模型与评估记录继续保存；真机工作暂缓。
 
 `sim2sim compare` 将 Isaac 验证轨迹中每步已检查的关节目标发送给 MuJoCo，初始关节位置与速度保持一致，比较每个控制步骤之前的关节、物体与夹爪接触数据。源记录发生 episode 终止时结束对应连续片段。该入口使用记录动作，不执行策略反馈计算。
 

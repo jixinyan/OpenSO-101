@@ -139,3 +139,21 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 | rl_games | PPO | 256 | 0/4 |
 | SB3 | SAC | 256 | 0/4 |
 | SB3 | TQC | 256 | 0/4 |
+
+## grasp_v4 的多 backend 训练
+
+`backend_comparison/` 保存 `8ae2dda` 的 SB3 PPO、skrl PPO 和 rl_games PPO。每项使用相同的 nominal Lift、seed 42、32 个环境、32 个 rollout 步骤、初始 std 0.73、hidden dimensions `[32, 16]` 和 50 次更新，共 51,200 transitions。每项完成模型保存、加载及 seed 10042 的 100 episodes 独立评估，任务成功均为 `0/100`。这些模型使用各自框架的 Gaussian 策略，环境将位置动作限制到完整关节范围；RSL 的 bounded PPO 使用另外的分布配置。该记录覆盖各框架的当前任务执行，完整训练收敛仍需验收。
+
+## 原生动作的 MuJoCo 回放
+
+`native_replay/native.json` 保存 `e745001` 的原生脚本 Lift `4/4`，以及路径执行前实际关节与物体位置、速度、机器人质量、完整惯性、COM、重力、armature、关节摩擦、PD 和速度限制。初始物理文件 SHA256 为 `cebef4d42da9d0357e094463c7956501cc9ab15efb66f50264be634a27da359e`。
+
+`native_replay/mujoco.json` 使用这些初始状态和实际原生 joint targets，在 MuJoCo 中执行四条连续轨迹，共 800 个控制步骤、16,000 个物理步骤。实际速度和力矩限制全部通过，质量、COM 和完整惯性读回检查通过。手臂关节 RMSE 为 `0.0005–0.0032 rad`，jaw RMSE 为 `0.09–0.20 rad`，MuJoCo 任务成功为 `0/4`。
+
+`native_replay/diagnostics.json` 依据相同的高度、目标距离、双侧接触和连续保持条件检查两种模拟器的逐步状态。MuJoCo 环境 0、2 丢失物体；环境 1、3 保持双侧接触，连续符合成功条件的时间为 0.16 秒、0.22 秒。任务要求为 0.25 秒。回放在各自原生成功步骤结束，全部 joint targets 保持源值。接触等价与成功迁移仍需验证。
+
+![实际原生动作回放](figures/native_mujoco_replay.png)
+
+## 训练停止与模型保存
+
+`training_stop/report.json` 保存 `2f0e735` 的实际原生训练检查。训练进程收到 SIGTERM 后于 `1.716817 秒`退出，保存明确的 `training_stop.json`，包含 signal、实际 PID 和源提交。Isaac framework 的退出码为零，训练状态为 `stop_requested`，没有完成训练的 metadata。全部原始模型继续保存，已经保存的 256 transitions 模型和 SHA256 保持一致。该检查使用独立的四环境训练进程，完整 campaign 继续运行。

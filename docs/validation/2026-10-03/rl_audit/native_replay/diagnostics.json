@@ -1,0 +1,139 @@
+{
+  "environments": [
+    {
+      "environment": 0,
+      "isaac": {
+        "height_steps": 67,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 85,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04265334420637976,
+        "final_jaw_angle_rad": 0.37290114164352417,
+        "final_contact_forces_n": [
+          46.62348556518555,
+          45.734886169433594
+        ]
+      },
+      "mujoco": {
+        "height_steps": 25,
+        "goal_steps": 0,
+        "bilateral_contact_steps": 38,
+        "eligible_steps": 0,
+        "longest_hold_seconds": 0.0,
+        "final_hold_seconds": 0.0,
+        "final_goal_distance_m": 0.19010766131478063,
+        "final_jaw_angle_rad": 4.8194802197867297e-05,
+        "final_contact_forces_n": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "environment": 1,
+      "isaac": {
+        "height_steps": 58,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 78,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04174638376188104,
+        "final_jaw_angle_rad": 0.24617554247379303,
+        "final_contact_forces_n": [
+          43.667354583740234,
+          52.089439392089844
+        ]
+      },
+      "mujoco": {
+        "height_steps": 58,
+        "goal_steps": 8,
+        "bilateral_contact_steps": 78,
+        "eligible_steps": 8,
+        "longest_hold_seconds": 0.16,
+        "final_hold_seconds": 0.16,
+        "final_goal_distance_m": 0.046148708547051595,
+        "final_jaw_angle_rad": 0.10240289053051502,
+        "final_contact_forces_n": [
+          28.664891301188753,
+          28.64940544491755
+        ]
+      }
+    },
+    {
+      "environment": 2,
+      "isaac": {
+        "height_steps": 46,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 67,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.04379213393778799,
+        "final_jaw_angle_rad": 0.3547789752483368,
+        "final_contact_forces_n": [
+          58.30506134033203,
+          34.488990783691406
+        ]
+      },
+      "mujoco": {
+        "height_steps": 0,
+        "goal_steps": 0,
+        "bilateral_contact_steps": 17,
+        "eligible_steps": 0,
+        "longest_hold_seconds": 0.0,
+        "final_hold_seconds": 0.0,
+        "final_goal_distance_m": 0.15943796742830904,
+        "final_jaw_angle_rad": 4.490058718109182e-05,
+        "final_contact_forces_n": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    {
+      "environment": 3,
+      "isaac": {
+        "height_steps": 62,
+        "goal_steps": 13,
+        "bilateral_contact_steps": 78,
+        "eligible_steps": 13,
+        "longest_hold_seconds": 0.26,
+        "final_hold_seconds": 0.26,
+        "final_goal_distance_m": 0.047184301500455945,
+        "final_jaw_angle_rad": 0.24662885069847107,
+        "final_contact_forces_n": [
+          44.286624908447266,
+          52.04139709472656
+        ]
+      },
+      "mujoco": {
+        "height_steps": 62,
+        "goal_steps": 11,
+        "bilateral_contact_steps": 80,
+        "eligible_steps": 11,
+        "longest_hold_seconds": 0.22,
+        "final_hold_seconds": 0.22,
+        "final_goal_distance_m": 0.049602546517051385,
+        "final_jaw_angle_rad": 0.10146583053919835,
+        "final_contact_forces_n": [
+          24.44032465653198,
+          24.375805365892624
+        ]
+      }
+    }
+  ],
+  "task_parameters": {
+    "minimal_height": 0.04,
+    "goal_radius": 0.05,
+    "settle_seconds": 0.25,
+    "force_threshold": 0.5
+  },
+  "native_report_sha256": "a38186f1e05b6184cc5fedda927e050302a1aa0c79dffa179dcc35970b0c8127",
+  "replay_report_sha256": "a70d02e317a4b3a3168bd3647a7e487936d3d2ccff3457421bffc4bcba33f05c",
+  "trajectory_sha256": "65a3ce3460fa15d6c87bd6e386d2df98aa68259626a5bc19c90df090b86546d7",
+  "source_sha256": "dbb3c72d639c6e5d88e03126a591b8a623a49a27621184bb0909e8584a72409b",
+  "figure_sha256": "4b630526983521be88b84676265f9b710092b43d113aaa6e1c080916e280e01e"
+}
