@@ -1,7 +1,10 @@
 import argparse
 import csv
+import io
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -31,17 +34,22 @@ def gpu_scope():
 
 def configure_visible_gpu():
     scope = gpu_scope()
-    value = os.environ.get("CUDA_VISIBLE_DEVICES", str(scope.default_gpu))
-    devices = [int(item) for item in next(csv.reader([value]))]
-    scope.validate_allocation(devices)
-    if len(devices) != 1:
-        raise ValueError("单个 Isaac 进程需要指定一个物理 GPU")
-    os.environ["CUDA_VISIBLE_DEVICES"] = value
+    if sys.platform == "linux" and os.environ.get("OPENSO101_GPU_NAMESPACE") == "1":
+        physical_gpu = int(os.environ["OPENSO101_PHYSICAL_GPU"])
+        scope.validate_allocation([physical_gpu])
+        if list(Path("/dev").glob("nvidia[0-9]*")) != [Path(f"/dev/nvidia{physical_gpu}")]:
+            raise RuntimeError("GPU 设备目录必须只包含指定物理设备")
+        renderer_gpu = 0
+    else:
+        physical_gpu = _requested_gpu(scope)
+        if sys.platform == "linux":
+            _isolate_gpu(physical_gpu)
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(physical_gpu)
+        renderer_gpu = physical_gpu
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    physical_gpu = devices[0]
-    # CUDA 使用可见设备编号，renderer 使用主机的物理设备编号。
+    # CUDA 使用可见设备编号，renderer 使用设备目录中的编号。
     settings = {
-        "--/renderer/activeGpu": str(physical_gpu),
+        "--/renderer/activeGpu": str(renderer_gpu),
         "--/renderer/multiGpu/enabled": "false",
         "--/renderer/multiGpu/autoEnable": "false",
         "--/renderer/multiGpu/maxGpuCount": "1",
@@ -57,3 +65,32 @@ def configure_visible_gpu():
         if argument not in sys.argv:
             sys.argv.append(argument)
     return physical_gpu
+
+
+def _requested_gpu(scope):
+    value = os.environ.get("CUDA_VISIBLE_DEVICES", str(scope.default_gpu))
+    devices = [int(item) for item in next(csv.reader([value]))]
+    scope.validate_allocation(devices)
+    if len(devices) != 1:
+        raise ValueError("单个 Isaac 进程需要指定一个物理 GPU")
+    return devices[0]
+
+
+def _isolate_gpu(physical_gpu):
+    executable = Path(os.environ.get("OPENSO101_BWRAP_PATH",
+                      shutil.which("bwrap") or Path(sys.prefix).parent / "openso101-gpu-scope/usr/bin/bwrap"))
+    if not executable.is_file():
+        raise FileNotFoundError(f"Linux GPU 设备隔离需要 bubblewrap：{executable}")
+    inventory = subprocess.check_output(["nvidia-smi", "--query-gpu=index,uuid", "--format=csv,noheader"], text=True)
+    devices = {int(row[0]): row[1].strip() for row in csv.reader(io.StringIO(inventory))}
+    uuid = devices[physical_gpu]
+    command = [str(executable), "--unshare-user", "--bind", "/", "/", "--dev", "/dev"]
+    for name in (f"nvidia{physical_gpu}", "nvidiactl", "nvidia-uvm", "nvidia-uvm-tools", "nvidia-modeset"):
+        path = Path("/dev") / name
+        if not path.exists():
+            raise FileNotFoundError(path)
+        command.extend(["--dev-bind", str(path), str(path)])
+    command.extend(["--chdir", str(Path.cwd()), "--", *sys.orig_argv])
+    environment = os.environ | {"CUDA_VISIBLE_DEVICES": uuid, "NVIDIA_VISIBLE_DEVICES": uuid,
+                               "OPENSO101_GPU_NAMESPACE": "1", "OPENSO101_PHYSICAL_GPU": str(physical_gpu)}
+    os.execve(executable, command, environment)

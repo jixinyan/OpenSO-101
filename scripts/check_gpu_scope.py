@@ -39,7 +39,13 @@ for pid in args.pid:
     if not cwd.name.startswith("OpenSO-101"):
         raise ValueError("指定进程需要属于 OpenSO-101 工作目录")
     visible = process.environ()["CUDA_VISIBLE_DEVICES"]
-    devices = [int(value) for value in next(csv.reader([visible]))]
+    environment = process.environ()
+    if environment.get("OPENSO101_GPU_NAMESPACE") == "1":
+        devices = [int(environment["OPENSO101_PHYSICAL_GPU"])]
+        if visible != environment["NVIDIA_VISIBLE_DEVICES"]:
+            raise ValueError("隔离进程的 CUDA 与 NVIDIA UUID 必须一致")
+    else:
+        devices = [int(value) for value in next(csv.reader([visible]))]
     scope.validate_allocation(devices)
     actual = sorted(allocations.get(pid, set()))
     if actual:
@@ -48,6 +54,8 @@ for pid in args.pid:
             raise ValueError("实际 GPU 与进程指定的 GPU 不一致")
     records.append({"pid": pid, "command": command, "cwd": str(cwd),
                     "requested_gpus": devices, "actual_gpus": actual,
+                    "cuda_visible_devices": visible,
+                    "device_namespace": environment.get("OPENSO101_GPU_NAMESPACE") == "1",
                     "allocations": allocation_details.get(pid, [])})
 result = {"status": "actual_gpu_scope_verified", "created_at": datetime.now(UTC).isoformat(),
           "checked_process_types": ["compute", "graphics"],
