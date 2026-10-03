@@ -10,14 +10,22 @@ export OPENBLAS_NUM_THREADS=1
 export LD_LIBRARY_PATH="/home/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:/home/jixin/workspace/envs/edh-graphics/root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 task_python=/home/jixin/workspace/envs/openso101-v2/bin/python
 prefix=${2:?请指定输出名称}
+check_kind=${3:-both}
+if [[ "$check_kind" != scene && "$check_kind" != task && "$check_kind" != both ]]; then
+    exit 1
+fi
+if [[ "$check_kind" == scene || "$check_kind" == both ]]; then
 "$task_python" -u -m openso101.cli.main scenes prepare \
     outputs/rl_progress/v3_indexed_scene_exact/bundle \
     --output "outputs/rl_progress/${prefix}_scene" \
     > "outputs/rl_progress/${prefix}_scene.log" 2>&1
 test -f "outputs/rl_progress/${prefix}_scene/preparation.json"
+fi
+if [[ "$check_kind" == task || "$check_kind" == both ]]; then
 "$task_python" -u scripts/check_grasp_task.py \
     --output "outputs/rl_progress/${prefix}_task" \
     --planner-python /home/jixin/workspace/envs/openso101-mujoco/bin/python \
     --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
     > "outputs/rl_progress/${prefix}_task.log" 2>&1
 test -f "outputs/rl_progress/${prefix}_task/report.json"
+fi
