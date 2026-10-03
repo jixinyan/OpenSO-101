@@ -35,6 +35,7 @@ try:
     from openso101.rl.vision_distillation import action_mapping
     from openso101.robots import SO101_SIM_JOINT_NAMES
     from openso101.tasks.shared.grasp_profile import success_event
+    from openso101.tasks.shared import grasp_v3
 
     physics_samples = []
 
@@ -131,7 +132,7 @@ try:
               "distribution_and_target_mapping_verified": True, "task_success_verified": False,
               "completed_episode_shaping_returns": completed_shaping_returns,
               "trace_sha256": digest(args.output / "runtime.hdf5"), "source_sha256": digest(Path(__file__)),
-              "profile_sha256": digest(Path(__file__).resolve().parents[1] / "src/openso101/tasks/shared/grasp_v3.py")}
+              "profile_sha256": digest(Path(grasp_v3.__file__))}
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report), flush=True)
 finally:

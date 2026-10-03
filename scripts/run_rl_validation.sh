@@ -1,5 +1,5 @@
 set -euo pipefail
-cd /home/jixin/workspace/code/OpenSO-101-v2
+cd "${OPENSO101_REPO:-/home/jixin/workspace/code/OpenSO-101-v2}"
 export CUDA_VISIBLE_DEVICES="${1:-6}"
 export OMNI_KIT_ACCEPT_EULA=YES
 export OPENSO101_SO101_USD_PATH="$PWD/outputs/SO-ARM101-USD.usd"
@@ -13,7 +13,7 @@ runtime_prefix=${2:-v3_progress}
 for runtime_mode in nominal randomized; do
     for runtime_task in Lift PickPlace; do
         runtime_output="outputs/rl_progress/${runtime_prefix}_${runtime_task}_${runtime_mode}"
-        "$task_python" -u outputs/check_rl_runtime.py --task "OpenSO101-${runtime_task}-v0" --environment-mode "$runtime_mode" --output "$runtime_output"
+        "$task_python" -u scripts/check_rl_runtime.py --task "OpenSO101-${runtime_task}-v0" --environment-mode "$runtime_mode" --output "$runtime_output" --steps 500
         test -s "$runtime_output/report.json"
     done
 done

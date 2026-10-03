@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -87,10 +88,12 @@ def campaign(args):
         write_receipt()
         return 0 if receipt["multi_seed_acceptance_verified"] else 1
     finally:
-        for process in processes:
+        for process, job in zip(processes, jobs, strict=True):
             if process.poll() is None:
-                process.terminate()
+                os.killpg(process.pid, signal.SIGTERM)
+                job["status"] = "terminated"
         for process in processes:
             process.wait()
         for handle in handles:
             handle.close()
+        write_receipt()

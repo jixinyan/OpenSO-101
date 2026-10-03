@@ -1,5 +1,5 @@
 set -euo pipefail
-cd /home/jixin/workspace/code/OpenSO-101-v2
+cd "${OPENSO101_REPO:-/home/jixin/workspace/code/OpenSO-101-v2}"
 export CUDA_VISIBLE_DEVICES="${1:-4}"
 export OMNI_KIT_ACCEPT_EULA=YES
 export OPENSO101_SO101_USD_PATH="$PWD/outputs/SO-ARM101-USD.usd"
