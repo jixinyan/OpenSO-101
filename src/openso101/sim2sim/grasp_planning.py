@@ -1,6 +1,7 @@
 import mujoco
 import numpy as np
 from scipy.optimize import least_squares
+from scipy.spatial.transform import Rotation, Slerp
 
 from .mujoco import JOINT_NAMES, JOINT_OFFSETS
 
@@ -61,12 +62,42 @@ def plan_collision_grasp(model, states, environment, rng):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
                    for point in np.linspace(start_arm, end_arm, 65)[1:])
 
-    accepted_solutions = [item for item in solutions if feasible(item)
-                          and path_safe(initial, item.x[:5]) and path_safe(item.x[:5], item.x[5:])]
-    result = min(accepted_solutions, key=lambda item: np.linalg.norm(item.x[:5] - initial)
-                 + np.linalg.norm(item.x[5:] - item.x[:5])) if accepted_solutions else min(
-                     solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
-    arms = list(result.x.reshape(2, 5))
+    def descent_path(start_arm, end_arm):
+        first, last = pose(start_arm), pose(end_arm)
+        fractions = np.linspace(0., 1., 65)[1:]
+        rotations = Slerp([0., 1.], Rotation.from_matrix([first[1], last[1]]))(fractions).as_matrix()
+        previous = start_arm
+        path = []
+        accepted = True
+        for fraction, target_rotation in zip(fractions, rotations, strict=True):
+            target_position = first[0] + fraction * (last[0] - first[0])
+
+            def residual(arm):
+                position, rotation, depth = pose(arm)
+                return np.concatenate((20 * (position - target_position), (rotation - target_rotation).ravel(),
+                                       [100 * depth], .0001 * (arm - previous)))
+
+            solution = least_squares(residual, np.clip(previous, lower, upper), bounds=(lower, upper),
+                                     ftol=1e-9, xtol=1e-9, gtol=1e-9, max_nfev=100)
+            position, rotation, depth = pose(solution.x)
+            accepted &= bool(solution.success and np.linalg.norm(position - target_position) <= .003
+                             and np.linalg.norm(rotation - target_rotation) <= .02 and depth <= .0001)
+            path.append(solution.x)
+            previous = solution.x
+        return np.asarray(path), accepted
+
+    candidates = sorted((item for item in solutions if feasible(item) and path_safe(initial, item.x[:5])),
+                        key=lambda item: np.linalg.norm(item.x[:5] - initial)
+                        + np.linalg.norm(item.x[5:] - item.x[:5]))
+    result = min(solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
+    grasp_path = None
+    pair_accepted = False
+    for candidate in candidates:
+        candidate_path, valid = descent_path(candidate.x[:5], candidate.x[5:])
+        if valid:
+            result, grasp_path, pair_accepted = candidate, candidate_path, True
+            break
+    arms = [result.x[:5], grasp_path[-1] if grasp_path is not None else result.x[5:]]
     previous = arms[-1]
     goal = np.asarray(environment["goal_position_root"])
 
@@ -86,11 +117,11 @@ def plan_collision_grasp(model, states, environment, rng):
     targets = []
     previous = initial
     for index, (name, arm, target) in enumerate(zip(("approach", "grasp", "lift"), arms, [*positions, goal], strict=True)):
-        path = np.linspace(previous, arm, 65)[1:]
+        path = grasp_path if name == "grasp" and grasp_path is not None else np.linspace(previous, arm, 65)[1:]
         samples = [pose(point, jaw=0. if name == "lift" else .8, allow_grasp_contact=name == "lift") for point in path]
         position, rotation, depth = samples[-1]
         maximum_depth = max(value[2] for value in samples)
-        accepted = (bool(accepted_solutions) if index < 2 else bool(lift_feasible)) and maximum_depth <= .0001
+        accepted = (pair_accepted if index < 2 else bool(lift_feasible)) and maximum_depth <= .0001
         targets.append({"phase": name, "target_position_root": target.tolist(),
                         "joint_position": (arm - JOINT_OFFSETS[:5]).tolist(),
                         "path_joint_positions": (path - JOINT_OFFSETS[:5]).tolist(),

@@ -1234,10 +1234,6 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_train.add_argument("--video", action=argparse.BooleanOptionalAction, default=True)
     p_train.add_argument("--video_length", type=int, default=200)
     p_train.add_argument("--video_interval", type=int, default=2400)
-    # Default to wandb so live metrics are visible in the browser without
-    # tunneling tensorboard. Falls back to tensorboard if wandb isn't
-    # installed (it's in [project.optional-dependencies] — `pip install
-    # openso101[wandb]` or `pip install wandb`).
     p_train.add_argument(
         "--logger",
         choices=("wandb", "tensorboard", "neptune"),
