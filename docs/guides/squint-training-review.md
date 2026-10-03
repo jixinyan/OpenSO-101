@@ -12,7 +12,7 @@
 - [图像处理](https://github.com/aalmuzairee/squint/blob/7086fd516eda7df585a5261c541e0670a6d916b4/utils.py)
 - [论文](https://arxiv.org/html/2602.21203v1)
 
-本次检查只读取已经保存的真实训练 scalar、独立评估和原生 Isaac 推理轨迹。RL 训练保持停止，新增训练与恢复训练需要用户重新授权。报告、文件 SHA256 和图表见 [记录核查](../validation/2026-09-30/squint_training/README.md)。
+报告、文件 SHA256 和图表见 [记录核查](../validation/2026-09-30/squint_training/README.md)。用户已授权新训练；当前 controller、reward、独立评估与运行记录见 [grasp_v3](rl-grasp-v3.md) 和 [2026-10-03 状态](v2-status-2026-10-03.md)。
 
 ## Squint 的完整训练流程
 
@@ -102,4 +102,4 @@ Squint SO101 controller 的 nominal stiffness/damping 为 1000/100，force limit
 
 训练验收沿用 v2 Spec：三个 seed、每次 100 episode，连续三次独立评估成功率至少 90%。每种条件保存所有 checkpoint 和评估结果，模型选择依据成功率与保持指标。PPO、普通 SB3 SAC 与完整 Squint 使用各自准确的算法名称和配置；本项目现有 SB3 SAC 尚未包含 Squint 的 C51、视觉 encoder 和 GPU replay 设计。
 
-本轮交付为源码研究、保存记录核查和实验要求。动作实现、reward 修改、Squint 训练与收敛验证保持待完成状态。
+`grasp_v3` 提供六个关节的 measured-reference 增量控制、Tanh Gaussian PPO、有限时间 potential reward 和独立 checkpoint 评估。实际训练检查已经完成 6,144 transitions、模型保存、100 episodes 评估和 MuJoCo 运行。任务成功率为零，多个 seed 的收敛与成功策略迁移仍需验收。完整 Squint 上游训练尚未执行。

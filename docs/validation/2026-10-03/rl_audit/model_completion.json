@@ -1,0 +1,34 @@
+{
+  "result": {
+    "instruction": "将红色方块放入托盘，打开夹爪，等待物体稳定。",
+    "object_names": [
+      "红色方块",
+      "托盘"
+    ],
+    "require_released": true
+  },
+  "requests": [
+    {
+      "attempt": 0,
+      "model": "gpt-6-astra",
+      "schema": "InstructionRecord",
+      "wire_api": "responses",
+      "status": "validated",
+      "usage": {
+        "input_tokens": 153,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0
+        },
+        "output_tokens": 46,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 199
+      },
+      "request_sha256": "4c9ddd8ff3e0b29a31e03a2df544e6e09c374da292ca34a171b067feca45941e",
+      "elapsed_seconds": 2.704407932702452,
+      "response_sha256": "cd07285a43efea3fe06d73ac3d7149fdedbd48e258c72bb4af33dc772da71bc6"
+    }
+  ]
+}
