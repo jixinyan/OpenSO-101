@@ -42,6 +42,7 @@ def configure_grasp_v3(cfg, task_id):
         actuator.stiffness = 17.8
         actuator.damping = .6
         actuator.effort_limit_sim = 3.35
+        actuator.velocity_limit_sim = 1.5
     cfg.reward_discount = .99
     cfg.terminations.time_out.time_out = False
     if cfg.task_profile_task == "pick_place":
@@ -61,7 +62,7 @@ def configure_grasp_v3(cfg, task_id):
     cfg.observations.policy.object_velocity = ObservationTermCfg(func=object_velocity)
     cfg.observations.policy.task_state = ObservationTermCfg(func=task_state)
     cfg.rewards = ProgressRewardsCfg()
-    cfg.rewards.success_bonus.weight = 30. / step_dt
+    cfg.rewards.success_bonus.weight = 100. / step_dt
     cfg.scene.ee_frame.debug_vis = False
     cfg.commands.object_pose.debug_vis = False
 

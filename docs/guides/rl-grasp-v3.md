@@ -14,7 +14,7 @@ policy 观测包含关节位置和速度、物体位置和速度、任务目标�
 
 进展奖励为 `5 × (gamma × Phi(next) - Phi(previous))`，其中 `gamma` 与训练配置一致。`Phi` 包含接近、抓取中心、闭合、双侧接触、提升、目标距离和 PickPlace 阶段。episode 起始与终止的势能均为零；完整 episode 的折扣 shaping 累计需要通过实际轨迹检查。
 
-每次成功奖励为 30。关节速度和目标变化分别按控制时间计算惩罚。成功事件同时要求当前步骤的 success termination 和当前 termination 标记。
+每次成功奖励为 100。`Phi` 的上限为 18，终止步骤的 shaping 大小最多为 90。关节速度和目标变化分别按控制时间计算惩罚。成功事件同时要求当前步骤的 success termination 和当前 termination 标记。
 
 Lift 要求双侧接触力均超过 0.5 N、物体高度超过 4 cm、目标距离小于 5 cm，并保持 0.25 秒。PickPlace 要求完成抓取和搬运阶段，释放后位于目标 3 cm 范围，夹爪位置超过 0.4 rad，物体线速度不超过 0.02 m/s、角速度不超过 0.1 rad/s，并稳定保持 0.5 秒。PickPlace 的保持时间在当前物理步骤计算。
 
