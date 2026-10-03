@@ -20,6 +20,7 @@ parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--collision-bundle", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--terminal-hold-seconds", type=float, default=0.)
+parser.add_argument("--gripper-contact-dimension", type=int, choices=(3, 4, 6), default=3)
 args = parser.parse_args()
 if not np.isfinite(args.terminal_hold_seconds) or args.terminal_hold_seconds < 0:
     raise ValueError("末步目标保持时间必须为非负有限数值")
@@ -39,7 +40,8 @@ with h5py.File(source / "trajectory.hdf5") as stream:
         "joint_position", "joint_targets", "object_position_root", "jaw_forces", "active", "phase", "success")}
 if any(not np.isfinite(value).all() for value in (*fields.values(), *native.values())):
     raise ValueError("原生来源包含无效数值")
-metadata = dict(states["planner_physics"], physics_recording=states["physics_recording"], quaternion_order="wxyz")
+metadata = dict(states["planner_physics"], physics_recording=states["physics_recording"], quaternion_order="wxyz",
+                gripper_contact_dimension=args.gripper_contact_dimension)
 template = build_model(args.robot_model, metadata, args.collision_bundle)
 args.output.mkdir(parents=True, exist_ok=False)
 parameters = states["task_parameters"]
@@ -136,6 +138,8 @@ result = {"status": "native_scripted_action_replay_with_terminal_hold_completed"
           "mujoco_successes": sum(item["mujoco_success"] for item in records), "episodes": len(records),
           "replay_window_successes": sum(item["replay_window_success"] for item in records),
           "requested_terminal_hold_seconds": args.terminal_hold_seconds,
+          "gripper_contact_dimension": args.gripper_contact_dimension,
+          "gripper_friction": [1.2, .005, .0001],
           "source_report_sha256": digest(source / "report.json"), "source_trace_sha256": report["trace_sha256"],
           "source_initial_physics_sha256": report["initial_physics_sha256"],
           "source_states_sha256": report["states_sha256"], "source_script_sha256": report["source_sha256"],

@@ -44,6 +44,9 @@ def check_kinematics(model, trace):
 
 
 def build_model(robot_model, metadata, collision_bundle=None):
+    gripper_contact_dimension = metadata.get("gripper_contact_dimension", 3)
+    if gripper_contact_dimension not in (3, 4, 6):
+        raise ValueError("夹爪接触维度需要使用 MuJoCo 的 3、4 或 6")
     spec = mujoco.MjSpec.from_file(str(robot_model))
     if [joint.name for joint in spec.joints] != list(JOINT_NAMES):
         raise ValueError("需要官方 SO-101 old-calibration MJCF 的六个关节")
@@ -74,6 +77,7 @@ def build_model(robot_model, metadata, collision_bundle=None):
             geom.conaffinity = 6
             if geom.parent.name in ("gripper", "moving_jaw_so101_v1"):
                 geom.friction = [1.2, 0.005, 0.0001]
+                geom.condim = gripper_contact_dimension
     if collision_bundle is not None:
         bundle = Path(collision_bundle).resolve()
         manifest = json.loads((bundle / "manifest.json").read_text())
@@ -97,7 +101,8 @@ def build_model(robot_model, metadata, collision_bundle=None):
                 spec.add_mesh(name=part_name, file=str(path))
                 geom.parent.add_geom(name=part_name, type=mujoco.mjtGeom.mjGEOM_MESH, meshname=part_name,
                                      pos=geom.pos, quat=geom.quat, contype=geom.contype, conaffinity=geom.conaffinity,
-                                     friction=geom.friction, solref=geom.solref, solimp=geom.solimp, group=3)
+                                     friction=geom.friction, condim=geom.condim,
+                                     solref=geom.solref, solimp=geom.solimp, group=3)
             geom.contype = 0
             geom.conaffinity = 0
             replaced.add(name)
@@ -123,7 +128,8 @@ def build_model(robot_model, metadata, collision_bundle=None):
             name = f"native_camera_mount_{extra_index}_{part_index}"
             spec.add_mesh(name=name, uservert=mesh.vertices.ravel(), userface=mesh.faces.ravel())
             spec.body(extra["body"]).add_geom(name=name, type=mujoco.mjtGeom.mjGEOM_MESH, meshname=name,
-                                             contype=1, conaffinity=6, friction=[1.2, .005, .0001], group=3)
+                                             contype=1, conaffinity=6, friction=[1.2, .005, .0001],
+                                             condim=gripper_contact_dimension, group=3)
     if "table_geometry" in metadata:
         geometry = metadata["table_geometry"]
         position = np.asarray(geometry["position_root"], dtype=float)

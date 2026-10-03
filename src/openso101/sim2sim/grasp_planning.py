@@ -114,7 +114,7 @@ def plan_collision_grasp(model, states, environment, rng):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
                    for point in np.linspace(start_arm, end_arm, 65)[1:])
 
-    def cartesian_path(start_arm, end_arm, jaw=.8, allow_grasp_contact=False, held=False, free_yaw=False):
+    def cartesian_path(start_arm, end_arm, jaw=.8, allow_grasp_contact=False, held=False, transporting=False):
         first, last = pose(start_arm, jaw, allow_grasp_contact, held), pose(end_arm, jaw, allow_grasp_contact, held)
         fractions = np.linspace(0., 1., 65)[1:]
         rotations = Slerp([0., 1.], Rotation.from_matrix([first[1], last[1]]))(fractions).as_matrix()
@@ -122,6 +122,7 @@ def plan_collision_grasp(model, states, environment, rng):
         path = []
         accepted = True
         for fraction, target_rotation in zip(fractions, rotations, strict=True):
+            previous_rotation = pose(previous, jaw, allow_grasp_contact, held)[1]
             target_position = first[0] + fraction * (last[0] - first[0])
             if held:
                 target_position = (first[0] + first[1] @ held_transform[0]
@@ -132,20 +133,21 @@ def plan_collision_grasp(model, states, environment, rng):
                 position, rotation, depth = pose(arm, jaw, allow_grasp_contact, held)
                 if held:
                     position = position + rotation @ held_transform[0]
-                orientation = (rotation[:, 2] - target_rotation[:, 2] if free_yaw
+                orientation = (.05 * (rotation - previous_rotation).ravel() if transporting
                                else (rotation - target_rotation).ravel())
                 return np.concatenate((20 * (position - target_position), orientation,
-                                       [100 * depth], .0001 * (arm - previous)))
+                                       [100 * depth, max(0., np.cos(np.pi / 4) - rotation[2, 2]) if transporting else 0.],
+                                       (.01 if transporting else .0001) * (arm - previous)))
 
             solution = least_squares(residual, np.clip(previous, lower, upper), bounds=(lower, upper),
                                      ftol=1e-9, xtol=1e-9, gtol=1e-9, max_nfev=100)
             position, rotation, depth = pose(solution.x, jaw, allow_grasp_contact, held)
             if held:
                 position = position + rotation @ held_transform[0]
-            orientation_error = np.linalg.norm(rotation[:, 2] - target_rotation[:, 2] if free_yaw
-                                               else rotation - target_rotation)
+            orientation_accepted = (rotation[2, 2] >= np.cos(np.pi / 4) if transporting
+                                    else np.linalg.norm(rotation - target_rotation) <= .02)
             accepted &= bool(solution.success and np.linalg.norm(position - target_position) <= .003
-                             and orientation_error <= .02 and depth <= .0001)
+                             and orientation_accepted and depth <= .0001)
             path.append(solution.x)
             previous = solution.x
         return np.asarray(path), accepted
@@ -165,7 +167,7 @@ def plan_collision_grasp(model, states, environment, rng):
         for index in range(1, waypoint_count):
             path, accepted = cartesian_path(candidate_paths[-1][-1], candidate_arms[index],
                                             jaw=0. if index >= 2 else .8, allow_grasp_contact=index >= 2,
-                                            held=pick_place and index >= 2, free_yaw=pick_place and index >= 3)
+                                            held=pick_place and index >= 2, transporting=pick_place and index >= 3)
             valid &= accepted
             candidate_paths.append(path)
         if valid:
@@ -192,6 +194,8 @@ def plan_collision_grasp(model, states, environment, rng):
                         "gripper_inclination_rad": float(np.arccos(np.clip(rotation[2, 2], -1, 1))),
                         "maximum_penetration_m": depth, "sampled_path_maximum_penetration_m": maximum_depth,
                         "path_samples": len(samples), "accepted": bool(accepted), "attempts": len(solutions)})
+        targets[-1]["joint_path_length_rad"] = float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max(axis=-1).sum())
+        targets[-1]["maximum_sample_joint_step_rad"] = float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max())
         previous = arm
     return {"environment": environment["environment"], "targets": targets,
             "accepted": all(item["accepted"] for item in targets),
