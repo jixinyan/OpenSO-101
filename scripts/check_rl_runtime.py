@@ -61,6 +61,7 @@ try:
     robot = runtime.scene["robot"]
     ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
     mapping = action_mapping(runtime)
+    torch.manual_seed(args.seed)
     actor = BoundedActorCritic(TensorDict(observation, batch_size=[4]),
                              {"policy": ["policy"], "critic": ["policy"]}, 6,
                              noise_std_type="log", init_noise_std=.8).to(runtime.device)
@@ -126,6 +127,7 @@ try:
         trace.create_dataset("physics_steps/joint_position", data=torch.stack(physics_positions).cpu().numpy())
     report = {"task": args.task, "task_profile": args.task_profile, "environment_mode": args.environment_mode,
               "steps": args.steps, "num_envs": 4, "resets": resets,
+              "seed": args.seed,
               "observation_dim": observation["policy"].shape[-1], "maximum_target_error_rad": maximum_target_error,
               "maximum_sampled_speed_rad_s": maximum_speed,
               "maximum_physics_speed_rad_s": maximum_physics_speed,
