@@ -1,0 +1,160 @@
+import argparse
+import json
+from pathlib import Path
+import subprocess
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--planner-python", type=Path, required=True)
+parser.add_argument("--robot-model", type=Path, required=True)
+parser.add_argument("--num-envs", type=int, default=4)
+parser.add_argument("--seed", type=int, default=42)
+args = parser.parse_args()
+if args.output.exists() or args.num_envs <= 0:
+    raise ValueError("任务检查需要新的输出目录和有效环境数量")
+args.output.mkdir(parents=True, exist_ok=False)
+args.task = "OpenSO101-Lift-v0"
+args.task_profile = "grasp_v3"
+args.environment_mode = "nominal"
+args.with_cameras = False
+args.visual_dr = False
+
+from isaaclab.app import AppLauncher
+
+app = AppLauncher(headless=True).app
+env = None
+try:
+    import h5py
+    import numpy as np
+    import torch
+    from isaaclab.managers import RecorderManagerBaseCfg, RecorderTerm, RecorderTermCfg
+    from isaaclab.managers.recorder_manager import DatasetExportMode
+    from isaaclab.utils import configclass
+    from isaaclab.utils.math import subtract_frame_transforms
+
+    from openso101.rl.config import digest
+    from openso101.rl.execution import build_environment
+    from openso101.robots import SO101_SIM_JOINT_NAMES
+    from openso101.tasks.shared.grasp import _jaw_force_magnitude
+
+    trace = []
+    physics = []
+
+    class TaskRecorder(RecorderTerm):
+        def record_post_step(self):
+            runtime = self._env
+            robot = runtime.scene["robot"]
+            obj = runtime.scene["object"]
+            object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
+                                                           obj.data.root_pos_w)
+            grip_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
+                                                         runtime.scene["ee_frame"].data.target_pos_w[:, 0])
+            values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
+                      "object_position_root": object_position, "grasp_position_root": grip_position,
+                      "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])
+                                                for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
+                      "success": runtime.termination_manager.get_term("success"),
+                      "terminated": runtime.reset_terminated, "truncated": runtime.reset_time_outs,
+                      "phase": phase.clone(), "active": active.clone()}
+            if any(not torch.isfinite(value).all() for value in values.values()):
+                raise RuntimeError("任务检查产生无效状态")
+            trace.append({name: value.cpu().numpy().copy() for name, value in values.items()})
+            return None, None
+
+        def record_post_physics_decimation_step(self):
+            physics.append(self._env.scene["robot"].root_physx_view.get_dof_velocities()[:, ids].cpu().numpy().copy())
+            return None, None
+
+    @configclass
+    class TaskRecorderCfg(RecorderManagerBaseCfg):
+        dataset_export_dir_path = str(args.output / "recorder")
+        dataset_export_mode = DatasetExportMode.EXPORT_NONE
+        task = RecorderTermCfg(class_type=TaskRecorder)
+
+    args.recorder_cfg = TaskRecorderCfg()
+    env = build_environment(args, training=True)
+    env.reset()
+    runtime = env.unwrapped
+    robot = runtime.scene["robot"]
+    ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
+    obj = runtime.scene["object"]
+    object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
+    states = {"seed": args.seed, "task": args.task, "control_dt": runtime.step_dt, "physics_dt": runtime.physics_dt,
+              "soft_joint_limits": robot.data.soft_joint_pos_limits[0, ids].cpu().tolist(),
+              "environments": [{"environment": index,
+                                "joint_position": robot.data.joint_pos[index, ids].cpu().tolist(),
+                                "object_position_root": object_position[index].cpu().tolist(),
+                                "goal_position_root": runtime.command_manager.get_command("object_pose")[index, :3].cpu().tolist()}
+                               for index in range(args.num_envs)]}
+    states_path = args.output / "initial_states.json"
+    with states_path.open("x") as stream:
+        json.dump(states, stream, indent=2)
+    plan_path = args.output / "plan.json"
+    with (args.output / "planning.log").open("x") as log:
+        subprocess.run([str(args.planner_python), "scripts/plan_grasp_task.py", "--states", str(states_path),
+                        "--robot-model", str(args.robot_model), "--output", str(plan_path)],
+                       stdout=log, stderr=subprocess.STDOUT, check=True)
+    plan = json.loads(plan_path.read_text())
+    if plan["states_sha256"] != digest(states_path):
+        raise ValueError("规划与实际初始状态不一致")
+    targets = torch.tensor([[item["joint_position"] for item in environment["targets"]]
+                            for environment in plan["environments"]], device=runtime.device)
+    phase = torch.zeros(args.num_envs, dtype=torch.long, device=runtime.device)
+    active = torch.ones(args.num_envs, dtype=torch.bool, device=runtime.device)
+    finished_success = torch.zeros_like(active)
+    for step in range(runtime.max_episode_length):
+        target_index = torch.where(phase < 2, phase, 2).clamp(0, 2)
+        target_index = torch.where(phase == 2, 1, target_index)
+        arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
+        jaw_target = torch.where(phase < 2, .8, 0.).unsqueeze(-1)
+        desired = torch.cat((arm_target, jaw_target), dim=-1)
+        actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
+        actions[~active] = 0
+        _, _, terminated, truncated, _ = env.step(actions)
+        sample = trace[-1]
+        errors = torch.linalg.vector_norm(torch.as_tensor(sample["joint_position"], device=runtime.device)[:, :5]
+                                         - arm_target, dim=-1)
+        advanced = (phase < 2) & (errors < .06) & active
+        forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
+        advanced |= (phase == 2) & (forces > .5).all(dim=-1) & active
+        phase += advanced.long()
+        finished_success |= torch.as_tensor(sample["success"], device=runtime.device) & active
+        active &= ~(terminated | truncated)
+        if not active.any():
+            break
+    if not trace or len(physics) != len(trace) * runtime.cfg.decimation:
+        raise RuntimeError("实际任务轨迹的步骤数量不完整")
+    trajectory = args.output / "trajectory.hdf5"
+    with h5py.File(trajectory, "x") as stream:
+        for name in trace[0]:
+            stream.create_dataset(name, data=np.stack([item[name] for item in trace]))
+        stream.create_dataset("physics_steps/joint_velocity", data=np.asarray(physics))
+        stream.attrs["control_dt"] = runtime.step_dt
+        stream.attrs["physics_dt"] = runtime.physics_dt
+    records = []
+    for index in range(args.num_envs):
+        samples = [item for item in trace if item["active"][index]]
+        forces = np.stack([item["jaw_forces"][index] for item in samples])
+        heights = np.asarray([item["object_position_root"][index, 2] for item in samples])
+        records.append({"environment": index, "success": bool(finished_success[index]),
+                        "control_steps": len(samples), "maximum_phase": int(max(item["phase"][index] for item in samples)),
+                        "maximum_jaw_forces_n": forces.max(axis=0).tolist(),
+                        "bilateral_contact_steps": int((forces > .5).all(axis=-1).sum()),
+                        "maximum_object_height_root_m": float(heights.max())})
+    report = {"status": "native_task_completed", "task": args.task, "task_profile": args.task_profile,
+              "environment_mode": args.environment_mode, "seed": args.seed, "environments": records,
+              "successes": int(finished_success.sum()), "episodes": args.num_envs,
+              "controller": "scripted_IK_measured_reference_delta", "control_dt": runtime.step_dt,
+              "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
+              "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
+              "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
+              "profile_sha256": digest(Path("src/openso101/tasks/shared/grasp_v3.py")),
+              "rl_policy_success_verified": False}
+    with (args.output / "report.json").open("x") as stream:
+        json.dump(report, stream, indent=2)
+    print(json.dumps(report), flush=True)
+finally:
+    if env is not None:
+        env.close()
+app.close()
