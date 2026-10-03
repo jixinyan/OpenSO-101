@@ -1,0 +1,44 @@
+{
+  "native_report_sha256": "8f1dfc3d082095d8b97314b0500e2eaf4a9e6dc8e24b525870bab9954b5b991f",
+  "native_trace_sha256": "5441908768bdae4ba3d117c6a397a1609eb9c319423d08dd318190b65c2b3588",
+  "evaluations": [
+    {
+      "label": "\u589e\u91cf\u63a7\u5236\u57fa\u7ebf \u00b7 100 iterations",
+      "report_sha256": "6e60dc4e2a8f601bf7bb817417fb06458c08cf39612ed1f8db55b9b11046c2e6",
+      "checkpoint_sha256": "4a9544b269e9b3cc37434d17b555c18ff0e7bd643c8a671786accc82d98cf89a",
+      "counts": {
+        "reached": 96,
+        "grasped": 28,
+        "held_above_table": 1,
+        "success": 0
+      }
+    },
+    {
+      "label": "\u589e\u91cf\u63a7\u5236\u8fdb\u5c55\u5956\u52b1 \u00b7 100 iterations",
+      "report_sha256": "8a4fca3f0dca4f817bea6e41c7e2bd5fcbfea0aa5b82ee4dcfa83e8a93ae995c",
+      "checkpoint_sha256": "c236906751832c50f3d810cee506867d06f002571e10edfb4bfe0f60b0d24a18",
+      "counts": {
+        "reached": 98,
+        "grasped": 39,
+        "held_above_table": 0,
+        "success": 0
+      }
+    },
+    {
+      "label": "\u7edd\u5bf9\u4f4d\u7f6e\u63a7\u5236 \u00b7 2 iterations",
+      "report_sha256": "08a78f6efaf3785ebb987ccf06ec1e9944e27ad8580bfefc51b38dc2e0045828",
+      "checkpoint_sha256": "af0e2e9aa5fa4641e0950990e9f48a1e00cae676c9fe274ad685e7fac5bb3623",
+      "counts": {
+        "reached": 8,
+        "grasped": 0,
+        "held_above_table": 0,
+        "success": 0
+      }
+    }
+  ],
+  "source_sha256": "d536674eb287ff37fe99c1aa46199440dc8427caadeaece8703e57e3b74e900c",
+  "figures": {
+    "native_position_grasp.png": "8df1e204c1a55dab7ee27234bd70366b1b3508add9db6a29fb9bbb8770dbdc68",
+    "independent_evaluations.png": "3c1ea78a5443ca34997e301b9f65eda82643ab22badcfce58ab2da5820e7a0b0"
+  }
+}

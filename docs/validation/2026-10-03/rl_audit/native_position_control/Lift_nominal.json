@@ -1,0 +1,42 @@
+{
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "steps": 500,
+  "num_envs": 4,
+  "resets": 8,
+  "seed": 42,
+  "observation_dim": 38,
+  "maximum_target_error_rad": 0.0,
+  "maximum_sampled_speed_rad_s": 1.5000040531158447,
+  "maximum_physics_speed_rad_s": 1.5000070333480835,
+  "actual_velocity_limit_verified": true,
+  "physics_dt": 0.001,
+  "control_dt": 0.02,
+  "maximum_target_limit_correction_rad": 0.0,
+  "distribution_and_target_mapping_verified": true,
+  "task_success_verified": false,
+  "completed_episode_shaping_returns": [
+    1.2186861558100004e-08,
+    3.6714668694148855e-08,
+    3.330787902433574e-10,
+    -1.2376626047378575e-08,
+    -8.509624072712205e-08,
+    -2.5290021812840457e-09,
+    2.5522277392192594e-08,
+    -2.4761270655399015e-09
+  ],
+  "completed_episode_activity_returns": [
+    0.0020910183654632417,
+    0.009823809114750478,
+    0.0026903694236534645,
+    0.005985995940282005,
+    0.0050253473733027935,
+    0.001026981167015039,
+    0.003290171576591089,
+    0.00873672925546998
+  ],
+  "trace_sha256": "810f0f07a7611e1a5137fadf87d6896bab055c49656aa8af2447f72ad24fd0d6",
+  "source_sha256": "2f719cc1be1a8d2dd8e7d758c6194d230bc48359864d9863618e5bf940ba3133",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4"
+}

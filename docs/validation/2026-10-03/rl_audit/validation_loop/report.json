@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "status": "task_threshold_not_met",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v3",
+  "teacher_sha256": "863e4671996ae4e4294eea419461f905fbd60a9690eedf38482e00227eb525af",
+  "source_metadata_sha256": "cae77935e9dc38653341f147b1dc67d5acf9d8059267e7af3f84e03d498d2e49",
+  "validation_git_sha": "83526369be0171214390a9b0edd8c913408583e0",
+  "created_at": "2026-10-03T09:31:37.426966+00:00",
+  "episodes_per_evaluation": 100,
+  "success_threshold": 0.9,
+  "stages": [
+    {
+      "name": "teacher_evaluation",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-v2/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "eval",
+        "--task",
+        "OpenSO101-Lift-v0",
+        "--checkpoint",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v3_loop_8352636/teacher",
+        "--num-envs",
+        "64",
+        "--n-episodes",
+        "100",
+        "--seed",
+        "30042",
+        "--headless"
+      ],
+      "started_at": "2026-10-03T09:31:37.428634+00:00",
+      "status": "task_threshold_not_met",
+      "log": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v3_loop_8352636/teacher_evaluation.log",
+      "exit_code": 0,
+      "completed_at": "2026-10-03T09:35:40.489008+00:00",
+      "log_sha256": "8120dbd9b80481df1539d515cc8c8e254fd4c15bb09a0cf285dfdeaa0091fb1c",
+      "report": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v3_loop_8352636/teacher/evaluation-20261003T093539124748Z.json",
+      "report_sha256": "66179addd4466ffdb2ff4268f419212f18336609ae1fa568f2311c6ab561534d",
+      "successes": 0,
+      "episodes": 100
+    }
+  ],
+  "single_policy_loop_verified": false,
+  "multi_seed_acceptance_verified": false,
+  "hardware_run_verified": false
+}

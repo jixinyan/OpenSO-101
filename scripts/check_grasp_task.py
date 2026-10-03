@@ -63,6 +63,8 @@ try:
                       "success": runtime.termination_manager.get_term("success"),
                       "terminated": runtime.reset_terminated, "truncated": runtime.reset_time_outs,
                       "phase": phase.clone(), "active": active.clone()}
+            values["path_cursor"] = path_cursor.clone()
+            values["desired_joint_position"] = desired.clone()
             if any(not torch.isfinite(value).all() for value in values.values()):
                 raise RuntimeError("任务检查产生无效状态")
             trace.append({name: value.cpu().numpy().copy() for name, value in values.items()})
@@ -86,6 +88,7 @@ try:
     mappings = action_mapping(runtime)
     ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
     phase = torch.full((args.num_envs,), -1, dtype=torch.long, device=runtime.device)
+    path_cursor = torch.zeros_like(phase)
     active = torch.ones(args.num_envs, dtype=torch.bool, device=runtime.device)
 
     def control_actions(desired):
@@ -102,6 +105,7 @@ try:
     settling_steps = 10 if args.task_profile == "grasp_v4" else 0
     settling_target = robot.data.joint_pos[:, ids].clone()
     settling_target[:, -1] = .8
+    desired = settling_target
     for _ in range(settling_steps):
         _, _, terminated, truncated, _ = env.step(control_actions(settling_target))
         if (terminated | truncated).any():
@@ -146,7 +150,7 @@ try:
     targets = torch.tensor([[item["joint_position"] for item in environment["targets"]]
                             for environment in plan["environments"]], device=runtime.device)
     phase.zero_()
-    path_cursor = torch.zeros_like(phase)
+    path_cursor.zero_()
     paths = (torch.tensor([[item["path_joint_positions"] for item in environment["targets"]]
                            for environment in plan["environments"]], device=runtime.device)
              if args.task_profile == "grasp_v4" else None)

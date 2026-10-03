@@ -65,3 +65,27 @@ CPU 检查为 44 项通过，四项使用替代服务或对象的测试未执行
 ## 视觉 student 的实际数据
 
 `student/recorded_inference.json` 使用实际完成蒸馏的视觉 student，模型 SHA256 为 `6d1df1cd1feaf96ad7da8ac41c8e17f591b7d84e141c92195f4c3b854050ba85`。原生独立评估完成 `0/8`，并采集第一条完整 250 帧 HDF5。逐帧推理读取实际双相机、关节和任务目标，生成有限且形状正确的 motor commands；控制周期为 `0.02 秒`。episode SHA256 为 `9088da28fcc173fef846c137c7e495e00e315cd11fa0dd3d609c810fd1bd2dbd`。真机运行尚未执行。
+
+## 绝对位置控制
+
+`native_position_control/` 保存 `3f82f0a` 的四种原生物理条件，以及 `9e35e9b` 的脚本 Lift 与 PPO 独立评估。动作均值根据原生初始关节位置与实际 action mapping 初始化，控制目标覆盖官方完整关节范围。
+
+| 任务与条件 | 逐物理步骤最高速度 rad/s | 目标转换最大误差 rad |
+|---|---:|---:|
+| Lift nominal | 1.500007033 | 0 |
+| Lift randomized | 1.500007629 | 0 |
+| PickPlace nominal | 1.500007510 | 0 |
+| PickPlace randomized | 1.500028849 | 0 |
+
+每项包含四环境、500 控制步骤，四项共 40,000 个物理步骤。速度检查和完整 episode reward 检查全部通过。
+
+`task.json` 记录实际标准 reset 下的 IK 控制结果：成功 `1/4`，成功环境有 22 个双侧接触步骤，物体中心最高为 robot root frame 的 `0.204055 m`。控制包含原生重力补偿，最高实际速度为 `1.500087 rad/s`。原生轨迹 SHA256 为 `5441908768bdae4ba3d117c6a397a1609eb9c319423d08dd318190b65c2b3588`。脚本控制与 RL 策略分别保留任务验收状态。
+
+`ppo_evaluation.json` 保存 6,144 transitions 后的 100 episodes 独立评估，成功率为 `0/100`，接近物体比例为 8%。`activity_100_iterations.json` 保存增量控制进展奖励配置在 19,660,800 transitions 后的实际评估：接近物体 98 次、双侧接触 39 次、提升与成功次数均为零。
+
+![原生位置控制](figures/native_position_grasp.png)
+![实际独立评估](figures/independent_evaluations.png)
+
+## 完整闭环的任务验收
+
+`validation_loop/report.json` 来自真实 teacher 模型的独立 100 episodes 检查，seed 为 `30042`，模型 SHA256 为 `863e4671996ae4e4294eea419461f905fbd60a9690eedf38482e00227eb525af`。实际成功率为 `0/100`，状态为 `task_threshold_not_met`。teacher、MuJoCo 与 student 的各项任务评估均要求至少 `90/100`；成功策略的完整流程尚未通过。
