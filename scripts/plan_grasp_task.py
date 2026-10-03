@@ -41,28 +41,33 @@ for environment in states["environments"]:
             mujoco.mj_forward(model, data)
             rotation = data.xmat[gripper].reshape(3, 3)
             error = 10 * (data.xpos[gripper] + rotation @ center - position)
-            return np.concatenate((error, rotation[:, 2] - [0., 0., 1.])) if vertical else error
+            inclination = max(0., np.cos(np.pi / 4) - rotation[2, 2])
+            return np.concatenate((error, [inclination])) if vertical else error
 
         starts = [np.clip(previous, limits[:, 0] + 1e-5, limits[:, 1] - 1e-5)]
         starts.extend(rng.uniform(limits[:, 0] + 1e-5, limits[:, 1] - 1e-5, size=(15, 5)))
         solutions = [least_squares(residual, initial, bounds=(limits[:, 0] + 1e-5, limits[:, 1] - 1e-5),
                                    ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=500) for initial in starts]
-        result = min(solutions, key=lambda item: np.linalg.norm(residual(item.x)))
+        feasible = [item for item in solutions if item.success and np.linalg.norm(residual(item.x)[:3]) <= .03
+                    and (not vertical or residual(item.x)[3] <= .01)]
+        result = min(feasible, key=lambda item: np.linalg.norm(item.x - previous)) if feasible else min(
+            solutions, key=lambda item: np.linalg.norm(residual(item.x)))
         errors = residual(result.x)
         position_error = float(np.linalg.norm(errors[:3]) / 10)
         orientation_error = float(np.linalg.norm(errors[3:])) if vertical else None
         accepted = bool(result.success and position_error <= .003
-                        and (orientation_error is None or orientation_error <= .05))
+                        and (orientation_error is None or orientation_error <= .01))
         targets.append({"phase": name, "target_position_root": position.tolist(),
                         "joint_position": (result.x - JOINT_OFFSETS[:5]).tolist(),
-                        "position_error_m": position_error, "vertical_axis_error": orientation_error,
+                        "position_error_m": position_error, "inclination_limit_violation": orientation_error,
                         "accepted": accepted, "attempts": len(solutions)})
         previous = result.x
     records.append({"environment": environment["environment"], "targets": targets,
                     "accepted": all(item["accepted"] for item in targets)})
 report = {"status": "kinematic_plan_verified" if all(item["accepted"] for item in records) else "kinematic_plan_failed",
           "environments": records, "states_sha256": digest(args.states), "robot_model_sha256": digest(args.robot_model),
-          "planner_source_sha256": digest(Path(__file__)), "collision_path_verified": False,
+          "planner_source_sha256": digest(Path(__file__)), "maximum_grasp_inclination_rad": float(np.pi / 4),
+          "collision_path_verified": False,
           "task_success_verified": False}
 with args.output.open("x") as stream:
     json.dump(report, stream, indent=2)
