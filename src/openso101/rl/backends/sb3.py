@@ -35,7 +35,7 @@ class Backend:
                               ent_coef=cfg.entropy_coef, max_grad_norm=cfg.max_grad_norm)
             else:
                 common.update(buffer_size=cfg.replay_size, learning_starts=cfg.learning_starts,
-                              batch_size=cfg.batch_size(env.unwrapped.num_envs), train_freq=1, gradient_steps=1)
+                              batch_size=cfg.replay_batch_size, train_freq=1, gradient_steps=cfg.gradient_steps)
             model = self.algorithms[cfg.algo]("MlpPolicy", wrapped, **common)
         model.learn(total_timesteps=cfg.iterations * cfg.rollout_steps * env.unwrapped.num_envs,
                     reset_num_timesteps=resume is None)

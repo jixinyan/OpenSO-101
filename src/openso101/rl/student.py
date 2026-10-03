@@ -8,7 +8,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from openso101.teleop.so101_mapping import batched_action_to_motor_units
+from openso101.teleop.so101_mapping import batched_action_to_motor_units, batched_motor_units_to_action
 
 from .config import digest
 from .portable import decode_joint_targets
@@ -23,8 +23,9 @@ def student_features(proprio, wrist, overhead):
 
 
 class VisionStudent(nn.Module):
-    def __init__(self, num_actions=6):
+    def __init__(self, num_actions=6, bounded_actions=False):
         super().__init__()
+        self.bounded_actions = bounded_actions
         self.encoder = nn.Sequential(
             nn.Conv2d(6, 32, 5, stride=2), nn.ELU(),
             nn.Conv2d(32, 64, 3, stride=2), nn.ELU(),
@@ -36,7 +37,8 @@ class VisionStudent(nn.Module):
     def forward(self, features):
         proprio = features[:, :6]
         images = features[:, 6:].reshape(-1, 6, CAMERA_SIZE, CAMERA_SIZE)
-        return self.head(torch.cat((proprio, self.encoder(images)), dim=-1))
+        actions = self.head(torch.cat((proprio, self.encoder(images)), dim=-1))
+        return actions.tanh() if self.bounded_actions else actions
 
 
 class RLStudentPolicy:
@@ -48,7 +50,7 @@ class RLStudentPolicy:
             path = (folder / name).resolve()
             if not path.is_relative_to(folder.resolve()) or digest(path) != expected:
                 raise ValueError(f"student 文件校验失败：{name}")
-        self.model = VisionStudent().to(device)
+        self.model = VisionStudent(bounded_actions=self.metadata.get("bounded_actions", False)).to(device)
         self.model.load_state_dict(torch.load(folder / "student.pt", map_location=device, weights_only=True))
         self.model.eval()
         self.device = device
@@ -56,6 +58,7 @@ class RLStudentPolicy:
         self.openso101_postprocessor = self.decode_actions
 
     def preprocess(self, obs):
+        self.joint_position = batched_motor_units_to_action(obs["observation.state"])
         return student_features(obs["observation.state"], obs["observation.images.wrist_camera"],
                                 obs["observation.images.overhead_camera"])
 
@@ -63,5 +66,6 @@ class RLStudentPolicy:
         return self.model(features)
 
     def decode_actions(self, actions):
-        targets = decode_joint_targets(actions, self.metadata["action_mapping"])
+        targets = decode_joint_targets(actions, self.metadata["action_mapping"],
+                                       joint_position=self.joint_position)
         return batched_action_to_motor_units(targets)

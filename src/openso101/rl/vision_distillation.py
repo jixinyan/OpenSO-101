@@ -39,13 +39,23 @@ class StudentObservationsCfg(ObservationGroupCfg):
 
 
 class VisionStudentTeacher(StudentTeacher):
-    def __init__(self, obs, obs_groups, num_actions, **kwargs):
+    def __init__(self, obs, obs_groups, num_actions, bounded_actions=False, **kwargs):
         # 构造过程中使用本体观测确定 student 输入，图像由 VisionStudent 编码。
         proprio_obs = {**obs, "student": obs["student"][:, :6]}
         super().__init__(proprio_obs, obs_groups, num_actions, student_obs_normalization=False, **kwargs)
         self.student = VisionStudent(num_actions)
+        self.bounded_actions = bounded_actions
+        self.student.bounded_actions = bounded_actions
         self.teacher.requires_grad_(False)
         self.teacher_obs_normalizer.requires_grad_(False)
+
+    def evaluate(self, obs):
+        actions = super().evaluate(obs)
+        return actions.tanh() if self.bounded_actions else actions
+
+    def act(self, obs):
+        actions = super().act(obs)
+        return actions.clamp(-1, 1) if self.bounded_actions else actions
 
 
 class VisionDistillationRunner(DistillationRunner):
@@ -58,6 +68,7 @@ class VisionDistillationRunner(DistillationRunner):
 
 def action_mapping(env):
     from isaaclab.envs.mdp.actions import BinaryJointPositionAction, JointPositionAction
+    from openso101.tasks.shared.delta_action import JointDeltaAction
 
     robot = env.scene["robot"]
     mappings = {}
@@ -72,7 +83,8 @@ def action_mapping(env):
             if isinstance(term, JointPositionAction):
                 scale = torch.as_tensor(term._scale).expand(env.num_envs, len(ids))[0, index]
                 offset = torch.as_tensor(term._offset).expand(env.num_envs, len(ids))[0, index]
-                item.update(type="position", scale=float(scale), offset=float(offset))
+                item.update(type="relative_position" if isinstance(term, JointDeltaAction) else "position",
+                            scale=float(scale), offset=0. if isinstance(term, JointDeltaAction) else float(offset))
                 if term.cfg.clip is not None:
                     item["processed_clip"] = term._clip[0, index].tolist()
             elif type(term) is BinaryJointPositionAction:
@@ -98,6 +110,7 @@ def train_vision_student(env, teacher_folder: Path, output: Path, iterations: in
         "num_steps_per_env": rollout_steps, "save_interval": iterations, "logger": "tensorboard",
         "obs_groups": {"policy": ["student"], "teacher": ["policy"]},
         "policy": {"teacher_hidden_dims": policy_cfg["actor_hidden_dims"],
+                   "bounded_actions": meta.config.action_distribution == "tanh_gaussian",
                    "teacher_obs_normalization": policy_cfg["actor_obs_normalization"],
                    "activation": policy_cfg["activation"], "init_noise_std": 0.1},
         "algorithm": {"num_learning_epochs": 1, "learning_rate": 1e-4, "gradient_length": 1,
@@ -111,6 +124,7 @@ def train_vision_student(env, teacher_folder: Path, output: Path, iterations: in
     torch.save(runner.alg.policy.student.state_dict(), output / "student.pt")
     (output / "student.json").write_text(json.dumps({
         "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile,
+        "bounded_actions": meta.config.action_distribution == "tanh_gaussian",
         "teacher_sha256": meta.files[meta.checkpoint],
         "scene_sha256": meta.scene_sha256, "control_dt": env.unwrapped.step_dt,
         "observation_format": "motor_positions_and_two_rgb_cameras", "image_size": [64, 64],

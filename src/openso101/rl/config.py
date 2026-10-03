@@ -28,6 +28,15 @@ class TrainCfg(BaseModel):
     normalize_observations: bool = True
     replay_size: int = Field(default=100000, gt=0)
     learning_starts: int = Field(default=1000, ge=0)
+    environment_mode: Literal["randomized", "nominal"] = "randomized"
+    action_distribution: Literal["gaussian", "tanh_gaussian"] = "gaussian"
+    initial_noise_std: float = Field(default=0.5, gt=0)
+    learning_rate_schedule: Literal["fixed", "adaptive"] = "fixed"
+    desired_kl: float = Field(default=0.01, gt=0)
+    evaluation_interval: int = Field(default=100, gt=0)
+    evaluation_episodes: int = Field(default=100, gt=0)
+    replay_batch_size: int = Field(default=256, gt=1)
+    gradient_steps: int = Field(default=1, gt=0)
 
     @model_validator(mode="after")
     def supported_algorithm(self):
@@ -35,6 +44,10 @@ class TrainCfg(BaseModel):
             raise ValueError("SAC 和 TQC 使用 sb3 backend")
         if not self.hidden_dims or any(size <= 0 for size in self.hidden_dims):
             raise ValueError("hidden_dims 必须包含正整数")
+        if self.action_distribution == "tanh_gaussian" and (self.backend != "rsl_rl" or self.algo != "ppo"):
+            raise ValueError("tanh_gaussian 使用 rsl_rl PPO")
+        if self.learning_starts >= self.replay_size:
+            raise ValueError("learning_starts 必须小于 replay_size")
         return self
 
     def batch_size(self, num_envs: int) -> int:
@@ -53,7 +66,7 @@ class CheckpointMeta(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     schema_version: Literal[1] = 1
     task_id: str
-    task_profile: Literal["default", "grasp_v2"] = "default"
+    task_profile: Literal["default", "grasp_v2", "grasp_v3"] = "default"
     config: TrainCfg
     observation_format: str = "state"
     git_sha: str

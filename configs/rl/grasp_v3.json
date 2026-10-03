@@ -1,0 +1,20 @@
+{
+  "backend": "rsl_rl",
+  "algo": "ppo",
+  "seed": 42,
+  "iterations": 5000,
+  "rollout_steps": 96,
+  "epochs": 5,
+  "mini_batches": 4,
+  "learning_rate": 0.0001,
+  "gamma": 0.99,
+  "entropy_coef": 0.005,
+  "hidden_dims": [256, 128, 64],
+  "action_distribution": "tanh_gaussian",
+  "initial_noise_std": 0.8,
+  "environment_mode": "nominal",
+  "learning_rate_schedule": "adaptive",
+  "desired_kl": 0.01,
+  "evaluation_interval": 100,
+  "evaluation_episodes": 100
+}

@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
-from rsl_rl.runners import OnPolicyRunner
 
 from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
+from openso101.rl.bounded_policy import runner_class
 
 
 def configuration(cfg: TrainCfg, device: str):
@@ -15,7 +15,8 @@ def configuration(cfg: TrainCfg, device: str):
         "seed": cfg.seed, "device": device, "num_steps_per_env": cfg.rollout_steps,
         "save_interval": min(50, cfg.iterations),
         "logger": "tensorboard", "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
-        "policy": {"class_name": "ActorCritic", "init_noise_std": 0.5,
+        "policy": {"class_name": "BoundedActorCritic" if cfg.action_distribution == "tanh_gaussian" else "ActorCritic",
+                   "init_noise_std": cfg.initial_noise_std,
                    "noise_std_type": "log",
                    "actor_obs_normalization": cfg.normalize_observations,
                    "critic_obs_normalization": cfg.normalize_observations,
@@ -23,7 +24,8 @@ def configuration(cfg: TrainCfg, device: str):
                    "activation": "elu"},
         "algorithm": {"class_name": "PPO", "num_learning_epochs": cfg.epochs,
                       "num_mini_batches": cfg.mini_batches, "learning_rate": cfg.learning_rate,
-                      "schedule": "fixed", "gamma": cfg.gamma, "lam": cfg.gae_lambda,
+                      "schedule": cfg.learning_rate_schedule, "desired_kl": cfg.desired_kl,
+                      "gamma": cfg.gamma, "lam": cfg.gae_lambda,
                       "entropy_coef": cfg.entropy_coef, "clip_param": cfg.clip,
                       "max_grad_norm": cfg.max_grad_norm, "value_loss_coef": 1.0,
                       "use_clipped_value_loss": True},
@@ -36,23 +38,38 @@ class Backend:
         config = configuration(cfg, env.unwrapped.device)
         if resume:
             previous = CheckpointMeta.read(resume)
-            if (cfg.hidden_dims, cfg.normalize_observations) != (
+            if (cfg.hidden_dims, cfg.normalize_observations, cfg.action_distribution, cfg.environment_mode) != (
                 previous.config.hidden_dims, previous.config.normalize_observations,
+                previous.config.action_distribution, previous.config.environment_mode,
             ):
-                raise ValueError("继续训练需要保持 policy 结构和观测归一化配置")
+                raise ValueError("继续训练需要保持 policy 结构、观测归一化、动作分布和环境设置")
             config["policy"] = json.loads((resume / "backend.json").read_text())["policy"]
         write_backend_config(output, config)
-        runner = OnPolicyRunner(RslRlVecEnvWrapper(env), config, log_dir=str(output), device=env.unwrapped.device)
+        runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=str(output), device=env.unwrapped.device)
         if resume:
             runner.load(str(resume / CheckpointMeta.read(resume).checkpoint))
-        runner.learn(num_learning_iterations=cfg.iterations, init_at_random_ep_len=True)
+            runner.current_learning_iteration += 1
+        from openso101.rl.benchmark import evaluate_snapshot
+
+        remaining = cfg.iterations
+        while remaining:
+            count = min(remaining, cfg.evaluation_interval)
+            runner.learn(num_learning_iterations=count, init_at_random_ep_len=False)
+            checkpoint = output / f"model_{runner.current_learning_iteration}.pt"
+            runner.save(str(checkpoint))
+            converged = evaluate_snapshot(output, checkpoint, runner.current_learning_iteration, cfg)
+            remaining -= count
+            if converged:
+                break
+            if remaining:
+                runner.current_learning_iteration += 1
         runner.save(str(output / "model.pt"))
         return output / "model.pt"
 
     def load(self, env, folder: Path):
         meta = CheckpointMeta.read(folder)
         config = json.loads((folder / "backend.json").read_text())
-        runner = OnPolicyRunner(RslRlVecEnvWrapper(env), config, log_dir=None, device=env.unwrapped.device)
+        runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=None, device=env.unwrapped.device)
         runner.load(str(folder / meta.checkpoint), load_optimizer=False)
         inference = runner.get_inference_policy(device=env.unwrapped.device)
         return inference

@@ -79,6 +79,10 @@ def stable_placement(env):
     return (command.placement_hold_seconds / 0.5).clamp(0, 1)
 
 
+def success_event(env):
+    return (env.termination_manager.get_term("success") & env.termination_manager.terminated).float()
+
+
 def processed_action_change(env):
     current = torch.cat([env.action_manager.get_term(name).processed_actions
                          for name in env.action_manager.active_terms], dim=-1)
@@ -119,7 +123,7 @@ class GraspRewardsCfg:
     held_goal = RewardTermCfg(func=held_goal, weight=16.)
     processed_action_change = RewardTermCfg(func=processed_action_change, weight=-0.1)
     joint_vel = RewardTermCfg(func=mdp.joint_vel_l2, weight=-1e-4)
-    success_bonus = RewardTermCfg(func=mdp.is_terminated_term, params={"term_keys": ["success"]}, weight=100.)
+    success_bonus = RewardTermCfg(func=success_event, weight=100.)
 
 
 def configure_grasp_profile(cfg, task_id):

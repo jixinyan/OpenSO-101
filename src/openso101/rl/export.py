@@ -1,4 +1,5 @@
 import json
+import copy
 import subprocess
 from pathlib import Path
 
@@ -27,7 +28,7 @@ def export(args):
         import torch
         from isaaclab.utils.math import quat_apply_inverse, subtract_frame_transforms
         from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper, export_policy_as_jit
-        from rsl_rl.runners import OnPolicyRunner
+        from .bounded_policy import runner_class
 
         from openso101.robots.so101.constants import SO101_SIM_JOINT_NAMES
         from openso101.tasks.shared.grasp import _jaw_force_magnitude, object_grasped_by_jaws
@@ -40,13 +41,18 @@ def export(args):
 
         args.seed = meta.config.seed
         args.task_profile = meta.task_profile
+        args.environment_mode = meta.config.environment_mode
+        args.reward_discount = meta.config.gamma
         env = build_environment(args, training=False)
         unwrapped = env.unwrapped
         config = json.loads((folder / "backend.json").read_text())
-        runner = OnPolicyRunner(RslRlVecEnvWrapper(env), config, log_dir=None, device=unwrapped.device)
+        runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=None, device=unwrapped.device)
         runner.load(str(folder / meta.checkpoint), load_optimizer=False)
         actor = runner.alg.policy.eval()
-        export_policy_as_jit(actor, actor.actor_obs_normalizer, str(output), filename="policy.pt")
+        export_actor = copy.deepcopy(actor)
+        if meta.config.action_distribution == "tanh_gaussian":
+            export_actor.actor = torch.nn.Sequential(export_actor.actor, torch.nn.Tanh())
+        export_policy_as_jit(export_actor, actor.actor_obs_normalizer, str(output), filename="policy.pt")
         robot = unwrapped.scene["robot"]
         joint_ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
         observation_terms = [
@@ -55,6 +61,8 @@ def export(args):
                                    unwrapped.observation_manager.group_obs_term_dim["policy"], strict=True)
         ]
         expected_names = ["joint_pos", "joint_vel", "object_position", "target_object_position", "grasp_state", "actions"]
+        if meta.task_profile == "grasp_v3":
+            expected_names.extend(("object_velocity", "task_state"))
         if [term["name"] for term in observation_terms] != expected_names:
             raise ValueError("policy 观测定义不支持 portable 导出")
         if robot.num_joints != 6:
@@ -65,6 +73,8 @@ def export(args):
         )
         metadata = {
             "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile, "training_git_sha": meta.git_sha,
+            "environment_mode": meta.config.environment_mode,
+            "action_distribution": meta.config.action_distribution,
             "export_git_sha": revision, "checkpoint_sha256": digest(folder / meta.checkpoint),
             "files": {"policy.pt": digest(output / "policy.pt")}, "control_dt": unwrapped.step_dt,
             "physics_dt": unwrapped.physics_dt, "joint_names": list(SO101_SIM_JOINT_NAMES),
@@ -133,11 +143,17 @@ def export(args):
                 )
                 goal = unwrapped.command_manager.get_command("object_pose")
                 grasp = object_grasped_by_jaws(unwrapped).float().unsqueeze(-1)
+                extras = {}
+                if meta.task_profile == "grasp_v3":
+                    from openso101.tasks.shared.grasp_v3 import object_velocity, task_state
+
+                    extras = {"object_velocity": object_velocity(unwrapped), "task_state": task_state(unwrapped)}
                 rebuilt = portable.observation(robot.data.joint_pos, robot.data.joint_vel, object_root, goal,
-                                               grasp, unwrapped.action_manager.action)
+                                               grasp, unwrapped.action_manager.action, **extras)
                 actions = actor.act_inference(observation)
                 exported_actions = portable.predict(rebuilt)
-                decoded = portable.joint_targets(exported_actions, enforce_limits=False)
+                decoded = portable.joint_targets(exported_actions, enforce_limits=False,
+                                                 joint_position=robot.data.joint_pos[:, joint_ids].cpu())
                 errors = {"observation": float((rebuilt - observation["policy"].cpu()).abs().max()),
                           "policy_action": float((exported_actions - actions.cpu()).abs().max())}
                 for name, error in errors.items():
@@ -186,7 +202,8 @@ def export(args):
                     processed_by_joint.update({robot.joint_names[joint_id]: term.processed_actions[:, index]
                                                for index, joint_id in enumerate(ids)})
                 processed = torch.stack([processed_by_joint[name] for name in SO101_SIM_JOINT_NAMES], dim=-1)
-                target_error = float((processed.cpu() - decoded).abs().max())
+                active = ~(terminated | truncated).cpu()
+                target_error = float((processed.cpu()[active] - decoded[active]).abs().max()) if active.any() else 0.
                 maximum_errors["processed_targets"] = max(maximum_errors["processed_targets"], target_error)
                 if target_error > 1e-5:
                     raise RuntimeError("policy 动作转换检查失败")

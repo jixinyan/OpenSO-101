@@ -27,6 +27,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 import openso101.tasks.pick_place.mdp as mdp
+from openso101.tasks.shared.grasp_profile import success_event
 from openso101.envs import OpenSO101EnvCfg, TeleopActionsCfg, UnsupportedVariantError
 from openso101.robots import (
     SO101_ARM_JOINT_NAMES,
@@ -271,8 +272,7 @@ class RewardsCfg:
 
     # 物体释放后在放置区域保持稳定，获得完成奖励。
     success_bonus = RewTerm(
-        func=mdp.is_terminated_term,
-        params={"term_keys": ["success"]},
+        func=success_event,
         weight=SO101_PICK_GOAL_BONUS,
     )
 

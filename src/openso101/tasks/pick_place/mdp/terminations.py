@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import torch
 from isaaclab.assets import Articulation, RigidObject
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import SceneEntityCfg, ManagerTermBase
 from isaaclab.utils.math import subtract_frame_transforms
 
 from openso101.tasks.shared.grasp import object_grasped_by_jaws
@@ -53,7 +53,33 @@ def reached_goal_while_grasped(
 
 
 def released_at_place_goal(env, command_name="object_pose", settle_seconds=0.5):
-    return env.command_manager.get_term(command_name).placement_hold_seconds >= settle_seconds
+    return (env.command_manager.get_term(command_name).placement_hold_seconds >= settle_seconds) & placement_eligible(env, command_name)
+
+
+def placement_eligible(env, command_name="object_pose"):
+    robot, obj = env.scene["robot"], env.scene["object"]
+    command = env.command_manager.get_term(command_name)
+    position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w, obj.data.root_pos_w)
+    jaw = robot.data.joint_pos[:, robot.joint_names.index("Jaw")]
+    placed = torch.linalg.vector_norm(position - command.goal_for_stage(2), dim=-1) <= .03
+    stable = torch.linalg.vector_norm(obj.data.root_lin_vel_w, dim=-1) <= .02
+    stable &= torch.linalg.vector_norm(obj.data.root_ang_vel_w, dim=-1) <= .1
+    return (command.stage == 2) & placed & stable & ~object_grasped_by_jaws(env, .5) & (jaw > .4)
+
+
+class StablePlacementSuccess(ManagerTermBase):
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self.hold_seconds = torch.zeros(env.num_envs, device=env.device)
+
+    def reset(self, env_ids=None):
+        self.hold_seconds[env_ids if env_ids is not None else slice(None)] = 0.
+
+    def __call__(self, env, command_name="object_pose", settle_seconds=.5):
+        eligible = placement_eligible(env, command_name)
+        self.hold_seconds.copy_(torch.where(eligible, self.hold_seconds + env.step_dt, 0.))
+        env.command_manager.get_term(command_name).placement_hold_seconds = self.hold_seconds
+        return self.hold_seconds >= settle_seconds
 
 
 __all__ = ["reached_goal_while_grasped", "released_at_place_goal"]

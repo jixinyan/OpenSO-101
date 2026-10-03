@@ -28,14 +28,24 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
         from openso101.tasks.shared.grasp_profile import configure_grasp_profile
 
         configure_grasp_profile(cfg, args.task)
+    elif getattr(args, "task_profile", "default") == "grasp_v3":
+        from openso101.tasks.shared.grasp_v3 import configure_grasp_v3
+
+        configure_grasp_v3(cfg, args.task)
+        cfg.reward_discount = getattr(args, "reward_discount", .99)
     cfg.configure_play(not training)
     cfg.scene.num_envs = args.num_envs or 16
     if scene:
         cfg.configure_scene(scene)
     cfg.seed = args.seed if args.seed is not None else 42
+    if getattr(args, "recorder_cfg", None) is not None:
+        cfg.recorders = args.recorder_cfg
     cfg.configure_cameras(bool(getattr(args, "with_cameras", False)))
     if getattr(args, "visual_dr", False):
         cfg.configure_visual_dr(True)
+    from openso101.tasks.shared.grasp_v3 import configure_environment_mode
+
+    configure_environment_mode(cfg, getattr(args, "environment_mode", "randomized"))
     if student:
         from .vision_distillation import StudentObservationsCfg
 
@@ -70,6 +80,10 @@ def train(args):
     resume = Path(args.load_run).resolve() if args.load_run else None
     previous = CheckpointMeta.read(resume) if resume else None
     args.task_profile = getattr(args, "task_profile", None) or (previous.task_profile if previous else "default")
+    args.environment_mode = config.environment_mode
+    args.reward_discount = config.gamma
+    if args.task_profile == "grasp_v3" and config.action_distribution != "tanh_gaussian":
+        raise ValueError("grasp_v3 的 RSL PPO 需要 tanh_gaussian 动作分布")
     if previous and previous.task_profile != args.task_profile:
         raise ValueError("继续训练需要保持 task_profile")
     if args.resume and resume is None:
@@ -122,7 +136,7 @@ def train(args):
         if previous and config.backend == "rsl_rl":
             import torch
 
-            start_iteration = torch.load(resume / previous.checkpoint, map_location="cpu", weights_only=False)["iter"]
+            start_iteration = torch.load(resume / previous.checkpoint, map_location="cpu", weights_only=False)["iter"] + 1
         TrainingRunMeta(
             task_id=args.task, task_profile=args.task_profile, config=config, git_sha=git_sha,
             num_envs=env.unwrapped.num_envs, files=source_files, scene_sha256=scene_sha,
@@ -130,18 +144,25 @@ def train(args):
         ).write(output)
         checkpoint = get_backend(config.backend).train(env, config, output, resume)
         files = {checkpoint.name: digest(checkpoint), "train.json": digest(output / "train.json")}
-        for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json"):
+        for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json",
+                     "model_best.pt", "best_evaluation.json", "evaluation_history.json", "convergence.json"):
             if (output / name).exists():
                 files[name] = digest(output / name)
         if scene:
             for path in scene.rglob("*"):
                 if path.is_file():
                     files[path.relative_to(output).as_posix()] = digest(path)
+        transitions = config.iterations * config.rollout_steps * env.unwrapped.num_envs
+        if config.backend == "rsl_rl":
+            import torch
+
+            iteration = torch.load(checkpoint, map_location="cpu", weights_only=False)["iter"]
+            transitions = (iteration - start_iteration + 1) * config.rollout_steps * env.unwrapped.num_envs
         CheckpointMeta(
             task_id=args.task, task_profile=args.task_profile, config=config, git_sha=git_sha, checkpoint=checkpoint.name,
             files=files, scene_sha256=scene_sha,
             completed_transitions=(previous.completed_transitions if previous else 0)
-            + config.iterations * config.rollout_steps * env.unwrapped.num_envs,
+            + transitions,
         ).write(output)
         CheckpointMeta.read(output)
         print(json.dumps({"run": str(output.resolve()), "checkpoint": checkpoint.name, "status": "trained"}))
@@ -156,10 +177,12 @@ def evaluate(args, *, play=False):
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
     args.task_profile = meta.task_profile
+    args.environment_mode = meta.config.environment_mode
+    args.reward_discount = meta.config.gamma
     if args.task != meta.task_id:
         raise ValueError("checkpoint 与请求任务不匹配")
     scene = folder / "scene" if meta.scene_sha256 else None
-    args.seed = getattr(args, "seed", meta.config.seed)
+    args.seed = meta.config.seed if getattr(args, "seed", None) is None else args.seed
     episodes_requested = getattr(args, "n_episodes", 10)
     if episodes_requested <= 0:
         raise ValueError("n_episodes 必须大于零")
@@ -214,7 +237,7 @@ def evaluate(args, *, play=False):
                 returns += reward
                 lengths += 1
                 for name in success_terms:
-                    latched |= env.unwrapped.termination_manager.get_term(name)
+                    latched |= env.unwrapped.termination_manager.get_term(name) & terminated
                 for index in (terminated | truncated).nonzero().flatten().tolist():
                     if completed[index] < quotas[index]:
                         records.append({"success": bool(latched[index]), "return": float(returns[index]),
@@ -260,6 +283,8 @@ def distill(args):
     output.mkdir(parents=True, exist_ok=False)
     args.task = meta.task_id
     args.task_profile = meta.task_profile
+    args.environment_mode = meta.config.environment_mode
+    args.reward_discount = meta.config.gamma
     args.seed = meta.config.seed
     args.with_cameras = True
     scene = teacher / "scene" if meta.scene_sha256 else None

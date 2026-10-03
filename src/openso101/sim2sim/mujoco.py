@@ -249,10 +249,16 @@ def evaluate(args):
                 qvel = data.qvel[joint_dof_ids]
                 forces = jaw_forces(model, data)
                 grasped = bool((forces > metadata["grasp_force_threshold_newtons"]).all())
+                velocity = np.zeros(6)
+                mujoco.mj_objectVelocity(model, data, mujoco.mjtObj.mjOBJ_BODY, object_id, velocity, 0)
                 observation = policy.observation(qpos[None], qvel[None], data.xpos[object_id][None],
-                                                 goal[None], [[float(grasped)]], last_action)
+                                                 goal[None], [[float(grasped)]], last_action,
+                                                 object_velocity=np.concatenate((velocity[3:], velocity[:3]))[None],
+                                                 task_state=[[stage / 2., hold_seconds / .5, 1 - step * control_dt / metadata["episode_length_s"]]]
+                                                 if metadata["task_id"] == "OpenSO101-PickPlace-v0"
+                                                 else [[0., lift_hold_seconds / .25, 1 - step * control_dt / metadata["episode_length_s"]]])
                 actions = policy.predict(observation)
-                targets = policy.joint_targets(actions, enforce_limits=False).numpy()[0]
+                targets = policy.joint_targets(actions, enforce_limits=False, joint_position=qpos[None]).numpy()[0]
                 last_action = actions.numpy()
                 buffers["joint_position"].append(qpos.copy())
                 buffers["joint_velocity"].append(qvel.copy())
@@ -285,7 +291,7 @@ def evaluate(args):
                 if metadata["task_id"] == "OpenSO101-Lift-v0":
                     eligible = bool(object_position[2] > task_height + parameters["minimal_height"]
                                     and np.linalg.norm(object_position - goal[:3]) < parameters["goal_radius"])
-                    if metadata.get("task_profile", "default") == "grasp_v2":
+                    if metadata.get("task_profile", "default") in ("grasp_v2", "grasp_v3"):
                         eligible = eligible and grasped
                         lift_hold_seconds = lift_hold_seconds + control_dt if eligible else 0.
                         success = lift_hold_seconds >= parameters["settle_seconds"]

@@ -189,7 +189,8 @@ class CurriculumGoalCommand(CommandTerm):
         stable = torch.linalg.vector_norm(self.object.data.root_lin_vel_w, dim=-1) <= 0.02
         stable &= torch.linalg.vector_norm(self.object.data.root_ang_vel_w, dim=-1) <= 0.1
         released = (self.stage == 2) & placed & stable & ~grasped & (jaw > 0.4)
-        self.placement_hold_seconds = torch.where(released, self.placement_hold_seconds + self._env.step_dt, 0.)
+        if not getattr(self._env.cfg, "current_step_placement_success", False):
+            self.placement_hold_seconds = torch.where(released, self.placement_hold_seconds + self._env.step_dt, 0.)
 
         # Refresh world-frame goal each step (robot root may move; for fixed-base it's constant).
         self.goal_pos_w, _ = combine_frame_transforms(

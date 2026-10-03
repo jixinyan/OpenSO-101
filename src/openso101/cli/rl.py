@@ -769,7 +769,7 @@ def _cmd_eval(args: argparse.Namespace) -> int:
                 ever_reached |= grasped_now
 
             if has_success_term:
-                succ_now = term_mgr.get_term("success")
+                succ_now = term_mgr.get_term("success") & term_mgr.terminated
                 newly = succ_now & ~ever_succeeded
                 first_success_step[newly] = steps_in_episode[newly]
                 ever_succeeded |= succ_now
@@ -1175,7 +1175,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
 
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
-    p_train.add_argument("--task-profile", choices=("default", "grasp_v2"), help="训练使用的任务配置版本")
+    p_train.add_argument("--task-profile", choices=("default", "grasp_v2", "grasp_v3"), help="训练使用的任务配置版本")
     p_train.add_argument("--backend", choices=("rsl_rl", "sb3", "skrl", "rl_games"))
     p_train.add_argument("--train-config", help="Backend-neutral TrainCfg JSON")
     p_train.add_argument("--output", help="New run directory")
@@ -1271,6 +1271,14 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_snapshot.add_argument("--output", required=True, type=Path)
     p_snapshot.set_defaults(func=_cmd_snapshot)
 
+    p_campaign = sub.add_parser("campaign", help="Lift 与 PickPlace 的三个 seed 独立训练和评估")
+    p_campaign.add_argument("--train-config", required=True)
+    p_campaign.add_argument("--output", required=True)
+    p_campaign.add_argument("--seeds", type=int, nargs=3, default=[42, 43, 44])
+    p_campaign.add_argument("--gpus", type=int, nargs=6, required=True)
+    p_campaign.add_argument("--num-envs", dest="num_envs", type=int, default=2048)
+    p_campaign.set_defaults(func=_cmd_campaign)
+
     p_play = sub.add_parser("play", help="Replay a trained checkpoint")
     p_play.add_argument("--task", required=True)
     p_play.add_argument("--checkpoint", required=True)
@@ -1324,6 +1332,12 @@ def _cmd_distill(args):
     from openso101.rl.execution import distill
 
     return distill(args)
+
+
+def _cmd_campaign(args):
+    from openso101.rl.campaign import campaign
+
+    return campaign(args)
 
 
 def _cmd_export(args):

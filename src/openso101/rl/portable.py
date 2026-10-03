@@ -7,21 +7,25 @@ import torch
 from .config import digest
 
 
-def decode_joint_targets(actions, action_mapping, *, enforce_limits=True):
+def decode_joint_targets(actions, action_mapping, *, enforce_limits=True, joint_position=None):
     if actions.ndim != 2 or actions.shape[1] != 6 or not torch.isfinite(actions).all():
         raise ValueError("action 必须包含六个有限数值")
     targets = []
-    for item in action_mapping:
+    for index, item in enumerate(action_mapping):
         value = actions[:, item["action_index"]]
         if item["type"] == "position":
             value = value * item["scale"] + item["offset"]
+        elif item["type"] == "relative_position":
+            if joint_position is None or joint_position.shape != actions.shape or not torch.isfinite(joint_position).all():
+                raise ValueError("relative_position 需要当前六个关节位置")
+            value = joint_position[:, index] + value.clamp(-1, 1) * item["scale"]
         elif item["type"] == "binary":
             value = torch.where(value < 0, item["close"], item["open"])
         else:
             raise ValueError("不支持的 action 类型")
         if "processed_clip" in item:
             value = value.clamp(*item["processed_clip"])
-        if enforce_limits:
+        if enforce_limits or item["type"] == "relative_position":
             value = value.clamp(item["lower"], item["upper"])
         targets.append(value)
     if len(targets) != 6:
@@ -45,7 +49,8 @@ class PortablePolicy:
         if not math.isfinite(self.metadata["control_dt"]) or self.metadata["control_dt"] <= 0:
             raise ValueError("control_dt 必须为正数")
 
-    def observation(self, joint_position, joint_velocity, object_position_root, goal_root, grasp_state, last_action):
+    def observation(self, joint_position, joint_velocity, object_position_root, goal_root, grasp_state, last_action,
+                    *, object_velocity=None, task_state=None):
         joint_position = torch.as_tensor(joint_position, device=self.device, dtype=torch.float32)
         if joint_position.ndim != 2 or joint_position.shape[1] != len(self.metadata["observation_joint_names"]):
             raise ValueError("joint_position 形状不匹配")
@@ -59,6 +64,9 @@ class PortablePolicy:
             "grasp_state": torch.as_tensor(grasp_state, device=self.device, dtype=torch.float32),
             "actions": torch.as_tensor(last_action, device=self.device, dtype=torch.float32),
         }
+        for name, value in (("object_velocity", object_velocity), ("task_state", task_state)):
+            if value is not None:
+                values[name] = torch.as_tensor(value, device=self.device, dtype=torch.float32)
         batch = joint_position.shape[0]
         ordered = []
         for term in self.metadata["observation_terms"]:
@@ -81,6 +89,9 @@ class PortablePolicy:
             raise ValueError("policy 输出必须包含六个有限数值")
         return actions
 
-    def joint_targets(self, actions, *, enforce_limits=True):
+    def joint_targets(self, actions, *, enforce_limits=True, joint_position=None):
         actions = torch.as_tensor(actions, device=self.device, dtype=torch.float32)
-        return decode_joint_targets(actions, self.metadata["action_mapping"], enforce_limits=enforce_limits)
+        if joint_position is not None:
+            joint_position = torch.as_tensor(joint_position, device=self.device, dtype=torch.float32)
+        return decode_joint_targets(actions, self.metadata["action_mapping"], enforce_limits=enforce_limits,
+                                    joint_position=joint_position)
