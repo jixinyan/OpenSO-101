@@ -35,7 +35,7 @@ try:
 
     from openso101.rl.config import digest
     from openso101.rl.execution import build_environment
-    from openso101.rl.scene_geometry import table_collision_geometry
+    from openso101.rl.scene_geometry import robot_collision_extras, table_collision_geometry
     from openso101.rl.vision_distillation import action_mapping
     from openso101.robots import SO101_SIM_JOINT_NAMES
     from openso101.tasks.shared.grasp import _jaw_force_magnitude
@@ -65,6 +65,12 @@ try:
                       "phase": phase.clone(), "active": active.clone()}
             values["path_cursor"] = path_cursor.clone()
             values["desired_joint_position"] = desired.clone()
+            values["jaw_net_force_vectors"] = torch.stack([
+                runtime.scene[name].data.net_forces_w.sum(dim=1)
+                for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1)
+            values["jaw_object_force_vectors"] = torch.stack([
+                runtime.scene[name].data.force_matrix_w.sum(dim=(1, 2))
+                for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=1)
             if any(not torch.isfinite(value).all() for value in values.values()):
                 raise RuntimeError("任务检查产生无效状态")
             trace.append({name: value.cpu().numpy().copy() for name, value in values.items()})
@@ -132,6 +138,7 @@ try:
         "nominal_damping": robot.data.joint_damping[0, ids].cpu().tolist(), "effort_limits": states["effort_limits"],
         "table_geometry": geometry, "table_height_root": geometry["top_height_root"],
         "object_size": list(runtime.cfg.scene.object.spawn.size), "object_mass": runtime.cfg.scene.object.spawn.mass_props.mass,
+        "robot_collision_extras": robot_collision_extras(runtime.sim.stage, "/World/envs/env_0/Robot"),
     }
     states_path = args.output / "initial_states.json"
     with states_path.open("x") as stream:
@@ -154,6 +161,13 @@ try:
     paths = (torch.tensor([[item["path_joint_positions"] for item in environment["targets"]]
                            for environment in plan["environments"]], device=runtime.device)
              if args.task_profile == "grasp_v4" else None)
+    if paths is not None:
+        starts = torch.stack((torch.tensor([item["joint_position"][:5] for item in states["environments"]],
+                                          device=runtime.device), paths[:, 0, -1], paths[:, 1, -1]), dim=1)
+        paths = torch.cat((starts.unsqueeze(2), paths), dim=2)
+        lengths = torch.cat((torch.zeros_like(paths[:, :, :1, 0]),
+                             torch.abs(paths[:, :, 1:] - paths[:, :, :-1]).amax(dim=-1).cumsum(dim=-1)), dim=-1)
+        path_distance = torch.zeros(args.num_envs, device=runtime.device)
     finished_success = torch.zeros_like(active)
     contact_hold_steps = torch.zeros_like(phase)
     for step in range(runtime.max_episode_length - settling_steps):
@@ -161,8 +175,18 @@ try:
         target_index = torch.where(phase == 2, 1, target_index)
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
         if paths is not None:
-            sample_index = torch.where(phase == 2, paths.shape[2] - 1, path_cursor)
-            arm_target = paths[torch.arange(args.num_envs, device=runtime.device), target_index, sample_index]
+            rows = torch.arange(args.num_envs, device=runtime.device)
+            selected_paths, selected_lengths = paths[rows, target_index], lengths[rows, target_index]
+            tracking_error = (robot.data.joint_pos[:, ids[:5]] - desired[:, :5]).abs().amax(dim=-1)
+            moving = (phase != 2) & active & (tracking_error < .08)
+            path_distance = torch.minimum(path_distance + moving * .75 * runtime.step_dt, selected_lengths[:, -1])
+            distance = torch.where(phase == 2, selected_lengths[:, -1], path_distance)
+            upper = torch.searchsorted(selected_lengths.contiguous(), distance[:, None].contiguous(), right=True)[:, 0]
+            upper = upper.clamp(1, paths.shape[2] - 1)
+            fraction = ((distance - selected_lengths[rows, upper - 1]) /
+                        (selected_lengths[rows, upper] - selected_lengths[rows, upper - 1]).clamp_min(1e-8))
+            arm_target = torch.lerp(selected_paths[rows, upper - 1], selected_paths[rows, upper], fraction[:, None])
+            path_cursor = upper - 1
         jaw_target = torch.where(phase < 2, .8, 0.).unsqueeze(-1)
         desired = torch.cat((arm_target, jaw_target), dim=-1)
         actions = control_actions(desired)
@@ -174,12 +198,13 @@ try:
         advanced = (phase < 2) & (errors < .06) & active
         if paths is not None:
             reached_sample = (errors < .015) & active & (phase != 2)
-            advanced = (phase < 2) & reached_sample & (path_cursor == paths.shape[2] - 1)
-            path_cursor = torch.where(reached_sample, (path_cursor + 1).clamp_max(paths.shape[2] - 1), path_cursor)
+            advanced = (phase < 2) & reached_sample & (path_distance >= selected_lengths[:, -1])
         forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
         contact_hold_steps = torch.where((phase == 2) & (forces > .5).all(dim=-1), contact_hold_steps + 1, 0)
         advanced |= (phase == 2) & (contact_hold_steps * runtime.step_dt >= .1) & active
         path_cursor = torch.where(advanced, 0, path_cursor)
+        if paths is not None:
+            path_distance = torch.where(advanced, 0., path_distance)
         phase += advanced.long()
         finished_success |= torch.as_tensor(sample["success"], device=runtime.device) & active
         active &= ~(terminated | truncated)
@@ -211,6 +236,8 @@ try:
                             else "scripted_IK_gravity_compensated_joint_targets", "control_dt": runtime.step_dt,
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
               "settling_steps": settling_steps, "bilateral_hold_before_lift_s": .1,
+              "planned_joint_speed_rad_s": .75 if paths is not None else None,
+              "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
               "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),

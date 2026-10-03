@@ -18,7 +18,7 @@ if digest(args.folder / "trajectory.hdf5") != report["trace_sha256"]:
 records = []
 with h5py.File(args.folder / "trajectory.hdf5") as trace:
     for environment, item in enumerate(plan["environments"]):
-        valid = np.flatnonzero(trace["active"][:, environment])
+        valid = np.flatnonzero(trace["active"][:, environment] & (trace["phase"][:, environment] >= 0))
         phases = trace["phase"][valid, environment]
         target_indices = np.where(phases == 2, 1, phases).clip(0, 2)
         target_joints = np.asarray([entry["joint_position"] for entry in item["targets"]])[target_indices]
@@ -35,8 +35,25 @@ with h5py.File(args.folder / "trajectory.hdf5") as trace:
                         "final_joint_velocity_rad_s": trace["joint_velocity"][valid[-1], environment].tolist(),
                         "final_object_position_root_m": positions[-1].tolist(),
                         "final_grasp_position_root_m": grip[-1].tolist()})
+        if "path_cursor" in trace:
+            records[-1]["path_progress"] = [{
+                "phase": int(phase), "control_steps": int((phases == phase).sum()),
+                "last_path_cursor": int(trace["path_cursor"][valid[phases == phase][-1], environment]),
+                "last_command_error_rad": float(np.linalg.norm(
+                    trace["desired_joint_position"][valid[phases == phase][-1], environment, :5]
+                    - trace["joint_position"][valid[phases == phase][-1], environment, :5])),
+            } for phase in np.unique(phases)]
         if "gravity_compensation" in trace:
             records[-1]["final_gravity_compensation_nm"] = trace["gravity_compensation"][valid[-1], environment].tolist()
             records[-1]["final_drive_target_difference_rad"] = (
                 trace["joint_targets"][valid[-1], environment] - qpos[-1]).tolist()
+        if "jaw_net_force_vectors" in trace:
+            net = trace["jaw_net_force_vectors"][valid, environment]
+            filtered = trace["jaw_object_force_vectors"][valid, environment]
+            records[-1]["contact_diagnostics"] = {
+                "maximum_net_force_n": np.linalg.norm(net, axis=-1).max(axis=0).tolist(),
+                "maximum_other_contact_force_n": np.linalg.norm(net - filtered, axis=-1).max(axis=0).tolist(),
+                "final_other_contact_force_n": np.linalg.norm(net[-1] - filtered[-1], axis=-1).tolist(),
+                "scope": "all_contacts_minus_object_filtered_contacts",
+            }
 print(json.dumps(records, indent=2), flush=True)

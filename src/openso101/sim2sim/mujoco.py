@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 
 import h5py
+import coacd
 import mujoco
 import numpy as np
+import trimesh
 from scipy.spatial.transform import Rotation
 
 from openso101.rl.config import digest
@@ -98,6 +100,27 @@ def build_model(robot_model, metadata, collision_bundle=None):
             replaced.add(name)
         if replaced != set(manifest["meshes"]):
             raise ValueError("collision bundle 中的 mesh 未完整应用")
+    for extra_index, extra in enumerate(metadata.get("robot_collision_extras", [])):
+        vertices = np.asarray(extra["vertices_body"], dtype=float)
+        faces = trimesh.geometry.triangulate_quads(extra["polygons"])
+        if (extra["body"] != "gripper" or vertices.ndim != 2 or vertices.shape[1] != 3
+                or not np.isfinite(vertices).all() or not len(faces)
+                or faces.min() < 0 or faces.max() >= len(vertices)):
+            raise ValueError("记录的机器人额外 collision mesh 无效")
+        coacd.set_log_level("warn")
+        parts = coacd.run_coacd(coacd.Mesh(vertices, faces), threshold=.01, preprocess_mode="auto",
+                               preprocess_resolution=100, resolution=10000, mcts_iterations=200,
+                               mcts_max_depth=4, seed=42)
+        if not parts:
+            raise RuntimeError("camera mount convex parts 生成失败")
+        for part_index, (points, triangles) in enumerate(parts):
+            mesh = trimesh.Trimesh(vertices=points, faces=triangles, process=True)
+            if not mesh.is_convex or not mesh.is_watertight or not np.isfinite(mesh.vertices).all():
+                raise RuntimeError("camera mount convex part 无效")
+            name = f"native_camera_mount_{extra_index}_{part_index}"
+            spec.add_mesh(name=name, uservert=mesh.vertices.ravel(), userface=mesh.faces.ravel())
+            spec.body(extra["body"]).add_geom(name=name, type=mujoco.mjtGeom.mjGEOM_MESH, meshname=name,
+                                             contype=1, conaffinity=6, friction=[1.2, .005, .0001], group=3)
     if "table_geometry" in metadata:
         geometry = metadata["table_geometry"]
         position = np.asarray(geometry["position_root"], dtype=float)
@@ -121,7 +144,7 @@ def build_model(robot_model, metadata, collision_bundle=None):
     cube.add_geom(name="object", type=mujoco.mjtGeom.mjGEOM_BOX, size=np.asarray(metadata["object_size"]) / 2,
                   mass=metadata["object_mass"], contype=2, conaffinity=5, friction=[1, 0.005, 0.0001])
     compiled = spec.compile()
-    if collision_bundle is not None:
+    if collision_bundle is not None or metadata.get("robot_collision_extras"):
         for name in ("body_mass", "body_ipos", "body_inertia", "body_iquat"):
             if not np.allclose(getattr(compiled, name)[:model.nbody], getattr(model, name), atol=1e-12, rtol=0):
                 raise RuntimeError("碰撞表示改变了机器人质量、COM 或惯性")
@@ -350,6 +373,9 @@ def evaluate(args):
         "evaluation_source_sha256": digest(Path(__file__)),
         "recorded_physics_source_sha256": digest(Path(__file__).with_name("recorded_physics.py")) if recorded else None,
         "contact_geometry": "CoACD_gripper_convex_parts" if collision_bundle else "upstream_MJCF_convex_meshes",
+        "native_robot_extra_mesh_count": len(metadata.get("robot_collision_extras", [])),
+        "native_robot_extra_convex_part_count": sum(model.geom(index).name.startswith("native_camera_mount_")
+                                                   for index in range(model.ngeom)),
         "collision_bundle_sha256": digest(Path(collision_bundle) / "manifest.json") if collision_bundle else None,
         "initial_states": "first_frame_of_actual_Isaac_trace",
         "source_object_velocity_available": velocity_available,

@@ -3,6 +3,39 @@ from pxr import Usd, UsdGeom, UsdPhysics
 from scipy.spatial.transform import Rotation
 
 
+def robot_collision_extras(stage, robot_path):
+    body = stage.GetPrimAtPath(f"{robot_path}/gripper")
+    group = stage.GetPrimAtPath(f"{robot_path}/gripper/collisions")
+    if not body.IsValid() or not group.IsValid():
+        raise ValueError("机器人缺少 gripper collision group")
+    if not UsdPhysics.CollisionAPI(group).GetCollisionEnabledAttr().Get():
+        raise ValueError("gripper collision group 必须启用")
+    cache = UsdGeom.XformCache()
+    body_inverse = np.linalg.inv(np.asarray(cache.GetLocalToWorldTransform(body)))
+    records = []
+    for prim in Usd.PrimRange(group, Usd.TraverseInstanceProxies()):
+        if not prim.IsA(UsdGeom.Mesh) or "/camera_mount/" not in str(prim.GetPath()):
+            continue
+        mesh = UsdGeom.Mesh(prim)
+        points = np.asarray(mesh.GetPointsAttr().Get(), dtype=float)
+        counts = np.asarray(mesh.GetFaceVertexCountsAttr().Get(), dtype=int)
+        indices = np.asarray(mesh.GetFaceVertexIndicesAttr().Get(), dtype=int)
+        if (points.ndim != 2 or points.shape[1] != 3 or not len(points) or not np.isfinite(points).all()
+                or not np.isin(counts, [3, 4]).all() or counts.sum() != len(indices)
+                or not len(indices) or indices.min() < 0 or indices.max() >= len(points)):
+            raise ValueError("camera mount collision mesh 无效")
+        transform = np.asarray(cache.GetLocalToWorldTransform(prim)) @ body_inverse
+        vertices = (np.column_stack((points, np.ones(len(points)))) @ transform)[:, :3]
+        if not np.isfinite(vertices).all():
+            raise ValueError("camera mount body transform 无效")
+        polygons = np.split(indices, np.cumsum(counts)[:-1])
+        records.append({"body": "gripper", "source_path": str(prim.GetPath()),
+                        "vertices_body": vertices.tolist(), "polygons": [face.tolist() for face in polygons],
+                        "native_approximation": UsdPhysics.MeshCollisionAPI(group).GetApproximationAttr().Get(),
+                        "source": "native_USD_collision_mesh"})
+    return records
+
+
 def table_collision_geometry(stage, table_path, root_position, root_quaternion):
     root_position = np.asarray(root_position, dtype=float)
     root_quaternion = np.asarray(root_quaternion, dtype=float)

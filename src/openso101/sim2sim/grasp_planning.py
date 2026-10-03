@@ -62,8 +62,8 @@ def plan_collision_grasp(model, states, environment, rng):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
                    for point in np.linspace(start_arm, end_arm, 65)[1:])
 
-    def descent_path(start_arm, end_arm):
-        first, last = pose(start_arm), pose(end_arm)
+    def cartesian_path(start_arm, end_arm, jaw=.8, allow_grasp_contact=False):
+        first, last = pose(start_arm, jaw, allow_grasp_contact), pose(end_arm, jaw, allow_grasp_contact)
         fractions = np.linspace(0., 1., 65)[1:]
         rotations = Slerp([0., 1.], Rotation.from_matrix([first[1], last[1]]))(fractions).as_matrix()
         previous = start_arm
@@ -73,13 +73,13 @@ def plan_collision_grasp(model, states, environment, rng):
             target_position = first[0] + fraction * (last[0] - first[0])
 
             def residual(arm):
-                position, rotation, depth = pose(arm)
+                position, rotation, depth = pose(arm, jaw, allow_grasp_contact)
                 return np.concatenate((20 * (position - target_position), (rotation - target_rotation).ravel(),
                                        [100 * depth], .0001 * (arm - previous)))
 
             solution = least_squares(residual, np.clip(previous, lower, upper), bounds=(lower, upper),
                                      ftol=1e-9, xtol=1e-9, gtol=1e-9, max_nfev=100)
-            position, rotation, depth = pose(solution.x)
+            position, rotation, depth = pose(solution.x, jaw, allow_grasp_contact)
             accepted &= bool(solution.success and np.linalg.norm(position - target_position) <= .003
                              and np.linalg.norm(rotation - target_rotation) <= .02 and depth <= .0001)
             path.append(solution.x)
@@ -93,35 +93,40 @@ def plan_collision_grasp(model, states, environment, rng):
     grasp_path = None
     pair_accepted = False
     for candidate in candidates:
-        candidate_path, valid = descent_path(candidate.x[:5], candidate.x[5:])
+        candidate_path, valid = cartesian_path(candidate.x[:5], candidate.x[5:])
         if valid:
             result, grasp_path, pair_accepted = candidate, candidate_path, True
             break
     arms = [result.x[:5], grasp_path[-1] if grasp_path is not None else result.x[5:]]
     previous = arms[-1]
     goal = np.asarray(environment["goal_position_root"])
+    grasp_rotation = pose(previous)[1]
 
     def lift_residual(arm):
         position, rotation, depth = pose(arm, jaw=0., allow_grasp_contact=True)
-        return np.concatenate((20 * (position - goal), .01 * (arm - previous), [100 * depth]))
+        return np.concatenate((20 * (position - goal), (rotation - grasp_rotation).ravel(),
+                               .0001 * (arm - previous), [100 * depth]))
 
     lift_starts = [np.clip(previous, lower, upper), *rng.uniform(lower, upper, size=(15, 5))]
     lift_solutions = [least_squares(lift_residual, guess, bounds=(lower, upper),
                                     ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=500) for guess in lift_starts]
     lift_feasible = [item for item in lift_solutions if item.success and np.linalg.norm(lift_residual(item.x)[:3]) <= .06
+                    and np.linalg.norm(lift_residual(item.x)[3:12]) <= .02
                     and lift_residual(item.x)[-1] <= .01
-                    and path_safe(previous, item.x, jaw=0., allow_grasp_contact=True)]
+                    ]
     lift = min(lift_feasible, key=lambda item: np.linalg.norm(item.x - previous)) if lift_feasible else min(
         lift_solutions, key=lambda item: np.linalg.norm(lift_residual(item.x)))
     arms.append(lift.x)
+    lift_path, lift_path_accepted = cartesian_path(previous, lift.x, jaw=0., allow_grasp_contact=True)
     targets = []
     previous = initial
     for index, (name, arm, target) in enumerate(zip(("approach", "grasp", "lift"), arms, [*positions, goal], strict=True)):
-        path = grasp_path if name == "grasp" and grasp_path is not None else np.linspace(previous, arm, 65)[1:]
+        path = (lift_path if name == "lift" else grasp_path if name == "grasp" and grasp_path is not None
+                else np.linspace(previous, arm, 65)[1:])
         samples = [pose(point, jaw=0. if name == "lift" else .8, allow_grasp_contact=name == "lift") for point in path]
         position, rotation, depth = samples[-1]
         maximum_depth = max(value[2] for value in samples)
-        accepted = (pair_accepted if index < 2 else bool(lift_feasible)) and maximum_depth <= .0001
+        accepted = (pair_accepted if index < 2 else bool(lift_feasible) and lift_path_accepted) and maximum_depth <= .0001
         targets.append({"phase": name, "target_position_root": target.tolist(),
                         "joint_position": (arm - JOINT_OFFSETS[:5]).tolist(),
                         "path_joint_positions": (path - JOINT_OFFSETS[:5]).tolist(),

@@ -36,7 +36,7 @@ def export(args):
         from .execution import build_environment
         from .portable import PortablePolicy
         from .vision_distillation import action_mapping
-        from .scene_geometry import table_collision_geometry
+        from .scene_geometry import robot_collision_extras, table_collision_geometry
         from openso101.robots.so101.so_arm101 import so101_usd_path
 
         args.seed = meta.config.seed if getattr(args, "seed", None) is None else args.seed
@@ -89,6 +89,7 @@ def export(args):
             "table_height_root": table_geometry["top_height_root"], "table_geometry": table_geometry,
             "task_reference_height_root": float(unwrapped.scene.env_origins[0, 2] - robot.data.root_pos_w[0, 2]),
             "robot_usd_sha256": digest(so101_usd_path()),
+            "robot_collision_extras": robot_collision_extras(unwrapped.sim.stage, "/World/envs/env_0/Robot"),
             "object_size": list(unwrapped.cfg.scene.object.spawn.size),
             "object_mass": unwrapped.cfg.scene.object.spawn.mass_props.mass,
             "episode_length_s": unwrapped.cfg.episode_length_s,
