@@ -14,6 +14,7 @@ from openso101.rl.initialization import record_initial_std
 def configuration(cfg: TrainCfg, device: str):
     return {
         "seed": cfg.seed, "device": device, "num_steps_per_env": cfg.rollout_steps,
+        "action_likelihood": "gaussian_latent" if cfg.action_distribution == "tanh_gaussian" else "gaussian",
         "save_interval": min(50, cfg.iterations),
         "logger": "tensorboard", "obs_groups": {"policy": ["policy"], "critic": ["policy"]},
         "policy": {"class_name": "BoundedActorCritic" if cfg.action_distribution == "tanh_gaussian" else "ActorCritic",

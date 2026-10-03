@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import Normal, TanhTransform, TransformedDistribution
+from torch.distributions import Normal, TanhTransform
 from rsl_rl.modules import ActorCritic
 from rsl_rl.runners import OnPolicyRunner
 
@@ -20,14 +20,16 @@ class BoundedActorCritic(ActorCritic):
     def act(self, obs, **kwargs):
         observation = self.actor_obs_normalizer(self.get_actor_obs(obs))
         self.update_distribution(observation)
-        return self.distribution.sample().tanh().clamp(-1 + 1e-6, 1 - 1e-6)
+        self.last_latent_action = self.distribution.sample()
+        return self.last_latent_action.tanh()
 
     def act_inference(self, obs):
         return super().act_inference(obs).tanh()
 
     def get_actions_log_prob(self, actions):
-        transformed = TransformedDistribution(self.distribution, [TanhTransform(cache_size=1)])
-        return transformed.log_prob(actions.clamp(-1 + 1e-6, 1 - 1e-6)).sum(dim=-1)
+        # rollout 保存 Gaussian latent；Tanh 的 Jacobian 在 PPO ratio 中消去。
+        distribution = Normal(self.distribution.loc.double(), self.distribution.scale.double())
+        return distribution.log_prob(actions.double()).sum(dim=-1)
 
     @property
     def entropy(self):
