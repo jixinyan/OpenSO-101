@@ -132,7 +132,12 @@ try:
         if args.task_profile == "grasp_v3":
             actions = ((desired - robot.data.joint_pos[:, ids]) / .04).clamp(-1, 1)
         else:
-            actions = torch.stack([(desired[:, index] - item["offset"]) / item["scale"]
+            gravity = robot.root_physx_view.get_gravity_compensation_forces()[:, ids]
+            stiffness = robot.root_physx_view.get_dof_stiffnesses()[:, ids]
+            if (stiffness <= 0).any() or not torch.isfinite(gravity).all():
+                raise RuntimeError("绝对位置任务检查需要有效的重力保持力矩和 stiffness")
+            compensated = desired + gravity / stiffness
+            actions = torch.stack([(compensated[:, index] - item["offset"]) / item["scale"]
                                    for index, item in enumerate(mappings)], dim=-1).clamp(-1, 1)
         actions[~active] = 0
         _, _, terminated, truncated, _ = env.step(actions)
@@ -170,7 +175,7 @@ try:
               "environment_mode": args.environment_mode, "seed": args.seed, "environments": records,
               "successes": int(finished_success.sum()), "episodes": args.num_envs,
               "controller": "scripted_IK_measured_reference_delta" if args.task_profile == "grasp_v3"
-                            else "scripted_IK_absolute_joint_targets", "control_dt": runtime.step_dt,
+                            else "scripted_IK_gravity_compensated_joint_targets", "control_dt": runtime.step_dt,
               "physics_dt": runtime.physics_dt, "maximum_physics_speed_rad_s": float(np.abs(physics).max()),
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),

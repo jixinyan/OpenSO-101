@@ -50,8 +50,9 @@ for environment in states["environments"]:
         return max(depths, default=0.)
 
     targets = []
+    grasp_height = .25 * states["planner_physics"]["object_size"][2] if args.collision_bundle else 0.
     for name, position, vertical in (("approach", start + [0., 0., .06], True),
-                                     ("grasp", start, True), ("lift", goal, False)):
+                                     ("grasp", start + [0., 0., grasp_height], True), ("lift", goal, False)):
         def residual(arm):
             data.qpos[ids[:5]] = arm
             data.qpos[ids[5]] = .8
@@ -59,8 +60,8 @@ for environment in states["environments"]:
             rotation = data.xmat[gripper].reshape(3, 3)
             error = 10 * (data.xpos[gripper] + rotation @ center - position)
             if args.collision_bundle:
-                orientation = rotation[:, 2] - [0., 0., 1.] if vertical else np.zeros(3)
-                return np.concatenate((error, orientation, [50 * penetration()]))
+                inclination = max(0., np.cos(np.pi / 4) - rotation[2, 2]) if vertical else 0.
+                return np.concatenate((error, [inclination, 50 * penetration()]))
             inclination = max(0., np.cos(np.pi / 4) - rotation[2, 2])
             return np.concatenate((error, [inclination])) if vertical else error
 
@@ -91,7 +92,8 @@ for environment in states["environments"]:
                     "accepted": all(item["accepted"] for item in targets)})
 report = {"status": "kinematic_plan_verified" if all(item["accepted"] for item in records) else "kinematic_plan_failed",
           "environments": records, "states_sha256": digest(args.states), "robot_model_sha256": digest(args.robot_model),
-          "planner_source_sha256": digest(Path(__file__)), "maximum_grasp_inclination_rad": .01 if args.collision_bundle else float(np.pi / 4),
+          "planner_source_sha256": digest(Path(__file__)), "maximum_grasp_inclination_rad": float(np.pi / 4),
+          "grasp_height_fraction_of_object": .25 if args.collision_bundle else 0.,
           "collision_bundle_sha256": digest(args.collision_bundle / "manifest.json") if args.collision_bundle else None,
           "waypoint_collision_verified": bool(args.collision_bundle) and all(item["accepted"] for item in records),
           "collision_path_verified": False,
