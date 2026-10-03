@@ -19,7 +19,10 @@ parser.add_argument("--source", type=Path, required=True)
 parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--collision-bundle", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--terminal-hold-seconds", type=float, default=0.)
 args = parser.parse_args()
+if not np.isfinite(args.terminal_hold_seconds) or args.terminal_hold_seconds < 0:
+    raise ValueError("末步目标保持时间必须为非负有限数值")
 source = args.source.resolve()
 report = json.loads((source / "report.json").read_text())
 states = json.loads((source / "initial_states.json").read_text())
@@ -76,9 +79,17 @@ with h5py.File(args.output / "trajectory.hdf5", "x") as trajectory:
         goal = np.asarray(states["environments"][environment]["goal_position_root"])
         hold = 0.
         success = False
+        replay_window_success = False
         buffers = {name: [] for name in ("joint_position", "object_position_root", "jaw_forces", "success")}
         velocities, torques = [], []
-        for step in selected:
+        extra_steps = 0
+        if args.terminal_hold_seconds:
+            available_steps = report["max_episode_steps"] - states["settling_steps"] - len(selected)
+            if available_steps < 0:
+                raise ValueError("原生回放轨迹超过源任务的 episode 时间")
+            extra_steps = min(available_steps, round(args.terminal_hold_seconds / states["control_dt"]))
+        command_indices = np.concatenate((selected, np.full(extra_steps, selected[-1], dtype=int)))
+        for command_step, step in enumerate(command_indices):
             targets = native["joint_targets"][step, environment] + JOINT_OFFSETS
             for _ in range(substeps):
                 drive.apply(data, targets)
@@ -94,6 +105,8 @@ with h5py.File(args.output / "trajectory.hdf5", "x") as trajectory:
                         and (forces > parameters["force_threshold"]).all())
             hold = hold + states["control_dt"] if eligible else 0.
             success |= hold >= parameters["settle_seconds"]
+            if command_step == len(selected) - 1:
+                replay_window_success = success
             for name, value in (("joint_position", data.qpos[qpos_ids] - JOINT_OFFSETS),
                                 ("object_position_root", position), ("jaw_forces", forces), ("success", success)):
                 buffers[name].append(np.asarray(value).copy())
@@ -102,28 +115,35 @@ with h5py.File(args.output / "trajectory.hdf5", "x") as trajectory:
         for name, values in arrays.items():
             group.create_dataset(f"mujoco/{name}", data=values)
             group.create_dataset(f"isaac/{name}", data=native[name][selected, environment])
-        group.create_dataset("joint_targets", data=native["joint_targets"][selected, environment])
+        group.create_dataset("joint_targets", data=native["joint_targets"][command_indices, environment])
+        group.create_dataset("terminal_hold", data=np.arange(len(command_indices)) >= len(selected))
         group.create_dataset("physics_steps/joint_velocity", data=np.asarray(velocities))
         group.create_dataset("physics_steps/actuator_force", data=np.asarray(torques))
-        error = arrays["joint_position"] - native["joint_position"][selected, environment]
+        error = arrays["joint_position"][:len(selected)] - native["joint_position"][selected, environment]
         records.append({"environment": environment, "native_success": report["environments"][environment]["success"],
-                        "mujoco_success": bool(success), "control_steps": len(selected),
+                        "mujoco_success": bool(success), "replay_window_success": bool(replay_window_success),
+                        "control_steps": len(command_indices), "source_control_steps": len(selected),
+                        "terminal_hold_steps": extra_steps,
                         "maximum_object_height_root_m": float(arrays["object_position_root"][:, 2].max()),
                         "bilateral_contact_steps": int((arrays["jaw_forces"] > parameters["force_threshold"]).all(axis=-1).sum()),
                         "joint_position_rmse_rad": np.sqrt(np.mean(error ** 2, axis=0)).tolist(),
                         "maximum_object_position_error_m": float(np.linalg.norm(
-                            arrays["object_position_root"] - native["object_position_root"][selected, environment], axis=-1).max()),
+                            arrays["object_position_root"][:len(selected)] - native["object_position_root"][selected, environment], axis=-1).max()),
                         "recorded_physics": physics.report(), "constrained_drive": drive.report()})
         print(json.dumps(records[-1]), flush=True)
-result = {"status": "native_scripted_action_replay_completed", "task": report["task"], "environments": records,
+result = {"status": "native_scripted_action_replay_with_terminal_hold_completed" if args.terminal_hold_seconds
+          else "native_scripted_action_replay_completed", "task": report["task"], "environments": records,
           "mujoco_successes": sum(item["mujoco_success"] for item in records), "episodes": len(records),
+          "replay_window_successes": sum(item["replay_window_success"] for item in records),
+          "requested_terminal_hold_seconds": args.terminal_hold_seconds,
           "source_report_sha256": digest(source / "report.json"), "source_trace_sha256": report["trace_sha256"],
           "source_initial_physics_sha256": report["initial_physics_sha256"],
           "source_states_sha256": report["states_sha256"], "source_script_sha256": report["source_sha256"],
           "robot_model_sha256": digest(args.robot_model), "collision_bundle_sha256": digest(args.collision_bundle / "manifest.json"),
           "replay_source_sha256": digest(Path(__file__)), "mujoco_version": mujoco.__version__,
           "trajectory_sha256": digest(args.output / "trajectory.hdf5"), "control_dt": states["control_dt"],
-          "physics_dt": template.opt.timestep, "action_source": "actual_native_joint_targets",
+          "physics_dt": template.opt.timestep, "action_source": "actual_native_joint_targets_and_terminal_hold"
+          if args.terminal_hold_seconds else "actual_native_joint_targets",
           "physics_equivalence_verified": False, "rl_policy_success_verified": False}
 (args.output / "report.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps(result, ensure_ascii=False), flush=True)

@@ -18,7 +18,7 @@ if [[ "$check_kind" == task ]]; then
     fi
     plan_arguments=()
     if [[ -n "${OPENSO101_VERIFIED_PLAN:-}" ]]; then
-        plan_arguments=(--verified-plan "$OPENSO101_VERIFIED_PLAN")
+        plan_arguments=(--verified-plan "$OPENSO101_VERIFIED_PLAN" --plan-states "${OPENSO101_PLAN_STATES:?请指定源规划的原生初始状态}")
     fi
     "$task_python" -u scripts/check_grasp_task.py --task-profile grasp_v4 \
         --task "${OPENSO101_TASK:-OpenSO101-Lift-v0}" \
