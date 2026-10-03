@@ -57,6 +57,19 @@ def _run(args):
 
 def add_subparsers(parser: argparse.ArgumentParser):
     sub = parser.add_subparsers(dest="command", required=True)
+    index = sub.add_parser("index", help="为实际资产目录生成 embedding 索引")
+    index.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    index.add_argument("--output", type=Path, required=True)
+    index.add_argument("--embedding-model", default="sentence-transformers/all-MiniLM-L6-v2")
+    index.add_argument("--model-revision")
+    index.set_defaults(func=_index_assets)
+    retrieval = sub.add_parser("retrieve", help="使用 embedding 检索实际资产")
+    retrieval.add_argument("query")
+    retrieval.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    retrieval.add_argument("--index", type=Path, required=True)
+    retrieval.add_argument("--limit", type=int, default=8)
+    retrieval.add_argument("--minimum-similarity", type=float, default=.25)
+    retrieval.set_defaults(func=_retrieve_assets)
     runtime = sub.add_parser("validate-runtime", help="Check resets, parallel simulation and optional cameras")
     runtime.add_argument("scene", type=Path)
     runtime.add_argument("--output", type=Path, required=True)
@@ -96,10 +109,17 @@ def add_subparsers(parser: argparse.ArgumentParser):
     generate = sub.add_parser("generate", help="Generate a scene proposal through an OpenAI-compatible service")
     generate.add_argument("--instruction", required=True)
     generate.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    generate.add_argument("--asset-index", type=Path)
     generate.add_argument("--output", type=Path, required=True)
     generate.add_argument("--base-url", default=os.environ.get("SCENE_MODEL_BASE_URL"))
     generate.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME"))
     generate.add_argument("--api-key-env", default="SCENE_MODEL_API_KEY")
+    generate.add_argument("--codex-config", type=Path)
+    generate.add_argument("--reasoning-effort", choices=("low", "medium", "high", "xhigh"))
+    generate.add_argument("--max-model-requests", type=int, default=12)
+    generate.add_argument("--max-revisions", type=int, default=3)
+    generate.add_argument("--runtime-output", type=Path)
+    generate.add_argument("--runtime-budget-seconds", type=float, default=600)
     generate.set_defaults(func=_generate)
     import_asset = sub.add_parser("import", help="Import a user-provided GLB into the asset catalog")
     import_asset.add_argument("file", type=Path)
@@ -154,6 +174,7 @@ def add_subparsers(parser: argparse.ArgumentParser):
     agent.add_argument("--height", type=int, help="Required when --frame is supplied")
     agent.add_argument("--sample-count", type=int, default=8, help="Frames to decode when --frame is omitted")
     agent.add_argument("--max-revisions", type=int, default=2, help="Maximum Astra repair iterations after review failures")
+    agent.add_argument("--max-model-requests", type=int, default=12)
     agent.add_argument("--timeout-seconds", type=float, default=300, help="Per-request Astra timeout")
     agent.add_argument("--image-limit", type=int, default=4, help="Maximum RGB frames attached to each Astra request")
     agent.add_argument("--reasoning-effort", choices=("low", "medium", "high", "xhigh"),
@@ -221,17 +242,43 @@ def _compile(args):
 
 def _generate(args):
     from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.generation import propose_scene, save_proposal
-    from openso101.scenes.model_client import ModelService
+    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
+    from openso101.scenes.workflow import JobLimits, generate_scene_job
 
-    if not args.base_url or not args.model:
+    config = load_codex_runtime_config(args.codex_config) if args.codex_config is not None else None
+    if config is not None and config.bearer_token and not os.environ.get(args.api_key_env, "").strip():
+        os.environ[args.api_key_env] = config.bearer_token
+    base_url = args.base_url or (config.base_url if config else None)
+    model = args.model or (config.model if config else None)
+    if not base_url or not model:
         raise ValueError("请设置 --base-url 和 --model，或对应的 SCENE_MODEL 环境变量")
     if args.output.exists():
         raise FileExistsError(args.output)
-    service = ModelService(args.base_url, args.model, args.api_key_env)
-    spec = propose_scene(args.instruction, AssetCatalog(args.catalog), service)
-    path = save_proposal(spec, args.output, service)
-    print(json.dumps({"scene_file": str(path.resolve()), "scene_sha256": spec.digest()}, indent=2))
+    service = ModelService(base_url, model, args.api_key_env, wire_api=config.wire_api if config else "chat",
+                           reasoning_effort=args.reasoning_effort or (config.reasoning_effort if config else "xhigh"))
+    limits = JobLimits(max_model_requests=args.max_model_requests, max_revisions=args.max_revisions,
+                       max_runtime_seconds=args.runtime_budget_seconds)
+    result = generate_scene_job(args.instruction, AssetCatalog(args.catalog), service, args.output,
+                                limits=limits, runtime_output=args.runtime_output, asset_index=args.asset_index)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _index_assets(args):
+    from openso101.scenes.asset_index import AssetIndex
+    from openso101.scenes.catalog import AssetCatalog
+
+    report = AssetIndex.build(AssetCatalog(args.catalog), args.output, model=args.embedding_model,
+                              revision=args.model_revision)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+
+def _retrieve_assets(args):
+    from openso101.scenes.asset_index import AssetIndex
+    from openso101.scenes.catalog import AssetCatalog
+
+    report = AssetIndex(AssetCatalog(args.catalog), args.index).search(
+        args.query, limit=args.limit, minimum_similarity=args.minimum_similarity)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
 def _agent_loop(args):
@@ -299,6 +346,7 @@ def _agent_loop(args):
             base_url, model, args.api_key_env,
             timeout_seconds=args.timeout_seconds, wire_api=wire_api,
             reasoning_effort=reasoning_effort, reasoning_summary=reasoning_summary,
+            max_requests=args.max_model_requests,
         ), image_limit=args.image_limit),
         retriever=ObjaverseRetriever(catalog, online=not args.offline_objaverse),
         generator=TrimeshAssetGenerator(),
@@ -313,6 +361,8 @@ def _agent_loop(args):
             steps=args.runtime_steps, resets=args.runtime_resets,
         )
         result = result.model_copy(update={
+            "status": "simulation_ready",
+            "phase": "simulation",
             "compiled_scene": prepared["compiled_scene"], "runtime_validation": prepared["runtime"],
             "pending_checks": tuple(prepared["pending_checks"]),
         })

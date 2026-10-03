@@ -134,6 +134,9 @@ def compile_bundle(bundle: Path, output: Path) -> Path:
         if not Path(dependency).resolve().is_relative_to(output):
             raise ValueError(f"USD 依赖位于输出目录以外：{dependency}")
     (output / "scene.json").write_text(spec.model_dump_json(indent=2))
+    for name in ("task_intent.json", "task_program.json", "provenance.json"):
+        if (bundle / name).is_file():
+            shutil.copyfile(bundle / name, output / name)
     (output / "compilation.json").write_text(json.dumps({
         "scene_sha256": spec.digest(), "status": "compiled",
         "files": {path.relative_to(output).as_posix(): file_digest(path)
@@ -152,7 +155,10 @@ def verify_compilation(output: Path) -> dict:
         path = (output / relative).resolve()
         if not path.is_relative_to(output) or file_digest(path) != expected:
             raise ValueError(f"编译文件校验失败：{relative}")
-    SceneSpec.read(output / "scene.json")
+    spec = SceneSpec.read(output / "scene.json")
+    from .bundle import verify_program_documents
+
+    verify_program_documents(output, spec, report["files"])
     if scene_document_digest(output / "scene.json") != report["scene_sha256"]:
         raise ValueError("编译配置的 SHA256 不匹配")
     return report

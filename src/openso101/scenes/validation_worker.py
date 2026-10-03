@@ -24,9 +24,15 @@ def main():
 
     app = AppLauncher(headless=True, enable_cameras=args.cameras).app
     import gymnasium as gym
+    import h5py
+    import numpy as np
     import torch
+    from isaaclab.managers import RecorderManagerBaseCfg, RecorderTerm, RecorderTermCfg
+    from isaaclab.managers.recorder_manager import DatasetExportMode
+    from isaaclab.utils import configclass
 
-    from .runtime import CustomSceneEnvCfg, register_custom_scene, scene_states
+    from .runtime import CustomSceneEnvCfg, register_custom_scene, scene_states, scene_jaw_forces
+    from .program import TaskProgramTracker
     from .usd import verify_compilation
     from .models import file_digest
 
@@ -37,6 +43,53 @@ def main():
     cfg.configure_scene(args.scene)
     cfg.configure_cameras(args.cameras)
     cfg.scene.num_envs = args.num_envs
+    trackers = ([TaskProgramTracker(cfg.scene_spec, cfg.task_program) for _ in range(args.num_envs)]
+                if cfg.task_program is not None else [])
+    trace = []
+    dynamic = [item.entity_id for item in cfg.scene_spec.entities if item.dynamic]
+
+    class ProgramRecorder(RecorderTerm):
+        def record_post_reset(self, env_ids):
+            for index in env_ids.tolist():
+                if trackers:
+                    trackers[index].reset()
+            return None, None
+
+        def record_post_step(self):
+            runtime = self._env
+            states = scene_states(runtime).cpu().numpy()
+            forces = {name: value.cpu().numpy() for name, value in scene_jaw_forces(runtime).items()}
+            jaw_id = runtime.scene["robot"].joint_names.index("Jaw")
+            opened = (runtime.scene["robot"].data.joint_pos[:, jaw_id] > .4).cpu().numpy()
+            phase = (runtime._scene_program_phase.cpu().numpy().copy() if trackers
+                     else np.zeros(args.num_envs, dtype=np.int64))
+            phase_hold = (runtime._scene_program_hold.cpu().numpy().copy() if trackers
+                          else np.zeros(args.num_envs))
+            held = runtime._scene_hold_seconds.cpu().numpy().copy()
+            success = runtime._scene_success.cpu().numpy().copy()
+            for index, tracker in enumerate(trackers):
+                values = {item.entity_id: states[index, column]
+                          for column, item in enumerate(cfg.scene_spec.entities)}
+                contacts = {name: value[index] for name, value in forces.items()}
+                result = tracker.update(values, contacts, bool(opened[index]), runtime.step_dt)
+                if (result["phase"] != phase[index] or result["success"] != success[index]
+                        or abs(tracker.phase_hold_seconds - phase_hold[index]) > 1e-5
+                        or abs(result["held_seconds"] - held[index]) > 1e-5):
+                    raise RuntimeError(f"TaskProgram 的实际状态检查失败：environment={index}")
+            trace.append({"states": states, "jaw_forces": np.stack([forces[name] for name in dynamic], axis=1),
+                          "opened": opened, "phase": phase, "phase_hold": phase_hold,
+                          "final_hold": held, "success": success,
+                          "terminated": runtime.reset_terminated.cpu().numpy().copy(),
+                          "truncated": runtime.reset_time_outs.cpu().numpy().copy()})
+            return None, None
+
+    @configclass
+    class ProgramRecorderCfg(RecorderManagerBaseCfg):
+        dataset_export_dir_path = str(args.output.parent / "recorder")
+        dataset_export_mode = DatasetExportMode.EXPORT_NONE
+        program = RecorderTermCfg(class_type=ProgramRecorder)
+
+    cfg.recorders = ProgramRecorderCfg()
     env = gym.make("OpenSO101-CustomScene-v0", cfg=cfg)
     images = {}
     camera_checks = {}
@@ -76,6 +129,17 @@ def main():
                     entry = camera_checks.setdefault(name, {"checked_frames": 0, "minimum_pixel_std": float("inf")})
                     entry["checked_frames"] += args.num_envs
                     entry["minimum_pixel_std"] = min(entry["minimum_pixel_std"], float(pixel_std.min()))
+        if len(trace) != args.steps:
+            raise RuntimeError("场景实际运行状态记录数量不完整")
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        trace_path = args.output.with_suffix(".hdf5")
+        with h5py.File(trace_path, "x") as stream:
+            for name in trace[0]:
+                stream.create_dataset(name, data=np.stack([item[name] for item in trace]))
+            stream.attrs["entity_ids"] = json.dumps([item.entity_id for item in cfg.scene_spec.entities])
+            stream.attrs["dynamic_entity_ids"] = json.dumps(dynamic)
+            stream.attrs["scene_sha256"] = compilation["scene_sha256"]
+            stream.attrs["control_dt"] = env.unwrapped.step_dt
         report = {
             "scene_sha256": compilation["scene_sha256"], "status": "runtime_verified",
             "num_envs": args.num_envs, "steps": args.steps, "resets": args.resets,
@@ -87,9 +151,13 @@ def main():
             "runtime_source_sha256": file_digest(Path(__file__).with_name("runtime.py")),
             "compilation_manifest_sha256": file_digest(args.scene / "compilation.json"),
             "observation_shape": list(observation["policy"].shape),
+            "trace_sha256": file_digest(trace_path),
+            "program_conditions_verified": bool(trackers),
+            "program_checked_frames": args.steps * args.num_envs if trackers else 0,
+            "program_maximum_phase": int(max(item["phase"].max() for item in trace)),
+            "observed_dual_contact_frames": int(sum((item["jaw_forces"] > .5).all(axis=-1).sum() for item in trace)),
             "pending_checks": ["dynamic_stability", "path_reachability", "contact_geometry", "camera_visibility", "task_completion", "successful_collection"],
         }
-        args.output.parent.mkdir(parents=True, exist_ok=True)
         with args.output.open("x") as stream:
             json.dump(report, stream, indent=2)
     finally:

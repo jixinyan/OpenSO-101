@@ -194,7 +194,7 @@ class SceneRevision(BaseModel):
 class AgentLoopResult(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False, frozen=True)
 
-    status: Literal["completed", "review_passed", "ready_for_collection", "needs_review", "checks_failed"]
+    status: Literal["completed", "review_passed", "simulation_ready", "ready_for_collection", "needs_review", "checks_failed"]
     phase: str
     video: RGBVideoInput
     description: VideoSceneDescription
@@ -485,8 +485,8 @@ class Real2SimAgentLoop:
         self.generator = generator
         self.physics_runtime_check = physics_runtime_check
         self.so101_runtime_check = so101_runtime_check
-        if not isinstance(max_revisions, int) or isinstance(max_revisions, bool) or not 0 <= max_revisions <= 5:
-            raise ValueError("max_revisions 必须位于 0 到 5")
+        if not isinstance(max_revisions, int) or isinstance(max_revisions, bool) or not 0 <= max_revisions <= 3:
+            raise ValueError("max_revisions 必须位于 0 到 3")
         self.max_revisions = max_revisions
 
     def run(self, video: RGBVideoInput, *, output: Path | None = None) -> AgentLoopResult:
@@ -533,7 +533,7 @@ class Real2SimAgentLoop:
                 physical = self.planner.review_physical(video, spec, static)
                 if physics_runtime is not None:
                     physical = physical.model_copy(update={
-                        "approved": bool(physical.approved and physics_runtime.get("approved", True)),
+                        "approved": bool(physical.approved and physics_runtime["approved"]),
                         "issues": physical.issues + tuple(str(item) for item in physics_runtime.get("issues", ())),
                         "suggested_changes": physical.suggested_changes + tuple(
                             str(item) for item in physics_runtime.get("suggested_changes", ())
@@ -549,10 +549,10 @@ class Real2SimAgentLoop:
                 if self.so101_runtime_check:
                     so101_runtime = self.so101_runtime_check(spec)
                     so101 = so101.model_copy(update={
-                        "approved": bool(so101.approved and so101_runtime.get("approved", True)),
+                        "approved": bool(so101.approved and so101_runtime["approved"]),
                         "reachable": so101_runtime.get("reachable", so101.reachable),
                         "camera_visible": so101_runtime.get("camera_visible", so101.camera_visible),
-                        "task_ready": bool(so101.task_ready and so101_runtime.get("task_ready", True)),
+                        "task_ready": bool(so101.task_ready and so101_runtime["task_ready"]),
                         "issues": so101.issues + tuple(str(item) for item in so101_runtime.get("issues", ())),
                         "suggested_changes": so101.suggested_changes + tuple(
                             str(item) for item in so101_runtime.get("suggested_changes", ())
@@ -570,10 +570,10 @@ class Real2SimAgentLoop:
             bundle = None
             if output is not None:
                 bundle = str(export_bundle(spec, self.catalog, output))
-            status = "completed" if physical.approved and so101.approved and so101.task_ready else "needs_review"
+            status = "review_passed" if physical.approved and so101.approved and so101.task_ready else "needs_review"
             return AgentLoopResult(
                 status=status,
-                phase="complete" if status == "completed" else "review",
+                phase="review",
                 video=video,
                 description=description,
                 asset_search=search_reports,

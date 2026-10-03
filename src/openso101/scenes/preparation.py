@@ -8,7 +8,8 @@ from .models import file_digest
 from .usd import verify_compilation
 
 
-def prepare_scene(bundle: Path, output: Path, *, num_envs: int = 4, steps: int = 200, resets: int = 100) -> dict:
+def prepare_scene(bundle: Path, output: Path, *, num_envs: int = 4, steps: int = 200, resets: int = 100,
+                  timeout_seconds: float | None = None) -> dict:
     if min(num_envs, steps, resets) <= 0:
         raise ValueError("环境数量、步骤数量和 reset 次数必须大于零")
     bundle = bundle.resolve()
@@ -19,12 +20,22 @@ def prepare_scene(bundle: Path, output: Path, *, num_envs: int = 4, steps: int =
     output.mkdir(parents=True, exist_ok=False)
     compiled = output / "compiled"
     runtime_path = output / "runtime.json"
-    subprocess.run([sys.executable, "-u", "-m", "openso101.scenes.worker", str(bundle), str(compiled)], check=True)
+    import math
+    import time
+
+    if timeout_seconds is not None and (not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
+        raise ValueError("场景运行预算必须为正数有限数值")
+    started = time.monotonic()
+    subprocess.run([sys.executable, "-u", "-m", "openso101.scenes.worker", str(bundle), str(compiled)],
+                   check=True, timeout=timeout_seconds)
     compilation = verify_compilation(compiled)
+    remaining = None if timeout_seconds is None else timeout_seconds - (time.monotonic() - started)
+    if remaining is not None and remaining <= 0:
+        raise TimeoutError("场景编译已达到运行预算上限")
     subprocess.run([
         sys.executable, "-u", "-m", "openso101.scenes.validation_worker", str(compiled), str(runtime_path),
         "--num-envs", str(num_envs), "--steps", str(steps), "--resets", str(resets), "--cameras",
-    ], check=True)
+    ], check=True, timeout=remaining)
     runtime = json.loads(runtime_path.read_text())
     if compilation["scene_sha256"] != spec.digest() or runtime["scene_sha256"] != spec.digest():
         raise ValueError("场景准备报告与源场景不匹配")

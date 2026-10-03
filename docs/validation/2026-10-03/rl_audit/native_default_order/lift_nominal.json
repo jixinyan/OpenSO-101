@@ -1,0 +1,32 @@
+{
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v3",
+  "environment_mode": "nominal",
+  "steps": 500,
+  "num_envs": 4,
+  "resets": 8,
+  "seed": 42,
+  "observation_dim": 38,
+  "maximum_target_error_rad": 0.0,
+  "maximum_sampled_speed_rad_s": 1.0861462354660034,
+  "maximum_physics_speed_rad_s": 1.1576240062713623,
+  "actual_velocity_limit_verified": true,
+  "physics_dt": 0.001,
+  "control_dt": 0.02,
+  "maximum_target_limit_correction_rad": 0.04154855012893677,
+  "distribution_and_target_mapping_verified": true,
+  "task_success_verified": false,
+  "completed_episode_shaping_returns": [
+    1.949532114561836e-08,
+    -1.0991242357927256e-07,
+    5.560625449679835e-09,
+    1.498842100433606e-08,
+    3.9052216166401976e-07,
+    9.460404439692871e-08,
+    -3.3625176913687493e-08,
+    -7.213528080418641e-08
+  ],
+  "trace_sha256": "42a67ed2e7e6bc12a49f4e4e9d22270b1b285d0342e2e66b3d48fc09136530e3",
+  "source_sha256": "6af689f3f8ff9d6a6182b7fe34775b705be1708a933050fdb630a519d6f5c6e6",
+  "profile_sha256": "08b2cd95180e96c1860a390a3c78aaf07ef138e7e707650b009b558e379cde0d"
+}

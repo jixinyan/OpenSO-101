@@ -56,7 +56,15 @@ def validate_layout(spec: SceneSpec, catalog: AssetCatalog) -> dict:
     }
 
 
-def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path) -> Path:
+def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path, *, intent=None, program=None,
+                  provenance: dict | None = None) -> Path:
+    if (intent is None) != (program is None):
+        raise ValueError("SceneBundle 需要同时提供 TaskIntent 与 TaskProgram")
+    if intent is not None:
+        from .program import compile_program
+
+        if compile_program(intent, spec) != program:
+            raise ValueError("TaskProgram 必须保留 TaskIntent 的完整条件")
     report = validate_layout(spec, catalog)
     destination = destination.resolve()
     # 已存在的 bundle 保持不可变，更新配置使用新的输出目录。
@@ -65,6 +73,11 @@ def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path) -> 
     for uid in sorted({entity.asset_uid for entity in spec.entities}):
         shutil.copytree(catalog.directory(uid), assets.directory(uid))
     (destination / "scene.json").write_text(spec.model_dump_json(indent=2))
+    if intent is not None:
+        (destination / "task_intent.json").write_text(intent.model_dump_json(indent=2))
+        (destination / "task_program.json").write_text(program.model_dump_json(indent=2))
+    if provenance is not None:
+        (destination / "provenance.json").write_text(json.dumps(provenance, ensure_ascii=False, indent=2))
     (destination / "validation.json").write_text(json.dumps(report, indent=2))
     files = {
         path.relative_to(destination).as_posix(): file_digest(path)
@@ -118,4 +131,17 @@ def verify_bundle(root: Path) -> SceneSpec:
         required.update(f"assets/{entity.asset_uid}/{name}" for name in (f"model.{asset.format}", "asset.json", "metadata.json"))
     if not required.issubset(files):
         raise ValueError("manifest 缺少必需文件")
+    verify_program_documents(root, spec, files)
     return spec
+
+
+def verify_program_documents(root: Path, spec: SceneSpec, files: dict):
+    names = {"task_intent.json", "task_program.json"}
+    if names.intersection(files) or any((root / name).exists() for name in names):
+        if not names.issubset(files):
+            raise ValueError("TaskIntent 与 TaskProgram 必须同时包含在文件校验清单中")
+        from .program import TaskIntent, compile_program, read_program
+
+        intent = TaskIntent.model_validate_json((root / "task_intent.json").read_text())
+        if read_program(root / "task_program.json", spec) != compile_program(intent, spec):
+            raise ValueError("TaskProgram 与 TaskIntent 的任务条件不一致")

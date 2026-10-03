@@ -1,0 +1,16 @@
+{
+  "source_sha256": "d93b9031dca8621ab97e097b53c9c2b71a563a0029fc3739158d31ffe8b28a2d",
+  "scalar_sha256": "476ed32cb8d3193edad81977e8f9438884f5366d2b8293b89a1ddcf7518e4af5",
+  "scene_trace_sha256": "9f12b27fbb6383a8c7f70699c929ecf4fda8cc9ef6f7c81f006bb314a337b9d5",
+  "runtime_reports": {
+    "Lift\nnominal": "42a67ed2e7e6bc12a49f4e4e9d22270b1b285d0342e2e66b3d48fc09136530e3",
+    "Lift\nrandomized": "af778511917351db9d32946e3e00df7632ace9987423aa37241091799aaff884",
+    "PickPlace\nnominal": "d6d04d41369002770045c429ab2b7332cf49dc5efd00c55240e17fc3f8f25543",
+    "PickPlace\nrandomized": "ff4e4843ace1d466044e74bb8efbe0614bb589ebde480985d23155f6693e10c9"
+  },
+  "figures": {
+    "scene_program.png": "a5099adc9093c191ac739c27b697c57cc5406a9096e76a49658c3ae2074f52da",
+    "native_physics.png": "d0ac42bc8a972ba04981f7deb4e35a82bb03fb936b3ff587da52ed015186fa2c",
+    "training_records.png": "e702a1115a580bebc13aff87d7f1a682e317ab1945f14a9d3deabc6a8466eb5d"
+  }
+}

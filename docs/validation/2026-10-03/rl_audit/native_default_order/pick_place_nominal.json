@@ -1,0 +1,28 @@
+{
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v3",
+  "environment_mode": "nominal",
+  "steps": 500,
+  "num_envs": 4,
+  "resets": 4,
+  "seed": 42,
+  "observation_dim": 34,
+  "maximum_target_error_rad": 0.0,
+  "maximum_sampled_speed_rad_s": 1.1809005737304688,
+  "maximum_physics_speed_rad_s": 1.714590311050415,
+  "actual_velocity_limit_verified": true,
+  "physics_dt": 0.001,
+  "control_dt": 0.02,
+  "maximum_target_limit_correction_rad": 0.040122270584106445,
+  "distribution_and_target_mapping_verified": true,
+  "task_success_verified": false,
+  "completed_episode_shaping_returns": [
+    -9.988816863145539e-08,
+    1.4324799774319275e-08,
+    -1.5284091404825506e-07,
+    7.421768346074775e-08
+  ],
+  "trace_sha256": "d6d04d41369002770045c429ab2b7332cf49dc5efd00c55240e17fc3f8f25543",
+  "source_sha256": "6af689f3f8ff9d6a6182b7fe34775b705be1708a933050fdb630a519d6f5c6e6",
+  "profile_sha256": "08b2cd95180e96c1860a390a3c78aaf07ef138e7e707650b009b558e379cde0d"
+}

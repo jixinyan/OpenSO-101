@@ -54,15 +54,32 @@ openso101 scenes compile outputs/apple_bundle --output outputs/apple_usd
 ```bash
 openso101 scenes generate --instruction "把苹果放置到桌面右侧" \
   --base-url "$SCENE_MODEL_BASE_URL" --model "$SCENE_MODEL_NAME" \
-  --output outputs/apple_proposal
+  --output outputs/apple_job
 openso101 scenes inspect 4c19ae47dbe8468285ee53ff487fe51a
-openso101 scenes layout outputs/apple_proposal/scene.json \
+openso101 scenes layout outputs/apple_job/bundle/scene.json \
   --locked object --output outputs/apple_layout.json
 ```
 
 模型接口为 OpenAI-compatible Chat Completions，服务地址包含其 API 前缀。默认从 `SCENE_MODEL_API_KEY` 读取密钥；`--api-key-env` 指定其他变量，无鉴权服务使用空字符串。模型名称与地址也可通过 `SCENE_MODEL_NAME` 和 `SCENE_MODEL_BASE_URL` 配置。
 
-`generate` 将当前资产目录和场景 schema 发送给指定服务，校验返回配置并保存 proposal。目录需要预先导入所需资产。调用前配置本次使用的模型服务；输出格式和场景校验错误立即终止。资产、布局、版本保存、编译与仿真检查均可独立调用。
+`generate` 将任务转换为 `TaskIntent`，生成资产候选与 `SceneSpec`，编译 `TaskProgram`，执行静态布局检查，并保存 `job.json` 与 `bundle/`。TaskIntent 版本 2 保存每个实体的英文检索文本、数值尺寸、初始 Pose、操作顺序和最终条件。SceneSpec 必须保留任务文本、尺寸、初始 Pose 和全部最终目标。需要用户补充信息时返回 `needs_input`，并保存具体要求。
+
+`TaskProgram` 按照顺序检查 pick、lift、move、place、release 和 wait 条件。抓取要求实际双侧接触力均超过 0.5 N；释放要求打开夹爪且双侧接触力均不超过 0.1 N。最终目标同时检查位置、速度、释放与连续稳定时间。具有 TaskProgram 的场景观测增加三个阶段数值；已有场景保持原有观测数量。
+
+```bash
+openso101 scenes index --catalog outputs/assets --output outputs/asset_index
+openso101 scenes retrieve "red apple" --catalog outputs/assets --index outputs/asset_index
+openso101 scenes generate --instruction "把苹果放置到桌面右侧" \
+  --catalog outputs/assets --asset-index outputs/asset_index \
+  --base-url "$SCENE_MODEL_BASE_URL" --model "$SCENE_MODEL_NAME" \
+  --output outputs/apple_job --runtime-output outputs/apple_prepared
+```
+
+embedding 索引使用 Sentence Transformers，将模型固定到 Hugging Face commit，保存实际资产与 metadata 的 SHA256、embedding 数量和文件 SHA256。检索使用 normalized cosine similarity；场景中的实体只能选择对应检索结果中的资产。资产或 metadata 改变后，读取索引立即终止并要求重新生成。默认模型为 `sentence-transformers/all-MiniLM-L6-v2`，`--embedding-model` 与 `--model-revision` 可指定模型及版本。
+
+默认预算为 12 次模型请求、最多三次场景修复、64 项候选、16 个实体和 600 秒实际运行检查。`job.json` 保存每项工具的输入、输出、用时、SHA256，以及实际模型请求与 tokens 用量。当前文本流程读取已有资产，下载量为零。成功的静态检查使用 `layout_valid`；实际编译与双相机运行通过后使用 `simulation_ready`。任务成功和数据集验收通过独立记录确认。
+
+调用前配置本次使用的模型服务；输出格式和场景校验错误立即终止。`--codex-config` 可使用 Responses 服务设置，密钥只在当前进程中读取。资产、布局、版本保存、编译与仿真检查均可独立调用。
 
 ## RGB 视频 real2sim agent loop
 
@@ -90,7 +107,7 @@ openso101 scenes agent-loop \
 `--offline-objaverse`。`--image-limit`、`--reasoning-effort`、`--timeout-seconds` 和
 `--max-revisions` 可分别控制每次请求的帧数、推理强度、单次超时和修复次数。
 
-也可以用 `--frame` 重用已经抽好的 JPEG/PNG；这时必须同时提供 `--fps`、`--frame-count`、`--width` 和 `--height`。`status=completed` 只表示静态检查和两个 Astra 审查通过；Isaac 的动态碰撞、可达性、接触、相机和成功采集仍由 `validate-runtime`、runtime check 或真机采集完成。
+也可以用 `--frame` 重用已经抽好的 JPEG/PNG；这时必须同时提供 `--fps`、`--frame-count`、`--width` 和 `--height`。静态检查和两个 Astra 审查通过时使用 `review_passed`；Isaac 的动态碰撞、可达性、接触、相机和成功采集使用各自的实际记录。
 
 `--runtime-output` 将生成 bundle 连接到 USD 编译和实际 Isaac 双相机检查，保存 `compiled/`、`runtime.json`、`preparation.json` 和 `agent_loop_result.json`。结果增加 `compiled_scene` 与 `runtime_validation`；`pending_checks` 使用实际运行报告中仍需完成的项目。模型审查结果、程序运行和任务成功分别保留其验证范围。
 
@@ -158,7 +175,7 @@ openso101 il record --task OpenSO101-CustomScene-v0 \
 
 键盘方向键控制平面移动，PageUp/PageDown 控制高度，A/D 控制旋转，Space 打开夹爪，Shift 关闭夹爪。damped least-squares IK 使用实际 Jacobian、关节限位与速度限制。leader 使用 `--teleop-device leader` 及原有设备参数。
 
-自定义场景 HDF5 保存全部实体状态、场景 hash 与可移植场景副本。回放自动读取录制使用的场景版本。LeRobot 导出保留场景副本，并在 `meta/scenes.json` 保存 episode 对应关系。无显示环境回放使用 `--headless --no-camera-viewports`。
+自定义场景 HDF5 保存全部实体状态、双侧接触力、任务阶段、保持时间、成功状态、场景 hash 与可移植场景副本。录制检查点与回放恢复这些任务状态。LeRobot 导出保留场景副本，并在 `meta/scenes.json` 保存 episode 对应关系。无显示环境回放使用 `--headless --no-camera-viewports`。
 
 嵌入其他 Python 程序时，在 SimulationApp 启动后执行 `import openso101.tasks` 注册内置任务。`import openso101` 可用于独立资产处理程序。
 

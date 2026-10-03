@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "instruction": "将一个 Apple 抓取后放置到桌面指定位置，并打开夹爪，等待稳定。Apple 尺寸为 0.04、0.04、0.05 米，初始中心为 0.20、-0.10、0.025 米，最终中心为 0.20、0.12、0.025 米。采用默认桌面与机器人基座。",
+  "status": "layout_valid",
+  "created_at": "2026-10-03T08:04:59.004548+00:00",
+  "limits": {
+    "max_model_requests": 12,
+    "max_revisions": 3,
+    "max_candidates": 64,
+    "max_entities": 16,
+    "max_runtime_seconds": 600.0
+  },
+  "tool_calls": [
+    {
+      "tool": "extract_intent",
+      "input": {
+        "instruction": "将一个 Apple 抓取后放置到桌面指定位置，并打开夹爪，等待稳定。Apple 尺寸为 0.04、0.04、0.05 米，初始中心为 0.20、-0.10、0.025 米，最终中心为 0.20、0.12、0.025 米。采用默认桌面与机器人基座。"
+      },
+      "status": "completed",
+      "result": {
+        "schema_version": 2,
+        "instruction": "将一个 Apple 抓取后放置到桌面指定位置，并打开夹爪，等待稳定。Apple 尺寸为 0.04、0.04、0.05 米，初始中心为 0.20、-0.10、0.025 米，最终中心为 0.20、0.12、0.025 米。采用默认桌面与机器人基座。",
+        "objects": [
+          {
+            "entity_id": "apple",
+            "label": "Apple",
+            "role": "manipulated",
+            "count": 1,
+            "attributes": {
+              "type": "apple"
+            },
+            "required_capabilities": [
+              "graspable"
+            ],
+            "asset_query": "apple fruit",
+            "dimensions_m": [
+              0.04,
+              0.04,
+              0.05
+            ],
+            "initial_pose": {
+              "position": [
+                0.2,
+                -0.1,
+                0.025
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ],
+        "ordered_actions": [
+          {
+            "action_id": "pick_apple",
+            "operation": "pick",
+            "conditions": [
+              {
+                "kind": "grasped",
+                "object_id": "apple",
+                "goal": null,
+                "height_above_table_m": null
+              }
+            ],
+            "hold_seconds": 0.0
+          },
+          {
+            "action_id": "place_apple",
+            "operation": "place",
+            "conditions": [
+              {
+                "kind": "goal",
+                "object_id": "apple",
+                "goal": {
+                  "object_id": "apple",
+                  "predicate": "at",
+                  "position_m": [
+                    0.2,
+                    0.12,
+                    0.025
+                  ],
+                  "target_id": null,
+                  "region_bounds_m": null
+                },
+                "height_above_table_m": null
+              },
+              {
+                "kind": "released",
+                "object_id": "apple",
+                "goal": null,
+                "height_above_table_m": null
+              },
+              {
+                "kind": "stable",
+                "object_id": "apple",
+                "goal": null,
+                "height_above_table_m": null
+              }
+            ],
+            "hold_seconds": 0.0
+          },
+          {
+            "action_id": "open_gripper",
+            "operation": "release",
+            "conditions": [
+              {
+                "kind": "released",
+                "object_id": "apple",
+                "goal": null,
+                "height_above_table_m": null
+              }
+            ],
+            "hold_seconds": 0.0
+          },
+          {
+            "action_id": "wait_stable",
+            "operation": "wait",
+            "conditions": [
+              {
+                "kind": "stable",
+                "object_id": "apple",
+                "goal": null,
+                "height_above_table_m": null
+              }
+            ],
+            "hold_seconds": 0.0
+          }
+        ],
+        "final_conditions": [
+          {
+            "kind": "goal",
+            "object_id": "apple",
+            "goal": {
+              "object_id": "apple",
+              "predicate": "at",
+              "position_m": [
+                0.2,
+                0.12,
+                0.025
+              ],
+              "target_id": null,
+              "region_bounds_m": null
+            },
+            "height_above_table_m": null
+          },
+          {
+            "kind": "released",
+            "object_id": "apple",
+            "goal": null,
+            "height_above_table_m": null
+          },
+          {
+            "kind": "stable",
+            "object_id": "apple",
+            "goal": null,
+            "height_above_table_m": null
+          }
+        ],
+        "constraints": [
+          "按顺序抓取 Apple、放置到指定桌面位置、打开夹爪、等待稳定。",
+          "所有位置均表示 Apple 中心，单位为米。",
+          "默认桌面使用 SceneSpec.table，不创建桌面实体。"
+        ],
+        "confirmed_defaults": {
+          "table": "采用 SO-101 默认桌面布局，桌面高度基准为 z=0。",
+          "robot_base": "采用 SO-101 默认机器人基座布局。",
+          "apple_rotation": "未指定初始旋转，采用单位四元数 wxyz=[1,0,0,0]。",
+          "wait": "未指定等待时长，不增加固定保持时间，以稳定条件为准。"
+        },
+        "clarifications": []
+      },
+      "elapsed_seconds": 12.188905753660947,
+      "result_sha256": "716d63cb28d3c24dd7ad7ff548bef5ea33f5db98ff04ddd2e342a90d8dfd4fa4"
+    },
+    {
+      "tool": "read_catalog",
+      "input": {
+        "catalog": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v3_agentic_text_conditions/bundle/assets"
+      },
+      "status": "completed",
+      "result": [
+        {
+          "uid": "811698689ddf00274a8abce36f4e159a",
+          "name": "generated_mesh",
+          "source_url": "generated://trimesh/recipe",
+          "license": "MIT",
+          "author": "OpenSO-101",
+          "sha256": "811698689ddf00274a8abce36f4e159a6f79d83bce5613aaf192076601677ee9",
+          "bounds": [
+            [
+              -0.019999999552965164,
+              -0.02500000037252903,
+              -0.019999999552965164
+            ],
+            [
+              0.019999999552965164,
+              0.02500000037252903,
+              0.019999999552965164
+            ]
+          ],
+          "vertices": 708,
+          "faces": 1408,
+          "format": "glb"
+        }
+      ],
+      "elapsed_seconds": 0.005726831033825874,
+      "result_sha256": "7ccc9c7bc9cf48a2002708ccf9928b49aaccef4f905ecc8cf27d7fb9c7e00b12"
+    },
+    {
+      "tool": "compose_scene",
+      "input": {
+        "revision": 0,
+        "intent_sha256": "e6ea5fe96635a352ff26905d0a270a9a14b9454c3b166c8db6344c3d12e0a02a"
+      },
+      "status": "completed",
+      "result": {
+        "schema_version": 1,
+        "scene_id": "so101_apple_place",
+        "meters_per_unit": 1,
+        "up_axis": "Z",
+        "table": {
+          "center_xy_m": [
+            0.3,
+            0.0
+          ],
+          "size_xy_m": [
+            0.8,
+            0.8
+          ],
+          "top_z_m": 0.0,
+          "thickness_m": 0.04
+        },
+        "robot_base": {
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "quaternion_wxyz": [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "entities": [
+          {
+            "entity_id": "apple",
+            "asset_uid": "811698689ddf00274a8abce36f4e159a",
+            "asset_sha256": "811698689ddf00274a8abce36f4e159a6f79d83bce5613aaf192076601677ee9",
+            "dimensions_m": [
+              0.04,
+              0.04,
+              0.05
+            ],
+            "pose": {
+              "position": [
+                0.2,
+                -0.1,
+                0.025
+              ],
+              "quaternion_wxyz": [
+                1.0,
+                0.0,
+                0.0,
+                0.0
+              ]
+            },
+            "dynamic": true,
+            "physics": {
+              "mass_kg": 0.04,
+              "static_friction": 0.8,
+              "dynamic_friction": 0.6,
+              "restitution": 0.0,
+              "collision": "convexHull",
+              "provenance": "estimated"
+            },
+            "reset_translation_m": [
+              [
+                0.0,
+                0.0,
+                0.0
+              ],
+              [
+                0.0,
+                0.0,
+                0.0
+              ]
+            ]
+          }
+        ],
+        "task": {
+          "task_id": "pick_place_apple",
+          "object_id": "apple",
+          "goal_position_m": [
+            0.2,
+            0.12,
+            0.025
+          ],
+          "position_tolerance_m": 0.03,
+          "settle_seconds": 0.5,
+          "max_linear_speed_m_s": 0.02,
+          "max_angular_speed_rad_s": 0.1,
+          "instruction": "将一个 Apple 抓取后放置到桌面指定位置，并打开夹爪，等待稳定。Apple 尺寸为 0.04、0.04、0.05 米，初始中心为 0.20、-0.10、0.025 米，最终中心为 0.20、0.12、0.025 米。采用默认桌面与机器人基座。",
+          "goals": [
+            {
+              "object_id": "apple",
+              "predicate": "at",
+              "position_m": [
+                0.2,
+                0.12,
+                0.025
+              ],
+              "target_id": null,
+              "region_bounds_m": null
+            }
+          ],
+          "require_released": true
+        },
+        "reset_seed": 0
+      },
+      "elapsed_seconds": 9.529847744852304,
+      "result_sha256": "e349f430e0a60a10663b04fa70e47581861bbf050c90ed4ac2ff718017fe08e2"
+    },
+    {
+      "tool": "validate_layout",
+      "input": {
+        "scene_sha256": "f8b5e582908483dbb33df65172903912eb751f426e4a582f4047d3285bb0a6a0"
+      },
+      "status": "completed",
+      "result": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      },
+      "elapsed_seconds": 0.019453040789812803,
+      "result_sha256": "2636eab586e04d3ab5794c48ed1003eef04fad60be557020c52f5be4c6db08f9"
+    }
+  ],
+  "model_requests": [
+    {
+      "attempt": 0,
+      "model": "gpt-6-astra",
+      "schema": "TaskIntent",
+      "wire_api": "responses",
+      "status": "validated",
+      "usage": {
+        "input_tokens": 1935,
+        "input_tokens_details": {
+          "cache_write_tokens": 1932,
+          "cached_tokens": 0
+        },
+        "output_tokens": 766,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 2701
+      },
+      "request_sha256": "2a67150c2e3076add26daba918e1dd008d15d030d40a8409a4451999ac99e328",
+      "elapsed_seconds": 11.511213052086532,
+      "response_sha256": "a71b9e3c1d694aa0822f3e914d863ab9f620e0a1871fbe6b3d0ba2fa1ad1073b"
+    },
+    {
+      "attempt": 0,
+      "model": "gpt-6-astra",
+      "schema": "SceneSpec",
+      "wire_api": "responses",
+      "status": "validated",
+      "usage": {
+        "input_tokens": 3393,
+        "input_tokens_details": {
+          "cache_write_tokens": 3390,
+          "cached_tokens": 0
+        },
+        "output_tokens": 712,
+        "output_tokens_details": {
+          "reasoning_tokens": 29
+        },
+        "total_tokens": 4105
+      },
+      "request_sha256": "4b50f9021d7f7d9884d252b61df466c7d1bcff2965ec8aae269047089f5dc505",
+      "elapsed_seconds": 9.474255478940904,
+      "response_sha256": "0294c917d3189ae8a6ddec4dd617806aacfee6be253143e9ca6513027ab43ec1"
+    }
+  ],
+  "downloaded_bytes": 0,
+  "collection_ready": false,
+  "dataset_verified": false,
+  "workflow_source_sha256": "59f170c42f9a6380c04e9e70a021e2c2978013fb28bfa1e37ce3be6787b9dbfa",
+  "elapsed_seconds": 22.062489609234035,
+  "intent_sha256": "e6ea5fe96635a352ff26905d0a270a9a14b9454c3b166c8db6344c3d12e0a02a",
+  "scene_sha256": "f8b5e582908483dbb33df65172903912eb751f426e4a582f4047d3285bb0a6a0",
+  "task_program_sha256": "9d7f6e141d7147069ff54e632e2b2ddb1b53f683be4514da4117cb3122e1684c",
+  "bundle": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v3_agentic_typed_intent/bundle",
+  "pending_checks": [
+    "stability",
+    "reachability",
+    "contact_geometry",
+    "cameras",
+    "collection"
+  ]
+}

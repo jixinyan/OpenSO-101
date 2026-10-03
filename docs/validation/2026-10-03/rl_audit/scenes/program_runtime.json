@@ -1,0 +1,59 @@
+{
+  "scene_sha256": "f8b5e582908483dbb33df65172903912eb751f426e4a582f4047d3285bb0a6a0",
+  "status": "runtime_verified",
+  "num_envs": 4,
+  "steps": 200,
+  "resets": 100,
+  "seed": 0,
+  "cameras": {
+    "wrist_camera": [
+      4,
+      128,
+      128,
+      3
+    ],
+    "overhead_camera": [
+      4,
+      128,
+      128,
+      3
+    ]
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "checked_frames": 800,
+      "minimum_pixel_std": 31.206871032714844
+    },
+    "overhead_camera": {
+      "checked_frames": 800,
+      "minimum_pixel_std": 7.837815761566162
+    }
+  },
+  "episode_terminations": {
+    "terminated": 0,
+    "truncated": 0
+  },
+  "task_success_verified": false,
+  "dataset_verified": false,
+  "control_dt": 0.016666666666666666,
+  "worker_sha256": "12b3ab92ef71a331bdfbfe8a282f855537d901d9367c3ca8ad4e0bdc9a16a1c8",
+  "runtime_source_sha256": "e90a2cd5da04ac90a2b65287e38dc75682782f31bd44f7111342a54db02e6574",
+  "compilation_manifest_sha256": "27a6bec0eec98bf98b47b209ee4a00fb95fd04a21ffe8ee78a61e0446d45afeb",
+  "observation_shape": [
+    4,
+    37
+  ],
+  "trace_sha256": "9f12b27fbb6383a8c7f70699c929ecf4fda8cc9ef6f7c81f006bb314a337b9d5",
+  "program_conditions_verified": true,
+  "program_checked_frames": 800,
+  "program_maximum_phase": 0,
+  "observed_dual_contact_frames": 0,
+  "pending_checks": [
+    "dynamic_stability",
+    "path_reachability",
+    "contact_geometry",
+    "camera_visibility",
+    "task_completion",
+    "successful_collection"
+  ]
+}

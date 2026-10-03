@@ -143,6 +143,7 @@ class _TeleopSimCheckpoint:
     command_goal_pos_w: Any | None = None
     command_cube_spawn_xy_b: Any | None = None
     command_placement_hold_seconds: Any | None = None
+    scene_task_state: Any | None = None
 
 
 def _clone_value(value):
@@ -328,6 +329,11 @@ class _TeleopCheckpointStore:
                 entity.entity_id: self.scene[entity.entity_id].data.root_state_w.clone()
                 for entity in self.env.cfg.scene_spec.entities if entity.dynamic
             }
+            checkpoint.scene_task_state = {
+                name: getattr(self.env, name).clone() for name in
+                ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold")
+                if hasattr(self.env, name)
+            }
             self.checkpoint = checkpoint
             return
 
@@ -374,9 +380,9 @@ class _TeleopCheckpointStore:
             robot.set_joint_position_target(checkpoint.robot_joint_pos)
             for entity_id, state in checkpoint.entity_states.items():
                 self.scene[entity_id].write_root_state_to_sim(state)
-            if hasattr(self.env, "_scene_hold_seconds"):
-                self.env._scene_hold_seconds.zero_()
-                self.env._scene_success.zero_()
+            for name, value in checkpoint.scene_task_state.items():
+                setattr(self.env, name, value.clone())
+            if checkpoint.scene_task_state:
                 self.env._scene_success_step = -1
             return checkpoint.hold_joint_target
 
@@ -645,7 +651,16 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
     if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
         from openso101.scenes.runtime import scene_states
 
-        return {"scene_entity_states": _tensor_to_numpy(scene_states(unwrapped_env)[0])}
+        sim_state = {"scene_entity_states": _tensor_to_numpy(scene_states(unwrapped_env)[0])}
+        from openso101.scenes.runtime import scene_jaw_forces
+        import torch
+
+        forces = scene_jaw_forces(unwrapped_env)
+        sim_state["scene_jaw_forces"] = _tensor_to_numpy(torch.stack(list(forces.values()), dim=1)[0])
+        for name in ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold"):
+            if hasattr(unwrapped_env, name):
+                sim_state[name.removeprefix("_")] = _tensor_to_numpy(getattr(unwrapped_env, name)[0])
+        return sim_state
     if "object" in scene.rigid_objects:
         sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
     if "object_pose" in unwrapped_env.command_manager.active_terms:
@@ -1682,9 +1697,17 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
                 state = _replay_to_tensor_like(states[index][None, ...], obj.data.root_state_w)
                 state[:, :3] += scene.env_origins
                 obj.write_root_state_to_sim(state)
+        for name in ("scene_hold_seconds", "scene_success", "scene_program_phase", "scene_program_hold"):
+            value = _replay_optional_frame(h5, f"sim/{name}", frame_index)
+            if value is not None:
+                import torch
+
+                dtype = torch.int64 if name == "scene_program_phase" else torch.bool if name == "scene_success" else torch.float32
+                restored = torch.as_tensor(value, device=unwrapped_env.device, dtype=dtype).expand(unwrapped_env.num_envs).clone()
+                setattr(unwrapped_env, "_" + name, restored)
+            elif hasattr(unwrapped_env, "_" + name):
+                getattr(unwrapped_env, "_" + name).zero_()
         if hasattr(unwrapped_env, "_scene_hold_seconds"):
-            unwrapped_env._scene_hold_seconds.zero_()
-            unwrapped_env._scene_success.zero_()
             unwrapped_env._scene_success_step = -1
         return
 

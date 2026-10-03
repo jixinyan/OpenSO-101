@@ -15,6 +15,7 @@ from isaaclab.managers import (
     TerminationTermCfg,
 )
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.math import matrix_from_quat, quat_apply_inverse
 
@@ -58,9 +59,70 @@ def reset_objects(env, env_ids):
             state[:, :3] += lower + torch.rand((len(env_ids), 3), device=env.device) * (upper - lower)
             state[:, :3] += env.scene.env_origins[env_ids]
             obj.write_root_state_to_sim(state, env_ids)
-    if hasattr(env, "_scene_hold_seconds"):
-        env._scene_hold_seconds[env_ids] = 0
-        env._scene_success[env_ids] = False
+    if not hasattr(env, "_scene_hold_seconds"):
+        env._scene_hold_seconds = torch.zeros(env.num_envs, device=env.device)
+        env._scene_success = torch.zeros(env.num_envs, device=env.device, dtype=torch.bool)
+        env._scene_success_step = -1
+    env._scene_hold_seconds[env_ids] = 0
+    env._scene_success[env_ids] = False
+    if env.cfg.task_program is not None:
+        if not hasattr(env, "_scene_program_phase"):
+            env._scene_program_phase = torch.zeros(env.num_envs, dtype=torch.int64, device=env.device)
+            env._scene_program_hold = torch.zeros(env.num_envs, device=env.device)
+        env._scene_program_phase[env_ids] = 0
+        env._scene_program_hold[env_ids] = 0
+
+
+def scene_jaw_forces(env):
+    dynamic = [entity.entity_id for entity in env.cfg.scene_spec.entities if entity.dynamic]
+    magnitudes = []
+    for name in ("gripper_jaw_contact", "moving_jaw_contact"):
+        matrix = env.scene[name].data.force_matrix_w
+        if matrix.shape != (env.num_envs, 1, len(dynamic), 3) or not torch.isfinite(matrix).all():
+            raise RuntimeError("场景双侧接触力的数量或数值无效")
+        magnitudes.append(torch.linalg.vector_norm(matrix[:, 0], dim=-1))
+    values = torch.stack(magnitudes, dim=-1)
+    return {name: values[:, index] for index, name in enumerate(dynamic)}
+
+
+def goal_reached(spec, goal, states, device):
+    state = states[goal.object_id]
+    entities = {entity.entity_id: entity for entity in spec.entities}
+    if goal.predicate == "at":
+        position = torch.tensor(goal.position_m, device=device)
+        return torch.linalg.vector_norm(state[:, :3] - position, dim=-1) <= spec.task.position_tolerance_m
+    target = states[goal.target_id]
+    local = quat_apply_inverse(target[:, 3:7], state[:, :3] - target[:, :3])
+    relative = matrix_from_quat(target[:, 3:7]).transpose(-1, -2) @ matrix_from_quat(state[:, 3:7])
+    extent = relative.abs() @ (torch.tensor(entities[goal.object_id].dimensions_m, device=device) / 2)
+    if goal.predicate == "inside":
+        lower, upper = torch.tensor(goal.region_bounds_m, device=device)
+        return ((local - extent >= lower) & (local + extent <= upper)).all(dim=-1)
+    target_half = torch.tensor(entities[goal.target_id].dimensions_m, device=device) / 2
+    reached = (local[:, :2].abs() + extent[:, :2] <= target_half[:2]).all(dim=-1)
+    return reached & ((local[:, 2] - extent[:, 2] - target_half[2]).abs() <= spec.task.position_tolerance_m)
+
+
+def program_condition(env, condition, states, forces, opened):
+    program = env.cfg.task_program
+    state = states[condition.object_id]
+    if condition.kind == "grasped":
+        return (forces[condition.object_id] > program.grasp_force_threshold_newtons).all(dim=-1)
+    if condition.kind == "released":
+        return opened & (forces[condition.object_id] <= program.release_force_threshold_newtons).all(dim=-1)
+    if condition.kind == "lifted":
+        return state[:, 2] - env.cfg.scene_spec.table.top_z_m >= condition.height_above_table_m
+    if condition.kind == "stable":
+        return ((torch.linalg.vector_norm(state[:, 7:10], dim=-1) <= env.cfg.scene_spec.task.max_linear_speed_m_s)
+                & (torch.linalg.vector_norm(state[:, 10:13], dim=-1) <= env.cfg.scene_spec.task.max_angular_speed_rad_s))
+    return goal_reached(env.cfg.scene_spec, condition.goal, states, env.device)
+
+
+def program_progress(env):
+    if not hasattr(env, "_scene_program_phase"):
+        return torch.zeros((env.num_envs, 3), device=env.device)
+    return torch.stack((env._scene_program_phase.float() / len(env.cfg.task_program.phases),
+                        env._scene_program_hold, env._scene_hold_seconds), dim=-1)
 
 
 def task_success(env):
@@ -73,33 +135,43 @@ def task_success(env):
     spec = env.cfg.scene_spec
     values = scene_states(env)
     states = {entity.entity_id: values[:, index] for index, entity in enumerate(spec.entities)}
-    entities = {entity.entity_id: entity for entity in spec.entities}
     jaw_id = env.scene["robot"].joint_names.index("Jaw")
+    opened = env.scene["robot"].data.joint_pos[:, jaw_id] > .4
+    forces = scene_jaw_forces(env)
+    if env.cfg.task_program is not None:
+        if not hasattr(env, "_scene_program_phase"):
+            env._scene_program_phase = torch.zeros(env.num_envs, dtype=torch.int64, device=env.device)
+            env._scene_program_hold = torch.zeros(env.num_envs, device=env.device)
+        program = env.cfg.task_program
+        active = env._scene_program_phase.clone()
+        for index, phase in enumerate(program.phases):
+            selected = active == index
+            eligible = torch.stack([program_condition(env, item, states, forces, opened)
+                                    for item in phase.conditions]).all(dim=0)
+            duration = torch.where(eligible, env._scene_program_hold + env.step_dt, 0.)
+            passed = selected & eligible & (duration + 1e-7 >= phase.hold_seconds)
+            env._scene_program_hold[selected] = duration[selected]
+            env._scene_program_hold[passed] = 0
+            env._scene_program_phase[passed] += 1
+        final = torch.stack([program_condition(env, item, states, forces, opened)
+                             for item in program.final_conditions]).all(dim=0)
+        eligible = (env._scene_program_phase == len(program.phases)) & final
+        env._scene_hold_seconds = torch.where(eligible, env._scene_hold_seconds + env.step_dt, 0.)
+        env._scene_success = env._scene_hold_seconds + 1e-7 >= program.settle_seconds
+        env._scene_success_step = env.common_step_counter
+        return env._scene_success
     valid = torch.ones(env.num_envs, dtype=torch.bool, device=env.device)
     goals = spec.task.goals or (Goal(object_id=spec.task.object_id, position_m=spec.task.goal_position_m),)
     for goal in goals:
         state = states[goal.object_id]
-        if goal.predicate == "at":
-            position = torch.tensor(goal.position_m, device=env.device)
-            reached = torch.linalg.vector_norm(state[:, :3] - position, dim=-1) <= spec.task.position_tolerance_m
-        else:
-            target = states[goal.target_id]
-            local = quat_apply_inverse(target[:, 3:7], state[:, :3] - target[:, :3])
-            relative = matrix_from_quat(target[:, 3:7]).transpose(-1, -2) @ matrix_from_quat(state[:, 3:7])
-            half = torch.tensor(entities[goal.object_id].dimensions_m, device=env.device) / 2
-            extent = relative.abs() @ half
-            if goal.predicate == "inside":
-                lower, upper = torch.tensor(goal.region_bounds_m, device=env.device)
-                reached = ((local - extent >= lower) & (local + extent <= upper)).all(dim=-1)
-            else:
-                target_half = torch.tensor(entities[goal.target_id].dimensions_m, device=env.device) / 2
-                reached = (local[:, :2].abs() + extent[:, :2] <= target_half[:2]).all(dim=-1)
-                reached &= (local[:, 2] - extent[:, 2] - target_half[2]).abs() <= spec.task.position_tolerance_m
+        reached = goal_reached(spec, goal, states, env.device)
         stable = torch.linalg.vector_norm(state[:, 7:10], dim=-1) <= spec.task.max_linear_speed_m_s
         stable &= torch.linalg.vector_norm(state[:, 10:13], dim=-1) <= spec.task.max_angular_speed_rad_s
         valid &= reached & stable
+        if spec.task.require_released:
+            valid &= (forces[goal.object_id] <= .1).all(dim=-1)
     if spec.task.require_released:
-        valid &= env.scene["robot"].data.joint_pos[:, jaw_id] > 0.4
+        valid &= opened
     env._scene_hold_seconds = torch.where(valid, env._scene_hold_seconds + env.step_dt, 0)
     env._scene_success = env._scene_hold_seconds >= env.cfg.scene_spec.task.settle_seconds
     env._scene_success_step = env.common_step_counter
@@ -147,6 +219,7 @@ class SceneObservationsCfg:
         objects = ObservationTermCfg(func=object_observations)
         goal = ObservationTermCfg(func=goal_observations)
         actions = ObservationTermCfg(func=mdp.last_action)
+        task_program = None
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -188,6 +261,7 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
     terminations: SceneTerminationsCfg = SceneTerminationsCfg()
     scene_spec: SceneSpec | None = None
     compiled_scene: str = ""
+    task_program: object | None = None
 
     def __post_init__(self):
         self.decimation = 2
@@ -208,13 +282,26 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
             prim_path="{ENV_REGEX_NS}/Content", spawn=sim_utils.UsdFileCfg(usd_path=str(folder / "environment.usda")),
         )
         for entity in spec.entities:
-            if entity.entity_id in ("robot", "light", "content", "overhead_camera", "wrist_camera"):
+            if entity.entity_id in ("robot", "light", "content", "overhead_camera", "wrist_camera",
+                                    "gripper_jaw_contact", "moving_jaw_contact"):
                 raise ValueError(f"entity_id 与系统实体重复：{entity.entity_id}")
             if entity.dynamic:
                 setattr(self.scene, entity.entity_id, RigidObjectCfg(
                     prim_path=f"{{ENV_REGEX_NS}}/Content/Objects/{entity.entity_id}",
                     spawn=None, init_state=RigidObjectCfg.InitialStateCfg(pos=entity.pose.position, rot=entity.pose.quaternion_wxyz),
                 ))
+        filters = [f"{{ENV_REGEX_NS}}/Content/Objects/{entity.entity_id}"
+                   for entity in spec.entities if entity.dynamic]
+        for name, body in (("gripper_jaw_contact", "gripper"), ("moving_jaw_contact", "jaw")):
+            setattr(self.scene, name, ContactSensorCfg(prim_path=f"{{ENV_REGEX_NS}}/Robot/{body}",
+                                                     update_period=0., history_length=1, debug_vis=False,
+                                                     filter_prim_paths_expr=filters))
+        program_path = folder / "task_program.json"
+        if program_path.is_file():
+            from .program import read_program
+
+            self.task_program = read_program(program_path, spec)
+            self.observations.policy.task_program = ObservationTermCfg(func=program_progress)
         self.scene.robot.init_state.pos = (
             spec.robot_base.position[0], spec.robot_base.position[1],
             spec.robot_base.position[2] + SO101_USD_TABLETOP_ROOT_Z,
