@@ -173,7 +173,7 @@ def train(args):
     return 0
 
 
-def evaluate(args, *, play=False):
+def evaluate(args, *, play=False, student_folder=None):
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
     args.task_profile = meta.task_profile
@@ -188,7 +188,8 @@ def evaluate(args, *, play=False):
         raise ValueError("n_episodes 必须大于零")
     from isaaclab.app import AppLauncher
 
-    app = AppLauncher(headless=args.headless).app
+    args.with_cameras = student_folder is not None
+    app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras).app
     env = None
     try:
         import torch
@@ -196,7 +197,18 @@ def evaluate(args, *, play=False):
         from .backends import get_backend
 
         env = build_environment(args, training=False, scene=scene)
-        policy = get_backend(meta.config.backend).load(env, folder)
+        if student_folder is None:
+            policy = get_backend(meta.config.backend).load(env, folder)
+        else:
+            from .student import RLStudentPolicy
+            from .vision_distillation import action_mapping, camera_proprio_observation
+
+            student = RLStudentPolicy(student_folder, env.unwrapped.device)
+            if (student.metadata["teacher_sha256"] != meta.files[meta.checkpoint]
+                    or student.metadata["action_mapping"] != action_mapping(env.unwrapped)
+                    or student.metadata["control_dt"] != env.unwrapped.step_dt):
+                raise ValueError("student、teacher 与评估环境的来源及动作转换不一致")
+            policy = lambda observation: student.select_action(camera_proprio_observation(env.unwrapped))
         observation, _ = env.reset()
         returns = torch.zeros(env.unwrapped.num_envs, device=env.unwrapped.device)
         lengths = torch.zeros_like(returns, dtype=torch.int64)
@@ -262,7 +274,12 @@ def evaluate(args, *, play=False):
                   "num_envs": env.unwrapped.num_envs, "episode_allocation": quotas.tolist(),
                   "progress_sampling": "before_control_step" if progress else None,
                   "progress_rates": {name: sum(record[name] for record in records) / len(records) for name in progress}}
-        report = folder / f"evaluation-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        if student_folder is not None:
+            result.update(student_sha256=student.metadata["files"]["student.pt"],
+                          goal_input=student.metadata["goal_input"], camera_observation=True,
+                          teacher_metadata_sha256=digest(folder / "checkpoint.json"))
+        report_folder = folder if student_folder is None else student_folder
+        report = report_folder / f"evaluation-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
         report.write_text(json.dumps(result, indent=2))
         print(json.dumps({"report": str(report), "success_rate": result["success_rate"]}))
     finally:
@@ -270,6 +287,16 @@ def evaluate(args, *, play=False):
             env.close()
     app.close()
     return 0
+
+
+def evaluate_student(args):
+    student_folder = Path(args.student).resolve()
+    metadata = json.loads((student_folder / "student.json").read_text())
+    args.checkpoint = str(student_folder / "teacher")
+    args.task = metadata["task_id"]
+    if metadata["schema_version"] != 2 or digest(Path(args.checkpoint) / "checkpoint.json") != metadata["teacher_metadata_sha256"]:
+        raise ValueError("student 评估需要完整且已校验的 teacher 记录")
+    return evaluate(args, student_folder=student_folder)
 
 
 def distill(args):

@@ -90,6 +90,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_dep.add_argument("--wrist-camera-path", default=None, help="wrist OpenCV 设备路径，优先于设备索引")
     p_dep.add_argument("--overhead-camera-path", default=None, help="overhead OpenCV 设备路径，优先于设备索引")
     p_dep.add_argument("--stop-file", default=None, help="文件存在时停止发送动作并关闭连接")
+    p_dep.add_argument("--goal-file", default=None, help="student 当前任务目标的 JSON 文件，包含 robot root frame 米制 xyz")
     p_dep.add_argument(
         "--camera-height",
         type=int,

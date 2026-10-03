@@ -137,6 +137,11 @@ def load_policy(
     # Resolve the path first so callers get a clear FileNotFoundError before
     # we pay the cost of importing LeRobot (and so tests can exercise the
     # path-resolution logic without LeRobot installed).
+    local = Path(path).expanduser()
+    if (local / "student.json").is_file():
+        from openso101.rl.student import RLStudentPolicy
+
+        return RLStudentPolicy(local.resolve(), device or "cpu")
     ckpt_dir = _resolve_checkpoint_dir(path)
 
     # Importing `lerobot.policies` triggers the @register_subclass calls in

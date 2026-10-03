@@ -1173,6 +1173,14 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_distill.add_argument("--headless", action="store_true")
     p_distill.set_defaults(func=_cmd_distill)
 
+    p_student_eval = sub.add_parser("student-eval", help="独立评估双相机与任务目标 student")
+    p_student_eval.add_argument("--student", required=True)
+    p_student_eval.add_argument("--num-envs", dest="num_envs", type=int, default=16)
+    p_student_eval.add_argument("--n-episodes", dest="n_episodes", type=int, default=100)
+    p_student_eval.add_argument("--seed", type=int, default=10042)
+    p_student_eval.add_argument("--headless", action="store_true")
+    p_student_eval.set_defaults(func=_cmd_student_eval)
+
     p_train = sub.add_parser("train", help="Train an RL policy")
     p_train.add_argument("--task", required=True, help="Gym ID")
     p_train.add_argument("--task-profile", choices=("default", "grasp_v2", "grasp_v3"), help="训练使用的任务配置版本")
@@ -1332,6 +1340,12 @@ def _cmd_distill(args):
     from openso101.rl.execution import distill
 
     return distill(args)
+
+
+def _cmd_student_eval(args):
+    from openso101.rl.execution import evaluate_student
+
+    return evaluate_student(args)
 
 
 def _cmd_campaign(args):

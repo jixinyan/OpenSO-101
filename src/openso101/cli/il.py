@@ -641,6 +641,7 @@ def _tensor_to_numpy(value):
 
 _REPLAY_COMMAND_FIELDS = (
     "stage", "goal_pos_b", "goal_pos_w", "cube_spawn_xy_b", "placement_hold_seconds",
+    "pose_command_b",
 )
 
 
@@ -660,10 +661,16 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
         for name in ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold"):
             if hasattr(unwrapped_env, name):
                 sim_state[name.removeprefix("_")] = _tensor_to_numpy(getattr(unwrapped_env, name)[0])
+        from openso101.rl.student import student_goal
+
+        sim_state["task_goal_root"] = _tensor_to_numpy(student_goal(unwrapped_env)[0])
         return sim_state
     if "object" in scene.rigid_objects:
         sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
     if "object_pose" in unwrapped_env.command_manager.active_terms:
+        from openso101.rl.student import student_goal
+
+        sim_state["task_goal_root"] = _tensor_to_numpy(student_goal(unwrapped_env)[0])
         command = unwrapped_env.command_manager.get_term("object_pose")
         for field in _REPLAY_COMMAND_FIELDS:
             if hasattr(command, field):
@@ -2038,6 +2045,8 @@ def _cmd_play(args: argparse.Namespace) -> int:
         unwrapped_env = env.unwrapped
 
         policy = _load_lerobot_policy(args.policy_path, device=env.unwrapped.device)
+        if "control_dt" in getattr(policy, "metadata", {}) and abs(policy.metadata["control_dt"] - env.unwrapped.step_dt) > 1e-6:
+            raise ValueError("student 控制周期与当前环境不一致，请使用 rl student-eval")
         print(f"[INFO]: Loaded LeRobot policy from {args.policy_path}.")
         if hasattr(policy, "reset"):
             policy.reset()
@@ -2055,6 +2064,10 @@ def _cmd_play(args: argparse.Namespace) -> int:
         while simulation_app.is_running():
             with torch.inference_mode():
                 obs = _build_il_policy_observation(unwrapped_env, scene)
+                if getattr(policy, "metadata", {}).get("goal_input") == "robot_root_xyz_m":
+                    from openso101.rl.student import student_goal
+
+                    obs["observation.goal"] = student_goal(unwrapped_env)[:1]
                 # Move obs to the policy's device so ACT's internal
                 # latent_sample (which lands on batch[OBS_STATE].device)
                 # stays consistent with the model weights.
@@ -2117,13 +2130,7 @@ def _load_lerobot_policy(checkpoint_path: str, *, device):
     through `openso101.il.policies.load_policy` so behaviour stays
     identical between the two contexts.
     """
-    try:
-        from openso101.il.policies import load_policy
-    except ImportError as exc:
-        raise RuntimeError(
-            "LeRobot is required to load IL policies. Install it via "
-            "`bash scripts/install.sh` or `pip install \"lerobot[feetech]==0.4.0\"`."
-        ) from exc
+    from openso101.il.policies import load_policy
 
     device_str = str(device) if device is not None else None
     return load_policy(checkpoint_path, device=device_str)
@@ -2294,6 +2301,8 @@ def _cmd_il_eval(args: argparse.Namespace) -> int:
 
         # Reuse _cmd_play's exact policy load + processor application path.
         policy = _load_lerobot_policy(args.policy_path, device=policy_device)
+        if "control_dt" in getattr(policy, "metadata", {}) and abs(policy.metadata["control_dt"] - env.unwrapped.step_dt) > 1e-6:
+            raise ValueError("student 控制周期与当前环境不一致，请使用 rl student-eval")
         print(f"[INFO]: Loaded LeRobot policy from {args.policy_path}.")
         if hasattr(policy, "reset"):
             policy.reset()
@@ -2323,6 +2332,10 @@ def _cmd_il_eval(args: argparse.Namespace) -> int:
         while simulation_app.is_running() and episodes_done < n_episodes:
             with torch.inference_mode():
                 obs = _build_il_policy_observation_batched(scene)
+                if getattr(policy, "metadata", {}).get("goal_input") == "robot_root_xyz_m":
+                    from openso101.rl.student import student_goal
+
+                    obs["observation.goal"] = student_goal(env.unwrapped)
                 obs = {
                     k: v.to(policy_device) if hasattr(v, "to") else v
                     for k, v in obs.items()

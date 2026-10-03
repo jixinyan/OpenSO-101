@@ -26,6 +26,8 @@ def validate(args):
     commands = []
     with h5py.File(episode, "r") as recording:
         metadata = policy.metadata
+        if not np.isclose(1 / recording.attrs["fps"], metadata["control_dt"], rtol=0, atol=1e-6):
+            raise ValueError("录制控制周期与 student 不一致")
         if recording.attrs["env_id"] != metadata["task_id"]:
             raise ValueError("录制任务与 student 任务不一致")
         if recording.attrs.get("scene_sha256") != metadata.get("scene_sha256"):
@@ -37,6 +39,9 @@ def validate(args):
             end = min(start + args.batch_size, frames)
             qpos = torch.as_tensor(recording["observations/qpos"][start:end], device=args.device, dtype=torch.float32)
             observation = {"observation.state": batched_action_to_motor_units(qpos)}
+            if policy.model.goal_dim:
+                observation["observation.goal"] = torch.as_tensor(recording["sim/task_goal_root"][start:end],
+                                                                    device=args.device, dtype=torch.float32)
             for name in ("wrist_camera", "overhead_camera"):
                 images = torch.as_tensor(recording[f"observations/images/{name}"][start:end], device=args.device)
                 observation[f"observation.images.{name}"] = images.permute(0, 3, 1, 2).float() / 255.

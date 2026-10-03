@@ -43,12 +43,14 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "scene_success",
     "scene_program_phase",
     "scene_program_hold",
+    "task_goal_root",
     "object_root_state",
     "command_stage",
     "command_goal_pos_b",
     "command_goal_pos_w",
     "command_cube_spawn_xy_b",
     "command_placement_hold_seconds",
+    "command_pose_command_b",
 )
 
 

@@ -28,6 +28,7 @@ throughout `openso101.cli.*`.
 from __future__ import annotations
 
 import argparse
+import json
 from contextlib import ExitStack
 import time
 from pathlib import Path
@@ -72,6 +73,11 @@ def deploy(args: argparse.Namespace) -> int:
         print("[INFO]: 停止文件存在，部署已终止。")
         return 0
     policy = _load_lerobot_policy(args.policy_path, device=args.device)
+    goal_file = Path(args.goal_file).expanduser().resolve() if getattr(args, "goal_file", None) else None
+    if getattr(policy, "metadata", {}).get("goal_input") == "robot_root_xyz_m":
+        if goal_file is None:
+            raise ValueError("student 部署需要 --goal-file 指定当前任务目标")
+        _read_student_goal(goal_file)
     if hasattr(policy, "metadata") and "control_dt" in policy.metadata:
         if not np.isclose(1.0 / args.fps, policy.metadata["control_dt"], atol=1e-6):
             raise ValueError("部署 fps 必须与 student 训练控制频率一致")
@@ -143,6 +149,10 @@ def deploy(args: argparse.Namespace) -> int:
                 break
 
             obs = _build_real_observation(follower, cameras)
+            if goal_file is not None:
+                import torch
+
+                obs["observation.goal"] = torch.as_tensor(_read_student_goal(goal_file), dtype=torch.float32).unsqueeze(0)
             # Move obs to the policy device, then apply the preprocessor
             # (normalization) BEFORE select_action — identical to il play.
             obs = {
@@ -387,6 +397,13 @@ def _clamp_motor_units(action: np.ndarray) -> np.ndarray:
         lo, hi = _MOTOR_UNIT_CLAMP[key]
         out[i] = float(min(max(out[i], lo), hi))
     return out
+
+
+def _read_student_goal(path: Path):
+    value = np.asarray(json.loads(path.read_text()), dtype=np.float32)
+    if value.shape != (3,) or not np.isfinite(value).all():
+        raise ValueError("student 目标文件必须包含三个有限数值，单位为米")
+    return value
 
 
 def _build_real_observation(follower, cameras: Mapping[str, Any]) -> dict:

@@ -3,6 +3,7 @@
 
 import copy
 import json
+import shutil
 from pathlib import Path
 
 import torch
@@ -17,7 +18,7 @@ from openso101.robots.so101.constants import SO101_SIM_JOINT_NAMES
 from openso101.teleop.so101_mapping import batched_action_to_motor_units
 
 from .config import CheckpointMeta, digest
-from .student import VisionStudent, student_features
+from .student import VisionStudent, student_features, student_goal
 
 
 def camera_proprio_observation(env):
@@ -26,7 +27,7 @@ def camera_proprio_observation(env):
     proprio = batched_action_to_motor_units(robot.data.joint_pos[:, ids])
     images = [env.scene[name].data.output["rgb"][:, :, :, :3].permute(0, 3, 1, 2).float() / 255.
               for name in ("wrist_camera", "overhead_camera")]
-    return student_features(proprio, *images)
+    return student_features(proprio, *images, student_goal(env))
 
 
 @configclass
@@ -41,9 +42,9 @@ class StudentObservationsCfg(ObservationGroupCfg):
 class VisionStudentTeacher(StudentTeacher):
     def __init__(self, obs, obs_groups, num_actions, bounded_actions=False, **kwargs):
         # 构造过程中使用本体观测确定 student 输入，图像由 VisionStudent 编码。
-        proprio_obs = {**obs, "student": obs["student"][:, :6]}
+        proprio_obs = {**obs, "student": obs["student"][:, :9]}
         super().__init__(proprio_obs, obs_groups, num_actions, student_obs_normalization=False, **kwargs)
-        self.student = VisionStudent(num_actions)
+        self.student = VisionStudent(num_actions, goal_dim=3)
         self.bounded_actions = bounded_actions
         self.student.bounded_actions = bounded_actions
         self.teacher.requires_grad_(False)
@@ -107,7 +108,7 @@ def train_vision_student(env, teacher_folder: Path, output: Path, iterations: in
         raise ValueError("视觉蒸馏需要 rsl_rl PPO teacher")
     policy_cfg = json.loads((teacher_folder / "backend.json").read_text())["policy"]
     cfg = {
-        "num_steps_per_env": rollout_steps, "save_interval": iterations, "logger": "tensorboard",
+        "num_steps_per_env": rollout_steps, "save_interval": 1, "logger": "tensorboard",
         "obs_groups": {"policy": ["student"], "teacher": ["policy"]},
         "policy": {"teacher_hidden_dims": policy_cfg["actor_hidden_dims"],
                    "bounded_actions": meta.config.action_distribution == "tanh_gaussian",
@@ -117,16 +118,27 @@ def train_vision_student(env, teacher_folder: Path, output: Path, iterations: in
                       "max_grad_norm": 1., "loss_type": "mse"},
     }
     (output / "distillation.json").write_text(json.dumps(copy.deepcopy(cfg), indent=2))
+    teacher_archive = output / "teacher"
+    teacher_archive.mkdir()
+    for name in (*meta.files, "checkpoint.json"):
+        destination = teacher_archive / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(teacher_folder / name, destination)
+    CheckpointMeta.read(teacher_archive)
     runner = VisionDistillationRunner(RslRlVecEnvWrapper(env), cfg, log_dir=str(output), device=env.unwrapped.device)
     runner.load(str(teacher_folder / meta.checkpoint), load_optimizer=False)
     runner.learn(iterations)
     runner.save(str(output / "distillation.pt"))
     torch.save(runner.alg.policy.student.state_dict(), output / "student.pt")
     (output / "student.json").write_text(json.dumps({
-        "schema_version": 1, "task_id": meta.task_id, "task_profile": meta.task_profile,
+        "schema_version": 2, "task_id": meta.task_id, "task_profile": meta.task_profile,
         "bounded_actions": meta.config.action_distribution == "tanh_gaussian",
         "teacher_sha256": meta.files[meta.checkpoint],
         "scene_sha256": meta.scene_sha256, "control_dt": env.unwrapped.step_dt,
-        "observation_format": "motor_positions_and_two_rgb_cameras", "image_size": [64, 64],
-        "action_mapping": action_mapping(env.unwrapped), "files": {"student.pt": digest(output / "student.pt")},
+        "observation_format": "motor_positions_goal_and_two_rgb_cameras", "image_size": [64, 64],
+        "goal_input": "robot_root_xyz_m", "teacher_metadata_sha256": digest(teacher_archive / "checkpoint.json"),
+        "action_mapping": action_mapping(env.unwrapped),
+        "source_sha256": {name: digest(Path(__file__).with_name(name)) for name in
+                          ("student.py", "vision_distillation.py", "execution.py")},
+        "files": {name: digest(output / name) for name in ("student.pt", "distillation.pt", "distillation.json")},
     }, indent=2))
