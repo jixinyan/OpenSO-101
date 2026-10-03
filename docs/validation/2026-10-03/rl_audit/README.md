@@ -27,6 +27,8 @@ checkpoint SHA256 为 `fa287ff2614db8f93e9867ab9b491a799070a46175ec5120582a3adb4
 
 `training_scalars_32b58c6.json` 保存实际 TensorBoard 数值与已有 checkpoint 的参数有限性检查。图表直接使用原始数值，并通过 SHA256 关联文件。
 
+`baseline_100_iterations.json` 保存 `8965174` 的 100 iterations 独立评估。训练完成 19,660,800 transitions，评估 seed 为 `10042`，100 episodes 中接近物体 96 次、双侧接触 28 次、持物抬升 1 次、任务成功 0 次。对应模型 SHA256 为 `4a9544b269e9b3cc37434d17b555c18ff0e7bd643c8a671786accc82d98cf89a`。
+
 ![训练记录](figures/training_records.png)
 
 ## 模型服务
@@ -44,3 +46,22 @@ CPU 检查为 44 项通过，四项使用替代服务或对象的测试未执行
 资产 embedding 的独立检查使用 Objaverse Apple `4c19ae47dbe8468285ee53ff487fe51a`，资产 SHA256 为 `709a61d29096e6d68730b9debc30c6816caf9b31315c1186017bd121814557f2`。模型为 `sentence-transformers/all-MiniLM-L6-v2`，固定 commit `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`，384 维 normalized embedding；`red apple` 的 cosine similarity 为 `0.787699`。当前检查覆盖单个实际资产。
 
 ![任务阶段与接触记录](figures/scene_program.png)
+
+## 实际索引资产的完整场景
+
+`indexed_scene/job.json` 记录真实模型的两次请求，以及实际 Apple 资产的检索、选择和场景生成。查询为 `apple fruit`，cosine similarity 为 `0.709894`；使用资产 `4c19ae47dbe8468285ee53ff487fe51a`，文件 SHA256 为 `709a61d29096e6d68730b9debc30c6816caf9b31315c1186017bd121814557f2`。场景 SHA256 为 `5e6e98ed5a21caaac57e87e3c4c97a9d4108d65581e581c0fcecbdbde7a1239e`。完整来源、TaskIntent、TaskProgram 和资产保存在版本化 bundle。
+
+`indexed_scene/runtime.json` 记录该 bundle 的真实 Isaac 运行，包含四个环境、100 次 reset、200 个控制步骤、每台相机 800 帧和 800 次 CPU 与 Isaac TaskProgram 比较。最大任务阶段为 0，双侧接触次数为 0，任务成功尚未通过。
+
+## 抓取控制与接触检查
+
+`grasp_control/report.json` 来自 `056fd18` 的原生实际 reset。四环境各执行 250 控制步骤，成功率为 `0/4`，最高物理采样速度为 `1.497725 rad/s`。逐步骤记录包含真实关节位置、位置目标、重力保持力矩、夹爪接触力、物体位置和任务阶段。
+
+`grasp_control/geometry_contacts.json` 使用相同实际姿态、官方 MJCF、SHA256 校验的 CoACD gripper 与实际桌面几何进行接触检查。一个规划姿态需要 `0.795480 N·m` 的保持力矩，measured-reference 控制的静止力矩范围为 `0.712 N·m`。四个倾斜抓取姿态均与桌面发生交叉。MuJoCo 几何结果单独记录验证范围，原生任务成功尚未通过。
+
+![实际抓取控制检查](figures/grasp_control.png)
+![100 次独立评估](figures/baseline_progress.png)
+
+## 视觉 student 的实际数据
+
+`student/recorded_inference.json` 使用实际完成蒸馏的视觉 student，模型 SHA256 为 `6d1df1cd1feaf96ad7da8ac41c8e17f591b7d84e141c92195f4c3b854050ba85`。原生独立评估完成 `0/8`，并采集第一条完整 250 帧 HDF5。逐帧推理读取实际双相机、关节和任务目标，生成有限且形状正确的 motor commands；控制周期为 `0.02 秒`。episode SHA256 为 `9088da28fcc173fef846c137c7e495e00e315cd11fa0dd3d609c810fd1bd2dbd`。真机运行尚未执行。

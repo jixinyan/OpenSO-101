@@ -1,0 +1,28 @@
+{
+  "status": "student_recorded_observation_inference_verified",
+  "frames": 250,
+  "task": "OpenSO101-Lift-v0",
+  "scene_sha256": null,
+  "student_sha256": "6d1df1cd1feaf96ad7da8ac41c8e17f591b7d84e141c92195f4c3b854050ba85",
+  "episode_sha256": "9088da28fcc173fef846c137c7e495e00e315cd11fa0dd3d609c810fd1bd2dbd",
+  "control_dt": 0.02,
+  "required_fps": 50.0,
+  "motor_minimum": [
+    -4.261817932128906,
+    -0.06137847900390625,
+    -2.3720703125,
+    84.81639099121094,
+    -12.996238708496094,
+    1.5211029052734375
+  ],
+  "motor_maximum": [
+    -0.052001953125,
+    25.30132293701172,
+    8.933120727539062,
+    89.99998474121094,
+    -1.83251953125,
+    1.5211029052734375
+  ],
+  "commands_sha256": "9414a4a603b4edcc6215264b1a76602d3f54f0c9dbd8c744ba3562ac705995e7",
+  "hardware_run_verified": false
+}

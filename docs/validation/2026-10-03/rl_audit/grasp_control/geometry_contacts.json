@@ -1,0 +1,1094 @@
+{
+  "status": "geometry_contacts_inspected",
+  "environments": [
+    {
+      "environment": 0,
+      "initial": {
+        "holding_effort_nm": [
+          1.3021908001229513e-15,
+          -0.44625256389202433,
+          -0.36032313712882424,
+          -0.024708416304824676,
+          -2.604619826358139e-05,
+          0.0028124395129573397
+        ],
+        "contacts": []
+      },
+      "final": {
+        "holding_effort_nm": [
+          1.4058811666785032e-15,
+          -0.6650964886878035,
+          -0.39482428990542756,
+          -0.08820577816658559,
+          8.011389470793983e-06,
+          0.003538249552332451
+        ],
+        "contacts": []
+      },
+      "planned_waypoints": [
+        {
+          "phase": "approach",
+          "holding_effort_nm": [
+            1.34143890438109e-15,
+            -0.631953775622128,
+            -0.4069811689197026,
+            -0.08446411639488319,
+            -8.360608495545908e-05,
+            0.003534308876914121
+          ],
+          "contacts": []
+        },
+        {
+          "phase": "grasp",
+          "holding_effort_nm": [
+            1.407898501106128e-15,
+            -0.670359532285796,
+            -0.36586576261232323,
+            -0.07838431937928353,
+            5.866340579087706e-06,
+            0.0035101806224497704
+          ],
+          "contacts": [
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.00710427443184742
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.007102799748260353
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.007099073029063339
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.00709822144818157
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007098183147567903
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007099347359158847
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_121"
+              ],
+              "penetration_m": 0.0024763817838789684
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_121"
+              ],
+              "penetration_m": 0.00247444507879762
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_142"
+              ],
+              "penetration_m": 0.0023997778456439425
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_142"
+              ],
+              "penetration_m": 0.00234887706510966
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0006982885554222343
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0005639051305402765
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.00012074457640730285
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.00022179897384497216
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.00022178721071751048
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_020"
+              ],
+              "penetration_m": 0.004219463342676716
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_036"
+              ],
+              "penetration_m": 0.0011039395208315324
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_073"
+              ],
+              "penetration_m": 0.003049085101477722
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_074"
+              ],
+              "penetration_m": 0.004344615330739852
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_121"
+              ],
+              "penetration_m": 0.0010547593197837392
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_142"
+              ],
+              "penetration_m": 0.001308665395961539
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.002460597559880276
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0023309330853130555
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_165"
+              ],
+              "penetration_m": 0.0010004614069711512
+            }
+          ]
+        },
+        {
+          "phase": "lift",
+          "holding_effort_nm": [
+            1.1706546181026765e-15,
+            -0.5396289229230015,
+            -0.44265932580173745,
+            -0.10971041318530408,
+            -0.0012489921900133887,
+            0.002763583673870463
+          ],
+          "contacts": []
+        }
+      ]
+    },
+    {
+      "environment": 1,
+      "initial": {
+        "holding_effort_nm": [
+          1.3021908001229513e-15,
+          -0.44625256389202433,
+          -0.36032313712882424,
+          -0.024708416304824676,
+          -2.604619826358139e-05,
+          0.0028124395129573397
+        ],
+        "contacts": []
+      },
+      "final": {
+        "holding_effort_nm": [
+          1.6572818039852786e-15,
+          -0.618796658408557,
+          -0.35120653158688797,
+          -0.03477284798304539,
+          0.0004809223784831935,
+          0.0029425336599852824
+        ],
+        "contacts": []
+      },
+      "planned_waypoints": [
+        {
+          "phase": "approach",
+          "holding_effort_nm": [
+            1.6217305325989274e-15,
+            -0.6019825256509674,
+            -0.3905139898023806,
+            -0.05567315952703111,
+            -0.00012336695857130976,
+            0.0033032085649898728
+          ],
+          "contacts": []
+        },
+        {
+          "phase": "grasp",
+          "holding_effort_nm": [
+            1.7112122995888518e-15,
+            -0.6417994751904248,
+            -0.36039216622430476,
+            -0.04794460971338568,
+            0.0006949482748442344,
+            0.003123017109598194
+          ],
+          "contacts": [
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.002761287590128513
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0027635804036443418
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0027629370468594365
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.0027270777469883926
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.0027262626801341262
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.004423292437750624
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.005474009533522346
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.0054736785832092336
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_020"
+              ],
+              "penetration_m": 0.0011338187482539074
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_074"
+              ],
+              "penetration_m": 0.001993358697156288
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0035791261962354356
+            }
+          ]
+        },
+        {
+          "phase": "lift",
+          "holding_effort_nm": [
+            1.2410801431765157e-15,
+            -0.42635902341037946,
+            -0.44035110744011974,
+            -0.10455603857668022,
+            -0.0002123219484559446,
+            0.0030335801097372203
+          ],
+          "contacts": []
+        }
+      ]
+    },
+    {
+      "environment": 2,
+      "initial": {
+        "holding_effort_nm": [
+          1.3021908001229513e-15,
+          -0.44625256389202433,
+          -0.36032313712882424,
+          -0.024708416304824676,
+          -2.604619826358139e-05,
+          0.0028124395129573397
+        ],
+        "contacts": []
+      },
+      "final": {
+        "holding_effort_nm": [
+          1.809916892331834e-15,
+          -0.7084794737003746,
+          -0.3344459713175983,
+          0.0013554756178506544,
+          4.191694101774535e-06,
+          0.0022592721380360267
+        ],
+        "contacts": []
+      },
+      "planned_waypoints": [
+        {
+          "phase": "approach",
+          "holding_effort_nm": [
+            1.772218874212713e-15,
+            -0.7954800154173625,
+            -0.42027477097466764,
+            -0.08567308871867174,
+            -6.0424619135589046e-05,
+            0.0035366316785178827
+          ],
+          "contacts": []
+        },
+        {
+          "phase": "grasp",
+          "holding_effort_nm": [
+            1.7830620583421952e-15,
+            -0.8012918906625488,
+            -0.4094009034299474,
+            -0.08567259437040312,
+            -6.895183606140873e-05,
+            0.0035366864917052293
+          ],
+          "contacts": [
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.007780524177774931
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.007779965333420548
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0077850864788494775
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007780397417161088
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007779267904727941
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007767888022321975
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.007772944620081924
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_036"
+              ],
+              "penetration_m": 0.0009741200028474534
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_036"
+              ],
+              "penetration_m": 0.0009118316587998949
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_121"
+              ],
+              "penetration_m": 0.00391325140324307
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_121"
+              ],
+              "penetration_m": 0.003907980613853879
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_142"
+              ],
+              "penetration_m": 0.0038841360548251685
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_142"
+              ],
+              "penetration_m": 0.003864881286461109
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0019099411486795427
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0018592896065628903
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_020"
+              ],
+              "penetration_m": 0.004815571356338024
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_036"
+              ],
+              "penetration_m": 0.0016154584369370225
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_073"
+              ],
+              "penetration_m": 0.002698775823224586
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_074"
+              ],
+              "penetration_m": 0.002824946107416071
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_074"
+              ],
+              "penetration_m": 0.002778141536392352
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_143"
+              ],
+              "penetration_m": 0.0006124921460789193
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0010750009544133118
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0010261377453227166
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_165"
+              ],
+              "penetration_m": 0.001502835434809634
+            }
+          ]
+        },
+        {
+          "phase": "lift",
+          "holding_effort_nm": [
+            1.6491917471556147e-15,
+            -0.7274903899034073,
+            -0.4310456500709002,
+            -0.10484852610324277,
+            0.00030103297446781386,
+            0.002978695069249228
+          ],
+          "contacts": []
+        }
+      ]
+    },
+    {
+      "environment": 3,
+      "initial": {
+        "holding_effort_nm": [
+          1.3021908001229513e-15,
+          -0.44625256389202433,
+          -0.36032313712882424,
+          -0.024708416304824676,
+          -2.604619826358139e-05,
+          0.0028124395129573397
+        ],
+        "contacts": []
+      },
+      "final": {
+        "holding_effort_nm": [
+          1.3475293626060037e-15,
+          -0.5614219160920135,
+          -0.3316817635301361,
+          -0.02040667651107625,
+          2.665222360110958e-06,
+          0.0027288334398887296
+        ],
+        "contacts": []
+      },
+      "planned_waypoints": [
+        {
+          "phase": "approach",
+          "holding_effort_nm": [
+            1.287896692014575e-15,
+            -0.5258478693768742,
+            -0.3773251375522703,
+            -0.04267648839632021,
+            7.414733318571415e-06,
+            0.0031212307465352737
+          ],
+          "contacts": []
+        },
+        {
+          "phase": "grasp",
+          "holding_effort_nm": [
+            1.3898413581492458e-15,
+            -0.5792989052119313,
+            -0.3414155576932254,
+            -0.031035115987459783,
+            4.676081951164341e-06,
+            0.0029280607797173702
+          ],
+          "contacts": [
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0008044040448398695
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0008038047171870615
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0008083595714887745
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.0008034071354462574
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.0007984853907922682
+            },
+            {
+              "bodies": [
+                "world",
+                "gripper"
+              ],
+              "geometries": [
+                "table",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.000803745907275652
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_017"
+              ],
+              "penetration_m": 0.0023851094872621224
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.004142490180251368
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.004125294983927025
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_018"
+              ],
+              "penetration_m": 0.004140817790366957
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_020"
+              ],
+              "penetration_m": 0.0007473430058110113
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_074"
+              ],
+              "penetration_m": 0.0013026548171621547
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0022395239417511426
+            },
+            {
+              "bodies": [
+                "object",
+                "gripper"
+              ],
+              "geometries": [
+                "object",
+                "collision_wrist_roll_follower_so101_v1_157"
+              ],
+              "penetration_m": 0.0022390927556130424
+            }
+          ]
+        },
+        {
+          "phase": "lift",
+          "holding_effort_nm": [
+            9.349288526250926e-16,
+            -0.33795727912671786,
+            -0.4252141205466657,
+            -0.0955696065429137,
+            0.000571039523661322,
+            0.0025438826939742677
+          ],
+          "contacts": []
+        }
+      ]
+    }
+  ],
+  "native_trace_sha256": "2ee288b57dcfcd7594b6ebcb503fce6444daeb062116462b5dbf6c98962b6c4a",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841",
+  "table_geometry": {
+    "type": "box",
+    "position_root": [
+      -4.713462199479322e-05,
+      -0.3439000071161839,
+      -0.4729185527861117
+    ],
+    "quaternion_root": [
+      0.9999999886031646,
+      0.0,
+      0.0,
+      0.0001509757288016497
+    ],
+    "half_size": [
+      0.455,
+      0.64,
+      0.5
+    ],
+    "top_height_root": 0.027081447213888166,
+    "collider_paths": [
+      "/World/envs/env_0/Table/Collisions/Cube"
+    ],
+    "approximation": "convexHull",
+    "source": "native_USD_collision_mesh"
+  },
+  "source_sha256": "d407043bab448b0fce2e398ad9c63fce1c0c884609adf9f3b74499328516ee4d",
+  "native_contact_validation": false
+}

@@ -49,7 +49,7 @@ openso101 rl train --task OpenSO101-CustomScene-v0 --backend sb3 --algo ppo \
 
 继续训练读取完整训练目录，检查任务、算法、backend、文件内容及场景版本。输出目录必须为新目录。评估直接读取 `checkpoint.json` 选择正确的加载方式。
 
-rsl_rl PPO 使用 log 参数表示探索标准差，并每 50 个 iteration 保存中间模型。继续训练沿用原模型的 policy 配置，保持网络结构和观测归一化设置。
+rsl_rl PPO 使用 log 参数表示探索标准差，每个 iteration 保存中间模型。`CheckedPPO` 检查观测、动作、分布、梯度和参数的有限性，并保存实际更新记录。继续训练沿用原模型的 policy 配置，保持网络结构和观测归一化设置。
 
 评估按照环境分配 episode 数量，完整完成请求的数量后生成报告。Lift 和 PickPlace 报告包含接近物体、两侧夹爪接触、物体高度、持物抬升及 PickPlace 阶段统计；这些诊断在控制步骤开始前采样。任务成功率读取实际 success termination，报告同时保存模型 SHA256、训练和评估代码版本、训练 transitions、运行设备及 Torch 版本。
 
@@ -66,7 +66,32 @@ openso101 rl distill --teacher-run outputs/apple_ppo --output outputs/apple_stud
   --num-envs 16 --iterations 1500 --rollout-steps 16 --headless
 ```
 
-teacher 使用 rsl_rl PPO 的状态观测。student 输入 wrist / overhead RGB 与六个关节的本体观测，图像统一处理为 64 × 64。导出包含 `student.pt`、`student.json`、模型 hash、关节动作转换和控制周期。现有 `sim2real deploy --policy-path` 可以读取该目录；部署频率需要与 `student.json` 的 `control_dt` 一致。
+teacher 使用 rsl_rl PPO 的状态观测。student 输入 wrist / overhead RGB、六个关节的本体观测与任务目标的 robot root frame 米制 xyz，图像统一处理为 64 × 64。导出包含 `student.pt`、`student.json`、模型 SHA256、关节动作转换、控制周期和经过文件校验的 teacher 副本。每个蒸馏 iteration 保存中间模型。
+
+```bash
+openso101 rl student-eval --student outputs/apple_student \
+  --num-envs 16 --n-episodes 100 --seed 10042 --headless \
+  --recording-output outputs/apple_student_recording
+openso101 sim2real validate --policy-path outputs/apple_student \
+  --episode outputs/apple_student_recording/episodes/episode_000000.hdf5 \
+  --output outputs/apple_student_inference
+```
+
+独立评估使用 teacher 对应的任务配置和实际相机，保存每个 episode 的实际 termination 与模型来源。采集保存首个环境的一条完整 episode，包含双相机、实际关节目标、物体状态和当前任务目标。离线验证读取全部帧，并通过部署所用的动作转换生成 motor commands。
+
+```bash
+openso101 rl validate-loop --teacher-run outputs/teacher_snapshot \
+  --output outputs/policy_validation_loop \
+  --robot-model outputs/so-arm100/Simulation/SO101/so101_old_calib.xml \
+  --collision-bundle outputs/rl_progress/gripper_collision \
+  --mujoco-python /path/to/mujoco/environment/bin/python
+```
+
+闭环入口保存经过 SHA256 校验的 teacher 副本，依次执行 teacher 独立评估、实际 Isaac 策略导出、MuJoCo 任务评估、双相机 student 蒸馏、student 独立评估和完整采集文件推理。三个任务评估各包含 100 episodes，均要求至少成功 90 次。导出使用另一个独立 seed 的 100 个实际初始环境；MuJoCo 使用源环境的实际物理参数、CoACD gripper 和速度、力矩受限的 implicit PD。
+
+每个步骤保存命令、日志、退出状态、实际成功次数和文件 SHA256。任务成功次数不足时终止后续步骤并保留当前记录。`single_policy_loop_verified` 只记录单个策略的完整闭环任务结果；三个 seed 的训练验收与真机验收仍各自记录。
+
+`sim2real deploy --policy-path` 可以读取 student 目录；部署频率需要与 `student.json` 的 `control_dt` 一致。带有目标输入的 student 通过 `--goal-file` 读取当前目标 JSON。目标文件为包含三个有限数值的 JSON 数组，使用 robot root frame 米制 xyz。真机验收根据用户要求暂缓。
 
 ## 已执行检查
 
@@ -77,4 +102,6 @@ teacher 使用 rsl_rl PPO 的状态观测。student 输入 wrist / overhead RGB 
 - 双相机视觉蒸馏，导出模型后读取实际录制的 12 帧图像执行推理。
 - PickPlace 的四个并行环境、100 次 reset 与 200 个控制步骤。
 
-短程训练用于验证程序流程，评估成功率为 0。收敛训练、多随机种子成功率、真机部署与任务性能尚未验收。Agent 编排结构与实际模型服务连接独立于本文中的训练接口。
+2026-10-03 的视觉 student 使用实际 `8965174` teacher，完成两次蒸馏 iteration、128 个真实 transitions；独立任务评估为 `0/8`。原生评估采集的 250 帧双相机 HDF5 通过完整文件检查和全部帧的模型推理、动作转换检查，控制频率为 50 Hz。报告位于 [recorded_inference.json](../validation/2026-10-03/rl_audit/student/recorded_inference.json)。
+
+短程训练验证程序流程。收敛训练、多随机种子成功率、成功 student 和真机部署仍需要各自的任务成功记录。

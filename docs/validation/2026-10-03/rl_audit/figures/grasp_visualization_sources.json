@@ -1,0 +1,10 @@
+{
+  "native_trace_sha256": "2ee288b57dcfcd7594b6ebcb503fce6444daeb062116462b5dbf6c98962b6c4a",
+  "geometry_report_sha256": "9304c41f4faf6af8b790e931ae52c6b5bf059950a1f8b311256940af7e0cd995",
+  "evaluation_sha256": "6e60dc4e2a8f601bf7bb817417fb06458c08cf39612ed1f8db55b9b11046c2e6",
+  "source_sha256": "29dbca308bc0800d3fd682d8e7ec570c0f1653acb8afa26a93b0ae6dc1b437aa",
+  "figures": {
+    "grasp_control.png": "c2c77c71049ac0c3050e8470403b87c2efa77bdc423661c207aeb8f11362a2a3",
+    "baseline_progress.png": "cee6883c9195e5d9aadc2de6ba8d261a2e4cca4800051f4bc26ba193c269535b"
+  }
+}

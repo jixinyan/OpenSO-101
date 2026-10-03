@@ -1,0 +1,96 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v3",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        15.22480583190918,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    },
+    {
+      "environment": 1,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    },
+    {
+      "environment": 2,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 0,
+      "maximum_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    },
+    {
+      "environment": 3,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.04302138835191727
+    }
+  ],
+  "successes": 0,
+  "episodes": 4,
+  "controller": "scripted_IK_measured_reference_delta",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.4977253675460815,
+  "states_sha256": "33a039c3b76a6a8bf212203ae937d3dce8779ceaaeb09e0e6ab4a3cbd78895a8",
+  "plan_sha256": "9d679c2f9fd3efb9e563b079abca20d329f8b5a07b680068e6d4868c1d813b6f",
+  "trace_sha256": "2ee288b57dcfcd7594b6ebcb503fce6444daeb062116462b5dbf6c98962b6c4a",
+  "source_sha256": "ff61d7e17228a518b74b747e4db81d71a215c645e9628b17a7eecfbf7c0d0ec8",
+  "profile_sha256": "08b2cd95180e96c1860a390a3c78aaf07ef138e7e707650b009b558e379cde0d",
+  "rl_policy_success_verified": false,
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.1577679945039563e-06,
+      0.7085682153701782,
+      0.3952180743217468,
+      0.08847779780626297,
+      0.0004955714102834463,
+      0.0035382676869630814
+    ],
+    "measured_reference_stationary_effort_budget_nm": [
+      0.7119999694824218,
+      0.7119999694824218,
+      0.7119999694824218,
+      0.7119999694824218,
+      0.7119999694824218,
+      0.7119999694824218
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 1000
+  }
+}
