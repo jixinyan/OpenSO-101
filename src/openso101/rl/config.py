@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Literal
 
@@ -46,6 +47,12 @@ class TrainCfg(BaseModel):
             raise ValueError("hidden_dims 必须包含正整数")
         if self.action_distribution == "tanh_gaussian" and (self.backend != "rsl_rl" or self.algo != "ppo"):
             raise ValueError("tanh_gaussian 使用 rsl_rl PPO")
+        if self.learning_rate_schedule == "adaptive" and self.backend != "rsl_rl":
+            raise ValueError("adaptive learning rate schedule 使用 rsl_rl backend")
+        if (self.backend == "skrl" or self.algo != "ppo") and not math.exp(-20) <= self.initial_noise_std <= math.exp(2):
+            raise ValueError("当前策略的 initial_noise_std 需要位于 [exp(-20), exp(2)]")
+        if self.action_distribution == "tanh_gaussian" and not math.exp(-5) <= self.initial_noise_std <= math.exp(2):
+            raise ValueError("tanh_gaussian 的 initial_noise_std 需要位于 [exp(-5), exp(2)]")
         if self.learning_starts >= self.replay_size:
             raise ValueError("learning_starts 必须小于 replay_size")
         return self

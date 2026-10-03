@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import math
 from pathlib import Path
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
@@ -9,6 +10,7 @@ from skrl.utils import set_seed
 from skrl.utils.runner.torch import Runner
 
 from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
+from openso101.rl.initialization import record_initial_std
 
 
 def configuration(cfg: TrainCfg, output: Path):
@@ -18,7 +20,7 @@ def configuration(cfg: TrainCfg, output: Path):
         "models": {
             "separate": True,
             "policy": {"class": "GaussianMixin", "clip_actions": True, "clip_log_std": True,
-                       "min_log_std": -20, "max_log_std": 2, "initial_log_std": -0.69,
+                       "min_log_std": -20, "max_log_std": 2, "initial_log_std": math.log(cfg.initial_noise_std),
                        "network": network, "output": "ACTIONS"},
             "value": {"class": "DeterministicMixin", "clip_actions": False, "network": network, "output": "ONE"},
         },
@@ -48,6 +50,7 @@ class Backend:
         runner = Runner(SkrlVecEnvWrapper(env, ml_framework="torch"), config)
         if resume:
             runner.agent.load(str(resume / CheckpointMeta.read(resume).checkpoint))
+        record_initial_std(output, cfg, runner.agent.models["policy"].log_std_parameter.exp(), resumed=resume is not None)
         runner.run()
         runner.agent.save(str(output / "model.pt"))
         return output / "model.pt"

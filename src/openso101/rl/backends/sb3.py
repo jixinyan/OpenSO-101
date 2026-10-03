@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 from pathlib import Path
+import math
 from typing import ClassVar
 
 import torch
@@ -11,6 +12,7 @@ from stable_baselines3 import PPO, SAC
 from stable_baselines3.common.vec_env import VecNormalize
 
 from openso101.rl.config import CheckpointMeta, TrainCfg
+from openso101.rl.initialization import record_initial_std
 
 
 class Backend:
@@ -30,6 +32,7 @@ class Backend:
                       "policy_kwargs": {"net_arch": list(cfg.hidden_dims), "activation_fn": torch.nn.ELU},
                       "tensorboard_log": str(output), "device": env.unwrapped.device}
             if cfg.algo == "ppo":
+                common["policy_kwargs"]["log_std_init"] = math.log(cfg.initial_noise_std)
                 common.update(n_steps=cfg.rollout_steps, batch_size=cfg.batch_size(env.unwrapped.num_envs),
                               n_epochs=cfg.epochs, gae_lambda=cfg.gae_lambda, clip_range=cfg.clip,
                               ent_coef=cfg.entropy_coef, max_grad_norm=cfg.max_grad_norm)
@@ -37,6 +40,20 @@ class Backend:
                 common.update(buffer_size=cfg.replay_size, learning_starts=cfg.learning_starts,
                               batch_size=cfg.replay_batch_size, train_freq=1, gradient_steps=cfg.gradient_steps)
             model = self.algorithms[cfg.algo]("MlpPolicy", wrapped, **common)
+            if cfg.algo != "ppo":
+                # SAC 与 TQC 的 standard deviation 由可训练 Linear 层输出。
+                with torch.no_grad():
+                    model.actor.log_std.weight.zero_()
+                    model.actor.log_std.bias.fill_(math.log(cfg.initial_noise_std))
+        if cfg.algo == "ppo":
+            initial_std = model.policy.log_std.exp()
+        else:
+            observation = wrapped.reset()
+            inputs, _ = model.policy.obs_to_tensor(observation)
+            with torch.no_grad():
+                _, log_std, _ = model.actor.get_action_dist_params(inputs)
+            initial_std = log_std.exp()
+        record_initial_std(output, cfg, initial_std, resumed=resume is not None)
         model.learn(total_timesteps=cfg.iterations * cfg.rollout_steps * env.unwrapped.num_envs,
                     reset_num_timesteps=resume is None)
         model.save(str(output / "model.zip"))

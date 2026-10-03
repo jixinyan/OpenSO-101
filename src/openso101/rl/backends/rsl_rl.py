@@ -8,6 +8,7 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
 from openso101.rl.bounded_policy import runner_class
+from openso101.rl.initialization import record_initial_std
 
 
 def configuration(cfg: TrainCfg, device: str):
@@ -66,6 +67,10 @@ class Backend:
         if resume:
             runner.load(str(resume / CheckpointMeta.read(resume).checkpoint))
             runner.current_learning_iteration += 1
+        std = runner.alg.policy.log_std
+        if cfg.action_distribution == "tanh_gaussian":
+            std = std.clamp(-5., 2.)
+        record_initial_std(output, cfg, std.exp(), resumed=resume is not None)
         from openso101.rl.benchmark import evaluate_snapshot
 
         remaining = cfg.iterations

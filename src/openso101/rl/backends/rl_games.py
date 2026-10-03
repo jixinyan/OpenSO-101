@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import math
 from pathlib import Path
 
 from isaaclab_rl.rl_games import RlGamesGpuEnv, RlGamesVecEnvWrapper
@@ -10,6 +11,7 @@ from rl_games.common.algo_observer import IsaacAlgoObserver
 from rl_games.torch_runner import Runner
 
 from openso101.rl.config import CheckpointMeta, TrainCfg, write_backend_config
+from openso101.rl.initialization import record_initial_std
 
 
 def configuration(cfg: TrainCfg, output: Path, env):
@@ -19,7 +21,7 @@ def configuration(cfg: TrainCfg, output: Path, env):
             "name": "actor_critic", "separate": False,
             "space": {"continuous": {"mu_activation": "None", "sigma_activation": "None",
                                      "mu_init": {"name": "default"},
-                                     "sigma_init": {"name": "const_initializer", "val": -0.69}, "fixed_sigma": True}},
+                                     "sigma_init": {"name": "const_initializer", "val": math.log(cfg.initial_noise_std)}, "fixed_sigma": True}},
             "mlp": {"units": list(cfg.hidden_dims), "activation": "elu", "d2rl": False,
                     "initializer": {"name": "default"}, "regularizer": {"name": None}},
         },
@@ -59,6 +61,7 @@ class Backend:
         if resume:
             agent.restore(str(resume / CheckpointMeta.read(resume).checkpoint))
             agent.max_epochs = agent.epoch_num + cfg.iterations
+        record_initial_std(output, cfg, agent.model.a2c_network.sigma.exp(), resumed=resume is not None)
         agent.train()
         agent.save(str(output / "model"))
         return output / "model.pth"

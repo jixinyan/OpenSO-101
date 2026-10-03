@@ -150,7 +150,8 @@ def train(args):
         checkpoint = get_backend(config.backend).train(env, config, output, resume)
         files = {checkpoint.name: digest(checkpoint), "train.json": digest(output / "train.json")}
         for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json",
-                     "model_best.pt", "best_evaluation.json", "evaluation_history.json", "convergence.json"):
+                     "model_best.pt", "best_evaluation.json", "evaluation_history.json", "convergence.json",
+                     "policy_initialization.json"):
             if (output / name).exists():
                 files[name] = digest(output / name)
         if scene:
