@@ -178,6 +178,10 @@ rollout 保存实际采样的 Gaussian latent，环境使用 Tanh 动作。log p
 
 `gpu_scope/stopping_worker.json` 保存独立停止检查的实际 GPU 4 计算与渲染记录，其 SHA256 由 `training_stop/scoped_worker.json` 关联。44 项 CPU 检查通过，四项使用替代服务或对象的测试未执行；GPU 7 的训练请求在创建 Isaac 和输出目录之前终止。
 
+`gpu_scope/process_migration.json` 保存统一项目目录时的实际进程记录。三个训练 worker 的 PID 保持为 `469959`、`469985`、`469998`，暂停 `1.785364 秒`后使用原进程继续运行；160 个源码与配置文件、三个已有模型的 SHA256 全部保持一致。`gpu_scope/gpu_scope_after_migration.json` 记录迁移后的实际计算与渲染占用，分别为 GPU 3、4、2。
+
+远程 Git 仅登记 `/home/jixin/workspace/code/OpenSO-101-v2` 一个工作目录。全部模型与评估保存在它的 `outputs` 中；`OpenSO-101-v4-scoped-workers` 为运行中进程使用的临时符号链接。`gpu_scope/archive_verification.json` 记录原始未提交源码及 Git 信息的实际归档验证，共 2,322 个普通文件，归档 SHA256 为 `d76946e40c1bdcc1ab9e64f2cf7e0cf40c328195708c60b3ddf60d6f5b1a4c64`。
+
 ## 原生成功示范与模型初始化
 
 `native_position_control/state_action_demonstrations.json` 保存四个实际原生 Lift 成功 episodes，共 840 个观测、动作与 transition reward。轨迹 SHA256 为 `b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739`。
