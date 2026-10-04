@@ -562,6 +562,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
         from openso101.rl.execution import evaluate
 
         return evaluate(args)
+    if getattr(args, "recording_output", None) is not None:
+        raise ValueError("策略录制需要包含 checkpoint.json 的完整模型目录")
     from openso101.rl.gpu_scope import configure_visible_gpu
 
     configure_visible_gpu()
@@ -1315,6 +1317,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_eval.add_argument("--num-envs", dest="num_envs", type=int, default=64)
     p_eval.add_argument("--n-episodes", dest="n_episodes", type=int, default=100)
     p_eval.add_argument("--seed", type=int, default=0)
+    p_eval.add_argument("--recording-output", help="保存首个环境完整 episode 的双相机与物理状态")
+    p_eval.add_argument("--camera-resolution", type=int, default=256, help="录制相机的正偶数尺寸")
     p_eval.add_argument("--headless", action="store_true")
     p_eval.set_defaults(func=_cmd_eval)
 

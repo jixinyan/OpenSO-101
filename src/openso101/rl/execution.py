@@ -246,7 +246,8 @@ def evaluate(args, *, play=False, student_folder=None):
         raise ValueError("n_episodes 必须大于零")
     from isaaclab.app import AppLauncher
 
-    args.with_cameras = student_folder is not None
+    recording_output = getattr(args, "recording_output", None)
+    args.with_cameras = student_folder is not None or recording_output is not None
     app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras).app
     env = None
     try:
@@ -254,13 +255,15 @@ def evaluate(args, *, play=False, student_folder=None):
 
         from .backends import get_backend
 
-        recording_output = getattr(args, "recording_output", None)
         if recording_output is not None:
             from .recording import first_episode_recorder
 
-            student_metadata = json.loads((student_folder / "student.json").read_text())
+            policy_sha256 = meta.files[meta.checkpoint]
+            if student_folder is not None:
+                student_metadata = json.loads((student_folder / "student.json").read_text())
+                policy_sha256 = student_metadata["files"]["student.pt"]
             args.recorder_cfg = first_episode_recorder(Path(recording_output), args.task, meta.task_profile,
-                                                       student_metadata["files"]["student.pt"])
+                                                       policy_sha256)
         env = build_environment(args, training=False, scene=scene)
         if student_folder is None:
             policy = get_backend(meta.config.backend).load(env, folder)
@@ -348,7 +351,7 @@ def evaluate(args, *, play=False, student_folder=None):
 
             episodes = list(Path(recording_output).rglob("episode_*.hdf5"))
             if len(episodes) != 1:
-                raise RuntimeError("student 评估需要一份完整的首个环境 episode")
+                raise RuntimeError("策略评估需要一份完整的首个环境 episode")
             validate_hdf5_episode(episodes[0])
             result["recorded_episode"] = {"path": str(episodes[0].resolve()),
                                           "sha256": digest(episodes[0]),

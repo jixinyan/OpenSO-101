@@ -37,7 +37,7 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, policy
                                   if hasattr(runtime.cfg, "scene_spec") else None)
                 self.recording = OpenSO101HDF5TeleopRecorder(
                     output, task_name=task_id, env_id=task_id, cameras=cameras, fps=fps,
-                    dataset_id="local/openso101_student_evaluation", scene_metadata=scene_metadata,
+                    dataset_id="local/openso101_policy_evaluation", scene_metadata=scene_metadata,
                     sim_joint_names=SO101_SIM_JOINT_NAMES)
                 self.recording.start_episode()
                 self.recording._h5.attrs["policy_sha256"] = policy_sha256
