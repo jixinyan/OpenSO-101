@@ -1,0 +1,32 @@
+{
+  "video_sha256": "8af4332b38e0dffc608667e8695971d003ec53b50f2eb3108b06710d1bcba342",
+  "episode_sha256": "e10c0bc6ec8fb1e8be373c6befb846bb6224fe7b1f9cd4daeba17611d63dc217",
+  "evaluation_sha256": "ea3c22086b7ec5ba38988329cf3615c7a4eb8f5766f0f891d2af3934302829fe",
+  "policy_sha256": "81feead484b019427d09ae3a502a58172ab4594c276c2357162da2371ec3c18a",
+  "frames": 250,
+  "fps": 50.0,
+  "duration_seconds": 5.0,
+  "width": 1024,
+  "height": 512,
+  "views": [
+    "overhead_camera",
+    "wrist_camera"
+  ],
+  "seed": 10043,
+  "task": "OpenSO101-Lift-v0",
+  "completed_transitions": 161611776,
+  "training_git_sha": "a7cab37e282a2e6f3cb77a684aea9502815ce1c2",
+  "evaluation_git_sha": "3313cd449c6493bca532765f4bd0ca145cdf06e7",
+  "episode": {
+    "success": false,
+    "return": -10.722265243530273,
+    "steps": 250,
+    "env_index": 0,
+    "reached": true,
+    "grasped": true,
+    "lifted": false,
+    "held_above_table": false
+  },
+  "evaluation_success_rate": 0.0,
+  "decoded_frames": 250
+}

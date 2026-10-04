@@ -1,0 +1,68 @@
+{
+  "status": "actual_gpu_scope_verified",
+  "created_at": "2026-10-04T05:05:25.048352+00:00",
+  "requested_root_pids": [
+    452950
+  ],
+  "checked_process_types": [
+    "compute",
+    "graphics"
+  ],
+  "allowed_gpus": [
+    2,
+    3,
+    4
+  ],
+  "processes": [
+    {
+      "pid": 452950,
+      "command": [
+        "/home/jixin/workspace/envs/openso101-v2/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "eval",
+        "--task",
+        "OpenSO101-Lift-v0",
+        "--checkpoint",
+        "outputs/rl_progress/v4_seed43_scoped_a7cab37/evaluations/iteration_000821",
+        "--num-envs",
+        "4",
+        "--n-episodes",
+        "4",
+        "--seed",
+        "10043",
+        "--headless",
+        "--recording-output",
+        "outputs/rl_progress/v4_seed43_policy_video",
+        "--camera-resolution",
+        "512"
+      ],
+      "cwd": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2",
+      "requested_gpus": [
+        4
+      ],
+      "actual_gpus": [
+        4
+      ],
+      "cuda_visible_devices": "GPU-0b5d4e54-90f6-bafd-936f-d5bfc93267f8",
+      "device_namespace": true,
+      "allocations": [
+        {
+          "gpu": 4,
+          "type": "C+G",
+          "used_memory": "9723 MiB",
+          "gpu_uuid": "GPU-0b5d4e54-90f6-bafd-936f-d5bfc93267f8"
+        },
+        {
+          "gpu": 4,
+          "type": "C",
+          "used_memory": "9723 MiB",
+          "gpu_uuid": "GPU-0b5d4e54-90f6-bafd-936f-d5bfc93267f8"
+        }
+      ]
+    }
+  ],
+  "source_sha256": "8e4d0fc12ed8f6ee24e66e873b178b9da32210c11bdeb611e8b5baf4a9c3832d"
+}

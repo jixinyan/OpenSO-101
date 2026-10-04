@@ -93,6 +93,24 @@ openso101 rl validate-loop --teacher-run outputs/teacher_snapshot \
 
 `sim2real deploy --policy-path` 可以读取 student 目录；部署频率需要与 `student.json` 的 `control_dt` 一致。带有目标输入的 student 通过 `--goal-file` 读取当前目标 JSON。目标文件为包含三个有限数值的 JSON 数组，使用 robot root frame 米制 xyz。真机验收根据用户要求暂缓。
 
+## 保存策略运行视频
+
+完整 checkpoint 目录支持在独立评估中录制首个环境的完整 episode：
+
+```bash
+openso101 rl eval --task OpenSO101-Lift-v0 --checkpoint outputs/teacher_snapshot \
+  --num-envs 4 --n-episodes 4 --seed 10043 --headless \
+  --recording-output outputs/policy_recording --camera-resolution 512
+python scripts/encode_policy_recording.py \
+  --episode outputs/policy_recording/episodes/episode_000000.hdf5 \
+  --evaluation outputs/teacher_snapshot/evaluation-<timestamp>.json \
+  --output outputs/policy_recording/policy.mp4
+```
+
+Linux NVIDIA 主机可以使用 `scripts/run_policy_recording.sh`，参数依次为物理 GPU、完整 checkpoint 目录、新的录制目录和评估 seed；`OPENSO101_REPO` 指定代码目录。该入口执行确定性推理，使用 checkpoint 的任务、环境与 reward 配置。
+
+HDF5 保存 overhead、wrist、实际关节目标、关节位置与速度、物体状态和任务状态。MP4 左侧为 overhead，右侧为 wrist，播放频率与控制频率一致。编码检查源文件与模型 SHA256、完整 episode 步骤数量、成功标记、时间戳、相机数据，以及全部视频帧的解码数量和尺寸。视频 JSON 保存模型来源与独立评估结果。
+
 ## 已执行检查
 
 2026-09-26 在 `jd_B300` 执行：
