@@ -38,6 +38,8 @@ for pid in args.pid:
     for process in (root, *root.children(recursive=True)):
         processes[process.pid] = process
 for pid, process in processes.items():
+    if process.status() == psutil.STATUS_ZOMBIE:
+        continue
     command = process.cmdline()
     cwd = Path(process.cwd()).resolve()
     if not cwd.name.startswith("OpenSO-101"):
