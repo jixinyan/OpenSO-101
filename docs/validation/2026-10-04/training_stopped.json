@@ -1,0 +1,79 @@
+{
+  "status": "training_stopped_verified",
+  "verified_at": "2026-10-04T05:32:23.439331+00:00",
+  "checked_pids": [
+    469917,
+    469918,
+    469959,
+    469957,
+    469958,
+    469985,
+    469977,
+    469978,
+    469998
+  ],
+  "training_processes_remaining": 0,
+  "owned_gpu_contexts_remaining": 0,
+  "checked_gpu_process_types": [
+    "compute",
+    "graphics"
+  ],
+  "training_authorized": false,
+  "saved_models_logs_and_evaluations_retained": true,
+  "runs": [
+    {
+      "seed": 42,
+      "worker_pid": 469959,
+      "stop_request": {
+        "status": "stop_requested",
+        "signal": 15,
+        "worker_pid": 469959,
+        "training_git_sha": "a7cab37e282a2e6f3cb77a684aea9502815ce1c2",
+        "task": "OpenSO101-Lift-v0",
+        "seed": 42,
+        "requested_at": "2026-10-04T05:30:02.088947+00:00"
+      },
+      "run": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v4_seed42_scoped_a7cab37",
+      "saved_iteration_models": 848,
+      "latest_model": "model_1022.pt",
+      "latest_model_sha256": "7a38b4bde1b58531f484292501450e7ab75add8fe6e9d3171f9735beabbb39fe",
+      "independent_evaluations": 8
+    },
+    {
+      "seed": 43,
+      "worker_pid": 469985,
+      "stop_request": {
+        "status": "stop_requested",
+        "signal": 15,
+        "worker_pid": 469985,
+        "training_git_sha": "a7cab37e282a2e6f3cb77a684aea9502815ce1c2",
+        "task": "OpenSO101-Lift-v0",
+        "seed": 43,
+        "requested_at": "2026-10-04T05:30:02.101636+00:00"
+      },
+      "run": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v4_seed43_scoped_a7cab37",
+      "saved_iteration_models": 819,
+      "latest_model": "model_940.pt",
+      "latest_model_sha256": "20bd325b983065a5ddcdadd37ba4764679bedbedf1976be016e5f94becc5f34a",
+      "independent_evaluations": 8
+    },
+    {
+      "seed": 44,
+      "worker_pid": 469998,
+      "stop_request": {
+        "status": "stop_requested",
+        "signal": 15,
+        "worker_pid": 469998,
+        "training_git_sha": "a7cab37e282a2e6f3cb77a684aea9502815ce1c2",
+        "task": "OpenSO101-Lift-v0",
+        "seed": 44,
+        "requested_at": "2026-10-04T05:30:02.087525+00:00"
+      },
+      "run": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v4_seed44_scoped_a7cab37",
+      "saved_iteration_models": 767,
+      "latest_model": "model_893.pt",
+      "latest_model_sha256": "480fba2b6cfdc56d793190d9b4157ccc2a3a1a5e60a683bfe7f9773a6c742837",
+      "independent_evaluations": 7
+    }
+  ]
+}

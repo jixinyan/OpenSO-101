@@ -6,7 +6,7 @@
 
 首个环境完成接近和双侧夹爪接触，抬升与任务成功均为 false。四个环境的接近、双侧接触分别为 4/4，抬升与同时持物抬升分别为 1/4，任务成功为 0/4。完整任务成功继续使用规定的终止条件。
 
-录制进程的实际计算与渲染均使用物理 GPU 4，设备目录仅包含指定 GPU 与 NVIDIA 公共设备。已有三个训练进程持续运行。CLI 的八项本地检查通过，录制、完整 HDF5 校验与 MP4 编码使用实际模型和仿真数据。
+录制进程的实际计算与渲染均使用物理 GPU 4，设备目录仅包含指定 GPU 与 NVIDIA 公共设备。录制时三个训练进程持续运行。CLI 的八项本地检查通过，录制、完整 HDF5 校验与 MP4 编码使用实际模型和仿真数据。
 
 原始文件统一保存在 `outputs/rl_progress/v4_seed43_policy_video/`，MP4 为 `policy.mp4`，HDF5 为 `episodes/episode_000000.hdf5`。模型位于 `outputs/rl_progress/v4_seed43_scoped_a7cab37/evaluations/iteration_000821/`。
 
