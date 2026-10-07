@@ -1,0 +1,21 @@
+{
+  "status": "actual_planner_geometry_verified",
+  "poses": 840,
+  "contacts": 2759,
+  "model_build_seconds": 0.8850468578748405,
+  "cache_reuse_build_seconds": 0.6547183450311422,
+  "cache_model_equality_verified": true,
+  "maximum_pose_error": 0.0,
+  "maximum_contact_error": 0.0,
+  "full_forward_seconds": 0.04357682913541794,
+  "collision_geometry_seconds": 0.03198292199522257,
+  "speed_ratio": 1.3625030615378797,
+  "mujoco_version": "3.14.0",
+  "native_report_sha256": "c7b103bb744cd9f8ea7572e9efaba9030a67e7901fdb65b95a758ae0d101c78e",
+  "trajectory_sha256": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739",
+  "source_sha256": "b73d88bccde10c775e5ac37abb66184f71d8d0bb371b7b2f79d2d2473e4bb6d7",
+  "planner_sha256": "85cd0a15c8826914f00c60bdc2e6d60003090dbb4c9de9d9c5e34c261d7b671f",
+  "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+  "collision_bundle_sha256": "2463d2560e880c2b9dace0fa8cf711678eb606f1154878eeece99372d6a35841",
+  "task_success_verified": false
+}

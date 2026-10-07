@@ -1,0 +1,23 @@
+{
+  "status": "actual_demonstration_and_evaluation_figures_verified",
+  "figures": {
+    "demonstration_fit.png": {
+      "sha256": "fbd3afb7408ab9353c77f1f4373fbc24e03c136bbcffbe92df9173dfaa68c2fb",
+      "width": 2080,
+      "height": 768
+    },
+    "independent_evaluation.png": {
+      "sha256": "bd72154d2bd013cc271af7cb7a37cfc9aa900331bf75314d777fe2a2b0177242",
+      "width": 2240,
+      "height": 736
+    }
+  },
+  "source_sha256": "7cb869c1364592c34c2a3aaf141411a2a714dfa0b3fc67285a8d525625a8ef10",
+  "files": {
+    "demonstration_initialization.json": "bdeefcc4a348b3c0df362a99be3d32bc0b3c2f5fcd4c3e6eb29dc004aed6e09b",
+    "demonstration_pretrain.jsonl": "9c261b400b24ab98fa177368f7326ffccc3c6292c8776d30a9dc9163b1e628a5",
+    "initial_policy_evaluation.json": "998f6bd4a1703bc2e7bb1daf736f629366e5b9a70eaf4412f29a3c3464bb375d",
+    "evaluation_history.json": "1a2ae3e39df735eb9fd3d5b0ec67d405a498bf981462a808a2c408d180a73e8f"
+  },
+  "task_success_threshold_verified": false
+}

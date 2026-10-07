@@ -1,0 +1,21 @@
+{
+  "status": "actual_success_demonstration_initialization_completed",
+  "frames": 840,
+  "actor_mse": 4.636091398424469e-05,
+  "objective_mse": 0.0002302848151884973,
+  "objective": "latent_mse",
+  "action_margin": 0.0001,
+  "rmse_per_action": [
+    0.00918243732303381,
+    0.00639436487108469,
+    0.0073621575720608234,
+    0.007479265332221985,
+    0.00654313899576664,
+    8.359160710824654e-05
+  ],
+  "critic_smooth_l1": 0.06583819538354874,
+  "gradient_steps": 8000,
+  "rl_transitions": 0,
+  "dataset_sha256": "738c37bc48f2c397b85ce5139d5b2816320f1593492f545a60bf46fd7eedd940",
+  "task_success_verified": false
+}

@@ -146,7 +146,7 @@ prompt for unattended batch capture.
 
 录制 HDF5 后，可以导出本地 LeRobot 数据集：
 
-每个 episode 的首帧确定 `sim` 状态字段，后续帧必须包含相同字段和形状。PickPlace 记录物体状态、任务阶段、任务目标、物体初始位置和 `command_placement_hold_seconds`；回放时恢复已有记录字段。数据写入和状态恢复中的错误会立即报告并终止。
+每个 episode 的首帧确定 `sim` 状态字段，后续帧必须包含相同字段和形状。记录包含三维 `environment_origin`，回放根据源环境与目标环境的原点转换物体与任务目标的 world frame 坐标。PickPlace 记录物体状态、任务阶段、任务目标、物体初始位置和 `command_placement_hold_seconds`；回放时恢复已有记录字段。数据写入和状态恢复中的错误会立即报告并终止。
 
 ```bash
 openso101 il export \
@@ -182,7 +182,11 @@ openso101 il replay \
 
 `--report` 检查控制周期与源 FPS、已记录状态的恢复误差、ActionManager 每步动作、关节有限数值，以及 wrist／overhead RGB 的形状与有限数值。报告保存源文件与检查代码的 SHA256、实际检查帧数和源任务成功标记；状态与动作误差阈值为 `1e-6`。检查覆盖环境索引零；已有报告文件、空动作范围和负数保持步骤会在启动 Isaac 前终止。
 
-`replay_verified` 表示请求范围的程序检查全部通过。报告中的 `task_success_verified` 与 `physics_state_reproducibility_verified` 保持 `false`；任务完成、随机化参数和接触求解状态需要对应验收。旧数据仅检查已保存的状态字段，可通过 `source_sim_fields` 与 `restore_errors` 查看检查范围。
+`replay_verified` 表示请求范围的程序检查全部通过。`task_success_verified` 读取实际任务 termination；完整物理轨迹的重复性由 `physics_state_reproducibility_verified` 单独记录。旧数据仅检查已保存的状态字段，可通过 `source_sim_fields` 与 `restore_errors` 查看检查范围。
+
+原生策略或 scripted controller 的采集文件保存 `task_profile`、`environment_mode`、`physics_dt`、`reward_discount` 与 `environment_origin`。`grasp_v4` 回放从这些 metadata 恢复原生任务、绝对关节目标和控制周期，读取实际双相机尺寸。原生文件需要包含环境原点。
+
+2026-10-07 完成四环境成功采集到单环境的实际 Lift 回放：243 帧、50 Hz、动作和全部记录状态的恢复误差均为零，实际满足 0.25 秒持物要求。该成功 episode 的 LeRobot 导出也完成两台相机全部 243 帧的读取检查，动作和关节观测转换误差均为零。报告与操作范围见 [采集与回放记录](../validation/2026-10-06/README.md)。
 
 实际运行覆盖 PickPlace 的第 120–179 帧、自定义场景全部 12 帧及旧键盘数据的前 60 帧；三项进程均正常退出，动作和状态恢复误差均为零。报告见 [回放运行记录](../validation/2026-09-29/README.md)。
 

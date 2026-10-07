@@ -51,6 +51,12 @@ openso101 rl train --task OpenSO101-CustomScene-v0 --backend sb3 --algo ppo \
 
 rsl_rl PPO 使用 log 参数表示探索标准差，每个 iteration 保存中间模型。`CheckedPPO` 检查观测、动作、分布、梯度和参数的有限性，并保存实际更新记录。继续训练沿用原模型的 policy 配置，保持网络结构和观测归一化设置。
 
+`configs/rl/grasp_demonstrations.json` 使用经过完整轨迹检查的实际 Lift 成功示范初始化 actor 与 critic。actor 监督 Gaussian latent，critic 使用实际 transition reward 的折扣累计值。训练保存示范 tensor、来源 SHA256、初始化曲线、两个 optimizer 和 gradient steps；继续训练恢复这些文件与 optimizer。初始化后与 PPO 更新后分别运行 100 episodes 独立评估。
+
+`configs/rl/grasp_corrective_demonstrations.json` 另外读取实际控制扰动下的成功轨迹。采集使用独立随机数生成器对 arm targets 添加 0.015 rad 标准差的扰动，保持 jaw 控制和真实任务成功条件。actor 标签读取动作前计算的 `expert_policy_action`；`policy_action` 保存实际执行动作，critic reward 来自该执行动作产生的真实 transition。示范准备只读取从初始状态到 success termination 的完整成功 episode。
+
+单张 GPU 的 Linux 主机入口为 `scripts/run_rl_worker.sh`。当前 `configs/runtime/gpu_scope.json` 限定物理 GPU 2；训练、独立评估和 renderer 均使用同一设备。`scripts/run_native_python.sh` 提供相同设备限制、Isaac 依赖与 LeRobot 所需 FFmpeg 动态库。最新实际任务结果见 [v2 状态](v2-status-2026-10-06.md)。
+
 评估按照环境分配 episode 数量，完整完成请求的数量后生成报告。Lift 和 PickPlace 报告包含接近物体、两侧夹爪接触、物体高度、持物抬升及 PickPlace 阶段统计；这些诊断在控制步骤开始前采样。任务成功率读取实际 success termination，报告同时保存模型 SHA256、训练和评估代码版本、训练 transitions、运行设备及 Torch 版本。
 
 ## 动作与相机随机化

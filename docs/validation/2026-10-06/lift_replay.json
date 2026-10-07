@@ -1,0 +1,67 @@
+{
+  "status": "replay_verified",
+  "task": "OpenSO101-Lift-v0",
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/lift_portable_dataset_20261006/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "34e06fb6e73f0b384357f8799eaa294e38e78911a0c9ef28c49b1644ca267fb0",
+  "source_task_success": true,
+  "source_scene_sha256": "",
+  "source_sim_fields": [
+    "command_pose_command_b",
+    "environment_origin",
+    "object_root_state",
+    "task_episode_step",
+    "task_goal_root",
+    "task_hold_seconds"
+  ],
+  "observed_env_index": 0,
+  "checkpoint_frame": 0,
+  "start_frame": 0,
+  "stop_frame": 243,
+  "requested_frames": 243,
+  "completed_frames": 243,
+  "control_dt": 0.02,
+  "source_fps": 50,
+  "control_timing_error_seconds": 0.0,
+  "step_checks": {
+    "warm_start": 0,
+    "hold": 0,
+    "replay": 243
+  },
+  "maximum_action_error": 0.0,
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0,
+    "command_pose_command_b": 0.0,
+    "object_root_state": 0.0,
+    "task_episode_step": 0.0,
+    "task_goal_root": 0.0,
+    "task_hold_seconds": 0.0
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 243,
+      "minimum_pixel_std": 37.33934783935547
+    },
+    "overhead_camera": {
+      "frames": 243,
+      "minimum_pixel_std": 20.681406021118164
+    }
+  },
+  "task_success_verified": true,
+  "native_task_configuration": true,
+  "physics_state_reproducibility_verified": false,
+  "validator_sha256": "9738bcd64ded22c73e918296ed2a7e3ca02f0cf5611a21b36c397c739be7fea1",
+  "cli_sha256": "b496dbefe309305a06bd00cd29cde3b6af84e42227ac4481fe9f2023dff19b22",
+  "replay_environment_origin": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "source_environment_origin": [
+    1.25,
+    -1.25,
+    0.0
+  ],
+  "trajectory_sha256": "846873377ce913cbab470a9aaf3fd37371136d79ed044650420d34e7d174089f",
+  "maximum_hold_seconds": 0.25999996066093445
+}
