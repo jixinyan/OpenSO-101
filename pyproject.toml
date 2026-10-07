@@ -56,7 +56,7 @@ dev = [
     "pytest-cov",
 ]
 wandb = ["wandb"]
-sim2sim = ["mujoco==3.14.0", "scipy>=1.14", "osqp==1.1.1", "coacd==1.0.7", "trimesh>=4.12,<5"]
+sim2sim = ["mujoco==3.14.0", "scipy>=1.14", "osqp==1.1.1", "coacd==1.0.7", "trimesh>=4.12,<5", "filelock>=3.16,<4"]
 analysis = ["plotly>=6,<7"]
 scenes = [
     "objaverse==0.1.7",
