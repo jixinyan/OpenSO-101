@@ -76,7 +76,7 @@ class Backend:
         if cfg.demonstration_sources:
             from openso101.rl.demonstrations import DemonstrationUpdates
 
-            demonstrations = DemonstrationUpdates(runner.alg, cfg, output)
+            demonstrations = DemonstrationUpdates(runner.alg, cfg, output, env.request)
             runner.alg.demonstration_updates = demonstrations
             if resume is None:
                 runner._prepare_logging_writer()
@@ -86,7 +86,7 @@ class Backend:
                 runner.current_learning_iteration = 0
                 from openso101.rl.benchmark import evaluate_initialization
 
-                evaluate_initialization(output, cfg)
+                evaluate_initialization(output, cfg, env.request)
             else:
                 demonstrations.optimizer.load_state_dict(restored_infos["demonstration_optimizer"])
                 demonstrations.steps = restored_infos["demonstration_gradient_steps"]
@@ -103,7 +103,7 @@ class Backend:
                 raise
             checkpoint = output / f"model_{runner.current_learning_iteration}.pt"
             runner.save(str(checkpoint))
-            converged = evaluate_snapshot(output, checkpoint, runner.current_learning_iteration, cfg)
+            converged = evaluate_snapshot(output, checkpoint, runner.current_learning_iteration, cfg, env.request)
             remaining -= count
             if converged:
                 break

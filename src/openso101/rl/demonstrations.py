@@ -94,8 +94,9 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
 
 
 class DemonstrationUpdates:
-    def __init__(self, algorithm, cfg, folder):
+    def __init__(self, algorithm, cfg, folder, stop_request):
         self.algorithm, self.cfg = algorithm, cfg
+        self.stop_request = stop_request
         metadata = json.loads((folder / "demonstrations.json").read_text())
         if digest(folder / "demonstrations.pt") != metadata["dataset_sha256"]:
             raise ValueError("成功示范 dataset SHA256 不一致")
@@ -116,6 +117,7 @@ class DemonstrationUpdates:
         return actor, critic
 
     def step(self, indices):
+        self.stop_request.check()
         actor, critic = self.losses(indices)
         loss = actor + .01 * critic
         self.algorithm.require_finite("demonstration_loss", loss)
