@@ -31,9 +31,13 @@ limits = np.asarray(states["soft_joint_limits"], dtype=float)[:5] + JOINT_OFFSET
 center = np.array([.01, 0., -.09])
 rng = np.random.default_rng(states["seed"])
 records = []
+waypoint_seed = None
 for environment in states["environments"]:
     if args.collision_bundle:
-        records.append(plan_collision_grasp(model, states, environment, rng))
+        record = plan_collision_grasp(model, states, environment, rng, waypoint_seed)
+        records.append(record)
+        if record["accepted"]:
+            waypoint_seed = [target["joint_position"] for target in record["targets"]]
         continue
     previous = np.asarray(environment["joint_position"][:5]) + JOINT_OFFSETS[:5]
     start = np.asarray(environment["object_position_root"])

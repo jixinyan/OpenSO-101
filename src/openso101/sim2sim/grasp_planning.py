@@ -6,7 +6,7 @@ from scipy.spatial.transform import Rotation, Slerp
 from .mujoco import JOINT_NAMES, JOINT_OFFSETS
 
 
-def plan_collision_grasp(model, states, environment, rng):
+def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     data = mujoco.MjData(model)
     ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     gripper = model.body("gripper").id
@@ -89,9 +89,12 @@ def plan_collision_grasp(model, states, environment, rng):
         return np.concatenate(residuals)
 
     starts = [np.tile(np.clip(initial, lower, upper), waypoint_count)]
+    if waypoint_seed is not None:
+        seed = np.asarray(waypoint_seed, dtype=float)
+        if seed.shape != (waypoint_count, 5) or not np.isfinite(seed).all():
+            raise ValueError("已有任务规划需要完整的 waypoint 关节位置")
+        starts.insert(0, np.clip(seed + JOINT_OFFSETS[:5], lower, upper).ravel())
     starts.extend(np.tile(arm, waypoint_count) for arm in rng.uniform(lower, upper, size=(31, 5)))
-    solutions = [least_squares(coupled_residual, guess, bounds=(np.tile(lower, waypoint_count), np.tile(upper, waypoint_count)),
-                               ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=1000) for guess in starts]
 
     def feasible(solution):
         nonlocal held_transform
@@ -121,6 +124,7 @@ def plan_collision_grasp(model, states, environment, rng):
         previous = start_arm
         path = []
         accepted = True
+        checks = []
         for fraction, target_rotation in zip(fractions, rotations, strict=True):
             previous_rotation = pose(previous, jaw, allow_grasp_contact, held)[1]
             target_position = first[0] + fraction * (last[0] - first[0])
@@ -146,33 +150,55 @@ def plan_collision_grasp(model, states, environment, rng):
                 position = position + rotation @ held_transform[0]
             orientation_accepted = (rotation[2, 2] >= np.cos(np.pi / 4) if transporting
                                     else np.linalg.norm(rotation - target_rotation) <= .02)
-            accepted &= bool(solution.success and np.linalg.norm(position - target_position) <= .003
-                             and orientation_accepted and depth <= .0001)
+            position_error = float(np.linalg.norm(position - target_position))
+            step_accepted = bool(solution.success and position_error <= .003
+                                 and orientation_accepted and depth <= .0001)
+            accepted &= step_accepted
+            checks.append({"sample": len(path), "accepted": step_accepted,
+                           "position_error_m": position_error, "penetration_m": float(depth),
+                           "orientation_accepted": bool(orientation_accepted),
+                           "solver_success": bool(solution.success), "evaluations": int(solution.nfev)})
             path.append(solution.x)
             previous = solution.x
-        return np.asarray(path), accepted
+        return np.asarray(path), accepted, {"accepted": accepted,
+                                            "failed_samples": [item for item in checks if not item["accepted"]]}
 
-    candidates = sorted((item for item in solutions if feasible(item) and path_safe(initial, item.x[:5])),
-                        key=lambda item: np.linalg.norm(item.x[:5] - initial)
-                        + np.linalg.norm(np.diff(item.x.reshape(waypoint_count, 5), axis=0)))
-    result = min(solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
+    solutions = []
     planned_paths = None
     paths_accepted = False
-    for candidate in candidates:
+    candidate_checks = []
+    for guess in starts:
+        candidate = least_squares(
+            coupled_residual, guess, bounds=(np.tile(lower, waypoint_count), np.tile(upper, waypoint_count)),
+            ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=1000)
+        solutions.append(candidate)
+        waypoints_accepted = feasible(candidate)
+        approach_accepted = path_safe(initial, candidate.x[:5]) if waypoints_accepted else False
+        check = {"attempt": len(solutions), "evaluations": int(candidate.nfev),
+                 "waypoints_accepted": bool(waypoints_accepted), "approach_accepted": bool(approach_accepted),
+                 "paths": []}
+        candidate_checks.append(check)
+        print({"environment": environment["environment"], "attempt": len(solutions),
+               "waypoints_accepted": waypoints_accepted, "approach_accepted": approach_accepted}, flush=True)
+        if not waypoints_accepted or not approach_accepted:
+            continue
         candidate_arms = candidate.x.reshape(waypoint_count, 5)
         grasp_position, grasp_rotation, _ = pose(candidate_arms[1])
         held_transform = (grasp_rotation.T @ (start - grasp_position), grasp_rotation.T @ object_rotation)
         candidate_paths = [np.linspace(initial, candidate_arms[0], 65)[1:]]
         valid = True
         for index in range(1, waypoint_count):
-            path, accepted = cartesian_path(candidate_paths[-1][-1], candidate_arms[index],
+            path, accepted, path_check = cartesian_path(candidate_paths[-1][-1], candidate_arms[index],
                                             jaw=0. if index >= 2 else .8, allow_grasp_contact=index >= 2,
                                             held=pick_place and index >= 2, transporting=pick_place and index >= 3)
             valid &= accepted
+            check["paths"].append({"phase": names[index], **path_check})
             candidate_paths.append(path)
         if valid:
             result, planned_paths, paths_accepted = candidate, candidate_paths, True
             break
+    if not paths_accepted:
+        result = min(solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
     arms = [path[-1] for path in planned_paths] if planned_paths is not None else result.x.reshape(waypoint_count, 5)
     grasp_position, grasp_rotation, _ = pose(arms[1])
     held_transform = (grasp_rotation.T @ (start - grasp_position), grasp_rotation.T @ object_rotation)
@@ -199,6 +225,7 @@ def plan_collision_grasp(model, states, environment, rng):
         previous = arm
     return {"environment": environment["environment"], "targets": targets,
             "accepted": all(item["accepted"] for item in targets),
+            "candidate_checks": candidate_checks,
             "approach_grasp_rotation_difference": float(np.linalg.norm(pose(arms[0])[1] - pose(arms[1])[1])),
             "grasp_lift_rotation_difference": float(np.linalg.norm(pose(arms[1])[1] - pose(arms[2])[1])),
             "coupled_waypoints": waypoint_count, "native_task_goal_radius_m": states["planner_physics"]["task_goal_radius"],
