@@ -48,6 +48,11 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, source
                 self.recording._h5.attrs["task_profile"] = task_profile
                 self.recording._h5.attrs["environment_mode"] = runtime.cfg.environment_mode
                 self.recording._h5.attrs["physics_dt"] = runtime.physics_dt
+                if scene_metadata is None:
+                    self.recording._h5.attrs["source_num_envs"] = runtime.num_envs
+                    self.recording._h5.attrs["source_seed"] = runtime.cfg.seed
+                    self.recording._h5.attrs["source_env_spacing"] = runtime.cfg.scene.env_spacing
+                    self.recording._h5.attrs["source_replicate_physics"] = runtime.cfg.scene.replicate_physics
                 if task_profile in ("grasp_v3", "grasp_v4"):
                     self.recording._h5.attrs["reward_discount"] = runtime.cfg.reward_discount
             ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
@@ -57,7 +62,7 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, source
                 action=targets[0].cpu().numpy(), qpos=robot.data.joint_pos[0, ids].cpu().numpy(),
                 qvel=robot.data.joint_vel[0, ids].cpu().numpy(), camera_buffers=images,
                 timestamp=runtime.common_step_counter * runtime.step_dt,
-                sim_state=_collect_replay_sim_state(runtime, runtime.scene))
+                sim_state=_collect_replay_sim_state(runtime, runtime.scene, include_cohort=scene_metadata is None))
             return None, None
 
         def record_post_step(self):

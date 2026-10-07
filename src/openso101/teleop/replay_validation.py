@@ -47,6 +47,10 @@ class ReplayValidation:
             "control_timing_error_seconds": timing_error,
             "step_checks": {"warm_start": 0, "hold": 0, "replay": 0},
             "maximum_action_error": 0.0,
+            "source_num_envs": int(h5.attrs.get("source_num_envs", 1)),
+            "replay_num_envs": env.num_envs,
+            "source_cohort_restored": bool(getattr(env, "_replay_cohort", False)),
+            "maximum_cohort_action_error": 0.0,
             "restore_errors": {},
             "camera_checks": {name: {"frames": 0, "minimum_pixel_std": None} for name in self.camera_shapes},
             "task_success_verified": False,
@@ -65,7 +69,7 @@ class ReplayValidation:
             "joint_position": (robot.data.joint_pos[0, ids], h5["observations/qpos"][frame_index]),
             "joint_velocity": (robot.data.joint_vel[0, ids], h5["observations/qvel"][frame_index]),
         }
-        actual_state = _collect_replay_sim_state(env, env.scene)
+        actual_state = _collect_replay_sim_state(env, env.scene, include_cohort=self.report["source_cohort_restored"])
         origin_delta = (actual_state["environment_origin"] - h5["sim/environment_origin"][frame_index]
                         if "sim/environment_origin" in h5 else np.zeros(3))
         self.report["replay_environment_origin"] = actual_state["environment_origin"].tolist()
@@ -73,6 +77,8 @@ class ReplayValidation:
             self.report["source_environment_origin"] = h5["sim/environment_origin"][frame_index].tolist()
         for field in self.report["source_sim_fields"]:
             if field == "environment_origin":
+                continue
+            if field == "cohort_joint_targets" or (field.startswith("cohort_") and not self.report["source_cohort_restored"]):
                 continue
             expected = h5[f"sim/{field}"][frame_index].copy()
             if field in ("object_root_state", "command_goal_pos_w"):
@@ -88,6 +94,16 @@ class ReplayValidation:
             self.report["restore_errors"][field] = error
 
     def check_step(self, env, phase: str, expected_action) -> None:
+        expected_action = np.asarray(expected_action)
+        if self.report["source_cohort_restored"]:
+            actual = env._replay_transition["cohort_targets"].detach().cpu().numpy()
+            if actual.shape != expected_action.shape or not np.isfinite(actual).all():
+                raise ValueError("并行回放动作格式错误")
+            error = float(np.max(np.abs(actual.astype(np.float64) - expected_action.astype(np.float64))))
+            if error > 1e-6:
+                raise ValueError(f"并行回放动作误差超过 1e-6: {error}")
+            self.report["maximum_cohort_action_error"] = max(self.report["maximum_cohort_action_error"], error)
+            expected_action = expected_action[0]
         if hasattr(env, "_replay_mapping"):
             action = env._replay_transition["targets"].detach().cpu().numpy()
             self.report["task_success_verified"] |= env._replay_transition["success"]
@@ -166,6 +182,10 @@ def native_replay_recorder():
                                             for name in ("gripper_jaw_contact", "moving_jaw_contact")]).detach().clone(),
                 "hold_seconds": hold[0].detach().clone(),
             }
+            if getattr(runtime, "_replay_cohort", False):
+                runtime._replay_transition["cohort_targets"] = torch.cat([
+                    runtime.action_manager.get_term(name).processed_actions
+                    for name in runtime.action_manager.active_terms], dim=-1).detach().clone()
             return None, None
 
     @configclass

@@ -54,6 +54,19 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "command_cube_spawn_xy_b",
     "command_placement_hold_seconds",
     "command_pose_command_b",
+    "cohort_environment_origins",
+    "cohort_joint_position",
+    "cohort_joint_velocity",
+    "cohort_joint_targets",
+    "cohort_object_root_state",
+    "cohort_command_stage",
+    "cohort_command_goal_pos_b",
+    "cohort_command_goal_pos_w",
+    "cohort_command_cube_spawn_xy_b",
+    "cohort_command_placement_hold_seconds",
+    "cohort_command_pose_command_b",
+    "cohort_task_hold_seconds",
+    "cohort_task_episode_step",
 )
 
 
@@ -138,6 +151,20 @@ def validate_hdf5_episode(path: str | Path) -> None:
                     raise ValueError(f"{path} sim/{name} must contain numeric values")
                 if dataset.dtype.kind == "f" and not np.isfinite(dataset[:]).all():
                     raise ValueError(f"{path} sim/{name} contains non-finite values")
+        if "source_num_envs" in h5.attrs:
+            count = int(h5.attrs["source_num_envs"])
+            if count <= 0:
+                raise ValueError("来源环境数量需要大于零")
+            for field in ("source_seed", "source_env_spacing", "source_replicate_physics"):
+                if field not in h5.attrs:
+                    raise ValueError(f"并行采集缺少配置: {field}")
+            shapes = {"environment_origins": (count, 3), "joint_position": (count, 6),
+                      "joint_velocity": (count, 6), "joint_targets": (count, 6),
+                      "object_root_state": (count, 13), "task_episode_step": (count,)}
+            for field, shape in shapes.items():
+                key = f"sim/cohort_{field}"
+                if key not in h5 or h5[key].shape != (frame_count, *shape):
+                    raise ValueError(f"并行采集的字段形状错误: {key}")
 def validate_hdf5_dataset(root: str | Path) -> list[Path]:
     """Return valid HDF5 episode files, or raise a useful validation error."""
 

@@ -650,9 +650,7 @@ _REPLAY_COMMAND_FIELDS = (
 )
 
 
-def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
-    """Collect optional simulator state that lets HDF5 teleop frames be replayed from checkpoints."""
-
+def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> dict[str, Any]:
     sim_state: dict[str, Any] = {"environment_origin": _tensor_to_numpy(scene.env_origins[0])}
     if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
         from openso101.scenes.runtime import scene_states
@@ -672,6 +670,21 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
         return sim_state
     if "object" in scene.rigid_objects:
         sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
+        if include_cohort:
+            sim_state["cohort_object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w)
+    if include_cohort:
+        import torch
+
+        robot = scene["robot"]
+        ids = _replay_robot_joint_indices(robot)
+        sim_state.update({
+            "cohort_environment_origins": _tensor_to_numpy(scene.env_origins),
+            "cohort_joint_position": _tensor_to_numpy(robot.data.joint_pos[:, ids]),
+            "cohort_joint_velocity": _tensor_to_numpy(robot.data.joint_vel[:, ids]),
+            "cohort_joint_targets": _tensor_to_numpy(torch.cat([
+                unwrapped_env.action_manager.get_term(name).processed_actions
+                for name in unwrapped_env.action_manager.active_terms], dim=-1)),
+        })
     if "object_pose" in unwrapped_env.command_manager.active_terms:
         from openso101.rl.student import student_goal
 
@@ -680,11 +693,17 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
         for field in _REPLAY_COMMAND_FIELDS:
             if hasattr(command, field):
                 sim_state[f"command_{field}"] = _tensor_to_numpy(getattr(command, field)[0])
+                if include_cohort:
+                    sim_state[f"cohort_command_{field}"] = _tensor_to_numpy(getattr(command, field))
     if "success" in unwrapped_env.termination_manager.active_terms:
         success = unwrapped_env.termination_manager.get_term_cfg("success").func
         if hasattr(success, "hold_seconds"):
             sim_state["task_hold_seconds"] = _tensor_to_numpy(success.hold_seconds[0])
+            if include_cohort:
+                sim_state["cohort_task_hold_seconds"] = _tensor_to_numpy(success.hold_seconds)
         sim_state["task_episode_step"] = _tensor_to_numpy(unwrapped_env.episode_length_buf[0])
+        if include_cohort:
+            sim_state["cohort_task_episode_step"] = _tensor_to_numpy(unwrapped_env.episode_length_buf)
     return sim_state
 
 
@@ -1697,6 +1716,33 @@ def _replay_optional_frame(h5, dataset_name: str, frame_index: int):
 def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index: int) -> None:
     import numpy as np
 
+    if getattr(unwrapped_env, "_replay_cohort", False):
+        origins = h5["sim/cohort_environment_origins"][frame_index]
+        if not np.allclose(_tensor_to_numpy(scene.env_origins), origins, atol=1e-6, rtol=0):
+            raise ValueError("并行回放需要使用来源环境布局")
+        robot = scene["robot"]
+        ids = _replay_robot_joint_indices(robot)
+        positions, velocities = robot.data.joint_pos.clone(), robot.data.joint_vel.clone()
+        positions[:, ids] = _replay_to_tensor_like(h5["sim/cohort_joint_position"][frame_index], positions[:, ids])
+        velocities[:, ids] = _replay_to_tensor_like(h5["sim/cohort_joint_velocity"][frame_index], velocities[:, ids])
+        robot.write_joint_position_to_sim(positions)
+        robot.write_joint_velocity_to_sim(velocities)
+        robot.set_joint_position_target(positions)
+        obj = scene["object"]
+        obj.write_root_state_to_sim(_replay_to_tensor_like(h5["sim/cohort_object_root_state"][frame_index], obj.data.root_state_w))
+        command = unwrapped_env.command_manager.get_term("object_pose")
+        for field in _REPLAY_COMMAND_FIELDS:
+            key = f"sim/cohort_command_{field}"
+            if key in h5:
+                target = getattr(command, field)
+                target[:] = _replay_to_tensor_like(h5[key][frame_index], target)
+        if "sim/cohort_task_hold_seconds" in h5:
+            success = unwrapped_env.termination_manager.get_term_cfg("success").func
+            success.hold_seconds[:] = _replay_to_tensor_like(h5["sim/cohort_task_hold_seconds"][frame_index], success.hold_seconds)
+        unwrapped_env.episode_length_buf[:] = _replay_to_tensor_like(
+            h5["sim/cohort_task_episode_step"][frame_index], unwrapped_env.episode_length_buf)
+        return
+
     _replay_set_robot_proprio(
         scene,
         qpos=np.asarray(h5["observations/qpos"][frame_index], dtype=np.float32),
@@ -1777,8 +1823,9 @@ def _replay_step_action(env, actions, target, real_time_dt: float | None = None)
     if hasattr(env.unwrapped, "_replay_mapping"):
         import numpy as np
 
-        target = np.asarray([(target[index] - item["offset"]) / item["scale"]
-                             for index, item in enumerate(env.unwrapped._replay_mapping)], dtype=np.float32)
+        target = np.asarray(target)
+        target = np.stack([(target[..., index] - item["offset"]) / item["scale"]
+                           for index, item in enumerate(env.unwrapped._replay_mapping)], axis=-1).astype(np.float32)
     _replay_copy_targets_to_actions(
         actions,
         _replay_to_tensor_like(target, actions[0] if actions.ndim == 2 else actions),
@@ -1819,6 +1866,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         raise FileExistsError(f"回放报告已存在: {report_path}")
     if getattr(args, "hold_steps", 30) < 0:
         raise ValueError("hold_steps 必须大于或等于 0")
+    if getattr(args, "require_task_success", False) and report_path is None:
+        raise ValueError("任务成功验收需要提供 --report")
 
     import h5py
 
@@ -1833,6 +1882,17 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         physics_dt = h5.attrs.get("physics_dt")
         reward_discount = h5.attrs.get("reward_discount")
         source_fps = int(h5.attrs["fps"])
+        source_num_envs = int(h5.attrs.get("source_num_envs", 1))
+        replay_cohort = "source_num_envs" in h5.attrs and args.num_envs != 1
+        source_seed = int(h5.attrs["source_seed"]) if replay_cohort else None
+        source_env_spacing = float(h5.attrs["source_env_spacing"]) if replay_cohort else None
+        source_replicate_physics = bool(h5.attrs["source_replicate_physics"]) if replay_cohort else None
+        if replay_cohort:
+            if args.num_envs is not None and args.num_envs != source_num_envs:
+                raise ValueError("并行回放的环境数量需要与来源一致")
+            if environment_mode != "nominal":
+                raise ValueError("并行回放需要 nominal 的物理属性记录")
+            args.num_envs = source_num_envs
         camera_sizes = {name: h5[f"observations/images/{name}"].shape[1:3] for name in
                         ("overhead_camera", "wrist_camera")}
         if "scene_relative_path" in h5.attrs or "scene_sha256" in h5.attrs:
@@ -1918,6 +1978,10 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         else:
             env_cfg.configure_action_mode("teleop")
         env_cfg.configure_cameras(True)
+        if replay_cohort:
+            env_cfg.seed = source_seed
+            env_cfg.scene.env_spacing = source_env_spacing
+            env_cfg.scene.replicate_physics = source_replicate_physics
         for name, (height, width) in camera_sizes.items():
             camera = getattr(env_cfg.scene, name)
             camera.height, camera.width = height, width
@@ -1930,6 +1994,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         env = gym.make(args.task, cfg=env_cfg)
         scene = env.unwrapped.scene
         unwrapped_env = env.unwrapped
+        unwrapped_env._replay_cohort = replay_cohort
         env.reset()
         if native_recording:
             from openso101.rl.vision_distillation import action_mapping
@@ -1942,6 +2007,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
         with h5py.File(episode_path, "r") as h5:
+            action_dataset = h5["sim/cohort_joint_targets"] if replay_cohort else h5["action"]
             fps = int(h5.attrs.get("fps", 30))
             real_time_dt = 1.0 / fps if args.real_time and fps > 0 else None
             validation = None
@@ -1958,17 +2024,17 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                     _replay_step_action(
                         env,
                         actions,
-                        np.asarray(h5["action"][frame_index], dtype=np.float32),
+                        np.asarray(action_dataset[frame_index], dtype=np.float32),
                         real_time_dt,
                     )
                     if validation is not None:
-                        validation.check_step(unwrapped_env, "warm_start", h5["action"][frame_index])
+                        validation.check_step(unwrapped_env, "warm_start", action_dataset[frame_index])
             else:
                 _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, checkpoint_frame)
                 if validation is not None:
                     validation.check_restore(unwrapped_env, h5, checkpoint_frame)
 
-            checkpoint_action = np.asarray(h5["action"][checkpoint_frame], dtype=np.float32)
+            checkpoint_action = np.asarray(action_dataset[checkpoint_frame], dtype=np.float32)
             for _ in range(max(args.hold_steps, 0)):
                 _replay_step_action(env, actions, checkpoint_action, real_time_dt)
                 if validation is not None:
@@ -1982,13 +2048,15 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                 _replay_step_action(
                     env,
                     actions,
-                    np.asarray(h5["action"][frame_index], dtype=np.float32),
+                    np.asarray(action_dataset[frame_index], dtype=np.float32),
                     real_time_dt,
                 )
                 if validation is not None:
-                    validation.check_step(unwrapped_env, "replay", h5["action"][frame_index])
+                    validation.check_step(unwrapped_env, "replay", action_dataset[frame_index])
             if validation is not None:
                 validation.save()
+                if getattr(args, "require_task_success", False) and not validation.report["task_success_verified"]:
+                    raise RuntimeError("回放未满足实际任务成功条件；验收报告已保存")
     finally:
         if env is not None:
             env.close()
@@ -2732,6 +2800,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_replay.add_argument("--checkpoint-frame", type=int, default=None, help="恢复指定帧的已记录状态。")
     p_replay.add_argument("--hold-steps", type=int, default=30, help="恢复后保持 checkpoint 动作的步骤数量。")
     p_replay.add_argument("--report", default=None, help="保存实际状态恢复、关节与双相机检查的 JSON 报告。")
+    p_replay.add_argument("--require-task-success", action="store_true", help="任务成功条件未满足时终止验收，并保存报告。")
     p_replay.add_argument("--real-time", action="store_true")
     p_replay.add_argument("--list-checkpoints", action="store_true")
     p_replay.add_argument("--headless", action="store_true")
