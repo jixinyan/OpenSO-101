@@ -18,8 +18,10 @@
   "evaluation_interval": 100,
   "evaluation_episodes": 100,
   "demonstration_sources": ["outputs/rl_progress/v4_demonstrations_verified_858bc44_task"],
-  "demonstration_epochs": 1000,
+  "demonstration_epochs": 2000,
   "demonstration_batch_size": 256,
   "demonstration_learning_rate": 0.001,
-  "demonstration_updates_per_iteration": 2
+  "demonstration_updates_per_iteration": 2,
+  "demonstration_objective": "latent_mse",
+  "demonstration_action_margin": 0.0001
 }

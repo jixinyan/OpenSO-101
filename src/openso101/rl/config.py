@@ -43,6 +43,8 @@ class TrainCfg(BaseModel):
     demonstration_batch_size: int = Field(default=256, gt=1)
     demonstration_learning_rate: float = Field(default=1e-3, gt=0)
     demonstration_updates_per_iteration: int = Field(default=0, ge=0)
+    demonstration_objective: Literal["bounded_mse", "latent_mse"] = "bounded_mse"
+    demonstration_action_margin: float = Field(default=1e-4, gt=0, lt=.01)
 
     @model_validator(mode="after")
     def supported_algorithm(self):

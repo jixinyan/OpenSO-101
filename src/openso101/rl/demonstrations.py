@@ -106,19 +106,24 @@ class DemonstrationUpdates:
             *algorithm.policy.actor.parameters(), *algorithm.policy.critic.parameters()],
             lr=cfg.demonstration_learning_rate)
         self.steps = 0
+        self.latent_targets = self.dataset["actions"].clamp(
+            -1 + cfg.demonstration_action_margin, 1 - cfg.demonstration_action_margin).atanh()
 
     def losses(self, indices):
         observations = TensorDict({"policy": self.dataset["observations"][indices]}, batch_size=[len(indices)])
         policy = self.algorithm.policy
-        actions = policy.act_inference(observations)
+        mean = policy.actor(policy.actor_obs_normalizer(policy.get_actor_obs(observations)))
+        actions = mean.tanh()
         values = policy.evaluate(observations).squeeze(-1)
-        actor = torch.nn.functional.mse_loss(actions, self.dataset["actions"][indices])
+        action_mse = torch.nn.functional.mse_loss(actions, self.dataset["actions"][indices])
+        actor = (torch.nn.functional.mse_loss(mean, self.latent_targets[indices])
+                 if self.cfg.demonstration_objective == "latent_mse" else action_mse)
         critic = torch.nn.functional.smooth_l1_loss(values, self.dataset["returns"][indices])
-        return actor, critic
+        return actor, critic, action_mse
 
     def step(self, indices):
         self.stop_request.check()
-        actor, critic = self.losses(indices)
+        actor, critic, action_mse = self.losses(indices)
         loss = actor + .01 * critic
         self.algorithm.require_finite("demonstration_loss", loss)
         self.optimizer.zero_grad()
@@ -128,7 +133,7 @@ class DemonstrationUpdates:
         for name, parameter in self.algorithm.policy.named_parameters():
             self.algorithm.require_finite(f"demonstration_parameter/{name}", parameter)
         self.steps += 1
-        return float(actor.detach()), float(critic.detach())
+        return float(actor.detach()), float(critic.detach()), float(action_mse.detach())
 
     def pretrain(self, folder):
         policy = self.algorithm.policy
@@ -137,21 +142,33 @@ class DemonstrationUpdates:
         policy.train()
         policy.update_normalization(observations)
         count = len(self.dataset["actions"])
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer, T_max=self.cfg.demonstration_epochs,
+            eta_min=self.cfg.demonstration_learning_rate * .01)
         with (folder / "demonstration_pretrain.jsonl").open("x") as stream:
             for epoch in range(self.cfg.demonstration_epochs):
                 permutation = torch.randperm(count, device=self.algorithm.device)
                 losses = [self.step(indices) for indices in permutation.split(self.cfg.demonstration_batch_size)]
+                scheduler.step()
                 if (epoch + 1) % 50 == 0 or epoch == 0:
-                    record = {"epoch": epoch + 1, "actor_mse": float(np.mean([item[0] for item in losses])),
+                    record = {"epoch": epoch + 1, "actor_mse": float(np.mean([item[2] for item in losses])),
+                              "objective_mse": float(np.mean([item[0] for item in losses])),
+                              "objective": self.cfg.demonstration_objective,
+                              "learning_rate": scheduler.get_last_lr()[0],
                               "critic_smooth_l1": float(np.mean([item[1] for item in losses])),
                               "gradient_steps": self.steps}
                     stream.write(json.dumps(record) + "\n")
                     stream.flush()
                     print(json.dumps({"demonstration_pretrain": record}), flush=True)
         with torch.no_grad():
-            actor, critic = self.losses(torch.arange(count, device=self.algorithm.device))
+            actor, critic, action_mse = self.losses(torch.arange(count, device=self.algorithm.device))
+            predictions = policy.act_inference(observations)
+            joint_rmse = (predictions - self.dataset["actions"]).square().mean(0).sqrt()
         report = {"status": "actual_success_demonstration_initialization_completed", "frames": count,
-                  "actor_mse": float(actor), "critic_smooth_l1": float(critic),
+                  "actor_mse": float(action_mse), "objective_mse": float(actor),
+                  "objective": self.cfg.demonstration_objective,
+                  "action_margin": self.cfg.demonstration_action_margin,
+                  "rmse_per_action": joint_rmse.tolist(), "critic_smooth_l1": float(critic),
                   "gradient_steps": self.steps, "rl_transitions": 0,
                   "dataset_sha256": digest(folder / "demonstrations.pt"), "task_success_verified": False}
         (folder / "demonstration_initialization.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -162,5 +179,5 @@ class DemonstrationUpdates:
         for _ in range(self.cfg.demonstration_updates_per_iteration):
             indices = torch.randint(len(self.dataset["actions"]), (self.cfg.demonstration_batch_size,),
                                     device=self.algorithm.device)
-            losses.append(self.step(indices)[0])
+            losses.append(self.step(indices)[2])
         return float(np.mean(losses))
