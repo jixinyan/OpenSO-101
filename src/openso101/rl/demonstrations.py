@@ -46,9 +46,19 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
             raise ValueError("成功示范的任务、观测、动作或控制配置与训练不一致")
         if digest(folder / "trajectory.hdf5") != report["trace_sha256"]:
             raise ValueError("成功示范 trajectory SHA256 不一致")
+        action_field = "policy_action"
+        if "supervision" in report:
+            supervision = report["supervision"]
+            if (supervision["action_field"] != "expert_policy_action"
+                    or supervision["executed_action_field"] != "policy_action"
+                    or supervision["reward_source"] != "actual_executed_transition"):
+                raise ValueError("示范监督目标与实际动作的来源不符合支持的定义")
+            action_field = supervision["action_field"]
         with h5py.File(folder / "trajectory.hdf5", "r") as stream:
             arrays = {name: stream[name][:] for name in
                       ("policy_observation", "policy_action", "weighted_reward", "active", "success")}
+            if action_field != "policy_action":
+                arrays[action_field] = stream[action_field][:]
         if any(not np.isfinite(value).all() for value in arrays.values()):
             raise ValueError("成功示范包含无效数值")
         included = []
@@ -62,7 +72,7 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
                     or not bool(arrays["success"][selected[-1], index])):
                 raise ValueError("成功示范需要从初始状态到成功结束的完整 episode")
             observations = arrays["policy_observation"][selected, index]
-            actions = arrays["policy_action"][selected, index]
+            actions = arrays[action_field][selected, index]
             rewards = arrays["weighted_reward"][selected, index].sum(axis=-1)
             if observations.shape != (len(selected), sum(item["size"] for item in expected_terms)):
                 raise ValueError("示范观测尺寸与训练不一致")
@@ -80,6 +90,8 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
             raise ValueError("示范来源没有实际成功的完整 episode")
         sources.append({"source": str(folder), "report_sha256": digest(folder / "report.json"),
                         "trajectory_sha256": report["trace_sha256"], "episodes": included,
+                        "supervision_action_field": action_field, "executed_action_field": "policy_action",
+                        "reward_source": "actual_executed_transition",
                         "controller": report["controller"]})
     dataset = {name: torch.cat(items) for name, items in buffers.items()}
     torch.save(dataset, output / names[0])

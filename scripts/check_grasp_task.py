@@ -17,6 +17,8 @@ parser.add_argument("--task", choices=("OpenSO101-Lift-v0", "OpenSO101-PickPlace
 parser.add_argument("--with-cameras", action="store_true")
 parser.add_argument("--camera-resolution", type=int, default=256)
 parser.add_argument("--recording-output", type=Path)
+parser.add_argument("--arm-target-noise-std", type=float, default=0.)
+parser.add_argument("--arm-target-noise-seed", type=int, default=100042)
 args = parser.parse_args()
 from openso101.rl.gpu_scope import configure_visible_gpu
 
@@ -27,6 +29,8 @@ if (args.verified_plan is None) != (args.plan_states is None):
     raise ValueError("使用已有规划需要同时提供其原生初始状态")
 if args.recording_output is not None and (not args.with_cameras or args.task_profile != "grasp_v4"):
     raise ValueError("完整 HDF5 任务采集需要双相机与 grasp_v4")
+if not 0. <= args.arm_target_noise_std <= .04 or (args.arm_target_noise_std and args.task_profile != "grasp_v4"):
+    raise ValueError("arm target 扰动需要 grasp_v4，标准差范围为 0 至 0.04 rad")
 args.output.mkdir(parents=True, exist_ok=False)
 pick_place = args.task == "OpenSO101-PickPlace-v0"
 if pick_place and args.task_profile != "grasp_v4":
@@ -74,6 +78,7 @@ try:
             values = {"joint_position": robot.data.joint_pos[:, ids], "joint_velocity": robot.data.joint_vel[:, ids],
                       "policy_observation": policy_observation,
                       "policy_action": policy_action,
+                      "expert_policy_action": expert_policy_action,
                       "weighted_reward": runtime.reward_manager._step_reward * runtime.step_dt,
                       "robot_body_position_root": body_positions, "robot_body_quaternion_root": body_quaternions,
                       "gravity_compensation": robot.root_physx_view.get_gravity_compensation_forces()[:, ids],
@@ -136,6 +141,8 @@ try:
     phase = torch.full((args.num_envs,), -1, dtype=torch.long, device=runtime.device)
     path_cursor = torch.zeros_like(phase)
     active = torch.ones(args.num_envs, dtype=torch.bool, device=runtime.device)
+    noise_generator = torch.Generator(device=runtime.device).manual_seed(args.arm_target_noise_seed)
+    arm_scales = torch.tensor([item["scale"] for item in mappings[:5]], device=runtime.device)
 
     def control_actions(desired):
         if args.task_profile == "grasp_v3":
@@ -155,6 +162,7 @@ try:
     for _ in range(settling_steps):
         policy_observation = observation["policy"].detach().clone()
         policy_action = control_actions(settling_target)
+        expert_policy_action = policy_action.clone()
         observation, _, terminated, truncated, _ = env.step(policy_action)
         if (terminated | truncated).any():
             raise RuntimeError("规划准备过程提前终止")
@@ -291,6 +299,11 @@ try:
         desired = torch.cat((arm_target, jaw_target), dim=-1)
         actions = control_actions(desired)
         actions[~active] = 0
+        expert_policy_action = actions.clone()
+        if args.arm_target_noise_std:
+            noise = torch.randn(actions[:, :5].shape, generator=noise_generator, device=runtime.device)
+            actions[:, :5] = (actions[:, :5] + noise * args.arm_target_noise_std / arm_scales).clamp(-1, 1)
+            actions[~active] = 0
         policy_observation = observation["policy"].detach().clone()
         policy_action = actions.detach().clone()
         observation, _, terminated, truncated, _ = env.step(actions)
@@ -366,6 +379,10 @@ try:
               "reward_terms": list(runtime.reward_manager.active_terms),
               "state_action_sampling": "observation_before_action_with_transition_reward",
               "rl_policy_success_verified": False}
+    report["supervision"] = {"action_field": "expert_policy_action", "executed_action_field": "policy_action",
+                             "arm_target_noise_std_rad": args.arm_target_noise_std,
+                             "arm_target_noise_seed": args.arm_target_noise_seed,
+                             "reward_source": "actual_executed_transition"}
     gravity = np.stack([item["gravity_compensation"] for item in trace])
     holding_budget = (np.asarray(states["joint_stiffness"]) * .04 if args.task_profile == "grasp_v3"
                       else np.asarray(states["effort_limits"]))
