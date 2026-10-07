@@ -1,0 +1,34 @@
+[INFO][AppLauncher]: Using device: cuda:0
+[INFO][AppLauncher]: Loading experience file: /mnt/data/users/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/isaaclab/apps/isaaclab.python.headless.kit
+............................................                             [100%]Loading user config located at: '/mnt/data/users/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/isaacsim/kit/data/Kit/Isaac-Sim/5.1/user.config.json'
+[Info] [carb] Logging to file: /mnt/data/users/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/isaacsim/kit/logs/Kit/Isaac-Sim/5.1/kit_20261007_124913.log
+2026-10-07T04:49:17Z [3,891ms] [Warning] [omni.usd_config.extension] Enable omni.materialx.libs extension to use MaterialX
+2026-10-07T04:49:18Z [5,059ms] [Warning] [omni.platforminfo.plugin] failed to open the default display.  Can't verify X Server version.
+2026-10-07T04:49:19Z [5,765ms] [Warning] [carb] Acquiring non optional plugin interface which is not listed as dependency: [omni::physx::IPhysxBenchmarks v1.0] (plugin: <default plugin>), by client: omni.physics.physx.plugin. Add it to CARB_PLUGIN_IMPL_DEPS() macro of a client.
+2026-10-07T04:49:19Z [6,189ms] [Warning] [omni.isaac.dynamic_control] omni.isaac.dynamic_control is deprecated as of Isaac Sim 4.5. No action is needed from end-users.
+2026-10-07T04:49:36Z [22,955ms] [Warning] [carb.cudainterop.plugin] CUDA_VISIBLE_DEVICES environment variable is set.
+2026-10-07T04:49:36Z [22,955ms] [Warning] [carb.cudainterop.plugin] Note CUDA device enumeration and Omniverse device enumeration are different.
+2026-10-07T04:49:36Z [22,955ms] [Warning] [carb.cudainterop.plugin] Setting CUDA_VISIBLE_DEVICES can lead to undesired behavior or crashes.
+
+|---------------------------------------------------------------------------------------------|
+| Driver Version: 580.105.08    | Graphics API: Vulkan
+|=============================================================================================|
+| GPU | Name                             | Active | LDA | GPU Memory | Vendor-ID | LUID       |
+|     |                                  |        |     |            | Device-ID | UUID       |
+|     |                                  |        |     |            | Bus-ID    |            |
+|---------------------------------------------------------------------------------------------|
+| 0   | NVIDIA H20G                      | Yes: 0 |     | 275040  MB | 10de      | 0          |
+|     |                                  |        |     |            | 3182      | aa3aa801.. |
+|     |                                  |        |     |            | 5e        |            |
+|=============================================================================================|
+| OS: 22.04.5 LTS (Jammy Jellyfish) ubuntu, Version: 22.04.5, Kernel: 6.6.0-100.jd_b007.x86_64
+| Processor: Intel(R) Xeon(R) 6776P
+| Bare Metal Cores: 128 | Bare Metal Logical Cores: 256
+| Core Usage Quota: 200
+|---------------------------------------------------------------------------------------------|
+| Total Memory (MB): 2048000 | Free Memory: 144634
+| Total Page/Swap (MB): 0 | Free Page/Swap: 0
+|---------------------------------------------------------------------------------------------|
+2026-10-07T04:49:39Z [25,770ms] [Warning] [gpu.foundation.plugin] ECC is enabled on physical device 0
+2026-10-07T04:49:43Z [30,103ms] [Warning] [omni.kvdb.plugin] Disabling key-value database because another kit process is locking it
+{"report": "outputs/rl_progress/native_regressions_20261007T044912204553Z.json", "exit_code": 0, "worker_pid": 18753, "git_sha": "417fee8199599ecbdddf6e30b4d50bdf1f77ae9d"}

@@ -1,0 +1,1167 @@
+{
+  "source_report_sha256": "aa1f3fceafe3c592f797a930eedef051281e1fbcb67cda55ea48a72bfac2be6f",
+  "trace_sha256": "02d84517a7eab4924b46b729249af4a1ebc9b9de38938ba455abb24a23de52c7",
+  "velocity_sampling": "actual_observation_before_action",
+  "hold_sampling": "actual_termination_after_action",
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "release_steps": 32,
+      "maximum_hold_seconds": 0.5000000596046448,
+      "released_samples": [
+        {
+          "step": 342,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0053568026050925255,
+          "angular_speed_rad_s": 0.4892026484012604,
+          "jaw_rad": 0.21961574256420135
+        },
+        {
+          "step": 343,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.07896780222654343,
+          "angular_speed_rad_s": 3.035954236984253,
+          "jaw_rad": 0.24961833655834198
+        },
+        {
+          "step": 344,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.17786836624145508,
+          "angular_speed_rad_s": 6.851491928100586,
+          "jaw_rad": 0.2796200215816498
+        },
+        {
+          "step": 345,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.06408052891492844,
+          "angular_speed_rad_s": 1.8314932584762573,
+          "jaw_rad": 0.3096226155757904
+        },
+        {
+          "step": 346,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.09586898237466812,
+          "angular_speed_rad_s": 4.8103156089782715,
+          "jaw_rad": 0.33962464332580566
+        },
+        {
+          "step": 347,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.07334856688976288,
+          "angular_speed_rad_s": 3.452920436859131,
+          "jaw_rad": 0.3696272373199463
+        },
+        {
+          "step": 348,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.00046308120363391936,
+          "angular_speed_rad_s": 0.005758179351687431,
+          "jaw_rad": 0.3996298313140869
+        },
+        {
+          "step": 349,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 5.4471584007842466e-05,
+          "angular_speed_rad_s": 0.0023023306857794523,
+          "jaw_rad": 0.42963242530822754
+        },
+        {
+          "step": 350,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 3.544613718986511e-05,
+          "angular_speed_rad_s": 0.0009035638649947941,
+          "jaw_rad": 0.45963501930236816
+        },
+        {
+          "step": 351,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 5.430361125036143e-05,
+          "angular_speed_rad_s": 0.0023002957459539175,
+          "jaw_rad": 0.4896376132965088
+        },
+        {
+          "step": 352,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0001121151726692915,
+          "angular_speed_rad_s": 0.0014649824006482959,
+          "jaw_rad": 0.5196277499198914
+        },
+        {
+          "step": 353,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 9.87161256489344e-05,
+          "angular_speed_rad_s": 0.0007743576425127685,
+          "jaw_rad": 0.5496112704277039
+        },
+        {
+          "step": 354,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 4.959769648849033e-05,
+          "angular_speed_rad_s": 0.001154319616034627,
+          "jaw_rad": 0.5795947909355164
+        },
+        {
+          "step": 355,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 0.00017607194604352117,
+          "angular_speed_rad_s": 0.013796291314065456,
+          "jaw_rad": 0.6095783114433289
+        },
+        {
+          "step": 356,
+          "hold_seconds": 0.15999998152256012,
+          "linear_speed_m_s": 5.005496495869011e-05,
+          "angular_speed_rad_s": 0.001164721674285829,
+          "jaw_rad": 0.6395618319511414
+        },
+        {
+          "step": 357,
+          "hold_seconds": 0.17999997735023499,
+          "linear_speed_m_s": 8.591957157477736e-05,
+          "angular_speed_rad_s": 0.0016827923245728016,
+          "jaw_rad": 0.6695453524589539
+        },
+        {
+          "step": 358,
+          "hold_seconds": 0.19999997317790985,
+          "linear_speed_m_s": 5.463014531414956e-05,
+          "angular_speed_rad_s": 0.0023047099821269512,
+          "jaw_rad": 0.6995288729667664
+        },
+        {
+          "step": 359,
+          "hold_seconds": 0.21999996900558472,
+          "linear_speed_m_s": 5.447572038974613e-05,
+          "angular_speed_rad_s": 0.0023025735281407833,
+          "jaw_rad": 0.7295123934745789
+        },
+        {
+          "step": 360,
+          "hold_seconds": 0.23999996483325958,
+          "linear_speed_m_s": 9.259105354431085e-06,
+          "angular_speed_rad_s": 0.002712105168029666,
+          "jaw_rad": 0.7594516277313232
+        },
+        {
+          "step": 361,
+          "hold_seconds": 0.25999996066093445,
+          "linear_speed_m_s": 5.404777402873151e-05,
+          "angular_speed_rad_s": 0.0009600255289115012,
+          "jaw_rad": 0.7868797183036804
+        },
+        {
+          "step": 362,
+          "hold_seconds": 0.2799999713897705,
+          "linear_speed_m_s": 5.73861543671228e-05,
+          "angular_speed_rad_s": 0.0013843064662069082,
+          "jaw_rad": 0.807366132736206
+        },
+        {
+          "step": 363,
+          "hold_seconds": 0.29999998211860657,
+          "linear_speed_m_s": 0.00014767155516892672,
+          "angular_speed_rad_s": 0.0008349113049916923,
+          "jaw_rad": 0.8191857933998108
+        },
+        {
+          "step": 364,
+          "hold_seconds": 0.3199999928474426,
+          "linear_speed_m_s": 6.49635840090923e-05,
+          "angular_speed_rad_s": 0.001535465708002448,
+          "jaw_rad": 0.8229684829711914
+        },
+        {
+          "step": 365,
+          "hold_seconds": 0.3400000035762787,
+          "linear_speed_m_s": 4.3977292079944164e-05,
+          "angular_speed_rad_s": 0.0007060013012960553,
+          "jaw_rad": 0.8207501769065857
+        },
+        {
+          "step": 366,
+          "hold_seconds": 0.36000001430511475,
+          "linear_speed_m_s": 3.518800804158673e-05,
+          "angular_speed_rad_s": 0.0008964192238636315,
+          "jaw_rad": 0.8150714635848999
+        },
+        {
+          "step": 367,
+          "hold_seconds": 0.3800000250339508,
+          "linear_speed_m_s": 5.50526128790807e-05,
+          "angular_speed_rad_s": 0.0023030447773635387,
+          "jaw_rad": 0.8082858920097351
+        },
+        {
+          "step": 368,
+          "hold_seconds": 0.40000003576278687,
+          "linear_speed_m_s": 0.00017713848501443863,
+          "angular_speed_rad_s": 0.013836827129125595,
+          "jaw_rad": 0.8021548986434937
+        },
+        {
+          "step": 369,
+          "hold_seconds": 0.4200000464916229,
+          "linear_speed_m_s": 5.4445077694253996e-05,
+          "angular_speed_rad_s": 0.0023022349923849106,
+          "jaw_rad": 0.7976897358894348
+        },
+        {
+          "step": 370,
+          "hold_seconds": 0.440000057220459,
+          "linear_speed_m_s": 5.9843641793122515e-06,
+          "angular_speed_rad_s": 9.349171159556136e-05,
+          "jaw_rad": 0.7952132225036621
+        },
+        {
+          "step": 371,
+          "hold_seconds": 0.46000006794929504,
+          "linear_speed_m_s": 5.2379728003870696e-05,
+          "angular_speed_rad_s": 0.0022819614969193935,
+          "jaw_rad": 0.7945330739021301
+        },
+        {
+          "step": 372,
+          "hold_seconds": 0.4800000786781311,
+          "linear_speed_m_s": 5.436419087345712e-05,
+          "angular_speed_rad_s": 0.001217555021867156,
+          "jaw_rad": 0.795160710811615
+        },
+        {
+          "step": 373,
+          "hold_seconds": 0.5000000596046448,
+          "linear_speed_m_s": 8.2044156442862e-05,
+          "angular_speed_rad_s": 0.004237726330757141,
+          "jaw_rad": 0.7965138554573059
+        }
+      ]
+    },
+    {
+      "environment": 1,
+      "success": true,
+      "release_steps": 33,
+      "maximum_hold_seconds": 0.5000000596046448,
+      "released_samples": [
+        {
+          "step": 333,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.025972148403525352,
+          "angular_speed_rad_s": 0.561825692653656,
+          "jaw_rad": 0.21647486090660095
+        },
+        {
+          "step": 334,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.07769478112459183,
+          "angular_speed_rad_s": 3.008443832397461,
+          "jaw_rad": 0.24647745490074158
+        },
+        {
+          "step": 335,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.11707209795713425,
+          "angular_speed_rad_s": 5.959264755249023,
+          "jaw_rad": 0.2764793634414673
+        },
+        {
+          "step": 336,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.037693578749895096,
+          "angular_speed_rad_s": 1.6167303323745728,
+          "jaw_rad": 0.3064799904823303
+        },
+        {
+          "step": 337,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.05156448483467102,
+          "angular_speed_rad_s": 2.14054274559021,
+          "jaw_rad": 0.3364821970462799
+        },
+        {
+          "step": 338,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0533134900033474,
+          "angular_speed_rad_s": 2.4813709259033203,
+          "jaw_rad": 0.36648479104042053
+        },
+        {
+          "step": 339,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.04388841614127159,
+          "angular_speed_rad_s": 2.0707478523254395,
+          "jaw_rad": 0.39648738503456116
+        },
+        {
+          "step": 340,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.09196271002292633,
+          "angular_speed_rad_s": 4.335572719573975,
+          "jaw_rad": 0.4264899790287018
+        },
+        {
+          "step": 341,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.058608390390872955,
+          "angular_speed_rad_s": 2.760230779647827,
+          "jaw_rad": 0.4564925730228424
+        },
+        {
+          "step": 342,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 4.798481677426025e-05,
+          "angular_speed_rad_s": 0.001002559787593782,
+          "jaw_rad": 0.48649516701698303
+        },
+        {
+          "step": 343,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 5.197351492824964e-05,
+          "angular_speed_rad_s": 0.0019643371924757957,
+          "jaw_rad": 0.5164873003959656
+        },
+        {
+          "step": 344,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.00012185703235445544,
+          "angular_speed_rad_s": 0.003108023200184107,
+          "jaw_rad": 0.5464708209037781
+        },
+        {
+          "step": 345,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 5.191029413254e-05,
+          "angular_speed_rad_s": 0.001964373281225562,
+          "jaw_rad": 0.5764543414115906
+        },
+        {
+          "step": 346,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 3.729474701685831e-05,
+          "angular_speed_rad_s": 0.0012706409906968474,
+          "jaw_rad": 0.6064378619194031
+        },
+        {
+          "step": 347,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 5.02015755046159e-05,
+          "angular_speed_rad_s": 0.001954783918336034,
+          "jaw_rad": 0.6364213824272156
+        },
+        {
+          "step": 348,
+          "hold_seconds": 0.15999998152256012,
+          "linear_speed_m_s": 5.12936276209075e-05,
+          "angular_speed_rad_s": 0.0007970033911988139,
+          "jaw_rad": 0.6664049029350281
+        },
+        {
+          "step": 349,
+          "hold_seconds": 0.17999997735023499,
+          "linear_speed_m_s": 3.869842839776538e-05,
+          "angular_speed_rad_s": 0.001278539770282805,
+          "jaw_rad": 0.6963884234428406
+        },
+        {
+          "step": 350,
+          "hold_seconds": 0.19999997317790985,
+          "linear_speed_m_s": 5.431265162769705e-05,
+          "angular_speed_rad_s": 0.0020118970423936844,
+          "jaw_rad": 0.7263719439506531
+        },
+        {
+          "step": 351,
+          "hold_seconds": 0.21999996900558472,
+          "linear_speed_m_s": 5.3861334890825674e-05,
+          "angular_speed_rad_s": 0.00203326134942472,
+          "jaw_rad": 0.7563420534133911
+        },
+        {
+          "step": 352,
+          "hold_seconds": 0.23999996483325958,
+          "linear_speed_m_s": 5.19116256327834e-05,
+          "angular_speed_rad_s": 0.001964373281225562,
+          "jaw_rad": 0.7842769026756287
+        },
+        {
+          "step": 353,
+          "hold_seconds": 0.25999996066093445,
+          "linear_speed_m_s": 2.2136056941235438e-05,
+          "angular_speed_rad_s": 0.0001242112775798887,
+          "jaw_rad": 0.8056195974349976
+        },
+        {
+          "step": 354,
+          "hold_seconds": 0.2799999713897705,
+          "linear_speed_m_s": 6.190084241097793e-05,
+          "angular_speed_rad_s": 0.0025912176351994276,
+          "jaw_rad": 0.8183507323265076
+        },
+        {
+          "step": 355,
+          "hold_seconds": 0.29999998211860657,
+          "linear_speed_m_s": 3.476142592262477e-05,
+          "angular_speed_rad_s": 0.004613486584275961,
+          "jaw_rad": 0.8228955864906311
+        },
+        {
+          "step": 356,
+          "hold_seconds": 0.3199999928474426,
+          "linear_speed_m_s": 4.2476658563828096e-05,
+          "angular_speed_rad_s": 0.0008237326401285827,
+          "jaw_rad": 0.8211879730224609
+        },
+        {
+          "step": 357,
+          "hold_seconds": 0.3400000035762787,
+          "linear_speed_m_s": 3.729542004293762e-05,
+          "angular_speed_rad_s": 0.0012706300476565957,
+          "jaw_rad": 0.8157532811164856
+        },
+        {
+          "step": 358,
+          "hold_seconds": 0.36000001430511475,
+          "linear_speed_m_s": 2.0840641809627414e-05,
+          "angular_speed_rad_s": 0.00013131038576830178,
+          "jaw_rad": 0.8089884519577026
+        },
+        {
+          "step": 359,
+          "hold_seconds": 0.3800000250339508,
+          "linear_speed_m_s": 6.74622060614638e-05,
+          "angular_speed_rad_s": 0.0014669190859422088,
+          "jaw_rad": 0.8027282953262329
+        },
+        {
+          "step": 360,
+          "hold_seconds": 0.40000003576278687,
+          "linear_speed_m_s": 0.00012188295659143478,
+          "angular_speed_rad_s": 0.0031086790841072798,
+          "jaw_rad": 0.7980626225471497
+        },
+        {
+          "step": 361,
+          "hold_seconds": 0.4200000464916229,
+          "linear_speed_m_s": 5.05952411913313e-05,
+          "angular_speed_rad_s": 0.0019559648353606462,
+          "jaw_rad": 0.7953796982765198
+        },
+        {
+          "step": 362,
+          "hold_seconds": 0.440000057220459,
+          "linear_speed_m_s": 4.2592404497554526e-05,
+          "angular_speed_rad_s": 0.0008256555302068591,
+          "jaw_rad": 0.7945312857627869
+        },
+        {
+          "step": 363,
+          "hold_seconds": 0.46000006794929504,
+          "linear_speed_m_s": 5.052181222708896e-05,
+          "angular_speed_rad_s": 0.001956374617293477,
+          "jaw_rad": 0.7950493693351746
+        },
+        {
+          "step": 364,
+          "hold_seconds": 0.4800000786781311,
+          "linear_speed_m_s": 2.1045216271886602e-05,
+          "angular_speed_rad_s": 0.00011654231639113277,
+          "jaw_rad": 0.7963528633117676
+        },
+        {
+          "step": 365,
+          "hold_seconds": 0.5000000596046448,
+          "linear_speed_m_s": 4.9527774535818025e-05,
+          "angular_speed_rad_s": 0.0019596568308770657,
+          "jaw_rad": 0.7979053854942322
+        }
+      ]
+    },
+    {
+      "environment": 2,
+      "success": false,
+      "release_steps": 65,
+      "maximum_hold_seconds": 0.13999998569488525,
+      "released_samples": [
+        {
+          "step": 335,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.016604123637080193,
+          "angular_speed_rad_s": 3.1470577716827393,
+          "jaw_rad": 0.23502549529075623
+        },
+        {
+          "step": 336,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0459386482834816,
+          "angular_speed_rad_s": 2.26167368888855,
+          "jaw_rad": 0.26502808928489685
+        },
+        {
+          "step": 337,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.006013118661940098,
+          "angular_speed_rad_s": 0.16246859729290009,
+          "jaw_rad": 0.2950306832790375
+        },
+        {
+          "step": 338,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.008690163493156433,
+          "angular_speed_rad_s": 0.518690824508667,
+          "jaw_rad": 0.3250332772731781
+        },
+        {
+          "step": 339,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0032392258290201426,
+          "angular_speed_rad_s": 0.1620142012834549,
+          "jaw_rad": 0.3550358712673187
+        },
+        {
+          "step": 340,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0024561600293964148,
+          "angular_speed_rad_s": 0.11566760390996933,
+          "jaw_rad": 0.38503846526145935
+        },
+        {
+          "step": 341,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.001490690279752016,
+          "angular_speed_rad_s": 0.07705620676279068,
+          "jaw_rad": 0.4150410592556
+        },
+        {
+          "step": 342,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.0027191878762096167,
+          "angular_speed_rad_s": 0.14832106232643127,
+          "jaw_rad": 0.4450436532497406
+        },
+        {
+          "step": 343,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.000514357874635607,
+          "angular_speed_rad_s": 0.04033809155225754,
+          "jaw_rad": 0.4750462472438812
+        },
+        {
+          "step": 344,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0010479839984327555,
+          "angular_speed_rad_s": 0.08113894611597061,
+          "jaw_rad": 0.5050456523895264
+        },
+        {
+          "step": 345,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0012290319427847862,
+          "angular_speed_rad_s": 0.08897429704666138,
+          "jaw_rad": 0.5350291728973389
+        },
+        {
+          "step": 346,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 0.0012640263885259628,
+          "angular_speed_rad_s": 0.07301715761423111,
+          "jaw_rad": 0.5650126934051514
+        },
+        {
+          "step": 347,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0011778285261243582,
+          "angular_speed_rad_s": 0.08404530584812164,
+          "jaw_rad": 0.5949962139129639
+        },
+        {
+          "step": 348,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.0026047027204185724,
+          "angular_speed_rad_s": 0.12890870869159698,
+          "jaw_rad": 0.6249797344207764
+        },
+        {
+          "step": 349,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0018447076436132193,
+          "angular_speed_rad_s": 0.05914720520377159,
+          "jaw_rad": 0.6549632549285889
+        },
+        {
+          "step": 350,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.000872728880494833,
+          "angular_speed_rad_s": 0.06706204265356064,
+          "jaw_rad": 0.6849467754364014
+        },
+        {
+          "step": 351,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0007299595745280385,
+          "angular_speed_rad_s": 0.049521058797836304,
+          "jaw_rad": 0.7149302959442139
+        },
+        {
+          "step": 352,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0007965590921230614,
+          "angular_speed_rad_s": 0.052835553884506226,
+          "jaw_rad": 0.7449138164520264
+        },
+        {
+          "step": 353,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.002963660517707467,
+          "angular_speed_rad_s": 0.20416562259197235,
+          "jaw_rad": 0.774193286895752
+        },
+        {
+          "step": 354,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0009304011473432183,
+          "angular_speed_rad_s": 0.04436810314655304,
+          "jaw_rad": 0.7984662055969238
+        },
+        {
+          "step": 355,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0009480267181061208,
+          "angular_speed_rad_s": 0.03493519499897957,
+          "jaw_rad": 0.8145672082901001
+        },
+        {
+          "step": 356,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0008812564192339778,
+          "angular_speed_rad_s": 0.04310094192624092,
+          "jaw_rad": 0.8220874071121216
+        },
+        {
+          "step": 357,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0009278730140067637,
+          "angular_speed_rad_s": 0.04733078554272652,
+          "jaw_rad": 0.8224959969520569
+        },
+        {
+          "step": 358,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.001585678313858807,
+          "angular_speed_rad_s": 0.11171187460422516,
+          "jaw_rad": 0.8181889653205872
+        },
+        {
+          "step": 359,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0009109446546062827,
+          "angular_speed_rad_s": 0.042420804500579834,
+          "jaw_rad": 0.8116810917854309
+        },
+        {
+          "step": 360,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0010785552440211177,
+          "angular_speed_rad_s": 0.05771319195628166,
+          "jaw_rad": 0.8050560355186462
+        },
+        {
+          "step": 361,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0008932578493840992,
+          "angular_speed_rad_s": 0.051458463072776794,
+          "jaw_rad": 0.7996967434883118
+        },
+        {
+          "step": 362,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 0.0009202413493767381,
+          "angular_speed_rad_s": 0.05979030206799507,
+          "jaw_rad": 0.7962452173233032
+        },
+        {
+          "step": 363,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 0.0008991832146421075,
+          "angular_speed_rad_s": 0.04839396849274635,
+          "jaw_rad": 0.7947349548339844
+        },
+        {
+          "step": 364,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 0.0014111107448115945,
+          "angular_speed_rad_s": 0.07045149058103561,
+          "jaw_rad": 0.794795036315918
+        },
+        {
+          "step": 365,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0007760912412777543,
+          "angular_speed_rad_s": 0.05075928941369057,
+          "jaw_rad": 0.795866072177887
+        },
+        {
+          "step": 366,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0028086842503398657,
+          "angular_speed_rad_s": 0.16438086330890656,
+          "jaw_rad": 0.7973784804344177
+        },
+        {
+          "step": 367,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.0015369992470368743,
+          "angular_speed_rad_s": 0.13498198986053467,
+          "jaw_rad": 0.7988731265068054
+        },
+        {
+          "step": 368,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0010898223845288157,
+          "angular_speed_rad_s": 0.09581930935382843,
+          "jaw_rad": 0.8000531196594238
+        },
+        {
+          "step": 369,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0009039784199558198,
+          "angular_speed_rad_s": 0.05435867980122566,
+          "jaw_rad": 0.8007895350456238
+        },
+        {
+          "step": 370,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0009595950832590461,
+          "angular_speed_rad_s": 0.07035524398088455,
+          "jaw_rad": 0.8010878562927246
+        },
+        {
+          "step": 371,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 0.0009845824679359794,
+          "angular_speed_rad_s": 0.044859591871500015,
+          "jaw_rad": 0.8010408878326416
+        },
+        {
+          "step": 372,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0008757952018640935,
+          "angular_speed_rad_s": 0.04418626055121422,
+          "jaw_rad": 0.8007791042327881
+        },
+        {
+          "step": 373,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0027228067629039288,
+          "angular_speed_rad_s": 0.1869061291217804,
+          "jaw_rad": 0.8004357814788818
+        },
+        {
+          "step": 374,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.00487868906930089,
+          "angular_speed_rad_s": 0.33557429909706116,
+          "jaw_rad": 0.8001013398170471
+        },
+        {
+          "step": 375,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0007784555782563984,
+          "angular_speed_rad_s": 0.04327767714858055,
+          "jaw_rad": 0.7998383045196533
+        },
+        {
+          "step": 376,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0009172118734568357,
+          "angular_speed_rad_s": 0.04076460376381874,
+          "jaw_rad": 0.7996802926063538
+        },
+        {
+          "step": 377,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.004120359197258949,
+          "angular_speed_rad_s": 0.24315409362316132,
+          "jaw_rad": 0.7996183037757874
+        },
+        {
+          "step": 378,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.0019061772618442774,
+          "angular_speed_rad_s": 0.144419327378273,
+          "jaw_rad": 0.7996363639831543
+        },
+        {
+          "step": 379,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0008520196424797177,
+          "angular_speed_rad_s": 0.05321389436721802,
+          "jaw_rad": 0.7997012138366699
+        },
+        {
+          "step": 380,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0010611372999846935,
+          "angular_speed_rad_s": 0.04256637021899223,
+          "jaw_rad": 0.7997775077819824
+        },
+        {
+          "step": 381,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0006481327000074089,
+          "angular_speed_rad_s": 0.036495376378297806,
+          "jaw_rad": 0.7998538017272949
+        },
+        {
+          "step": 382,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 0.0008841524831950665,
+          "angular_speed_rad_s": 0.048944611102342606,
+          "jaw_rad": 0.7999110221862793
+        },
+        {
+          "step": 383,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 0.0010405797511339188,
+          "angular_speed_rad_s": 0.08594664931297302,
+          "jaw_rad": 0.7999491691589355
+        },
+        {
+          "step": 384,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 0.0007855040021240711,
+          "angular_speed_rad_s": 0.048398591578006744,
+          "jaw_rad": 0.7999531030654907
+        },
+        {
+          "step": 385,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.001083082053810358,
+          "angular_speed_rad_s": 0.0908547192811966,
+          "jaw_rad": 0.7999531030654907
+        },
+        {
+          "step": 386,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.0021652246359735727,
+          "angular_speed_rad_s": 0.1495763063430786,
+          "jaw_rad": 0.7999522686004639
+        },
+        {
+          "step": 387,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.001000126008875668,
+          "angular_speed_rad_s": 0.07601263374090195,
+          "jaw_rad": 0.799914538860321
+        },
+        {
+          "step": 388,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0007803453481756151,
+          "angular_speed_rad_s": 0.049261439591646194,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 389,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.001716354745440185,
+          "angular_speed_rad_s": 0.12953540682792664,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 390,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0008773041190579534,
+          "angular_speed_rad_s": 0.051424719393253326,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 391,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0007103708339855075,
+          "angular_speed_rad_s": 0.05587568134069443,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 392,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.0008338591433130205,
+          "angular_speed_rad_s": 0.05610772967338562,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 393,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 0.005183060187846422,
+          "angular_speed_rad_s": 0.322210431098938,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 394,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 0.0008214755798690021,
+          "angular_speed_rad_s": 0.05089802294969559,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 395,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 0.0008958701509982347,
+          "angular_speed_rad_s": 0.04765764996409416,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 396,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 0.0007990590529516339,
+          "angular_speed_rad_s": 0.04983607307076454,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 397,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 0.0004594616766553372,
+          "angular_speed_rad_s": 0.04810153692960739,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 398,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 0.0009966709185391665,
+          "angular_speed_rad_s": 0.07370743155479431,
+          "jaw_rad": 0.7999030947685242
+        },
+        {
+          "step": 399,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 0.001000956166535616,
+          "angular_speed_rad_s": 0.04508450627326965,
+          "jaw_rad": 0.7999030947685242
+        }
+      ]
+    },
+    {
+      "environment": 3,
+      "success": true,
+      "release_steps": 31,
+      "maximum_hold_seconds": 0.5000000596046448,
+      "released_samples": [
+        {
+          "step": 289,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.017385678365826607,
+          "angular_speed_rad_s": 3.450000762939453,
+          "jaw_rad": 0.23030370473861694
+        },
+        {
+          "step": 290,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.07156869024038315,
+          "angular_speed_rad_s": 3.7144980430603027,
+          "jaw_rad": 0.26030629873275757
+        },
+        {
+          "step": 291,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.14555102586746216,
+          "angular_speed_rad_s": 6.103137969970703,
+          "jaw_rad": 0.29030781984329224
+        },
+        {
+          "step": 292,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.10740229487419128,
+          "angular_speed_rad_s": 4.122655868530273,
+          "jaw_rad": 0.32031041383743286
+        },
+        {
+          "step": 293,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.1724444031715393,
+          "angular_speed_rad_s": 8.126748085021973,
+          "jaw_rad": 0.3503130078315735
+        },
+        {
+          "step": 294,
+          "hold_seconds": 0.0,
+          "linear_speed_m_s": 0.04286200553178787,
+          "angular_speed_rad_s": 2.0400710105895996,
+          "jaw_rad": 0.3803156018257141
+        },
+        {
+          "step": 295,
+          "hold_seconds": 0.019999999552965164,
+          "linear_speed_m_s": 5.5872471421025693e-05,
+          "angular_speed_rad_s": 0.0019641730468720198,
+          "jaw_rad": 0.41031819581985474
+        },
+        {
+          "step": 296,
+          "hold_seconds": 0.03999999910593033,
+          "linear_speed_m_s": 6.052020125935087e-06,
+          "angular_speed_rad_s": 7.160013046814129e-05,
+          "jaw_rad": 0.44032078981399536
+        },
+        {
+          "step": 297,
+          "hold_seconds": 0.05999999865889549,
+          "linear_speed_m_s": 5.609579602605663e-05,
+          "angular_speed_rad_s": 0.001958741806447506,
+          "jaw_rad": 0.470323383808136
+        },
+        {
+          "step": 298,
+          "hold_seconds": 0.07999999821186066,
+          "linear_speed_m_s": 1.7199057765537873e-05,
+          "angular_speed_rad_s": 0.00011223960609640926,
+          "jaw_rad": 0.5003257989883423
+        },
+        {
+          "step": 299,
+          "hold_seconds": 0.09999999403953552,
+          "linear_speed_m_s": 6.050037882232573e-06,
+          "angular_speed_rad_s": 7.161778921727091e-05,
+          "jaw_rad": 0.5303093194961548
+        },
+        {
+          "step": 300,
+          "hold_seconds": 0.11999998986721039,
+          "linear_speed_m_s": 5.8399164117872715e-06,
+          "angular_speed_rad_s": 7.075119356159121e-05,
+          "jaw_rad": 0.5602928400039673
+        },
+        {
+          "step": 301,
+          "hold_seconds": 0.13999998569488525,
+          "linear_speed_m_s": 6.024780759616988e-06,
+          "angular_speed_rad_s": 7.159080996643752e-05,
+          "jaw_rad": 0.5902763605117798
+        },
+        {
+          "step": 302,
+          "hold_seconds": 0.15999998152256012,
+          "linear_speed_m_s": 5.585477265412919e-05,
+          "angular_speed_rad_s": 0.001964070601388812,
+          "jaw_rad": 0.6202598810195923
+        },
+        {
+          "step": 303,
+          "hold_seconds": 0.17999997735023499,
+          "linear_speed_m_s": 6.303032478172099e-06,
+          "angular_speed_rad_s": 7.165413990151137e-05,
+          "jaw_rad": 0.6502434015274048
+        },
+        {
+          "step": 304,
+          "hold_seconds": 0.19999997317790985,
+          "linear_speed_m_s": 6.024792583048111e-06,
+          "angular_speed_rad_s": 7.15955684427172e-05,
+          "jaw_rad": 0.6802269220352173
+        },
+        {
+          "step": 305,
+          "hold_seconds": 0.21999996900558472,
+          "linear_speed_m_s": 5.015490751247853e-05,
+          "angular_speed_rad_s": 0.002105505671352148,
+          "jaw_rad": 0.7102104425430298
+        },
+        {
+          "step": 306,
+          "hold_seconds": 0.23999996483325958,
+          "linear_speed_m_s": 5.8510509006737266e-06,
+          "angular_speed_rad_s": 7.077503687469289e-05,
+          "jaw_rad": 0.7401939630508423
+        },
+        {
+          "step": 307,
+          "hold_seconds": 0.25999996066093445,
+          "linear_speed_m_s": 5.399808651418425e-05,
+          "angular_speed_rad_s": 0.001956092892214656,
+          "jaw_rad": 0.7697886228561401
+        },
+        {
+          "step": 308,
+          "hold_seconds": 0.2799999713897705,
+          "linear_speed_m_s": 5.5872558732517064e-05,
+          "angular_speed_rad_s": 0.0019641579128801823,
+          "jaw_rad": 0.7951281666755676
+        },
+        {
+          "step": 309,
+          "hold_seconds": 0.29999998211860657,
+          "linear_speed_m_s": 5.399861402111128e-05,
+          "angular_speed_rad_s": 0.0019560582004487514,
+          "jaw_rad": 0.8125889897346497
+        },
+        {
+          "step": 310,
+          "hold_seconds": 0.3199999928474426,
+          "linear_speed_m_s": 2.04765656235395e-05,
+          "angular_speed_rad_s": 0.00022722396533936262,
+          "jaw_rad": 0.8213838338851929
+        },
+        {
+          "step": 311,
+          "hold_seconds": 0.3400000035762787,
+          "linear_speed_m_s": 5.360846625990234e-05,
+          "angular_speed_rad_s": 0.0021669245325028896,
+          "jaw_rad": 0.822754979133606
+        },
+        {
+          "step": 312,
+          "hold_seconds": 0.36000001430511475,
+          "linear_speed_m_s": 1.032806085277116e-05,
+          "angular_speed_rad_s": 7.316718256333843e-05,
+          "jaw_rad": 0.8190122842788696
+        },
+        {
+          "step": 313,
+          "hold_seconds": 0.3800000250339508,
+          "linear_speed_m_s": 5.850952675245935e-06,
+          "angular_speed_rad_s": 7.078843918861821e-05,
+          "jaw_rad": 0.8126956224441528
+        },
+        {
+          "step": 314,
+          "hold_seconds": 0.40000003576278687,
+          "linear_speed_m_s": 6.303020199993625e-06,
+          "angular_speed_rad_s": 7.165830174926668e-05,
+          "jaw_rad": 0.8059790134429932
+        },
+        {
+          "step": 315,
+          "hold_seconds": 0.4200000464916229,
+          "linear_speed_m_s": 6.303101145022083e-06,
+          "angular_speed_rad_s": 7.164855196606368e-05,
+          "jaw_rad": 0.8003629446029663
+        },
+        {
+          "step": 316,
+          "hold_seconds": 0.440000057220459,
+          "linear_speed_m_s": 0.00010750973888207227,
+          "angular_speed_rad_s": 0.0014176005497574806,
+          "jaw_rad": 0.796599268913269
+        },
+        {
+          "step": 317,
+          "hold_seconds": 0.46000006794929504,
+          "linear_speed_m_s": 6.054654477338772e-06,
+          "angular_speed_rad_s": 7.16050635674037e-05,
+          "jaw_rad": 0.7948033213615417
+        },
+        {
+          "step": 318,
+          "hold_seconds": 0.4800000786781311,
+          "linear_speed_m_s": 5.851451078342507e-06,
+          "angular_speed_rad_s": 7.076330803101882e-05,
+          "jaw_rad": 0.794653058052063
+        },
+        {
+          "step": 319,
+          "hold_seconds": 0.5000000596046448,
+          "linear_speed_m_s": 3.042653770535253e-05,
+          "angular_speed_rad_s": 0.004664426203817129,
+          "jaw_rad": 0.795604944229126
+        }
+      ]
+    }
+  ]
+}

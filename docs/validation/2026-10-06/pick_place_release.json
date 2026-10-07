@@ -1,0 +1,250 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 374,
+      "maximum_phase": 6,
+      "maximum_jaw_forces_n": [
+        65.37309265136719,
+        65.20445251464844
+      ],
+      "bilateral_contact_steps": 219,
+      "maximum_object_height_root_m": 0.17796707153320312
+    },
+    {
+      "environment": 1,
+      "success": true,
+      "control_steps": 366,
+      "maximum_phase": 6,
+      "maximum_jaw_forces_n": [
+        101.87772369384766,
+        100.47685241699219
+      ],
+      "bilateral_contact_steps": 213,
+      "maximum_object_height_root_m": 0.17650800943374634
+    },
+    {
+      "environment": 2,
+      "success": false,
+      "control_steps": 400,
+      "maximum_phase": 6,
+      "maximum_jaw_forces_n": [
+        102.2484359741211,
+        117.53439331054688
+      ],
+      "bilateral_contact_steps": 204,
+      "maximum_object_height_root_m": 0.14827190339565277
+    },
+    {
+      "environment": 3,
+      "success": true,
+      "control_steps": 320,
+      "maximum_phase": 6,
+      "maximum_jaw_forces_n": [
+        79.90348815917969,
+        79.48833465576172
+      ],
+      "bilateral_contact_steps": 166,
+      "maximum_object_height_root_m": 0.15122804045677185
+    }
+  ],
+  "successes": 3,
+  "episodes": 4,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.500002145767212,
+  "max_episode_steps": 400,
+  "reused_plan_sha256": "dc5146a3639e21038f1f2a4f24ff99945e2473b17e8a99856a9faffa9d25dc46",
+  "reused_plan_states_sha256": "2f3b81abe24f05c401f72d28dab3330a0d5abfd22a601747ffe5cab26a1c9ba9",
+  "reused_plan_scope": "exact_kinematic_inputs_with_independent_physics_recording",
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "planned_joint_speed_rad_s": 0.85,
+  "release_condition": {
+    "object_goal_distance_m": 0.03,
+    "arm_speed_rad_s": 0.1,
+    "hold_seconds": 0.1,
+    "requires_completed_path": true
+  },
+  "planned_phases": [
+    "approach",
+    "grasp",
+    "lift",
+    "carry",
+    "place"
+  ],
+  "path_tracking_pause_error_rad": 0.08,
+  "states_sha256": "2f3b81abe24f05c401f72d28dab3330a0d5abfd22a601747ffe5cab26a1c9ba9",
+  "plan_sha256": "dc5146a3639e21038f1f2a4f24ff99945e2473b17e8a99856a9faffa9d25dc46",
+  "initial_physics_sha256": "3cbd3acb0c3ed61e0421f9b5041c467edbd61f5447f4ac613d08cf51e8a55b5d",
+  "trace_sha256": "02d84517a7eab4924b46b729249af4a1ebc9b9de38938ba455abb24a23de52c7",
+  "source_sha256": "1d92b84a9c04fb4ffd756b2959689f7993b98f83a3fa152ceba444343ac88e1e",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "policy_observation_terms": [
+    {
+      "name": "joint_pos",
+      "size": 6
+    },
+    {
+      "name": "joint_vel",
+      "size": 6
+    },
+    {
+      "name": "object_position",
+      "size": 3
+    },
+    {
+      "name": "target_object_position",
+      "size": 3
+    },
+    {
+      "name": "grasp_state",
+      "size": 1
+    },
+    {
+      "name": "actions",
+      "size": 6
+    },
+    {
+      "name": "object_velocity",
+      "size": 6
+    },
+    {
+      "name": "task_state",
+      "size": 3
+    }
+  ],
+  "policy_action_mapping": [
+    {
+      "joint_name": "Rotation",
+      "action_index": 0,
+      "lower": -1.9198598861694336,
+      "upper": 1.9198598861694336,
+      "type": "position",
+      "scale": 1.9198598861694336,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Pitch",
+      "action_index": 1,
+      "lower": -1.7453298568725586,
+      "upper": 1.7453298568725586,
+      "type": "position",
+      "scale": 1.7453298568725586,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Elbow",
+      "action_index": 2,
+      "lower": -1.7453298568725586,
+      "upper": 1.5707998275756836,
+      "type": "position",
+      "scale": 1.658064842224121,
+      "offset": -0.0872650146484375
+    },
+    {
+      "joint_name": "Wrist_Pitch",
+      "action_index": 3,
+      "lower": -1.65805983543396,
+      "upper": 1.65805983543396,
+      "type": "position",
+      "scale": 1.65805983543396,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Wrist_Roll",
+      "action_index": 4,
+      "lower": -2.792530059814453,
+      "upper": 2.792530059814453,
+      "type": "position",
+      "scale": 2.792530059814453,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Jaw",
+      "action_index": 5,
+      "lower": -0.17453300952911377,
+      "upper": 1.7453298568725586,
+      "type": "position",
+      "scale": 0.4000000059604645,
+      "offset": 0.4000000059604645,
+      "processed_clip": [
+        0.0,
+        0.800000011920929
+      ]
+    }
+  ],
+  "reward_terms": [
+    "progress",
+    "task_activity",
+    "processed_action_change",
+    "joint_vel",
+    "success_bonus"
+  ],
+  "state_action_sampling": "observation_before_action_with_transition_reward",
+  "rl_policy_success_verified": false,
+  "supervision": {
+    "action_field": "expert_policy_action",
+    "executed_action_field": "policy_action",
+    "arm_target_noise_std_rad": 0.0,
+    "arm_target_noise_seed": 100042,
+    "reward_source": "actual_executed_transition"
+  },
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.3267325559572782e-06,
+      0.7484341859817505,
+      0.45198172330856323,
+      0.11690674722194672,
+      0.0015716050984337926,
+      0.003539106110110879
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 1600
+  },
+  "video": {
+    "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace4_release_20261007/native_grasp.mp4",
+    "sha256": "324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4",
+    "frames": 374,
+    "fps": 50.0,
+    "environment": 0,
+    "resolution": [
+      512,
+      256
+    ],
+    "camera_order": [
+      "overhead_camera",
+      "wrist_camera"
+    ],
+    "scripted_task_success": true,
+    "rl_policy_success_verified": false
+  },
+  "recorded_episode": {
+    "path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace4_release_20261007/dataset/episodes/episode_000000.hdf5",
+    "sha256": "41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad",
+    "frames": 374,
+    "success": true
+  }
+}

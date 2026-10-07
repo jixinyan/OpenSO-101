@@ -1,0 +1,462 @@
+[
+  {
+    "environment": 0,
+    "final_phase": 5,
+    "final_joint_error_rad": [
+      -0.003435643227450269,
+      0.015107490350377839,
+      0.0024250283510385273,
+      -0.006080784417394902,
+      -0.0003065827461812831
+    ],
+    "minimum_grasp_target_error_m": 9.222465039920325e-05,
+    "final_grasp_target_error_m": 0.004706216813105305,
+    "minimum_ee_object_distance_m": 0.004320171196013689,
+    "final_ee_object_distance_m": 0.009672848507761955,
+    "final_joint_velocity_rad_s": [
+      0.0018687393749132752,
+      -0.006160722579807043,
+      -0.0031241821125149727,
+      0.0012200111523270607,
+      0.0003800503327511251,
+      0.004568116739392281
+    ],
+    "final_object_position_root_m": [
+      0.23687750101089478,
+      -0.1562749296426773,
+      0.0480329729616642
+    ],
+    "final_grasp_position_root_m": [
+      0.2379821091890335,
+      -0.15169468522071838,
+      0.0564807653427124
+    ],
+    "path_progress": [
+      {
+        "phase": 0,
+        "control_steps": 95,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0006542812916450202
+      },
+      {
+        "phase": 1,
+        "control_steps": 11,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.006152516230940819
+      },
+      {
+        "phase": 2,
+        "control_steps": 29,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.005897759459912777
+      },
+      {
+        "phase": 3,
+        "control_steps": 33,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.009369942359626293
+      },
+      {
+        "phase": 4,
+        "control_steps": 101,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.008035916835069656
+      },
+      {
+        "phase": 5,
+        "control_steps": 121,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.016822323203086853
+      }
+    ],
+    "final_gravity_compensation_nm": [
+      7.830843742340221e-07,
+      -0.47437697649002075,
+      -0.3405894339084625,
+      -0.04297276586294174,
+      -0.00032587008900009096,
+      0.0016447134548798203
+    ],
+    "final_drive_target_difference_rad": [
+      -0.0034356117248535156,
+      -0.011542774736881256,
+      -0.016709238290786743,
+      -0.008495032787322998,
+      -0.0003248751163482666,
+      -0.19871975481510162
+    ],
+    "placement": {
+      "maximum_hold_seconds": 0.0,
+      "final_hold_seconds": 0.0,
+      "final_jaw_angle_rad": 0.19881214201450348,
+      "final_jaw_forces_n": [
+        45.37730407714844,
+        45.08512496948242
+      ],
+      "final_goal_distance_m": 0.007605007190995938
+    },
+    "contact_diagnostics": {
+      "maximum_net_force_n": [
+        107.16280364990234,
+        107.60636901855469
+      ],
+      "maximum_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "final_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "scope": "all_contacts_minus_object_filtered_contacts"
+    }
+  },
+  {
+    "environment": 1,
+    "final_phase": 6,
+    "final_joint_error_rad": [
+      5.36503510810693e-05,
+      7.42891516414268e-06,
+      -1.1087198815484811e-05,
+      2.490947660371834e-05,
+      -8.077201793410538e-06
+    ],
+    "minimum_grasp_target_error_m": 0.00015245616857704884,
+    "final_grasp_target_error_m": 0.0023390030459876556,
+    "minimum_ee_object_distance_m": 0.0037450757808983326,
+    "final_ee_object_distance_m": 0.012347758747637272,
+    "final_joint_velocity_rad_s": [
+      0.0015026599867269397,
+      -0.004320407286286354,
+      -0.0031421701423823833,
+      0.0004222787683829665,
+      -0.0005328395636752248,
+      0.0750318393111229
+    ],
+    "final_object_position_root_m": [
+      0.24231737852096558,
+      -0.15388478338718414,
+      0.042081430554389954
+    ],
+    "final_grasp_position_root_m": [
+      0.23777194321155548,
+      -0.15052691102027893,
+      0.05306008458137512
+    ],
+    "path_progress": [
+      {
+        "phase": 0,
+        "control_steps": 91,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.003224309766665101
+      },
+      {
+        "phase": 1,
+        "control_steps": 11,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.006555940490216017
+      },
+      {
+        "phase": 2,
+        "control_steps": 29,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0030379456002265215
+      },
+      {
+        "phase": 3,
+        "control_steps": 36,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0063451360911130905
+      },
+      {
+        "phase": 4,
+        "control_steps": 93,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.007078214548528194
+      },
+      {
+        "phase": 5,
+        "control_steps": 94,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.006358675193041563
+      },
+      {
+        "phase": 6,
+        "control_steps": 33,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 6.11699215369299e-05
+      }
+    ],
+    "final_gravity_compensation_nm": [
+      7.890422466516611e-07,
+      -0.4666306972503662,
+      -0.33722826838493347,
+      -0.04712889343500137,
+      -0.0007398027810268104,
+      0.0031209697481244802
+    ],
+    "final_drive_target_difference_rad": [
+      5.364418029785156e-05,
+      -0.02620767056941986,
+      -0.018956929445266724,
+      -0.002622842788696289,
+      -4.9620866775512695e-05,
+      0.0018730759620666504
+    ],
+    "placement": {
+      "maximum_hold_seconds": 0.5000000596046448,
+      "final_hold_seconds": 0.5000000596046448,
+      "final_jaw_angle_rad": 0.7981269359588623,
+      "final_jaw_forces_n": [
+        0.0,
+        0.0
+      ],
+      "final_goal_distance_m": 0.0054278787072807744
+    },
+    "contact_diagnostics": {
+      "maximum_net_force_n": [
+        63.06221389770508,
+        61.9045295715332
+      ],
+      "maximum_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "final_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "scope": "all_contacts_minus_object_filtered_contacts"
+    }
+  },
+  {
+    "environment": 2,
+    "final_phase": 6,
+    "final_joint_error_rad": [
+      0.0028103744142107256,
+      0.001453340377316259,
+      0.0016815557329030728,
+      0.0008866652022044841,
+      -2.736785594148472e-06
+    ],
+    "minimum_grasp_target_error_m": 0.000164560248940976,
+    "final_grasp_target_error_m": 0.0014186446170225294,
+    "minimum_ee_object_distance_m": 0.004900163505226374,
+    "final_ee_object_distance_m": 0.016026968136429787,
+    "final_joint_velocity_rad_s": [
+      0.0006260907393880188,
+      -0.0050700632855296135,
+      -0.0027539946604520082,
+      4.5973152737133205e-05,
+      0.0014724552165716887,
+      -0.0038945931009948254
+    ],
+    "final_object_position_root_m": [
+      0.24809832870960236,
+      -0.15699365735054016,
+      0.04208357632160187
+    ],
+    "final_grasp_position_root_m": [
+      0.23895296454429626,
+      -0.1503773033618927,
+      0.05346117913722992
+    ],
+    "path_progress": [
+      {
+        "phase": 0,
+        "control_steps": 87,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.005233359057456255
+      },
+      {
+        "phase": 1,
+        "control_steps": 28,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.008558014407753944
+      },
+      {
+        "phase": 2,
+        "control_steps": 23,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0018651323625817895
+      },
+      {
+        "phase": 3,
+        "control_steps": 31,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.002446743194013834
+      },
+      {
+        "phase": 4,
+        "control_steps": 108,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.010177107527852058
+      },
+      {
+        "phase": 5,
+        "control_steps": 70,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.008115045726299286
+      },
+      {
+        "phase": 6,
+        "control_steps": 43,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0036910956259816885
+      }
+    ],
+    "final_gravity_compensation_nm": [
+      7.858782282710308e-07,
+      -0.5131474733352661,
+      -0.3431793451309204,
+      -0.038059547543525696,
+      0.001564565347507596,
+      0.001880986150354147
+    ],
+    "final_drive_target_difference_rad": [
+      0.002810359001159668,
+      -0.02737511694431305,
+      -0.017598122358322144,
+      -0.0012514591217041016,
+      8.535385131835938e-05,
+      0.00034683942794799805
+    ],
+    "placement": {
+      "maximum_hold_seconds": 0.13999998569488525,
+      "final_hold_seconds": 0.05999999865889549,
+      "final_jaw_angle_rad": 0.799653172492981,
+      "final_jaw_forces_n": [
+        0.1258213073015213,
+        0.0
+      ],
+      "final_goal_distance_m": 0.011112218860376426
+    },
+    "contact_diagnostics": {
+      "maximum_net_force_n": [
+        64.01683044433594,
+        74.5647964477539
+      ],
+      "maximum_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "final_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "scope": "all_contacts_minus_object_filtered_contacts"
+    }
+  },
+  {
+    "environment": 3,
+    "final_phase": 5,
+    "final_joint_error_rad": [
+      -0.0003792463881422403,
+      0.053258402283375084,
+      -0.0014985341665625374,
+      -0.04245624479208032,
+      0.0007736196392440498
+    ],
+    "minimum_grasp_target_error_m": 4.968469687827511e-05,
+    "final_grasp_target_error_m": 0.010248289160963363,
+    "minimum_ee_object_distance_m": 0.00469333678483963,
+    "final_ee_object_distance_m": 0.017398623749613762,
+    "final_joint_velocity_rad_s": [
+      0.0014363760128617287,
+      -0.009098832495510578,
+      -0.009570673108100891,
+      -0.004956284072250128,
+      -0.0007348741637542844,
+      0.004075888078659773
+    ],
+    "final_object_position_root_m": [
+      0.23510904610157013,
+      -0.15694120526313782,
+      0.04691765829920769
+    ],
+    "final_grasp_position_root_m": [
+      0.23728032410144806,
+      -0.14939551055431366,
+      0.062443770468235016
+    ],
+    "path_progress": [
+      {
+        "phase": 0,
+        "control_steps": 94,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0010480363853275776
+      },
+      {
+        "phase": 1,
+        "control_steps": 13,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.003777587553486228
+      },
+      {
+        "phase": 2,
+        "control_steps": 23,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.003924703225493431
+      },
+      {
+        "phase": 3,
+        "control_steps": 25,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.0039049384649842978
+      },
+      {
+        "phase": 4,
+        "control_steps": 96,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.004856681916862726
+      },
+      {
+        "phase": 5,
+        "control_steps": 139,
+        "last_path_cursor": 63,
+        "last_command_error_rad": 0.06813208013772964
+      }
+    ],
+    "final_gravity_compensation_nm": [
+      8.541710485587828e-07,
+      -0.5246150493621826,
+      -0.3432801067829132,
+      -0.024503789842128754,
+      -0.00013587861030828208,
+      0.001090207602828741
+    ],
+    "final_drive_target_difference_rad": [
+      -0.00037920475006103516,
+      0.023785576224327087,
+      -0.02078396826982498,
+      -0.04383289813995361,
+      0.0007659941911697388,
+      -0.18402352929115295
+    ],
+    "placement": {
+      "maximum_hold_seconds": 0.0,
+      "final_hold_seconds": 0.0,
+      "final_jaw_angle_rad": 0.18408474326133728,
+      "final_jaw_forces_n": [
+        46.428245544433594,
+        44.9875373840332
+      ],
+      "final_goal_distance_m": 0.008687536721228975
+    },
+    "contact_diagnostics": {
+      "maximum_net_force_n": [
+        73.14256286621094,
+        73.4593734741211
+      ],
+      "maximum_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "final_other_contact_force_n": [
+        0.0,
+        0.0
+      ],
+      "scope": "all_contacts_minus_object_filtered_contacts"
+    }
+  }
+]

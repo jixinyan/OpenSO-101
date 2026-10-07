@@ -1,0 +1,75 @@
+{
+  "status": "replay_verified",
+  "task": "OpenSO101-PickPlace-v0",
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace4_release_20261007/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad",
+  "source_task_success": true,
+  "source_scene_sha256": "",
+  "source_sim_fields": [
+    "command_cube_spawn_xy_b",
+    "command_goal_pos_b",
+    "command_goal_pos_w",
+    "command_placement_hold_seconds",
+    "command_stage",
+    "environment_origin",
+    "object_root_state",
+    "task_episode_step",
+    "task_goal_root",
+    "task_hold_seconds"
+  ],
+  "observed_env_index": 0,
+  "checkpoint_frame": 0,
+  "start_frame": 0,
+  "stop_frame": 374,
+  "requested_frames": 374,
+  "completed_frames": 374,
+  "control_dt": 0.02,
+  "source_fps": 50,
+  "control_timing_error_seconds": 0.0,
+  "step_checks": {
+    "warm_start": 0,
+    "hold": 0,
+    "replay": 374
+  },
+  "maximum_action_error": 0.0,
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0,
+    "command_cube_spawn_xy_b": 0.0,
+    "command_goal_pos_b": 0.0,
+    "command_goal_pos_w": 0.0,
+    "command_placement_hold_seconds": 0.0,
+    "command_stage": 0.0,
+    "object_root_state": 0.0,
+    "task_episode_step": 0.0,
+    "task_goal_root": 0.0,
+    "task_hold_seconds": 0.0
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 374,
+      "minimum_pixel_std": 57.15519714355469
+    },
+    "overhead_camera": {
+      "frames": 374,
+      "minimum_pixel_std": 16.380922317504883
+    }
+  },
+  "task_success_verified": true,
+  "native_task_configuration": true,
+  "physics_state_reproducibility_verified": false,
+  "validator_sha256": "9738bcd64ded22c73e918296ed2a7e3ca02f0cf5611a21b36c397c739be7fea1",
+  "cli_sha256": "fd10388240965ec91f7f38a4f77baf6c70807ed58e2689f8251c18e716c6703b",
+  "replay_environment_origin": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "source_environment_origin": [
+    1.25,
+    -1.25,
+    0.0
+  ],
+  "trajectory_sha256": "0e93d92314131bfbedc1c33ed94b1b68952cc8b52e50abf2c0405b00d28fea54",
+  "maximum_hold_seconds": 0.5000000596046448
+}

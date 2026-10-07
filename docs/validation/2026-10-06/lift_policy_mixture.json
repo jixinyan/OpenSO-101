@@ -1,0 +1,227 @@
+{
+  "status": "native_task_completed",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environment_mode": "nominal",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "success": true,
+      "control_steps": 242,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        71.95611572265625,
+        69.19404602050781
+      ],
+      "bilateral_contact_steps": 86,
+      "maximum_object_height_root_m": 0.19749344885349274
+    },
+    {
+      "environment": 1,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 1,
+      "maximum_jaw_forces_n": [
+        24.8446102142334,
+        0.0
+      ],
+      "bilateral_contact_steps": 0,
+      "maximum_object_height_root_m": 0.0456252284348011
+    },
+    {
+      "environment": 2,
+      "success": false,
+      "control_steps": 250,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        125.77217102050781,
+        97.24440002441406
+      ],
+      "bilateral_contact_steps": 61,
+      "maximum_object_height_root_m": 0.16795717179775238
+    },
+    {
+      "environment": 3,
+      "success": true,
+      "control_steps": 182,
+      "maximum_phase": 3,
+      "maximum_jaw_forces_n": [
+        74.36235809326172,
+        85.18109893798828
+      ],
+      "bilateral_contact_steps": 76,
+      "maximum_object_height_root_m": 0.16519767045974731
+    }
+  ],
+  "successes": 2,
+  "episodes": 4,
+  "controller": "scripted_IK_gravity_compensated_joint_targets",
+  "control_dt": 0.02,
+  "physics_dt": 0.001,
+  "maximum_physics_speed_rad_s": 1.500008463859558,
+  "max_episode_steps": 250,
+  "reused_plan_sha256": "4d3615c2ac09fe183680a0165092d6c10fb83be89a369830caa357c79b4188e1",
+  "reused_plan_states_sha256": "445e6c204a5d9570310daf016192283fc1d2d5309d382ef84e78ef47eacb9895",
+  "reused_plan_scope": "exact_kinematic_inputs_with_independent_physics_recording",
+  "settling_steps": 10,
+  "bilateral_hold_before_lift_s": 0.1,
+  "planned_joint_speed_rad_s": 0.75,
+  "release_condition": null,
+  "planned_phases": [
+    "approach",
+    "grasp",
+    "lift"
+  ],
+  "path_tracking_pause_error_rad": 0.08,
+  "states_sha256": "8a526b1153ec5c590d47bef7b79eaac439b8761f5a6aa7ec6bbfb2aed8472d77",
+  "plan_sha256": "4d3615c2ac09fe183680a0165092d6c10fb83be89a369830caa357c79b4188e1",
+  "initial_physics_sha256": "334a46c5ca705caae5ebfeb128f8a7e44ae5dbfe7ee10101f7e7ec8e3a60f124",
+  "trace_sha256": "723025c54eab703ca67324b13b2a945f90a4c7ba734bdf0fa9ced413031dfba4",
+  "source_sha256": "1d92b84a9c04fb4ffd756b2959689f7993b98f83a3fa152ceba444343ac88e1e",
+  "profile_sha256": "f9db5430a94e9bd167d7b0ae745f6331ae5e600002b91997a133e294ff27e0f4",
+  "execution_git_sha": "adc153585c334b50fd2b17292debe14498469f77",
+  "policy_observation_terms": [
+    {
+      "name": "joint_pos",
+      "size": 6
+    },
+    {
+      "name": "joint_vel",
+      "size": 6
+    },
+    {
+      "name": "object_position",
+      "size": 3
+    },
+    {
+      "name": "target_object_position",
+      "size": 7
+    },
+    {
+      "name": "grasp_state",
+      "size": 1
+    },
+    {
+      "name": "actions",
+      "size": 6
+    },
+    {
+      "name": "object_velocity",
+      "size": 6
+    },
+    {
+      "name": "task_state",
+      "size": 3
+    }
+  ],
+  "policy_action_mapping": [
+    {
+      "joint_name": "Rotation",
+      "action_index": 0,
+      "lower": -1.9198598861694336,
+      "upper": 1.9198598861694336,
+      "type": "position",
+      "scale": 1.9198598861694336,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Pitch",
+      "action_index": 1,
+      "lower": -1.7453298568725586,
+      "upper": 1.7453298568725586,
+      "type": "position",
+      "scale": 1.7453298568725586,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Elbow",
+      "action_index": 2,
+      "lower": -1.7453298568725586,
+      "upper": 1.5707998275756836,
+      "type": "position",
+      "scale": 1.658064842224121,
+      "offset": -0.0872650146484375
+    },
+    {
+      "joint_name": "Wrist_Pitch",
+      "action_index": 3,
+      "lower": -1.65805983543396,
+      "upper": 1.65805983543396,
+      "type": "position",
+      "scale": 1.65805983543396,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Wrist_Roll",
+      "action_index": 4,
+      "lower": -2.792530059814453,
+      "upper": 2.792530059814453,
+      "type": "position",
+      "scale": 2.792530059814453,
+      "offset": 0.0
+    },
+    {
+      "joint_name": "Jaw",
+      "action_index": 5,
+      "lower": -0.17453300952911377,
+      "upper": 1.7453298568725586,
+      "type": "position",
+      "scale": 0.4000000059604645,
+      "offset": 0.4000000059604645,
+      "processed_clip": [
+        0.0,
+        0.800000011920929
+      ]
+    }
+  ],
+  "reward_terms": [
+    "progress",
+    "task_activity",
+    "processed_action_change",
+    "joint_vel",
+    "success_bonus"
+  ],
+  "state_action_sampling": "observation_before_action_with_transition_reward",
+  "rl_policy_success_verified": false,
+  "supervision": {
+    "action_field": "expert_policy_action",
+    "executed_action_field": "policy_action",
+    "arm_target_noise_std_rad": 0.0,
+    "arm_target_noise_seed": 100042,
+    "reward_source": "actual_executed_transition",
+    "behavior_policy": {
+      "model_sha256": "4c5e5e13810408c9d4bdacf11fadb287adb7bfd68a4da53a644452627c83c008",
+      "checkpoint_metadata_sha256": "97856bd2b71dfc698a491e18aca86577d2cd59cf852c63a09bffd1bdc7c19824",
+      "weight": 0.15,
+      "training_git_sha": "99aec08bad0ff54d3e8aca2217938c12e24a06a8"
+    }
+  },
+  "gravity_diagnostics": {
+    "maximum_required_holding_effort_nm": [
+      2.184858885811991e-06,
+      0.8065249919891357,
+      0.45198172330856323,
+      0.11690674722194672,
+      0.0037951671984046698,
+      0.003539106110110879
+    ],
+    "stationary_effort_budget_nm": [
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684,
+      3.3499999046325684
+    ],
+    "frames_exceeding_stationary_effort_budget": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "measured_frames": 1000
+  }
+}

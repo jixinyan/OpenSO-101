@@ -20,6 +20,10 @@
 | [initial_policy_paired.json](initial_policy_paired.json) | 来源成功 episode 的完全相同初始状态 | 250 步、任务未成功 |
 | [initial_policy_paired.initial_observation.json](initial_policy_paired.initial_observation.json) | 实际恢复后的 38 维观测 | 最大误差为零 |
 | [perturbed_expert.json](perturbed_expert.json) | 0.015 rad 控制扰动下的真实 expert 轨迹 | Lift 3/4 |
+| [corrective_initialization.json](corrective_initialization.json) | 1529 个实际成功示范样本、12000 gradient steps | bounded action MSE 4.53e-5 |
+| [corrective_evaluation.json](corrective_evaluation.json) | 八次 PPO 更新后独立 100 episodes | 成功 0/100、接近物体 32/100 |
+| [control_audit.json](control_audit.json) | 保存模型对全部实际示范的动作预测 | arm 运动方向符合比例 77.63% |
+| [lift_policy_mixture.json](lift_policy_mixture.json) | 已保存模型参与 15% 的实际控制 | expert 引导的 Lift 2/4、成功轨迹 424 帧 |
 
 示范拟合与任务成功各自验收。扰动轨迹使用 `expert_policy_action` 作为 actor 标签，`policy_action` 保存实际执行动作，reward 使用真实执行 transition。监督准备只选择完整成功 episode。
 
@@ -27,12 +31,26 @@
 
 ![保存模型的独立任务评估](figures/independent_evaluation.png)
 
+[training_snapshot.json](training_snapshot.json) 保存单张 GPU 继续训练的实际事件数值与 SHA256。图中 iteration 68 对应累计 6,045,696 transitions；任务成功比例为零。
+
+![继续训练的实际曲线](figures/continued_training.png)
+
+## PickPlace 物理记录
+
+[pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
+
+[pick_place_release_diagnostics.json](pick_place_release_diagnostics.json) 保存实际释放后的速度与稳定时间。速度来自 action 前的真实 policy 观测，保持时间来自 action 后的真实 termination。剩余环境完成 65 个释放步骤，最长稳定时间为 0.14 秒。
+
+[pick_place_lerobot.json](pick_place_lerobot.json) 核查成功 episode 的全部 374 帧双相机读取；动作与关节观测转换误差为零，最大时间戳误差为 2.29e-7 秒。[pick_place_replay.json](pick_place_replay.json) 在单个 Isaac 环境回放四环境来源的全部 374 帧，状态恢复与动作误差为零，实际连续稳定放置时间达到 0.5 秒，`task_success_verified=true`。完整物理轨迹重复性尚待验收。
+
 ## 规划与程序验证
 
 [pick_place_plan.json](pick_place_plan.json) 记录四个实际环境的 PickPlace waypoint 与完整路径采样结果，四个环境均通过运动学检查。该报告中的 `continuous_collision_path_verified=false` 和 `task_success_verified=false` 保留各自的验收范围。
 
 [planner_geometry.json](planner_geometry.json) 比较 MuJoCo 的 840 个真实 recorded poses 和 2759 个 contacts，最大 pose 与 contact 误差均为零，缓存重新构建的模型参数完全一致。
 
-[native_regressions.json](native_regressions.json) 保存 Isaac 原生环境的实际 pytest 结果与源码版本，进程内部的检查结果为零。对应原生日志包含 44 项通过与四项未执行。
+[native_regressions.json](native_regressions.json) 保存 Isaac 原生环境的实际 pytest 结果与源码版本，进程内部的检查结果为零。[原生日志](native_regressions.log) 包含 44 项通过与四项未执行。
+
+[键盘终端日志](keyboard_terminal.log) 保存原生双相机采集时的真实 PTY 操作，涵盖 checkpoint 保存、HDF5 恢复、键盘目标误差为零和取消 episode 后正常退出。该记录没有人工任务成功的验收结果。
 
 全部 GPU 工作限定物理 GPU 2。当前源码、继续训练和待完成验收见 [开发状态](../../guides/v2-status-2026-10-06.md)。
