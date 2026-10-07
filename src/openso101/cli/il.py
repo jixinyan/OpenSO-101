@@ -214,7 +214,10 @@ class _TeleopResumeHold:
     restored pose until the leader is moved back near it.
     """
 
-    def __init__(self, release_threshold: float):
+    def __init__(self, release_threshold: float, *, device: str = "leader"):
+        if device not in ("leader", "keyboard"):
+            raise ValueError("遥操设备需要 leader 或 keyboard")
+        self.device = device
         self.default_threshold = float(release_threshold)
         self.release_threshold = float(release_threshold)
         self._target = None
@@ -241,15 +244,15 @@ class _TeleopResumeHold:
             if release_threshold is not None
             else self.default_threshold
         )
-        if context == "startup":
+        if self.device == "keyboard":
+            print("[INFO]: 键盘控制保持在当前记录的姿态。")
+        elif context == "startup":
             print(
-                "[INFO]: Holding sim at home pose (cube-facing). "
-                "Move the real leader arm near the home pose to begin live control."
+                "[INFO]: 机器人保持在初始姿态。将 leader arm 移动到该姿态后开始遥操。"
             )
         else:
             print(
-                "[INFO]: Holding restored checkpoint pose. "
-                "Move the real leader arm near the checkpoint pose to resume live control."
+                "[INFO]: 机器人保持在 checkpoint 姿态。将 leader arm 移动到该姿态后恢复遥操。"
             )
 
     def apply(self, leader_targets) -> _ResumeHoldState:
@@ -260,10 +263,9 @@ class _TeleopResumeHold:
         error = _target_max_abs_error(leader_targets, hold_target)
         if error <= self.release_threshold:
             self._target = None
-            label = "home" if self._context == "startup" else "checkpoint"
+            label = "键盘控制" if self.device == "keyboard" else "leader arm 控制"
             print(
-                f"[INFO]: Leader arm synced to {label} pose; live control "
-                f"engaged (max error {error:.4f} rad)."
+                f"[INFO]: {label}已恢复，最大关节目标误差为 {error:.4f} rad。"
             )
             return _ResumeHoldState(targets=leader_targets, holding=False, released=True, error=error)
 
@@ -983,7 +985,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
             ).encode(),
         )
 
-        resume_hold = _TeleopResumeHold(args.resume_sync_threshold)
+        resume_hold = _TeleopResumeHold(args.resume_sync_threshold, device=args.teleop_device)
         if args.startup_sync:
             # Hold the sim at the canonical home pose (cube-facing) until the
             # real leader is moved near it — otherwise the leader's first read
