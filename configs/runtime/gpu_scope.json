@@ -1,4 +1,4 @@
 {
-  "allowed_gpus": [2, 3, 4],
-  "default_gpu": 4
+  "allowed_gpus": [2],
+  "default_gpu": 2
 }
