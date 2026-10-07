@@ -49,7 +49,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     geometry_bodies = tuple(model.body(model.geom_bodyid[index]).name for index in range(model.ngeom))
 
     @lru_cache(maxsize=4096)
-    def pose_from_inputs(arm, jaw, allow_grasp_contact, held_pose):
+    def pose_from_inputs(arm, jaw, allow_grasp_contact, held_pose, released_pose):
         data.qpos[ids[:5]] = arm
         data.qpos[ids[5]] = jaw
         mujoco.mj_kinematics(model, data)
@@ -61,6 +61,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             data.qpos[object_qpos:object_qpos + 3] = position + rotation @ offset
             data.qpos[object_qpos + 3:object_qpos + 7] = Rotation.from_matrix(
                 rotation @ relative_rotation).as_quat(scalar_first=True)
+        elif released_pose is not None:
+            data.qpos[object_qpos:object_qpos + 7] = released_pose
         else:
             data.qpos[object_qpos:object_qpos + 3] = start
             data.qpos[object_qpos + 3:object_qpos + 7] = environment["object_quaternion_root"]
@@ -78,9 +80,9 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             depth = max(depth, -float(contact.dist))
         return position, rotation, depth
 
-    def pose(arm, jaw=.8, allow_grasp_contact=False, held=False):
+    def pose(arm, jaw=.8, allow_grasp_contact=False, held=False, released_pose=None):
         held_pose = tuple(np.concatenate((held_transform[0], held_transform[1].ravel()))) if held else None
-        return pose_from_inputs(tuple(arm), jaw, allow_grasp_contact, held_pose)
+        return pose_from_inputs(tuple(arm), jaw, allow_grasp_contact, held_pose, released_pose)
 
     def coupled_residual(joints):
         nonlocal held_transform
@@ -138,8 +140,9 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
                    for point in np.linspace(start_arm, end_arm, 65)[1:])
 
-    def cartesian_path(start_arm, end_arm, jaw=.8, allow_grasp_contact=False, held=False, transporting=False):
-        first, last = pose(start_arm, jaw, allow_grasp_contact, held), pose(end_arm, jaw, allow_grasp_contact, held)
+    def cartesian_path(start_arm, end_arm, jaw=.8, allow_grasp_contact=False, held=False, transporting=False,
+                       released_pose=None):
+        first, last = (pose(arm, jaw, allow_grasp_contact, held, released_pose) for arm in (start_arm, end_arm))
         fractions = np.linspace(0., 1., 65)[1:]
         rotations = Slerp([0., 1.], Rotation.from_matrix([first[1], last[1]]))(fractions).as_matrix()
         previous = start_arm
@@ -147,7 +150,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         accepted = True
         checks = []
         for fraction, target_rotation in zip(fractions, rotations, strict=True):
-            previous_rotation = pose(previous, jaw, allow_grasp_contact, held)[1]
+            previous_rotation = pose(previous, jaw, allow_grasp_contact, held, released_pose)[1]
             target_position = first[0] + fraction * (last[0] - first[0])
             if held:
                 target_position = (first[0] + first[1] @ held_transform[0]
@@ -155,7 +158,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                                                  - first[0] - first[1] @ held_transform[0]))
 
             def residual(arm):
-                position, rotation, depth = pose(arm, jaw, allow_grasp_contact, held)
+                position, rotation, depth = pose(arm, jaw, allow_grasp_contact, held, released_pose)
                 if held:
                     position = position + rotation @ held_transform[0]
                 orientation = (.05 * (rotation - previous_rotation).ravel() if transporting
@@ -168,7 +171,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
 
             solution = least_squares(residual, np.clip(previous, lower, upper), bounds=(lower, upper),
                                      ftol=1e-9, xtol=1e-9, gtol=1e-9, max_nfev=100)
-            position, rotation, depth = pose(solution.x, jaw, allow_grasp_contact, held)
+            position, rotation, depth = pose(solution.x, jaw, allow_grasp_contact, held, released_pose)
             if held:
                 position = position + rotation @ held_transform[0]
             orientation_accepted = (rotation[2, 2] >= np.cos(inclination_limit) if transporting
@@ -191,6 +194,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                                             "failed_samples": [item for item in checks if not item["accepted"]]}
 
     solutions = []
+    released_pose = (tuple(np.concatenate((environment["place_goal_position_root"],
+                                          environment["object_quaternion_root"]))) if pick_place else None)
     planned_paths = None
     paths_accepted = False
     candidate_checks = []
@@ -225,12 +230,21 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             valid &= accepted
             check["paths"].append({"phase": names[index], **path_check})
             candidate_paths.append(path)
+        if valid and pick_place:
+            retreat_path, retreat_accepted, retreat_check = cartesian_path(
+                candidate_paths[-1][-1], candidate_paths[3][-1], jaw=.8,
+                allow_grasp_contact=True, transporting=True, released_pose=released_pose)
+            endpoint_depth = pose(retreat_path[-1], jaw=.8, released_pose=released_pose)[2]
+            valid &= retreat_accepted and endpoint_depth <= .0001
+            check["paths"].append({"phase": "retreat", **retreat_check,
+                                   "endpoint_penetration_m": float(endpoint_depth)})
+            candidate_paths.append(retreat_path)
         if valid:
             result, planned_paths, paths_accepted = candidate, candidate_paths, True
             break
     if not paths_accepted:
         result = min(solutions, key=lambda item: np.linalg.norm(coupled_residual(item.x)))
-    arms = [path[-1] for path in planned_paths] if planned_paths is not None else result.x.reshape(waypoint_count, 5)
+    arms = [path[-1] for path in planned_paths[:waypoint_count]] if planned_paths is not None else result.x.reshape(waypoint_count, 5)
     grasp_position, grasp_rotation, _ = pose(arms[1])
     held_transform = (grasp_rotation.T @ (start - grasp_position), grasp_rotation.T @ object_rotation)
     targets = []
@@ -254,6 +268,29 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         targets[-1]["joint_path_length_rad"] = float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max(axis=-1).sum())
         targets[-1]["maximum_sample_joint_step_rad"] = float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max())
         previous = arm
+    if pick_place and planned_paths is not None:
+        path = planned_paths[-1]
+        samples = [pose(point, jaw=.8, allow_grasp_contact=True, released_pose=released_pose) for point in path]
+        endpoint = pose(path[-1], jaw=.8, released_pose=released_pose)
+        maximum_depth = max(value[2] for value in samples)
+        target_position = pose(arms[3], jaw=.8, released_pose=released_pose)[0]
+        targets.append({"phase": "retreat", "target_position_root": target_position.tolist(),
+                        "joint_position": (path[-1] - JOINT_OFFSETS[:5]).tolist(),
+                        "path_joint_positions": (path - JOINT_OFFSETS[:5]).tolist(),
+                        "position_error_m": float(np.linalg.norm(endpoint[0] - target_position)),
+                        "planned_object_position_root": list(released_pose[:3]),
+                        "released_object_pose": list(released_pose),
+                        "released_object_pose_scope": "planned_place_goal_with_initial_object_orientation",
+                        "allowed_path_contacts": ["gripper_object", "moving_jaw_object"],
+                        "endpoint_requires_no_gripper_object_penetration": True,
+                        "gripper_inclination_rad": float(np.arccos(np.clip(endpoint[1][2, 2], -1, 1))),
+                        "maximum_penetration_m": float(endpoint[2]),
+                        "sampled_path_maximum_penetration_m": float(maximum_depth),
+                        "path_samples": len(samples), "accepted": bool(paths_accepted and maximum_depth <= .0001
+                                                                       and endpoint[2] <= .0001),
+                        "attempts": len(solutions),
+                        "joint_path_length_rad": float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max(axis=-1).sum()),
+                        "maximum_sample_joint_step_rad": float(np.abs(np.diff(np.vstack((previous, path)), axis=0)).max())})
     return {"environment": environment["environment"], "targets": targets,
             "accepted": all(item["accepted"] for item in targets),
             "candidate_checks": candidate_checks,

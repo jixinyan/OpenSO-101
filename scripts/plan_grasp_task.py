@@ -28,7 +28,8 @@ if args.waypoint_seeds is not None:
             or seeds["robot_model_sha256"] != digest(args.robot_model)
             or seeds["collision_bundle_sha256"] != digest(args.collision_bundle / "manifest.json")):
         raise ValueError("waypoint 初始值需要相同的实际环境、机器人与 collision bundle")
-    seed_records = {item["environment"]: [target["joint_position"] for target in item["targets"]]
+    seed_records = {item["environment"]: [target["joint_position"] for target in item["targets"]
+                                         if target["phase"] != "retreat"]
                     for item in seeds["environments"]}
 model = (build_model(args.robot_model, states["planner_physics"], args.collision_bundle) if args.collision_bundle
          else mujoco.MjModel.from_xml_path(str(args.robot_model)))
@@ -48,7 +49,7 @@ for environment in states["environments"]:
         record = plan_collision_grasp(model, states, environment, rng, initial_waypoints)
         records.append(record)
         if record["accepted"]:
-            waypoint_seed = [target["joint_position"] for target in record["targets"]]
+            waypoint_seed = [target["joint_position"] for target in record["targets"] if target["phase"] != "retreat"]
         continue
     previous = np.asarray(environment["joint_position"][:5]) + JOINT_OFFSETS[:5]
     start = np.asarray(environment["object_position_root"])

@@ -104,6 +104,8 @@ try:
                                                    for name in runtime.action_manager.active_terms], dim=-1),
                       "object_position_root": object_position, "grasp_position_root": grip_position,
                       "object_quaternion_root": object_rotation,
+                      "object_linear_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_lin_vel_w),
+                      "object_angular_velocity_root": quat_apply_inverse(robot.data.root_quat_w, obj.data.root_ang_vel_w),
                       "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])
                                                 for name in ("gripper_jaw_contact", "moving_jaw_contact")], dim=-1),
                       "success": runtime.termination_manager.get_term("success"),
@@ -292,6 +294,9 @@ try:
             subprocess.run(command,
                            stdout=log, stderr=subprocess.STDOUT, check=True)
     plan = json.loads(plan_path.read_text())
+    expected_phases = ["approach", "grasp", "lift"] + (["carry", "place", "retreat"] if pick_place else [])
+    if any([item["phase"] for item in environment["targets"]] != expected_phases for environment in plan["environments"]):
+        raise ValueError("任务检查需要完整、有序并包含释放后撤离的规划")
     if args.verified_plan is None and plan["states_sha256"] != digest(states_path):
         raise ValueError("规划与实际初始状态不一致")
     targets = torch.tensor([[item["joint_position"] for item in environment["targets"]]
@@ -311,8 +316,11 @@ try:
     finished_success = torch.zeros_like(active)
     contact_hold_steps = torch.zeros_like(phase)
     release_hold_steps = torch.zeros_like(phase)
+    open_hold_steps = torch.zeros_like(phase)
     for step in range(runtime.max_episode_length - settling_steps):
         target_index = (phase - (phase >= 2).long()).clamp(0, targets.shape[1] - 1)
+        if pick_place:
+            target_index = torch.where(phase == 6, 4, target_index)
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
         if paths is not None:
             rows = torch.arange(args.num_envs, device=runtime.device)
@@ -320,10 +328,10 @@ try:
             tracking_error = (robot.data.joint_pos[:, ids[:5]] - desired[:, :5]).abs().amax(dim=-1)
             moving = (phase != 2) & active & (tracking_error < .08)
             if pick_place:
-                moving &= phase < 6
+                moving &= (phase != 6) & (phase < 8)
             path_distance = torch.minimum(path_distance + moving * args.path_speed_rad_s * runtime.step_dt,
                                           selected_lengths[:, -1])
-            holding = (phase == 2) | ((phase >= 6) if pick_place else torch.zeros_like(active))
+            holding = (phase == 2) | (((phase == 6) | (phase >= 8)) if pick_place else torch.zeros_like(active))
             distance = torch.where(holding, selected_lengths[:, -1], path_distance)
             upper = torch.searchsorted(selected_lengths.contiguous(), distance[:, None].contiguous(), right=True)[:, 0]
             upper = upper.clamp(1, paths.shape[2] - 1)
@@ -369,6 +377,11 @@ try:
                                  & (path_distance >= selected_lengths[:, -1]))
                 release_hold_steps = torch.where(release_ready, release_hold_steps + 1, 0)
                 advanced |= release_ready & (release_hold_steps * runtime.step_dt >= .1)
+                jaw_open = ((phase == 6) & active
+                            & (torch.as_tensor(sample["joint_position"], device=runtime.device)[:, -1] >= .7))
+                open_hold_steps = torch.where(jaw_open, open_hold_steps + 1, 0)
+                advanced |= jaw_open & (open_hold_steps * runtime.step_dt >= .1)
+                advanced |= (phase == 7) & path_finished
         forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
         contact_hold_steps = torch.where((phase == 2) & (forces > .5).all(dim=-1), contact_hold_steps + 1, 0)
         advanced |= (phase == 2) & (contact_hold_steps * runtime.step_dt >= .1) & active
@@ -414,6 +427,8 @@ try:
               "planned_joint_speed_rad_s": args.path_speed_rad_s if paths is not None else None,
               "release_condition": {"object_goal_distance_m": .03, "arm_speed_rad_s": .1,
                                     "hold_seconds": .1, "requires_completed_path": True} if pick_place else None,
+              "retreat_condition": {"jaw_angle_rad": .7, "hold_seconds": .1,
+                                    "path": "verified_cartesian_retreat"} if pick_place else None,
               "planned_phases": [item["phase"] for item in plan["environments"][0]["targets"]],
               "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
