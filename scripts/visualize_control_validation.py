@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 from matplotlib import font_manager, pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from fontTools.ttLib import TTFont
 import numpy as np
 from PIL import Image
@@ -50,6 +51,7 @@ if not np.isfinite(mse).all() or min(mse) <= 0:
 figure, axes = plt.subplots(1, 2, figsize=(12, 4.8))
 axes[0].bar(labels, mse, color=("#2563eb", "#64748b", "#059669"))
 axes[0].set(yscale="log", title=axis_titles[0], ylabel=axis_labels[0])
+axes[0].yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.0e}"))
 for index, value in enumerate(mse):
     axes[0].text(index, value * 1.2, f"{value:.3e}", ha="center")
 x = np.arange(3)

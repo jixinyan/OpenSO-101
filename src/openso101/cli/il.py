@@ -1734,11 +1734,13 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
         command = unwrapped_env.command_manager.get_term("object_pose")
         for field in _REPLAY_COMMAND_FIELDS:
             key = f"sim/cohort_command_{field}"
-            if key in h5:
+            if hasattr(command, field):
+                if key not in h5:
+                    raise ValueError(f"并行采集缺少任务命令: {key}")
                 target = getattr(command, field)
                 target[:] = _replay_to_tensor_like(h5[key][frame_index], target)
-        if "sim/cohort_task_hold_seconds" in h5:
-            success = unwrapped_env.termination_manager.get_term_cfg("success").func
+        success = unwrapped_env.termination_manager.get_term_cfg("success").func
+        if hasattr(success, "hold_seconds"):
             success.hold_seconds[:] = _replay_to_tensor_like(h5["sim/cohort_task_hold_seconds"][frame_index], success.hold_seconds)
         unwrapped_env.episode_length_buf[:] = _replay_to_tensor_like(
             h5["sim/cohort_task_episode_step"][frame_index], unwrapped_env.episode_length_buf)
@@ -2067,7 +2069,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     finally:
         if env is not None:
             env.close()
-    simulation_app.close()
+        simulation_app.close()
     return 0
 
 
