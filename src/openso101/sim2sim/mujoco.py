@@ -1,5 +1,7 @@
 import json
 import copy
+import hashlib
+from importlib.metadata import version
 from pathlib import Path
 
 # PyTorch 必须在 CoACD 之前初始化。
@@ -10,12 +12,52 @@ import coacd
 import mujoco
 import numpy as np
 import trimesh
+from filelock import FileLock
 from scipy.spatial.transform import Rotation
 
 from openso101.rl.config import digest
 
 JOINT_NAMES = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
 JOINT_OFFSETS = np.array([0., -np.pi / 2, np.pi / 2, 0., 0., 0.])
+
+
+def collision_extra_parts(vertices, faces, cache_root=None):
+    settings = {"threshold": .01, "preprocess_mode": "auto", "preprocess_resolution": 100,
+                "resolution": 10000, "mcts_iterations": 200, "mcts_max_depth": 4, "seed": 42}
+    inputs = {"schema_version": 1, "coacd_version": version("coacd"), "settings": settings,
+              "vertices": vertices.tolist(), "faces": faces.tolist()}
+
+    def generate():
+        coacd.set_log_level("warn")
+        parts = coacd.run_coacd(coacd.Mesh(vertices, faces), **settings)
+        if not parts:
+            raise RuntimeError("camera mount convex parts 生成失败")
+        return parts
+
+    if cache_root is None:
+        return generate()
+    key = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    cache_root.mkdir(parents=True, exist_ok=True)
+    folder = cache_root / key
+    with FileLock(str(cache_root / f"{key}.lock")):
+        if folder.exists():
+            manifest = json.loads((folder / "manifest.json").read_text())
+            if manifest["inputs"] != inputs or digest(folder / "parts.npz") != manifest["parts_sha256"]:
+                raise ValueError("camera mount CoACD 缓存的来源或 SHA256 不一致")
+            with np.load(folder / "parts.npz", allow_pickle=False) as arrays:
+                parts = [(arrays[f"vertices_{index}"].copy(), arrays[f"faces_{index}"].copy())
+                         for index in range(manifest["parts"])]
+            print(json.dumps({"collision_extra_cache": key, "parts": len(parts), "reused": True}), flush=True)
+            return parts
+        parts = generate()
+        folder.mkdir()
+        arrays = {name: value for index, part in enumerate(parts)
+                  for name, value in ((f"vertices_{index}", part[0]), (f"faces_{index}", part[1]))}
+        np.savez(folder / "parts.npz", **arrays)
+        (folder / "manifest.json").write_text(json.dumps({"inputs": inputs, "parts": len(parts),
+            "parts_sha256": digest(folder / "parts.npz"), "generator_sha256": digest(Path(__file__))}, indent=2))
+        print(json.dumps({"collision_extra_cache": key, "parts": len(parts), "reused": False}), flush=True)
+        return parts
 
 
 def check_kinematics(model, trace):
@@ -115,12 +157,8 @@ def build_model(robot_model, metadata, collision_bundle=None):
                 or not np.isfinite(vertices).all() or not len(faces)
                 or faces.min() < 0 or faces.max() >= len(vertices)):
             raise ValueError("记录的机器人额外 collision mesh 无效")
-        coacd.set_log_level("warn")
-        parts = coacd.run_coacd(coacd.Mesh(vertices, faces), threshold=.01, preprocess_mode="auto",
-                               preprocess_resolution=100, resolution=10000, mcts_iterations=200,
-                               mcts_max_depth=4, seed=42)
-        if not parts:
-            raise RuntimeError("camera mount convex parts 生成失败")
+        cache_root = Path(collision_bundle).resolve() / "robot_extras" if collision_bundle is not None else None
+        parts = collision_extra_parts(vertices, faces, cache_root)
         for part_index, (points, triangles) in enumerate(parts):
             mesh = trimesh.Trimesh(vertices=points, faces=triangles, process=True)
             if not mesh.is_convex or not mesh.is_watertight or not np.isfinite(mesh.vertices).all():
