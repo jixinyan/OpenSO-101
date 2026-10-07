@@ -12,7 +12,7 @@
   "hidden_dims": [256, 128, 64],
   "normalize_observations": true,
   "action_distribution": "tanh_gaussian",
-  "initial_noise_std": 0.12,
+  "initial_noise_std": 0.01,
   "environment_mode": "nominal",
   "learning_rate_schedule": "fixed",
   "evaluation_interval": 100,
