@@ -9,11 +9,11 @@ from pathlib import Path
 from openso101.rl.gpu_scope import configure_visible_gpu
 
 
-configure_visible_gpu()
-os.environ["OPENSO101_SKIP_ISAAC"] = "1"
 parser = argparse.ArgumentParser()
 parser.add_argument("--worker-report", type=Path)
 args = parser.parse_args()
+configure_visible_gpu()
+os.environ["OPENSO101_SKIP_ISAAC"] = "1"
 if args.worker_report is None:
     report = Path("outputs/rl_progress") / f"native_regressions_{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
     process = subprocess.run([sys.executable, __file__, "--worker-report", str(report)], check=True)
@@ -23,6 +23,8 @@ if args.worker_report is None:
 
 if args.worker_report.exists():
     raise FileExistsError(args.worker_report)
+git_sha = subprocess.run(["git", "rev-parse", "HEAD"], check=True, text=True,
+                         capture_output=True).stdout.strip()
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True).app
@@ -35,9 +37,7 @@ try:
         "--basetemp=outputs/pytest-20261006-native", "-q",
     ])
     args.worker_report.write_text(json.dumps({"exit_code": int(result), "worker_pid": os.getpid(),
-                                             "git_sha": subprocess.run(
-                                                 ["git", "rev-parse", "HEAD"], check=True, text=True,
-                                                 capture_output=True).stdout.strip()}, indent=2) + "\n")
+                                             "git_sha": git_sha}, indent=2) + "\n")
 finally:
     app.close()
 sys.exit(result)

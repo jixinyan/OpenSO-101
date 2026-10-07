@@ -236,6 +236,9 @@ def train(args):
 
 def evaluate(args, *, play=False, student_folder=None):
     configure_visible_gpu()
+    evaluation_git_sha = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[3],
+        capture_output=True, text=True, check=True).stdout.strip()
     folder = Path(args.checkpoint).resolve()
     meta = CheckpointMeta.read(folder)
     args.task_profile = meta.task_profile
@@ -339,9 +342,7 @@ def evaluate(args, *, play=False, student_folder=None):
                   "episodes": records, "success_rate": sum(record["success"] for record in records) / len(records),
                   "checkpoint_sha256": digest(folder / meta.checkpoint), "training_git_sha": meta.git_sha,
                   "completed_transitions": meta.completed_transitions,
-                  "evaluation_git_sha": subprocess.run(
-                      ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True,
-                  ).stdout.strip(),
+                  "evaluation_git_sha": evaluation_git_sha,
                   "torch_version": torch.__version__, "device": env.unwrapped.device,
                   "num_envs": env.unwrapped.num_envs, "episode_allocation": quotas.tolist(),
                   "progress_sampling": "before_control_step" if progress else None,
