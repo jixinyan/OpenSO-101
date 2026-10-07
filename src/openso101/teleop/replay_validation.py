@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+import h5py
 
 
 def _file_sha256(path: Path) -> str:
@@ -16,6 +17,9 @@ def _file_sha256(path: Path) -> str:
 class ReplayValidation:
     def __init__(self, episode: Path, report_path: Path, task: str, h5, env, frame_range: range, checkpoint_frame: int):
         self.report_path = report_path
+        self.trajectory = []
+        if report_path.with_suffix(".hdf5").exists():
+            raise FileExistsError(report_path.with_suffix(".hdf5"))
         source_fps = int(h5.attrs.get("fps", 30))
         timing_error = abs(float(env.step_dt) - 1.0 / source_fps)
         if timing_error > 1e-6:
@@ -77,6 +81,8 @@ class ReplayValidation:
         if hasattr(env, "_replay_mapping"):
             action = env._replay_transition["targets"].detach().cpu().numpy()
             self.report["task_success_verified"] |= env._replay_transition["success"]
+            self.trajectory.append({name: value.detach().cpu().numpy().copy()
+                                    for name, value in env._replay_transition.items() if isinstance(value, torch.Tensor)})
         else:
             action = env.action_manager.action[0].detach().cpu().numpy()
         expected_action = np.asarray(expected_action)
@@ -103,6 +109,13 @@ class ReplayValidation:
             self.report["completed_frames"] += 1
 
     def save(self) -> None:
+        if self.trajectory:
+            path = self.report_path.with_suffix(".hdf5")
+            with h5py.File(path, "x") as stream:
+                for name in self.trajectory[0]:
+                    stream.create_dataset(name, data=np.stack([item[name] for item in self.trajectory]))
+            self.report["trajectory_sha256"] = _file_sha256(path)
+            self.report["maximum_hold_seconds"] = max(float(item["hold_seconds"]) for item in self.trajectory)
         self.report["status"] = (
             "replay_verified" if self.report["completed_frames"] == self.report["requested_frames"]
             else "replay_interrupted"
@@ -119,10 +132,21 @@ def native_replay_recorder():
     class NativeReplayRecorder(RecorderTerm):
         def record_post_step(self):
             runtime = self._env
+            from openso101.robots import SO101_SIM_JOINT_NAMES
+            from openso101.tasks.shared.grasp import _jaw_force_magnitude
+
+            robot = runtime.scene["robot"]
+            ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
             runtime._replay_transition = {
                 "targets": torch.cat([runtime.action_manager.get_term(name).processed_actions[0]
                                       for name in runtime.action_manager.active_terms]).detach().clone(),
                 "success": bool(runtime.termination_manager.get_term("success")[0]),
+                "joint_position": robot.data.joint_pos[0, ids].detach().clone(),
+                "joint_velocity": robot.data.joint_vel[0, ids].detach().clone(),
+                "object_root_state": runtime.scene["object"].data.root_state_w[0].detach().clone(),
+                "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])[0]
+                                            for name in ("gripper_jaw_contact", "moving_jaw_contact")]).detach().clone(),
+                "hold_seconds": runtime.termination_manager.get_term_cfg("success").func.hold_seconds[0].detach().clone(),
             }
             return None, None
 

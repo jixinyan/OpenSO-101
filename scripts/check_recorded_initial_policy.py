@@ -57,6 +57,11 @@ try:
     runtime.action_manager.reset()
     observation = runtime.observation_manager.compute()
     error = float(np.abs(observation["policy"][0].cpu().numpy() - expected_observation).max())
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with args.output.with_suffix(".initial_observation.json").open("x") as stream:
+        json.dump({"maximum_error": error, "expected": expected_observation.tolist(),
+                   "actual": observation["policy"][0].cpu().tolist(),
+                   "source_episode_sha256": digest(args.episode), "source_trace_sha256": source["trace_sha256"]}, stream, indent=2)
     if error > 1e-6:
         raise ValueError(f"恢复后的实际初始 policy 观测与示范不一致: {error}")
     trajectory, success, task_return = [], False, 0.
