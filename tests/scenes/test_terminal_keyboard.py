@@ -29,8 +29,10 @@ def test_terminal_keys_expire_and_restore_terminal():
             assert reader.poll() == (set(), ())
         finally:
             reader.disconnect()
-            os.close(master)
-        assert termios.tcgetattr(stream.fileno()) == previous
+            try:
+                assert termios.tcgetattr(stream.fileno()) == previous
+            finally:
+                os.close(master)
 
 
 def test_fragmented_terminal_sequence_uses_library_decoder():

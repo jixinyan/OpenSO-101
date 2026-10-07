@@ -59,6 +59,15 @@ def _cmd_train(args: argparse.Namespace) -> int:
                 "action distribution."
             )
             return 2
+        teacher = Path(teacher).expanduser().resolve()
+        if not teacher.exists():
+            raise FileNotFoundError(f"--teacher-checkpoint not found: {teacher}")
+        if teacher.is_dir():
+            args.load_run = str(teacher)
+            args.checkpoint = None
+        else:
+            args.load_run = str(teacher.parent)
+            args.checkpoint = teacher.name
 
     # --- PPO training body (ported from the predecessor safe_sim2real
     # project's rsl_rl training script) ---
@@ -190,26 +199,6 @@ def _cmd_train(args: argparse.Namespace) -> int:
 
     if args.logger == "wandb":
         import wandb  # noqa: F401
-
-    # Distillation: the teacher checkpoint flag is the only user-facing
-    # way to point at a teacher. Internally rsl_rl reads it from
-    # `agent_cfg.load_run` + `agent_cfg.load_checkpoint`, which our existing
-    # `update_rsl_rl_cfg` pulls from `args.load_run` / `args.checkpoint`.
-    # Translate `--teacher-checkpoint` into both: if the user gave a directory,
-    # use it as `load_run`; if they gave a file path, split into parent + name.
-    if args.algo == "distillation":
-        from pathlib import Path as _Path
-        teacher = _Path(args.teacher_checkpoint).expanduser().resolve()
-        if not teacher.exists():
-            raise FileNotFoundError(
-                f"--teacher-checkpoint not found: {teacher}"
-            )
-        if teacher.is_dir():
-            args.load_run = str(teacher)
-            args.checkpoint = None
-        else:
-            args.load_run = str(teacher.parent)
-            args.checkpoint = teacher.name
 
     # Hydra reads sys.argv directly for override-style key=value flags
     # (e.g. agent.algorithm.gamma=0.95). The new CLI's argparse has already
