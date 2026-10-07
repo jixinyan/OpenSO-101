@@ -75,6 +75,8 @@
 
 ![实际采集与来源布局回放](figures/isaac_replay.png)
 
+[task_success_guard.json](task_success_guard.json) 使用来源成功数据在真实 Isaac 中执行一个控制步骤，保存恢复、动作、相机与任务报告。实际任务未完成时返回退出状态 1，并释放仿真进程。该检查保留单帧范围，完整单环境任务仍单独验收。
+
 [pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
 
 [pick_place_release_diagnostics.json](pick_place_release_diagnostics.json) 保存实际释放后的速度与稳定时间。速度来自 action 前的真实 policy 观测，保持时间来自 action 后的真实 termination。剩余环境完成 65 个释放步骤，最长稳定时间为 0.14 秒。
