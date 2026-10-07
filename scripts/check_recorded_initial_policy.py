@@ -35,6 +35,7 @@ with h5py.File(args.episode) as stream:
 with h5py.File(args.native / "trajectory.hdf5") as stream:
     expected_observation = stream["policy_observation"][0, 0]
 git_sha = subprocess.run(["git", "rev-parse", "HEAD"], check=True, text=True, capture_output=True).stdout.strip()
+validator_sha256 = digest(Path(__file__))
 args.task, args.task_profile = meta.task_id, meta.task_profile
 args.num_envs, args.seed = 1, meta.config.seed
 args.environment_mode, args.reward_discount = meta.config.environment_mode, meta.config.gamma
@@ -69,10 +70,20 @@ try:
     trajectory, success, task_return = [], False, 0.
     with torch.inference_mode():
         while app.is_running():
+            policy_observation = observation["policy"][0].detach().cpu().tolist()
             action = policy(observation)
             observation, reward, terminated, truncated, _ = env.step(action)
             task_return += float(reward[0])
-            trajectory.append({"action": action[0].cpu().tolist(), "reward": float(reward[0])})
+            transition = runtime._replay_transition
+            trajectory.append({"policy_observation": policy_observation,
+                               "action": action[0].cpu().tolist(), "reward": float(reward[0]),
+                               "joint_targets": transition["targets"].cpu().tolist(),
+                               "joint_position": transition["joint_position"].cpu().tolist(),
+                               "joint_velocity": transition["joint_velocity"].cpu().tolist(),
+                               "object_position_root": transition["object_position_root"].cpu().tolist(),
+                               "jaw_forces": transition["jaw_forces"].cpu().tolist(),
+                               "hold_seconds": float(transition["hold_seconds"]),
+                               "success": transition["success"]})
             if bool((terminated | truncated)[0]):
                 success = runtime._replay_transition["success"]
                 break
@@ -83,7 +94,7 @@ try:
               "initial_observation_error": error, "trajectory": trajectory,
               "source_episode_sha256": digest(args.episode), "source_trace_sha256": source["trace_sha256"],
               "model_sha256": digest(args.checkpoint / meta.checkpoint), "evaluation_git_sha": git_sha,
-              "independent_success_rate_verified": False, "validator_sha256": digest(Path(__file__))}
+              "independent_success_rate_verified": False, "validator_sha256": validator_sha256}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x") as stream:
         json.dump(result, stream, indent=2)

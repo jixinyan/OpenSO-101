@@ -1,0 +1,31 @@
+{
+  "backend": "rsl_rl",
+  "algo": "ppo",
+  "seed": 42,
+  "iterations": 2000,
+  "rollout_steps": 96,
+  "epochs": 5,
+  "mini_batches": 4,
+  "learning_rate": 0.0001,
+  "gamma": 0.99,
+  "entropy_coef": 0.001,
+  "hidden_dims": [256, 128, 64],
+  "normalize_observations": false,
+  "action_distribution": "tanh_gaussian",
+  "initial_noise_std": 0.12,
+  "environment_mode": "nominal",
+  "learning_rate_schedule": "fixed",
+  "evaluation_interval": 100,
+  "evaluation_episodes": 100,
+  "demonstration_sources": [
+    "outputs/rl_progress/v4_demonstrations_verified_858bc44_task",
+    "outputs/rl_progress/lift_perturbed_expert_20261007",
+    "outputs/rl_progress/lift_policy_mixture_20261007"
+  ],
+  "demonstration_epochs": 2000,
+  "demonstration_batch_size": 256,
+  "demonstration_learning_rate": 0.001,
+  "demonstration_updates_per_iteration": 2,
+  "demonstration_objective": "latent_mse",
+  "demonstration_action_margin": 0.0001
+}
