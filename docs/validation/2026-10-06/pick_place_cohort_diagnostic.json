@@ -1,0 +1,123 @@
+{
+  "scope": "actual_source_and_isaac_replay_diagnostic",
+  "records": {
+    "source": {
+      "bilateral_contact_steps": 189,
+      "first_bilateral_contact_frame": 106,
+      "maximum_object_height": 0.17986533045768738,
+      "final_object_position_root": [
+        0.24568982422351837,
+        -0.15684738755226135,
+        0.042081449180841446
+      ],
+      "final_jaw_angle": 0.7952931523323059
+    },
+    "replay": {
+      "bilateral_contact_steps": 189,
+      "first_bilateral_contact_frame": 106,
+      "maximum_object_height": 0.17986533045768738,
+      "final_object_position_root": [
+        0.24568982422351837,
+        -0.15684738755226135,
+        0.042081449180841446
+      ],
+      "final_jaw_angle": 0.7952931523323059
+    }
+  },
+  "errors": {
+    "joint_position": {
+      "rmse_per_component": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "maximum_absolute_error": 0.0,
+      "initial_absolute_error": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "final_absolute_error": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "joint_velocity": {
+      "rmse_per_component": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "maximum_absolute_error": 0.0,
+      "initial_absolute_error": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "final_absolute_error": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "object_position_root": {
+      "rmse_per_component": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "maximum_absolute_error": 0.0,
+      "initial_absolute_error": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "final_absolute_error": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "jaw_forces": {
+      "rmse_per_component": [
+        0.0,
+        0.0
+      ],
+      "maximum_absolute_error": 0.0,
+      "initial_absolute_error": [
+        0.0,
+        0.0
+      ],
+      "final_absolute_error": [
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "source_task_success": true,
+  "replay_task_success": true,
+  "source_episode_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_trace_sha256": "2d8ddce1d1d52afcc744d8b5ebfc2c92e849a0ed5c9800a2d1455d33273971f5",
+  "replay_report_sha256": "e79fd7e7bd2f8801c54d98049e020ec379200393f426956206aae7c0ce5dbec6",
+  "replay_trace_sha256": "ff04e4d2414f8553aae4bf8bb1abfdcd244cd2e30a9fb569d0b4b49bd22f943e",
+  "source_sha256": "a7706932c14ac28165a18947578cf0f930396f5f9c8ba6538a2e7e4d235ebc2a"
+}

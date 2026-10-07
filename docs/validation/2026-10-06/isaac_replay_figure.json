@@ -1,0 +1,17 @@
+{
+  "status": "actual_isaac_replay_figure_verified",
+  "source_sha256": "527aa45e36c3dc96ad356c89fa9e4ecf79772b504a0e8587e27e249695d948f7",
+  "figure_sha256": "775ad23de03d277b50a63608dbf5fd58350b67cbe378c4831352a9ecca1b969e",
+  "source_episode_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_trace_sha256": "2d8ddce1d1d52afcc744d8b5ebfc2c92e849a0ed5c9800a2d1455d33273971f5",
+  "replay_trace_sha256": "ff04e4d2414f8553aae4bf8bb1abfdcd244cd2e30a9fb569d0b4b49bd22f943e",
+  "replay_report_sha256": "e79fd7e7bd2f8801c54d98049e020ec379200393f426956206aae7c0ce5dbec6",
+  "frames": 328,
+  "maximum_joint_position_error_rad": 0.0,
+  "task_success_verified": true,
+  "rl_policy_success_verified": false,
+  "bilateral_contact_steps": {
+    "source": 189,
+    "replay": 189
+  }
+}

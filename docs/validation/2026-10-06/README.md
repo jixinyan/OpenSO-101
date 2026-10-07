@@ -71,6 +71,10 @@
 
 [pick_place_cohort_capture.json](pick_place_cohort_capture.json) 保存包含完整并行状态的新双相机采集，四个实际环境全部成功，首个环境包含 328 帧。[pick_place_cohort_lerobot.json](pick_place_cohort_lerobot.json) 读取全部帧，动作与关节观测转换误差为零。[pick_place_cohort_dataset_replay.json](pick_place_cohort_dataset_replay.json) 恢复来源四环境并完成全部帧，恢复字段和全部环境的关节目标误差为零，`task_success_verified=true`，稳定放置时间为 0.5 秒。[pick_place_cohort_gpu.json](pick_place_cohort_gpu.json) 的实际计算与图形进程仅使用物理 GPU 2。
 
+[pick_place_cohort_diagnostic.json](pick_place_cohort_diagnostic.json) 比较首个来源环境的全部 328 个实际控制步骤：关节位置、速度、物体位置和双侧接触力误差均为零，双侧接触步骤同为 189。全部实际数值、来源 SHA256 与回放 SHA256 保存在报告中。[isaac_replay_figure.json](isaac_replay_figure.json) 保存实际图表检查和文件 SHA256。
+
+![实际采集与来源布局回放](figures/isaac_replay.png)
+
 [pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
 
 [pick_place_release_diagnostics.json](pick_place_release_diagnostics.json) 保存实际释放后的速度与稳定时间。速度来自 action 前的真实 policy 观测，保持时间来自 action 后的真实 termination。剩余环境完成 65 个释放步骤，最长稳定时间为 0.14 秒。
