@@ -24,9 +24,15 @@ metadata = TrainingRunMeta.read(args.run)
 event_files = list(args.run.glob("events.out.tfevents.*"))
 if len(event_files) != 1 or metadata.config.backend != "rsl_rl":
     raise ValueError("曲线需要一份实际 RSL TensorBoard 事件文件")
-args.output.mkdir(parents=True, exist_ok=False)
+args.output.mkdir(parents=True, exist_ok=True)
+if any((args.output / name).exists() for name in ("continued_training.png", "training_snapshot.json")):
+    raise FileExistsError("训练图表与报告已经存在")
 event_copy = args.output / event_files[0].name
-shutil.copy2(event_files[0], event_copy)
+if event_copy.exists():
+    if digest(event_copy) != digest(event_files[0]):
+        raise FileExistsError("事件 snapshot 需要保持相同的源文件内容")
+else:
+    shutil.copy2(event_files[0], event_copy)
 events = EventAccumulator(str(event_copy), size_guidance={"scalars": 0}).Reload()
 tags = {
     "Train/mean_reward": ("平均 episode return", "return"),
@@ -42,8 +48,9 @@ for name in tags:
     iterations = np.asarray([entry.step for entry in entries], dtype=int)
     values = np.asarray([entry.value for entry in entries])
     if (not len(entries) or not np.isfinite(values).all() or (np.diff(iterations) <= 0).any()
-            or iterations[0] != metadata.start_iteration):
-        raise ValueError("实际事件数值或起始 iteration 与训练 metadata 不一致")
+            or iterations[0] < metadata.start_iteration
+            or iterations[-1] >= metadata.start_iteration + metadata.config.iterations):
+        raise ValueError(f"实际事件数值或 iteration 范围与训练 metadata 不一致: {name}")
     curves[name] = [{"iteration": int(entry.step), "value": float(entry.value),
                      "completed_transitions": metadata.prior_transitions +
                      (int(entry.step) - metadata.start_iteration + 1) *

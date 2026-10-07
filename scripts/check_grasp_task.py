@@ -147,7 +147,7 @@ try:
         from openso101.rl.recording import first_episode_recorder
 
         recording_cfg = first_episode_recorder(
-            args.recording_output, args.task, args.task_profile, digest(Path(__file__)),
+            args.recording_output, args.task, args.task_profile, source_sha256,
             controller="scripted_IK_gravity_compensated_joint_targets")
         args.recorder_cfg.policy_recording = recording_cfg.policy_recording
     env = build_environment(args, training=True)
