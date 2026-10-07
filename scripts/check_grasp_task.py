@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 import subprocess
 
+from openso101.rl.config import CheckpointMeta, digest
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--output", type=Path, required=True)
@@ -20,6 +22,8 @@ parser.add_argument("--recording-output", type=Path)
 parser.add_argument("--arm-target-noise-std", type=float, default=0.)
 parser.add_argument("--arm-target-noise-seed", type=int, default=100042)
 parser.add_argument("--path-speed-rad-s", type=float, default=.75)
+parser.add_argument("--behavior-policy", type=Path)
+parser.add_argument("--behavior-policy-weight", type=float, default=0.)
 args = parser.parse_args()
 from openso101.rl.gpu_scope import configure_visible_gpu
 
@@ -34,6 +38,18 @@ if not 0. <= args.arm_target_noise_std <= .04 or (args.arm_target_noise_std and 
     raise ValueError("arm target 扰动需要 grasp_v4，标准差范围为 0 至 0.04 rad")
 if not 0. < args.path_speed_rad_s <= 1.5:
     raise ValueError("规划路径速度需要位于 0 至 1.5 rad/s")
+if (not 0. <= args.behavior_policy_weight <= 1.
+        or (args.behavior_policy is None) != (args.behavior_policy_weight == 0.)):
+    raise ValueError("混合采集需要实际模型与 0 至 1 范围内的非零权重")
+behavior_metadata = CheckpointMeta.read(args.behavior_policy) if args.behavior_policy else None
+if behavior_metadata and (behavior_metadata.task_id != args.task or behavior_metadata.task_profile != args.task_profile
+        or behavior_metadata.config.backend != "rsl_rl" or behavior_metadata.config.environment_mode != "nominal"
+        or behavior_metadata.config.action_distribution != "tanh_gaussian"):
+    raise ValueError("混合采集需要相同任务与 nominal grasp profile 的实际 bounded RSL 模型")
+source_sha256 = digest(Path(__file__))
+profile_sha256 = digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py"))
+execution_git_sha = subprocess.run(["git", "rev-parse", "HEAD"], check=True, text=True,
+                                  capture_output=True).stdout.strip()
 args.output.mkdir(parents=True, exist_ok=False)
 pick_place = args.task == "OpenSO101-PickPlace-v0"
 if pick_place and args.task_profile != "grasp_v4":
@@ -54,7 +70,6 @@ try:
     from isaaclab.utils import configclass
     from isaaclab.utils.math import quat_apply_inverse, subtract_frame_transforms
 
-    from openso101.rl.config import digest
     from openso101.rl.execution import build_environment
     from openso101.rl.scene_geometry import robot_collision_extras, table_collision_geometry
     from openso101.rl.vision_distillation import action_mapping
@@ -140,6 +155,22 @@ try:
     runtime = env.unwrapped
     robot = runtime.scene["robot"]
     mappings = action_mapping(runtime)
+    behavior_policy = None
+    if behavior_metadata:
+        from tensordict import TensorDict
+        from openso101.rl.bounded_policy import BoundedActorCritic
+
+        behavior_config = json.loads((args.behavior_policy / "backend.json").read_text())
+        policy_config = behavior_config["policy"].copy()
+        if policy_config.pop("class_name") != "BoundedActorCritic":
+            raise ValueError("混合采集需要 BoundedActorCritic")
+        behavior_policy = BoundedActorCritic(
+            TensorDict(observation, batch_size=[args.num_envs]), behavior_config["obs_groups"],
+            runtime.action_manager.total_action_dim, **policy_config).to(runtime.device)
+        behavior_policy.load_state_dict(torch.load(
+            args.behavior_policy / behavior_metadata.checkpoint, map_location=runtime.device,
+            weights_only=False)["model_state_dict"])
+        behavior_policy.eval()
     ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
     phase = torch.full((args.num_envs,), -1, dtype=torch.long, device=runtime.device)
     path_cursor = torch.zeros_like(phase)
@@ -309,6 +340,13 @@ try:
             noise = torch.randn(actions[:, :5].shape, generator=noise_generator, device=runtime.device)
             actions[:, :5] = (actions[:, :5] + noise * args.arm_target_noise_std / arm_scales).clamp(-1, 1)
             actions[~active] = 0
+        if behavior_policy is not None:
+            with torch.inference_mode():
+                behavior_action = behavior_policy.act_inference(TensorDict(observation, batch_size=[args.num_envs]))
+            if behavior_action.shape != actions.shape or not torch.isfinite(behavior_action).all():
+                raise ValueError("实际混合模型的动作尺寸或数值无效")
+            actions = torch.lerp(actions, behavior_action, args.behavior_policy_weight)
+            actions[~active] = 0
         policy_observation = observation["policy"].detach().clone()
         policy_action = actions.detach().clone()
         observation, _, terminated, truncated, _ = env.step(actions)
@@ -380,8 +418,8 @@ try:
               "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),
               "initial_physics_sha256": digest(physics_path),
-              "trace_sha256": digest(trajectory), "source_sha256": digest(Path(__file__)),
-              "profile_sha256": digest(Path(f"src/openso101/tasks/shared/{args.task_profile}.py")),
+              "trace_sha256": digest(trajectory), "source_sha256": source_sha256,
+              "profile_sha256": profile_sha256, "execution_git_sha": execution_git_sha,
               "policy_observation_terms": [
                   {"name": name, "size": int(np.prod(shape))}
                   for name, shape in zip(runtime.observation_manager.active_terms["policy"],
@@ -394,6 +432,13 @@ try:
                              "arm_target_noise_std_rad": args.arm_target_noise_std,
                              "arm_target_noise_seed": args.arm_target_noise_seed,
                              "reward_source": "actual_executed_transition"}
+    if behavior_metadata:
+        report["supervision"]["behavior_policy"] = {
+            "model_sha256": behavior_metadata.files[behavior_metadata.checkpoint],
+            "checkpoint_metadata_sha256": digest(args.behavior_policy / "checkpoint.json"),
+            "weight": args.behavior_policy_weight,
+            "training_git_sha": behavior_metadata.git_sha,
+        }
     gravity = np.stack([item["gravity_compensation"] for item in trace])
     holding_budget = (np.asarray(states["joint_stiffness"]) * .04 if args.task_profile == "grasp_v3"
                       else np.asarray(states["effort_limits"]))
