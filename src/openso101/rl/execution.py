@@ -177,6 +177,9 @@ def train(args):
         from .snapshot import TrainingRunMeta
 
         source_files = {name: digest(output / name) for name in ("train.json", "source.zip", "environment.yaml")}
+        from .demonstrations import prepare_demonstrations
+
+        source_files.update(prepare_demonstrations(env, config, output, args.task, args.task_profile, resume))
         if previous:
             source_files["resume.json"] = digest(output / "resume.json")
             source_files.update({path.relative_to(output).as_posix(): digest(path)
@@ -202,7 +205,8 @@ def train(args):
                           for path in (output / "parent").rglob("*") if path.is_file()})
         for name in ("backend.json", "normalization.pkl", "replay.pkl", "environment.yaml", "source.zip", "run.json",
                      "model_best.pt", "best_evaluation.json", "evaluation_history.json", "convergence.json",
-                     "policy_initialization.json"):
+                     "policy_initialization.json", "demonstrations.pt", "demonstrations.json",
+                     "demonstration_initialization.json", "demonstration_pretrain.jsonl"):
             if (output / name).exists():
                 files[name] = digest(output / name)
         if scene:

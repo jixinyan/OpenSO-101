@@ -65,13 +65,31 @@ class Backend:
             config["policy"] = json.loads((resume / "backend.json").read_text())["policy"]
         write_backend_config(output, config)
         runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=str(output), device=env.unwrapped.device)
+        restored_infos = None
         if resume:
-            runner.load(str(resume / CheckpointMeta.read(resume).checkpoint))
+            restored_infos = runner.load(str(resume / CheckpointMeta.read(resume).checkpoint))
             runner.current_learning_iteration += 1
         std = runner.alg.policy.log_std
         if cfg.action_distribution == "tanh_gaussian":
             std = std.clamp(-5., 2.)
         record_initial_std(output, cfg, std.exp(), resumed=resume is not None)
+        if cfg.demonstration_sources:
+            from openso101.rl.demonstrations import DemonstrationUpdates
+
+            demonstrations = DemonstrationUpdates(runner.alg, cfg, output)
+            runner.alg.demonstration_updates = demonstrations
+            if resume is None:
+                runner._prepare_logging_writer()
+                demonstrations.pretrain(output)
+                runner.current_learning_iteration = -1
+                runner.save(str(output / "model_pretrained.pt"))
+                runner.current_learning_iteration = 0
+                from openso101.rl.benchmark import evaluate_initialization
+
+                evaluate_initialization(output, cfg)
+            else:
+                demonstrations.optimizer.load_state_dict(restored_infos["demonstration_optimizer"])
+                demonstrations.steps = restored_infos["demonstration_gradient_steps"]
         from openso101.rl.benchmark import evaluate_snapshot
 
         remaining = cfg.iterations

@@ -47,6 +47,14 @@ class BoundedActorCritic(ActorCritic):
 
 
 class BoundedOnPolicyRunner(OnPolicyRunner):
+    def save(self, path, infos=None):
+        details = dict(infos or {})
+        demonstrations = getattr(self.alg, "demonstration_updates", None)
+        if demonstrations is not None:
+            details["demonstration_optimizer"] = demonstrations.optimizer.state_dict()
+            details["demonstration_gradient_steps"] = demonstrations.steps
+        return super().save(path, infos=details)
+
     def _construct_algorithm(self, obs):
         policy_cfg = dict(self.policy_cfg)
         algorithm_cfg = dict(self.alg_cfg)

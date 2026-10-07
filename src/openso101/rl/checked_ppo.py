@@ -120,6 +120,9 @@ class CheckedPPO(PPO):
     def update(self):
         self.update_count += 1
         result = super().update()
+        if (getattr(self, "demonstration_updates", None) is not None
+                and self.demonstration_updates.cfg.demonstration_updates_per_iteration):
+            result["demonstration_actor_mse"] = self.demonstration_updates.update()
         if any(not math.isfinite(value) for value in result.values()):
             self.capture_failure("PPO loss 含有无效数值")
             raise FloatingPointError("PPO loss 含有无效数值")

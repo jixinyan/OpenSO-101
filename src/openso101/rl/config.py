@@ -38,6 +38,11 @@ class TrainCfg(BaseModel):
     evaluation_episodes: int = Field(default=100, gt=0)
     replay_batch_size: int = Field(default=256, gt=1)
     gradient_steps: int = Field(default=1, gt=0)
+    demonstration_sources: tuple[str, ...] = ()
+    demonstration_epochs: int = Field(default=1000, gt=0)
+    demonstration_batch_size: int = Field(default=256, gt=1)
+    demonstration_learning_rate: float = Field(default=1e-3, gt=0)
+    demonstration_updates_per_iteration: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def supported_algorithm(self):
@@ -55,6 +60,10 @@ class TrainCfg(BaseModel):
             raise ValueError("tanh_gaussian 的 initial_noise_std 需要位于 [exp(-5), exp(2)]")
         if self.learning_starts >= self.replay_size:
             raise ValueError("learning_starts 必须小于 replay_size")
+        if self.demonstration_sources and self.action_distribution != "tanh_gaussian":
+            raise ValueError("成功示范初始化使用 rsl_rl bounded PPO")
+        if self.demonstration_updates_per_iteration and not self.demonstration_sources:
+            raise ValueError("示范更新需要指定实际成功轨迹")
         return self
 
     def batch_size(self, num_envs: int) -> int:

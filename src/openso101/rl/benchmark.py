@@ -8,10 +8,7 @@ from pathlib import Path
 from .snapshot import snapshot
 
 
-def evaluate_snapshot(run, checkpoint, iteration, config):
-    destination = run / "evaluations" / f"iteration_{iteration:06d}"
-    destination.parent.mkdir(exist_ok=True)
-    snapshot(Namespace(run=str(run), checkpoint=checkpoint.name, output=str(destination)))
+def evaluate_bundle(destination, config):
     from .config import CheckpointMeta
 
     meta = CheckpointMeta.read(destination)
@@ -26,8 +23,39 @@ def evaluate_snapshot(run, checkpoint, iteration, config):
     result = json.loads(reports[0].read_text())
     if len(result["episodes"]) != config.evaluation_episodes:
         raise RuntimeError("独立评估的 episode 数量不匹配")
+    return result, reports[0]
+
+
+def evaluate_initialization(run, config):
+    from .config import CheckpointMeta, digest
+    from .snapshot import TrainingRunMeta
+
+    metadata = TrainingRunMeta.read(run)
+    destination = run / "initial_policy"
+    destination.mkdir(exist_ok=False)
+    names = set(metadata.files) | {"backend.json", "model_pretrained.pt", "demonstration_initialization.json"}
+    for name in names:
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(run / name, target)
+    CheckpointMeta(task_id=metadata.task_id, task_profile=metadata.task_profile, config=config,
+                   git_sha=metadata.git_sha, checkpoint="model_pretrained.pt",
+                   files={name: digest(destination / name) for name in names}, completed_transitions=0).write(destination)
+    result, report = evaluate_bundle(destination, config)
+    (run / "initial_policy_evaluation.json").write_text(json.dumps(result, indent=2) + "\n")
+    print(json.dumps({"initial_policy_evaluation": str(report), "success_rate": result["success_rate"]}), flush=True)
+
+
+def evaluate_snapshot(run, checkpoint, iteration, config):
+    destination = run / "evaluations" / f"iteration_{iteration:06d}"
+    destination.parent.mkdir(exist_ok=True)
+    snapshot(Namespace(run=str(run), checkpoint=checkpoint.name, output=str(destination)))
+    from .config import CheckpointMeta
+
+    meta = CheckpointMeta.read(destination)
+    result, report = evaluate_bundle(destination, config)
     result["iteration"] = iteration
-    result["source_report"] = str(reports[0].relative_to(run))
+    result["source_report"] = str(report.relative_to(run))
     history_path = run / "evaluation_history.json"
     history = json.loads(history_path.read_text()) if history_path.exists() else []
     history.append(result)
