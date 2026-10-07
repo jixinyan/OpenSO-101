@@ -1,0 +1,92 @@
+{
+  "scope": "actual_paired_motion_diagnostic",
+  "records": {
+    "scripted": {
+      "frames": 243,
+      "jaw_target_minimum": 1.0401010513305664e-05,
+      "jaw_target_maximum": 0.800000011920929,
+      "jaw_actual_minimum": 0.36648356914520264,
+      "first_closing_frame": 144,
+      "first_bilateral_contact_frame": 158,
+      "bilateral_contact_steps": 85,
+      "maximum_bilateral_force": 55.89454650878906,
+      "maximum_object_height": 0.19868846237659454,
+      "arm_target_path_length": [
+        0.6702407598495483,
+        1.054850697517395,
+        0.6956716179847717,
+        2.2749199867248535,
+        1.798134446144104
+      ],
+      "arm_actual_path_length": [
+        0.6921353936195374,
+        1.104292631149292,
+        0.7405675053596497,
+        2.3211264610290527,
+        1.817941665649414
+      ],
+      "final_joint_targets": [
+        0.6577339172363281,
+        0.16897593438625336,
+        -0.6125534772872925,
+        1.1283451318740845,
+        -1.7969833612442017,
+        1.1324882507324219e-05
+      ],
+      "final_joint_position": [
+        0.6577481031417847,
+        0.20189668238162994,
+        -0.5926726460456848,
+        1.1361180543899536,
+        -1.7971651554107666,
+        0.37290114164352417
+      ]
+    },
+    "model": {
+      "frames": 250,
+      "jaw_target_minimum": 0.0,
+      "jaw_target_maximum": 0.800000011920929,
+      "jaw_actual_minimum": -0.022652091458439827,
+      "first_closing_frame": 113,
+      "first_bilateral_contact_frame": null,
+      "bilateral_contact_steps": 0,
+      "maximum_bilateral_force": 0.0,
+      "maximum_object_height": 0.04302138835191727,
+      "arm_target_path_length": [
+        30.017299132421613,
+        30.194790138863027,
+        33.54863277822733,
+        29.3835431933403,
+        70.95603522472084
+      ],
+      "arm_actual_path_length": [
+        3.7124141105014132,
+        2.564225290348986,
+        2.754162069351878,
+        3.9679914116859436,
+        5.157647922780598
+      ],
+      "final_joint_targets": [
+        0.21820469200611115,
+        0.338728666305542,
+        -0.09437673538923264,
+        1.1769150495529175,
+        -0.9818461537361145,
+        9.948015213012695e-05
+      ],
+      "final_joint_position": [
+        0.1096540093421936,
+        0.42616403102874756,
+        -0.35727474093437195,
+        1.4557901620864868,
+        -0.7397446632385254,
+        -0.006205597426742315
+      ]
+    }
+  },
+  "paired_sha256": "f7cd133309047da79b06c8866b4f8d0b372f627aa26de315170f371d9b96183e",
+  "native_trace_sha256": "432034ad37ab85c2d48f3beeb7cdb987065bffd2ff15812b94a3d55c1608271f",
+  "initial_observation_error": 0.0,
+  "model_success": false,
+  "source_sha256": "9070d4cbf7a0dbda8a01e913c1a90aaea06079fa0c4e5a99c17c2136f02a27c8"
+}

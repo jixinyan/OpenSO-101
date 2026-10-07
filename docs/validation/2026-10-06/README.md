@@ -30,6 +30,12 @@
 | [mixture_paired_control.json](mixture_paired_control.json) | 同一成功示范的完整初始状态 | 38 维观测误差为零、250 步、任务未成功 |
 | [mixture_final_control_audit.json](mixture_final_control_audit.json) | PPO 后模型对全部实际示范的动作预测 | action MSE 0.0083099 |
 | [normalization_audit.json](normalization_audit.json) | 实际 actor 与实际归一化统计的前向计算 | PPO actor 使用初始统计时 MSE 0.0035923 |
+| [fixed_normalization_statistics.json](fixed_normalization_statistics.json) | 八次 PPO 更新后的全部十个保存模型 | actor、critic 的全部八项统计保持一致 |
+| [fixed_normalization_control.json](fixed_normalization_control.json) | 最终模型对全部 1953 个实际样本的预测 | action MSE 1.3670e-5 |
+| [fixed_normalization_evaluation.json](fixed_normalization_evaluation.json) | 固定统计配置的 100 episodes 独立评估 | 成功 0/100、接近物体 64/100、双侧接触 2/100 |
+| [continued_evaluation.json](continued_evaluation.json) | 1024 环境完成 100 次 PPO 更新后的独立评估 | iteration 107、成功 0/100 |
+| [comparison_stopped.json](comparison_stopped.json) | 完成比较后的实际 worker 停止与模型检查 | 已保存模型 SHA256 保持一致 |
+| [single_gpu_training.json](single_gpu_training.json) | 计算与图形进程的实际 NVIDIA 记录 | 全部仅使用物理 GPU 2 |
 
 示范拟合与任务成功各自验收。扰动轨迹使用 `expert_policy_action` 作为 actor 标签，`policy_action` 保存实际执行动作，reward 使用真实执行 transition。监督准备只选择完整成功 episode。
 
@@ -49,7 +55,9 @@
 
 [pick_place_complete.json](pick_place_complete.json) 在四个实际环境中全部完成任务，分别使用 328、329、349、286 个控制步骤，均在标准八秒任务时间内完成。物体进入目标、夹爪释放后执行 Cartesian retreat，当前步骤连续稳定 0.5 秒后成功结束。首条成功 HDF5 包含 328 帧，SHA256 为 `a25b2f915b0d1c7424a31c90fcf56845a8da56a4d7b8db65c530cbae84f3ff04`；双相机 MP4 SHA256 为 `f9d687110fd44582a6614bc084bfc7e609ed81507702da68c0c08b386a26048c`。
 
-[pick_place_complete_plan.json](pick_place_complete_plan.json) 保存完整基础路径检查与 64 点撤离路径采样。基础路径数值、实际初始状态、官方模型和 collision bundle 的 SHA256 全部保存；几何采样与任务成功各自验收。此条 328 帧成功数据的完整 LeRobot 读取与原生回放正在执行。
+[pick_place_complete_plan.json](pick_place_complete_plan.json) 保存完整基础路径检查与 64 点撤离路径采样。基础路径数值、实际初始状态、官方模型和 collision bundle 的 SHA256 全部保存；几何采样与任务成功各自验收。
+
+[pick_place_complete_lerobot.json](pick_place_complete_lerobot.json) 核查此条成功数据的全部 328 帧双相机读取，动作与状态转换误差为零。[pick_place_complete_replay.json](pick_place_complete_replay.json) 完成单环境的全部 328 帧回放，恢复与动作误差为零，任务成功为 false。[pick_place_replay_diagnostic.json](pick_place_replay_diagnostic.json) 保存实际接触与关节状态：来源有 189 个双侧接触步骤，回放只有一个；arm 位置 RMSE 为 0.0003–0.0038 rad，jaw 为 0.1598 rad。接触物理重复性仍需通过验收。
 
 [pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
 

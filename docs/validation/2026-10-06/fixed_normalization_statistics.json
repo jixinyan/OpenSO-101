@@ -1,0 +1,72 @@
+{
+  "status": "all_saved_normalization_statistics_verified",
+  "models": [
+    {
+      "file": "model_0.pt",
+      "iteration": 0,
+      "sha256": "e873f9725fee3cbc6b9060a37f9e89520757dc64f9fefdd808219c7d968a96b6"
+    },
+    {
+      "file": "model_1.pt",
+      "iteration": 1,
+      "sha256": "91bd8a67a23562067a970d35926ad42bd273947d37ce96efede5259f925b6e9c"
+    },
+    {
+      "file": "model_2.pt",
+      "iteration": 2,
+      "sha256": "0335b4895de42111574ab8ac4f30a5ba693750da4ba3888e1e8c7e54ed13757f"
+    },
+    {
+      "file": "model_3.pt",
+      "iteration": 3,
+      "sha256": "277010370cb2ec5182974909b165ee382b2c43f835397b45f36acb29dd00ca0b"
+    },
+    {
+      "file": "model_4.pt",
+      "iteration": 4,
+      "sha256": "ef67eb6acdf3188d412338dc5dfe8ce8d51449ad489d84678fe149ebeaf6cd82"
+    },
+    {
+      "file": "model_5.pt",
+      "iteration": 5,
+      "sha256": "c459f55c6b3b75d6955ed210004f5a17abf4977510fbfdc2e97598ba8dfe88d0"
+    },
+    {
+      "file": "model_6.pt",
+      "iteration": 6,
+      "sha256": "36ff459dcc82d5c8fe04fbc42ac295623c34fa546321d13556305943b50ba5a3"
+    },
+    {
+      "file": "model_7.pt",
+      "iteration": 7,
+      "sha256": "faa499f32325245e894a7068e934362cd87e8c689f7d7e86e0f9371fe1b8339b"
+    },
+    {
+      "file": "model_best.pt",
+      "iteration": 7,
+      "sha256": "faa499f32325245e894a7068e934362cd87e8c689f7d7e86e0f9371fe1b8339b"
+    },
+    {
+      "file": "model.pt",
+      "iteration": 7,
+      "sha256": "bbb212c0acf2388ecee20cbb1330665fad4caa18b4a605511c5fa9482c1c37a2"
+    }
+  ],
+  "counts": {
+    "actor": 1953,
+    "critic": 1953
+  },
+  "fields": [
+    "actor_obs_normalizer._mean",
+    "actor_obs_normalizer._var",
+    "actor_obs_normalizer._std",
+    "actor_obs_normalizer.count",
+    "critic_obs_normalizer._mean",
+    "critic_obs_normalizer._var",
+    "critic_obs_normalizer._std",
+    "critic_obs_normalizer.count"
+  ],
+  "initial_checkpoint_sha256": "832cd83401fbd94305f42589ad32ecb9e0214eae8802269d05334915deb53d96",
+  "source_sha256": "76aa3bdb8e689762a1efb9d6aab4be87544fedfd666244dba0dd7297aa1f03aa",
+  "task_success_verified": false
+}
