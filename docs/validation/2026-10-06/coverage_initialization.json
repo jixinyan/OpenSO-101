@@ -1,0 +1,23 @@
+{
+  "status": "actual_expert_action_initialization_completed",
+  "frames": 2703,
+  "successful_episodes": 9,
+  "failed_expert_supervision_episodes": 3,
+  "actor_mse": 1.2786093066097237e-05,
+  "objective_mse": 5.31926671101246e-05,
+  "objective": "latent_mse",
+  "action_margin": 0.0001,
+  "rmse_per_action": [
+    0.0034285779111087322,
+    0.004040622618049383,
+    0.004168933257460594,
+    0.00417089369148016,
+    0.003721716348081827,
+    8.514879300491884e-05
+  ],
+  "critic_smooth_l1": 2.204648017883301,
+  "gradient_steps": 22000,
+  "rl_transitions": 0,
+  "dataset_sha256": "79d4e1956441c95980617fcc5592d391544b1625c2bc9c7452cac703ae5980eb",
+  "task_success_verified": false
+}

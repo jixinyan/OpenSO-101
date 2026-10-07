@@ -1,0 +1,46 @@
+{
+  "status": "actual_control_validation_figure_verified",
+  "action_mse": [
+    1.3352026144275442e-05,
+    0.008309870027005672,
+    1.3670301086676773e-05
+  ],
+  "episode_counts": {
+    "reached": [
+      66,
+      60,
+      64
+    ],
+    "grasped": [
+      1,
+      0,
+      2
+    ],
+    "lifted": [
+      1,
+      0,
+      1
+    ],
+    "success": [
+      0,
+      0,
+      0
+    ]
+  },
+  "labels": [
+    "示范初始化",
+    "PPO 配置 A",
+    "PPO 配置 B"
+  ],
+  "figure_sha256": "c84de044f5331c599f4845b3406fe82946aef06d5063c077c9b08a51cc0572e9",
+  "source_sha256": "41494a257e6f2d1387da89c3eed4c25c2c25f72d43e2b21301f81ffc8228355f",
+  "files": {
+    "initial": "742dea62f25f13667db19de1df08e2cae9df7b22d55344f534dcbfa28025b985",
+    "old_control": "92666ffcec8c54d20ce74f7273e3902ac1b879e3038cb6f98ab2c28ba646e151",
+    "fixed_control": "a3b55ccdfd24df6bea8e08d2aa99d20b3f267fb16f6be840bc1b3f592f74cfe9",
+    "initial_evaluation": "9d801bd717ba46f5a67c5f0571c882e8f526f5fbc1ccb080587d3290ad883607",
+    "old_evaluation": "8e8ce4a4b3ab0c548b38e85ec9b85ddc770e89162285129ca5b9f62ca74e45de",
+    "fixed_evaluation": "e09654adb9d372615c830469d2b8d4e2ec768480c246b582e9abc5a74939f947"
+  },
+  "task_success_verified": false
+}

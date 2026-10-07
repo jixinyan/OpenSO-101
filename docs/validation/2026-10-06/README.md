@@ -36,14 +36,22 @@
 | [continued_evaluation.json](continued_evaluation.json) | 1024 环境完成 100 次 PPO 更新后的独立评估 | iteration 107、成功 0/100 |
 | [comparison_stopped.json](comparison_stopped.json) | 完成比较后的实际 worker 停止与模型检查 | 已保存模型 SHA256 保持一致 |
 | [single_gpu_training.json](single_gpu_training.json) | 计算与图形进程的实际 NVIDIA 记录 | 全部仅使用物理 GPU 2 |
+| [coverage_initialization.json](coverage_initialization.json) | 九条成功 episode、三条完整失败监督过程、2703 个实际样本 | 22000 gradient steps、action MSE 1.2786e-5 |
+| [coverage_control.json](coverage_control.json) | 八次 PPO 更新后的模型对全部 2703 个实际样本的预测 | action MSE 1.5824e-5 |
+| [coverage_normalization.json](coverage_normalization.json) | 全部十一个保存模型 | actor、critic 的八项归一化统计逐项相同 |
+| [coverage_evaluation.json](coverage_evaluation.json) | 完整失败过程监督配置的独立 100 episodes | 成功 0/100、接近物体 70/100 |
 
-示范拟合与任务成功各自验收。扰动轨迹使用 `expert_policy_action` 作为 actor 标签，`policy_action` 保存实际执行动作，reward 使用真实执行 transition。监督准备只选择完整成功 episode。
+示范拟合与任务成功各自验收。扰动轨迹使用 `expert_policy_action` 作为 actor 标签，`policy_action` 保存实际执行动作，reward 使用真实执行 transition。各报告保留对应数据范围；coverage 配置同时读取完整失败过程中的实际 expert 标签，并分别记录成功与失败数量。
 
 [paired_curve_report.json](paired_curve_report.json) 保存相同初始状态下的实际逐步数值与来源 SHA256。模型没有形成双侧接触。归一化前向诊断只测量参数与统计对输出的影响，任务成功使用原生仿真记录。
 
 ![相同初始状态的实际控制](figures/paired_control.png)
 
 ![实际示范动作拟合](figures/demonstration_fit.png)
+
+[control_figure.json](control_figure.json) 使用相同的 1953 个实际来源样本和每次 100 episodes 的独立评估生成动作误差与任务条件图。配置 A 使用动态统计与固定 1e-4 learning rate；配置 B 使用固定统计、adaptive KL 与 1e-5 learning rate。两项配置均完成八次 PPO 更新、49152 transitions；任务成功均为零。
+
+![实际动作误差与独立评估](figures/control_validation.png)
 
 ![保存模型的独立任务评估](figures/independent_evaluation.png)
 
@@ -58,6 +66,10 @@
 [pick_place_complete_plan.json](pick_place_complete_plan.json) 保存完整基础路径检查与 64 点撤离路径采样。基础路径数值、实际初始状态、官方模型和 collision bundle 的 SHA256 全部保存；几何采样与任务成功各自验收。
 
 [pick_place_complete_lerobot.json](pick_place_complete_lerobot.json) 核查此条成功数据的全部 328 帧双相机读取，动作与状态转换误差为零。[pick_place_complete_replay.json](pick_place_complete_replay.json) 完成单环境的全部 328 帧回放，恢复与动作误差为零，任务成功为 false。[pick_place_replay_diagnostic.json](pick_place_replay_diagnostic.json) 保存实际接触与关节状态：来源有 189 个双侧接触步骤，回放只有一个；arm 位置 RMSE 为 0.0003–0.0038 rad，jaw 为 0.1598 rad。接触物理重复性仍需通过验收。
+
+[pick_place_cohort_replay.json](pick_place_cohort_replay.json) 使用完整来源四环境、相同 seed、相同布局和实际 policy actions 执行全部轨迹。四个环境均完成任务，成功步骤与双侧接触数量均与来源相同；初始 policy 观测和实际关节目标误差为零。该报告保留四环境的实际轨迹 SHA256 与任务配置范围。
+
+[pick_place_cohort_capture.json](pick_place_cohort_capture.json) 保存包含完整并行状态的新双相机采集，四个实际环境全部成功，首个环境包含 328 帧。[pick_place_cohort_lerobot.json](pick_place_cohort_lerobot.json) 读取全部帧，动作与关节观测转换误差为零。[pick_place_cohort_dataset_replay.json](pick_place_cohort_dataset_replay.json) 恢复来源四环境并完成全部帧，恢复字段和全部环境的关节目标误差为零，`task_success_verified=true`，稳定放置时间为 0.5 秒。[pick_place_cohort_gpu.json](pick_place_cohort_gpu.json) 的实际计算与图形进程仅使用物理 GPU 2。
 
 [pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
 

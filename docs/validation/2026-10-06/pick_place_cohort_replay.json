@@ -1,0 +1,54 @@
+{
+  "scope": "actual_complete_source_cohort_replay",
+  "task": "OpenSO101-PickPlace-v0",
+  "task_profile": "grasp_v4",
+  "seed": 42,
+  "environments": [
+    {
+      "environment": 0,
+      "source_success": true,
+      "source_steps": 328,
+      "observed_steps": 328,
+      "success": true,
+      "bilateral_contact_steps": 189,
+      "maximum_hold_seconds": 0.5000000596046448
+    },
+    {
+      "environment": 1,
+      "source_success": true,
+      "source_steps": 329,
+      "observed_steps": 329,
+      "success": true,
+      "bilateral_contact_steps": 190,
+      "maximum_hold_seconds": 0.5000000596046448
+    },
+    {
+      "environment": 2,
+      "source_success": true,
+      "source_steps": 349,
+      "observed_steps": 349,
+      "success": true,
+      "bilateral_contact_steps": 172,
+      "maximum_hold_seconds": 0.5000000596046448
+    },
+    {
+      "environment": 3,
+      "source_success": true,
+      "source_steps": 286,
+      "observed_steps": 286,
+      "success": true,
+      "bilateral_contact_steps": 144,
+      "maximum_hold_seconds": 0.5000000596046448
+    }
+  ],
+  "successes": 4,
+  "episodes": 4,
+  "initial_observation_error": 0.0,
+  "maximum_target_error": 0.0,
+  "source_trace_sha256": "48dd29dd61e47388189b8aeabd740c2fc93b584384f8503b4324af9f296c3c58",
+  "source_report_sha256": "da4368f82fd900879ce001f758454160c2bf19e227da6355b44cbc88e08106dd",
+  "trajectory_sha256": "f6eca574e07e6cc7a7f7b2577f15cb5f29681cd5c9dae28d6a74638580e5f827",
+  "source_sha256": "769e515e5ea40166353f45129d1d6a7158bfd1aa57a432042ff6c4ae7c0bbfc3",
+  "evaluation_git_sha": "f302216c3daa61c7986a0c66803376184e02f5be",
+  "single_environment_reproducibility_verified": false
+}

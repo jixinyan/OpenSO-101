@@ -1,0 +1,77 @@
+{
+  "status": "all_saved_normalization_statistics_verified",
+  "models": [
+    {
+      "file": "model_0.pt",
+      "iteration": 0,
+      "sha256": "59a82e11886985315c0f3d155dd419c42e9df74018708c1e5731208515d91097"
+    },
+    {
+      "file": "model_1.pt",
+      "iteration": 1,
+      "sha256": "3462f089df4b4a6351c991e087a543214959f61fec81ff9321ece7a388a61104"
+    },
+    {
+      "file": "model_2.pt",
+      "iteration": 2,
+      "sha256": "c9112a4f2c2d2d24316675887c0bb9b480602615660f4110e4a744b7aa2653d3"
+    },
+    {
+      "file": "model_3.pt",
+      "iteration": 3,
+      "sha256": "c55f3086e5b5a0f15da28cd06eee74ae3a7599686deb19b5420be87eeb07b004"
+    },
+    {
+      "file": "model_4.pt",
+      "iteration": 4,
+      "sha256": "c676dda929ff1dbf989ee2db747b00ca02678ffda2b7d721202e1ee07e7231f4"
+    },
+    {
+      "file": "model_5.pt",
+      "iteration": 5,
+      "sha256": "d6830b7e9a621be46834bc80e70d067e207388096f9528678abdbd3edd87d991"
+    },
+    {
+      "file": "model_6.pt",
+      "iteration": 6,
+      "sha256": "77478bf09339d9385e1bea4faff34780b124406f62ed67c2f6c10ae8028435a2"
+    },
+    {
+      "file": "model_7.pt",
+      "iteration": 7,
+      "sha256": "f680a770df174bd3f8cff96912d77d0d967c1a5e3686e7f939ad620b4c2002a0"
+    },
+    {
+      "file": "model_best.pt",
+      "iteration": 7,
+      "sha256": "f680a770df174bd3f8cff96912d77d0d967c1a5e3686e7f939ad620b4c2002a0"
+    },
+    {
+      "file": "model_pretrained.pt",
+      "iteration": -1,
+      "sha256": "f5ef465aa9ce0dd4b64fc1f7db99c2c2bcf3a436ea9763bbc5e6f656b08794f6"
+    },
+    {
+      "file": "model.pt",
+      "iteration": 7,
+      "sha256": "6fc1c53ed5ea467a93b4d13b0cc5c49658cbf30f2de9cf5802fe704ce0e9c972"
+    }
+  ],
+  "counts": {
+    "actor": 2703,
+    "critic": 2703
+  },
+  "fields": [
+    "actor_obs_normalizer._mean",
+    "actor_obs_normalizer._var",
+    "actor_obs_normalizer._std",
+    "actor_obs_normalizer.count",
+    "critic_obs_normalizer._mean",
+    "critic_obs_normalizer._var",
+    "critic_obs_normalizer._std",
+    "critic_obs_normalizer.count"
+  ],
+  "initial_checkpoint_sha256": "f5ef465aa9ce0dd4b64fc1f7db99c2c2bcf3a436ea9763bbc5e6f656b08794f6",
+  "source_sha256": "76aa3bdb8e689762a1efb9d6aab4be87544fedfd666244dba0dd7297aa1f03aa",
+  "task_success_verified": false
+}
