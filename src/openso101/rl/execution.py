@@ -230,7 +230,7 @@ def train(args):
     finally:
         if env is not None:
             env.close()
-        app.close()
+    app.close()
     return 0
 
 
