@@ -1,5 +1,7 @@
 import mujoco
 import numpy as np
+from functools import lru_cache
+from time import perf_counter
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation, Slerp
 
@@ -41,15 +43,19 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     waypoint_count = len(positions)
     object_rotation = Rotation.from_quat(environment["object_quaternion_root"], scalar_first=True).as_matrix()
     held_transform = None
+    geometry_names = tuple(model.geom(index).name for index in range(model.ngeom))
+    geometry_bodies = tuple(model.body(model.geom_bodyid[index]).name for index in range(model.ngeom))
 
-    def pose(arm, jaw=.8, allow_grasp_contact=False, held=False):
+    @lru_cache(maxsize=4096)
+    def pose_from_inputs(arm, jaw, allow_grasp_contact, held_pose):
         data.qpos[ids[:5]] = arm
         data.qpos[ids[5]] = jaw
         mujoco.mj_kinematics(model, data)
         rotation = data.xmat[gripper].reshape(3, 3).copy()
         position = data.xpos[gripper] + rotation @ center
-        if held:
-            offset, relative_rotation = held_transform
+        if held_pose is not None:
+            offset = np.asarray(held_pose[:3])
+            relative_rotation = np.asarray(held_pose[3:]).reshape(3, 3)
             data.qpos[object_qpos:object_qpos + 3] = position + rotation @ offset
             data.qpos[object_qpos + 3:object_qpos + 7] = Rotation.from_matrix(
                 rotation @ relative_rotation).as_quat(scalar_first=True)
@@ -59,16 +65,20 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         forward_collision_geometry(model, data)
         depth = 0.
         for contact in data.contact:
-            geometries = [model.geom(index).name for index in (contact.geom1, contact.geom2)]
-            bodies = [model.body(model.geom_bodyid[index]).name for index in (contact.geom1, contact.geom2)]
+            geometries = [geometry_names[index] for index in (contact.geom1, contact.geom2)]
+            bodies = [geometry_bodies[index] for index in (contact.geom1, contact.geom2)]
             if "table" in geometries and (set(bodies) <= {"world", "base"}
-                                           or not held and set(bodies) <= {"world", "object"}):
+                                           or held_pose is None and set(bodies) <= {"world", "object"}):
                 continue
             if allow_grasp_contact and "object" in bodies and any(
                     body in ("gripper", "moving_jaw_so101_v1") for body in bodies):
                 continue
             depth = max(depth, -float(contact.dist))
         return position, rotation, depth
+
+    def pose(arm, jaw=.8, allow_grasp_contact=False, held=False):
+        held_pose = tuple(np.concatenate((held_transform[0], held_transform[1].ravel()))) if held else None
+        return pose_from_inputs(tuple(arm), jaw, allow_grasp_contact, held_pose)
 
     def coupled_residual(joints):
         nonlocal held_transform
@@ -176,6 +186,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     paths_accepted = False
     candidate_checks = []
     for guess in starts:
+        started = perf_counter()
         candidate = least_squares(
             coupled_residual, guess, bounds=(np.tile(lower, waypoint_count), np.tile(upper, waypoint_count)),
             ftol=1e-10, xtol=1e-10, gtol=1e-10, max_nfev=1000)
@@ -183,6 +194,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         waypoints_accepted = feasible(candidate)
         approach_accepted = path_safe(initial, candidate.x[:5]) if waypoints_accepted else False
         check = {"attempt": len(solutions), "evaluations": int(candidate.nfev),
+                 "solver_seconds": perf_counter() - started,
                  "waypoints_accepted": bool(waypoints_accepted), "approach_accepted": bool(approach_accepted),
                  "paths": []}
         candidate_checks.append(check)
@@ -234,6 +246,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     return {"environment": environment["environment"], "targets": targets,
             "accepted": all(item["accepted"] for item in targets),
             "candidate_checks": candidate_checks,
+            "pose_cache": pose_from_inputs.cache_info()._asdict(),
             "approach_grasp_rotation_difference": float(np.linalg.norm(pose(arms[0])[1] - pose(arms[1])[1])),
             "grasp_lift_rotation_difference": float(np.linalg.norm(pose(arms[1])[1] - pose(arms[2])[1])),
             "coupled_waypoints": waypoint_count, "native_task_goal_radius_m": states["planner_physics"]["task_goal_radius"],
