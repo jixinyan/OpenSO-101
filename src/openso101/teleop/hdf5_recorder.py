@@ -37,6 +37,7 @@ REQUIRED_HDF5_DATASETS: tuple[str, ...] = (
 )
 
 SIM_STATE_KEYS: tuple[str, ...] = (
+    "environment_origin",
     "scene_entity_states",
     "scene_jaw_forces",
     "scene_hold_seconds",

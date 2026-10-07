@@ -66,8 +66,18 @@ class ReplayValidation:
             "joint_velocity": (robot.data.joint_vel[0, ids], h5["observations/qvel"][frame_index]),
         }
         actual_state = _collect_replay_sim_state(env, env.scene)
+        origin_delta = (actual_state["environment_origin"] - h5["sim/environment_origin"][frame_index]
+                        if "sim/environment_origin" in h5 else np.zeros(3))
+        self.report["replay_environment_origin"] = actual_state["environment_origin"].tolist()
+        if "sim/environment_origin" in h5:
+            self.report["source_environment_origin"] = h5["sim/environment_origin"][frame_index].tolist()
         for field in self.report["source_sim_fields"]:
-            pairs[field] = (actual_state[field], h5[f"sim/{field}"][frame_index])
+            if field == "environment_origin":
+                continue
+            expected = h5[f"sim/{field}"][frame_index].copy()
+            if field in ("object_root_state", "command_goal_pos_w"):
+                expected[:3] += origin_delta
+            pairs[field] = (actual_state[field], expected)
         for field, (actual, expected) in pairs.items():
             actual = actual.detach().cpu().numpy() if isinstance(actual, torch.Tensor) else np.asarray(actual)
             if actual.shape != expected.shape or not np.isfinite(actual).all():

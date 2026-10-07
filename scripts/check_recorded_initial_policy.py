@@ -30,6 +30,8 @@ if (source["task"], source["task_profile"]) != (meta.task_id, meta.task_profile)
 with h5py.File(args.episode) as stream:
     if not bool(stream.attrs["success"]) or stream.attrs["task_profile"] != meta.task_profile:
         raise ValueError("初始状态需要来自完整成功的原生 episode")
+    if "sim/environment_origin" not in stream:
+        raise ValueError("初始状态需要记录所属环境的原点")
 with h5py.File(args.native / "trajectory.hdf5") as stream:
     expected_observation = stream["policy_observation"][0, 0]
 git_sha = subprocess.run(["git", "rev-parse", "HEAD"], check=True, text=True, capture_output=True).stdout.strip()

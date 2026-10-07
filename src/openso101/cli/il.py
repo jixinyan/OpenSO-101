@@ -651,11 +651,11 @@ _REPLAY_COMMAND_FIELDS = (
 def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
     """Collect optional simulator state that lets HDF5 teleop frames be replayed from checkpoints."""
 
-    sim_state: dict[str, Any] = {}
+    sim_state: dict[str, Any] = {"environment_origin": _tensor_to_numpy(scene.env_origins[0])}
     if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
         from openso101.scenes.runtime import scene_states
 
-        sim_state = {"scene_entity_states": _tensor_to_numpy(scene_states(unwrapped_env)[0])}
+        sim_state["scene_entity_states"] = _tensor_to_numpy(scene_states(unwrapped_env)[0])
         from openso101.scenes.runtime import scene_jaw_forces
         import torch
 
@@ -1734,6 +1734,9 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
     else:
         obj = scene["object"]
         root_state = _replay_to_tensor_like(object_root_state[None, ...], obj.data.root_state_w)
+        origin = _replay_optional_frame(h5, "sim/environment_origin", frame_index)
+        if origin is not None:
+            root_state[:, :3] += scene.env_origins[0] - _replay_to_tensor_like(origin, scene.env_origins[0])
         obj.write_root_state_to_sim(root_state)
 
     command_values = {
@@ -1745,7 +1748,12 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
         for field, value in command_values.items():
             if value is not None:
                 target = getattr(command, field)
-                target[0] = _replay_to_tensor_like(value, target[0])
+                restored = _replay_to_tensor_like(value, target[0])
+                if field == "goal_pos_w":
+                    origin = _replay_optional_frame(h5, "sim/environment_origin", frame_index)
+                    if origin is not None:
+                        restored += scene.env_origins[0] - _replay_to_tensor_like(origin, scene.env_origins[0])
+                target[0] = restored
     hold = _replay_optional_frame(h5, "sim/task_hold_seconds", frame_index)
     if hold is not None:
         success = unwrapped_env.termination_manager.get_term_cfg("success").func
@@ -1817,6 +1825,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         native_recording = task_profile is not None
         if native_recording and task_profile != "grasp_v4":
             raise ValueError("原生任务回放需要 grasp_v4")
+        if native_recording and "sim/environment_origin" not in h5:
+            raise ValueError("原生采集需要记录 environment_origin，才能恢复到当前并行环境")
         environment_mode = h5.attrs.get("environment_mode")
         physics_dt = h5.attrs.get("physics_dt")
         reward_discount = h5.attrs.get("reward_discount")
