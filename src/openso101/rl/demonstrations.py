@@ -18,6 +18,8 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
         previous = CheckpointMeta.read(resume)
         if previous.config.demonstration_sources != cfg.demonstration_sources:
             raise ValueError("继续训练需要保持成功示范来源")
+        if previous.config.demonstration_include_failed_supervision != cfg.demonstration_include_failed_supervision:
+            raise ValueError("继续训练需要保持已校验的动作监督范围")
         for name in names:
             if name not in previous.files:
                 raise ValueError("继续训练的 checkpoint 缺少已校验示范文件")
@@ -56,21 +58,24 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
             action_field = supervision["action_field"]
         with h5py.File(folder / "trajectory.hdf5", "r") as stream:
             arrays = {name: stream[name][:] for name in
-                      ("policy_observation", "policy_action", "weighted_reward", "active", "success")}
+                      ("policy_observation", "policy_action", "weighted_reward", "active", "success", "terminated", "truncated")}
             if action_field != "policy_action":
                 arrays[action_field] = stream[action_field][:]
         if any(not np.isfinite(value).all() for value in arrays.values()):
             raise ValueError("成功示范包含无效数值")
         included = []
         for episode in report["environments"]:
-            if not episode["success"]:
+            failed_supervision = (not episode["success"] and cfg.demonstration_include_failed_supervision
+                                  and action_field == "expert_policy_action")
+            if not episode["success"] and not failed_supervision:
                 continue
             index = episode["environment"]
             selected = np.flatnonzero(arrays["active"][:, index])
             if (len(selected) != episode["control_steps"] or selected[0] != 0
                     or not np.array_equal(selected, np.arange(len(selected)))
-                    or not bool(arrays["success"][selected[-1], index])):
-                raise ValueError("成功示范需要从初始状态到成功结束的完整 episode")
+                    or bool(arrays["success"][selected[-1], index]) != episode["success"]
+                    or not bool((arrays["terminated"] | arrays["truncated"])[selected[-1], index])):
+                raise ValueError("动作监督需要从初始状态到实际终止的完整 episode")
             observations = arrays["policy_observation"][selected, index]
             actions = arrays[action_field][selected, index]
             rewards = arrays["weighted_reward"][selected, index].sum(axis=-1)
@@ -85,7 +90,8 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
                 returns[step] = value
             for name, array in (("observations", observations), ("actions", actions), ("returns", returns)):
                 buffers[name].append(torch.from_numpy(array.copy()).float())
-            included.append({"environment": index, "frames": len(selected), "return": float(rewards.sum())})
+            included.append({"environment": index, "frames": len(selected), "return": float(rewards.sum()),
+                             "success": episode["success"], "failed_expert_supervision": failed_supervision})
         if not included:
             raise ValueError("示范来源没有实际成功的完整 episode")
         sources.append({"source": str(folder), "report_sha256": digest(folder / "report.json"),
@@ -98,6 +104,8 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
     (output / names[1]).write_text(json.dumps({
         "schema_version": 1, "task": task_id, "task_profile": task_profile,
         "sources": sources, "frames": len(dataset["actions"]), "gamma": cfg.gamma,
+        "successful_episodes": sum(item["success"] for source in sources for item in source["episodes"]),
+        "failed_expert_supervision_episodes": sum(item["failed_expert_supervision"] for source in sources for item in source["episodes"]),
         "state_action_sampling": "observation_before_action_with_transition_reward",
         "policy_observation_terms": expected_terms, "policy_action_mapping": expected_mapping,
         "dataset_sha256": digest(output / names[0]),

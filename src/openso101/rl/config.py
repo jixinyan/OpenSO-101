@@ -40,6 +40,7 @@ class TrainCfg(BaseModel):
     replay_batch_size: int = Field(default=256, gt=1)
     gradient_steps: int = Field(default=1, gt=0)
     demonstration_sources: tuple[str, ...] = ()
+    demonstration_include_failed_supervision: bool = False
     demonstration_epochs: int = Field(default=1000, gt=0)
     demonstration_batch_size: int = Field(default=256, gt=1)
     demonstration_learning_rate: float = Field(default=1e-3, gt=0)
@@ -67,6 +68,8 @@ class TrainCfg(BaseModel):
             raise ValueError("成功示范初始化使用 rsl_rl bounded PPO")
         if self.demonstration_updates_per_iteration and not self.demonstration_sources:
             raise ValueError("示范更新需要指定实际成功轨迹")
+        if self.demonstration_include_failed_supervision and not self.demonstration_sources:
+            raise ValueError("失败过程的动作监督需要实际采集来源")
         if self.freeze_demonstration_normalization and (not self.normalize_observations or not self.demonstration_sources):
             raise ValueError("固定示范归一化需要观测归一化和实际示范来源")
         return self
