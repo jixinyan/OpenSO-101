@@ -1,0 +1,23 @@
+{
+  "status": "actual_resumed_model_statistics_verified",
+  "verified_iteration": 9,
+  "new_ppo_updates": 2,
+  "new_transitions": 196608,
+  "total_transitions": 245760,
+  "fields": [
+    "actor_obs_normalizer._mean",
+    "actor_obs_normalizer._var",
+    "actor_obs_normalizer._std",
+    "actor_obs_normalizer.count",
+    "critic_obs_normalizer._mean",
+    "critic_obs_normalizer._var",
+    "critic_obs_normalizer._std",
+    "critic_obs_normalizer.count"
+  ],
+  "checkpoint_sha256": "1845e08cfa4c4e3bc9b6b4e47b98fe8d6e552aeb74c16503a54ddffb2cdd8bea",
+  "parent_checkpoint_sha256": "6fc1c53ed5ea467a93b4d13b0cc5c49658cbf30f2de9cf5802fe704ce0e9c972",
+  "actor_observation_samples": 2703,
+  "critic_observation_samples": 2703,
+  "source_sha256": "fb81293cc63baed91add0746d0c98a90d532411edf80732fe4e486074879e435",
+  "task_success_verified": false
+}

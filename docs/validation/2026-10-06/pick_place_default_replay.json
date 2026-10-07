@@ -1,0 +1,103 @@
+{
+  "status": "replay_verified",
+  "task": "OpenSO101-PickPlace-v0",
+  "source_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_task_success": true,
+  "source_scene_sha256": "",
+  "source_sim_fields": [
+    "cohort_command_cube_spawn_xy_b",
+    "cohort_command_goal_pos_b",
+    "cohort_command_goal_pos_w",
+    "cohort_command_placement_hold_seconds",
+    "cohort_command_stage",
+    "cohort_environment_origins",
+    "cohort_joint_position",
+    "cohort_joint_targets",
+    "cohort_joint_velocity",
+    "cohort_object_root_state",
+    "cohort_policy_actions",
+    "cohort_task_episode_step",
+    "cohort_task_hold_seconds",
+    "command_cube_spawn_xy_b",
+    "command_goal_pos_b",
+    "command_goal_pos_w",
+    "command_placement_hold_seconds",
+    "command_stage",
+    "environment_origin",
+    "object_root_state",
+    "task_episode_step",
+    "task_goal_root",
+    "task_hold_seconds"
+  ],
+  "observed_env_index": 0,
+  "checkpoint_frame": 0,
+  "start_frame": 0,
+  "stop_frame": 328,
+  "requested_frames": 328,
+  "completed_frames": 328,
+  "control_dt": 0.02,
+  "source_fps": 50,
+  "control_timing_error_seconds": 0.0,
+  "step_checks": {
+    "warm_start": 0,
+    "hold": 0,
+    "replay": 328
+  },
+  "maximum_action_error": 0.0,
+  "source_num_envs": 4,
+  "replay_num_envs": 4,
+  "source_cohort_restored": true,
+  "maximum_cohort_action_error": 0.0,
+  "restore_errors": {
+    "joint_position": 0.0,
+    "joint_velocity": 0.0,
+    "cohort_command_cube_spawn_xy_b": 0.0,
+    "cohort_command_goal_pos_b": 0.0,
+    "cohort_command_goal_pos_w": 0.0,
+    "cohort_command_placement_hold_seconds": 0.0,
+    "cohort_command_stage": 0.0,
+    "cohort_environment_origins": 0.0,
+    "cohort_joint_position": 0.0,
+    "cohort_joint_velocity": 0.0,
+    "cohort_object_root_state": 0.0,
+    "cohort_task_episode_step": 0.0,
+    "cohort_task_hold_seconds": 0.0,
+    "command_cube_spawn_xy_b": 0.0,
+    "command_goal_pos_b": 0.0,
+    "command_goal_pos_w": 0.0,
+    "command_placement_hold_seconds": 0.0,
+    "command_stage": 0.0,
+    "object_root_state": 0.0,
+    "task_episode_step": 0.0,
+    "task_goal_root": 0.0,
+    "task_hold_seconds": 0.0
+  },
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 328,
+      "minimum_pixel_std": 57.337730407714844
+    },
+    "overhead_camera": {
+      "frames": 328,
+      "minimum_pixel_std": 16.284547805786133
+    }
+  },
+  "task_success_verified": true,
+  "native_task_configuration": true,
+  "physics_state_reproducibility_verified": false,
+  "validator_sha256": "43d6927dfed2717dc78f2fbcc0b7c5c7e1079d4e54f0421fffb1b53766ea1cbe",
+  "cli_sha256": "81a678a3ae677084a1ec47676ca4291671d9fe0e9113ce85a5d9760bf2e58ebb",
+  "replay_environment_origin": [
+    1.25,
+    -1.25,
+    0.0
+  ],
+  "source_environment_origin": [
+    1.25,
+    -1.25,
+    0.0
+  ],
+  "trajectory_sha256": "ff04e4d2414f8553aae4bf8bb1abfdcd244cd2e30a9fb569d0b4b49bd22f943e",
+  "maximum_hold_seconds": 0.5000000596046448
+}

@@ -40,6 +40,9 @@
 | [coverage_control.json](coverage_control.json) | 八次 PPO 更新后的模型对全部 2703 个实际样本的预测 | action MSE 1.5824e-5 |
 | [coverage_normalization.json](coverage_normalization.json) | 全部十一个保存模型 | actor、critic 的八项归一化统计逐项相同 |
 | [coverage_evaluation.json](coverage_evaluation.json) | 完整失败过程监督配置的独立 100 episodes | 成功 0/100、接近物体 70/100 |
+| [coverage_continue_launch.json](coverage_continue_launch.json) | 完整来源模型、optimizer 与数据 SHA256 | 1024 环境、100 次 PPO 更新的实际启动记录 |
+| [coverage_continue_gpu.json](coverage_continue_gpu.json) | 继续训练的实际计算和图形进程 | 全部仅使用物理 GPU 2 |
+| [coverage_continue_model.json](coverage_continue_model.json) | 实际保存的 iteration 9 模型 | 两次新增更新、八项归一化统计保持来源数值 |
 
 示范拟合与任务成功各自验收。扰动轨迹使用 `expert_policy_action` 作为 actor 标签，`policy_action` 保存实际执行动作，reward 使用真实执行 transition。各报告保留对应数据范围；coverage 配置同时读取完整失败过程中的实际 expert 标签，并分别记录成功与失败数量。
 
@@ -76,6 +79,8 @@
 ![实际采集与来源布局回放](figures/isaac_replay.png)
 
 [task_success_guard.json](task_success_guard.json) 使用来源成功数据在真实 Isaac 中执行一个控制步骤，保存恢复、动作、相机与任务报告。实际任务未完成时返回退出状态 1，并释放仿真进程。该检查保留单帧范围，完整单环境任务仍单独验收。
+
+[pick_place_default_replay.json](pick_place_default_replay.json) 使用默认 task、环境数量、起始帧和保持步骤执行原生回放。完整 328 帧均通过状态、动作与双相机检查，任务成功，实际稳定放置时间为 0.5 秒。轨迹 SHA256 与显式参数回放逐项一致。
 
 [pick_place_release.json](pick_place_release.json) 在四个实际环境中完成 3/4。成功需要物体进入最终目标、夹爪释放、实际速度达到要求并连续稳定 0.5 秒。源成功 HDF5 为 374 帧，SHA256 为 `41ffb912eccd4b2ec355facd0f9e82d73ba3cf7f3cfbdd41062ee631371643ad`；双相机 MP4 SHA256 为 `324a3292f1a34af2a8c5072021bfcdd3c0a0fb116b36ac3dcbcd25ea00bcb7c4`。
 

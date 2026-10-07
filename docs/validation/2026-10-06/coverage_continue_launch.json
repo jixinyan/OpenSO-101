@@ -1,0 +1,18 @@
+{
+  "status": "training_process_started",
+  "launcher_pid": 259145,
+  "created_at": "2026-10-07T07:38:50.534057+00:00",
+  "command": [
+    "bash",
+    "outputs/tmp/run_corrective_coverage_continue.sh"
+  ],
+  "source_git_sha": "f401cad346ea93e5891fb17154f8f250b720f323",
+  "parent_checkpoint_sha256": "6fc1c53ed5ea467a93b4d13b0cc5c49658cbf30f2de9cf5802fe704ce0e9c972",
+  "parent_metadata_sha256": "007c87e5013e4effd3d8ebbe68cafe5cb8546c78b70a9e34e47471c47a5efc3d",
+  "dataset_sha256": "79d4e1956441c95980617fcc5592d391544b1625c2bc9c7452cac703ae5980eb",
+  "physical_gpu": 2,
+  "num_envs": 1024,
+  "requested_ppo_updates": 100,
+  "independent_evaluation_episodes": 100,
+  "source_sha256": "3d459c648834248c6f28fd9fe976ebcc175ea72038198fa50f231cc6294cf4e6"
+}
