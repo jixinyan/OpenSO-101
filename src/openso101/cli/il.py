@@ -2069,7 +2069,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     finally:
         if env is not None:
             env.close()
-        simulation_app.close()
+    simulation_app.close()
     return 0
 
 
