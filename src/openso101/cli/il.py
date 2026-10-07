@@ -2070,7 +2070,9 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     finally:
         if env is not None:
             env.close()
-    simulation_app.close()
+        if sys.exc_info()[0] is not None:
+            simulation_app.app.post_quit(1)
+        simulation_app.close()
     return 0
 
 
