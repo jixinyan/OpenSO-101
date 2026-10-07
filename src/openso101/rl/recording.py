@@ -12,7 +12,8 @@ from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder, validate
 from openso101.teleop.lerobot_recorder import collect_camera_buffers
 
 
-def first_episode_recorder(output: Path, task_id: str, task_profile: str, policy_sha256: str):
+def first_episode_recorder(output: Path, task_id: str, task_profile: str, source_sha256: str,
+                           *, controller="actual_policy_joint_targets"):
     output = output.resolve()
     output.mkdir(parents=True, exist_ok=False)
 
@@ -40,10 +41,15 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, policy
                     dataset_id="local/openso101_policy_evaluation", scene_metadata=scene_metadata,
                     sim_joint_names=SO101_SIM_JOINT_NAMES)
                 self.recording.start_episode()
-                self.recording._h5.attrs["policy_sha256"] = policy_sha256
+                source_field = "policy_sha256" if controller == "actual_policy_joint_targets" else "controller_sha256"
+                self.recording._h5.attrs[source_field] = source_sha256
                 self.recording._h5.attrs["time_base"] = "simulation"
-                self.recording._h5.attrs["controller"] = "actual_policy_joint_targets"
+                self.recording._h5.attrs["controller"] = controller
                 self.recording._h5.attrs["task_profile"] = task_profile
+                self.recording._h5.attrs["environment_mode"] = runtime.cfg.environment_mode
+                self.recording._h5.attrs["physics_dt"] = runtime.physics_dt
+                if task_profile in ("grasp_v3", "grasp_v4"):
+                    self.recording._h5.attrs["reward_discount"] = runtime.cfg.reward_discount
             ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
             targets = torch.cat([runtime.action_manager.get_term(name).processed_actions
                                  for name in runtime.action_manager.active_terms], dim=-1)

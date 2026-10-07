@@ -16,6 +16,7 @@ parser.add_argument("--task-profile", choices=("grasp_v3", "grasp_v4"), default=
 parser.add_argument("--task", choices=("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0"), default="OpenSO101-Lift-v0")
 parser.add_argument("--with-cameras", action="store_true")
 parser.add_argument("--camera-resolution", type=int, default=256)
+parser.add_argument("--recording-output", type=Path)
 args = parser.parse_args()
 from openso101.rl.gpu_scope import configure_visible_gpu
 
@@ -24,6 +25,8 @@ if args.output.exists() or args.num_envs <= 0:
     raise ValueError("任务检查需要新的输出目录和有效环境数量")
 if (args.verified_plan is None) != (args.plan_states is None):
     raise ValueError("使用已有规划需要同时提供其原生初始状态")
+if args.recording_output is not None and (not args.with_cameras or args.task_profile != "grasp_v4"):
+    raise ValueError("完整 HDF5 任务采集需要双相机与 grasp_v4")
 args.output.mkdir(parents=True, exist_ok=False)
 pick_place = args.task == "OpenSO101-PickPlace-v0"
 if pick_place and args.task_profile != "grasp_v4":
@@ -117,6 +120,13 @@ try:
         task = RecorderTermCfg(class_type=TaskRecorder)
 
     args.recorder_cfg = TaskRecorderCfg()
+    if args.recording_output is not None:
+        from openso101.rl.recording import first_episode_recorder
+
+        recording_cfg = first_episode_recorder(
+            args.recording_output, args.task, args.task_profile, digest(Path(__file__)),
+            controller="scripted_IK_gravity_compensated_joint_targets")
+        args.recorder_cfg.policy_recording = recording_cfg.policy_recording
     env = build_environment(args, training=True)
     observation, _ = env.reset()
     runtime = env.unwrapped
@@ -394,6 +404,19 @@ try:
                            "resolution": [args.camera_resolution * 2, args.camera_resolution],
                            "camera_order": ["overhead_camera", "wrist_camera"],
                            "scripted_task_success": bool(finished_success[0]), "rl_policy_success_verified": False}
+    if args.recording_output is not None:
+        from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+
+        episodes = list(args.recording_output.glob("episodes/episode_*.hdf5"))
+        if len(episodes) != 1:
+            raise RuntimeError("任务采集需要一份完整的首个环境 episode")
+        validate_hdf5_episode(episodes[0])
+        with h5py.File(episodes[0], "r") as stream:
+            if bool(stream.attrs["success"]) != bool(finished_success[0]):
+                raise ValueError("HDF5 成功标记与实际任务 termination 不一致")
+            frames = stream["action"].shape[0]
+        report["recorded_episode"] = {"path": str(episodes[0].resolve()), "sha256": digest(episodes[0]),
+                                      "frames": frames, "success": bool(finished_success[0])}
     with (args.output / "report.json").open("x") as stream:
         json.dump(report, stream, indent=2)
     print(json.dumps(report), flush=True)

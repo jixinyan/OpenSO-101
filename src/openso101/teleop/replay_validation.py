@@ -46,6 +46,7 @@ class ReplayValidation:
             "restore_errors": {},
             "camera_checks": {name: {"frames": 0, "minimum_pixel_std": None} for name in self.camera_shapes},
             "task_success_verified": False,
+            "native_task_configuration": hasattr(env, "_replay_mapping"),
             "physics_state_reproducibility_verified": False,
             "validator_sha256": _file_sha256(Path(__file__)),
             "cli_sha256": _file_sha256(Path(__file__).parents[1] / "cli" / "il.py"),
@@ -73,7 +74,11 @@ class ReplayValidation:
             self.report["restore_errors"][field] = error
 
     def check_step(self, env, phase: str, expected_action) -> None:
-        action = env.action_manager.action[0].detach().cpu().numpy()
+        if hasattr(env, "_replay_mapping"):
+            action = env._replay_transition["targets"].detach().cpu().numpy()
+            self.report["task_success_verified"] |= env._replay_transition["success"]
+        else:
+            action = env.action_manager.action[0].detach().cpu().numpy()
         expected_action = np.asarray(expected_action)
         if action.shape != expected_action.shape or not np.isfinite(action).all():
             raise ValueError("回放动作格式错误")
@@ -104,3 +109,27 @@ class ReplayValidation:
         )
         self.report_path.parent.mkdir(parents=True, exist_ok=True)
         self.report_path.write_text(json.dumps(self.report, indent=2), encoding="utf-8")
+
+
+def native_replay_recorder():
+    from isaaclab.managers import RecorderManagerBaseCfg, RecorderTerm, RecorderTermCfg
+    from isaaclab.managers.recorder_manager import DatasetExportMode
+    from isaaclab.utils import configclass
+
+    class NativeReplayRecorder(RecorderTerm):
+        def record_post_step(self):
+            runtime = self._env
+            runtime._replay_transition = {
+                "targets": torch.cat([runtime.action_manager.get_term(name).processed_actions[0]
+                                      for name in runtime.action_manager.active_terms]).detach().clone(),
+                "success": bool(runtime.termination_manager.get_term("success")[0]),
+            }
+            return None, None
+
+    @configclass
+    class NativeReplayRecorderCfg(RecorderManagerBaseCfg):
+        dataset_export_mode = DatasetExportMode.EXPORT_NONE
+        dataset_export_dir_path = "outputs/rl_progress/replay_manager"
+        transition = RecorderTermCfg(class_type=NativeReplayRecorder)
+
+    return NativeReplayRecorderCfg()

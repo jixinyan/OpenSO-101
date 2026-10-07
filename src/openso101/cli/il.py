@@ -678,6 +678,11 @@ def _collect_replay_sim_state(unwrapped_env, scene) -> dict[str, Any]:
         for field in _REPLAY_COMMAND_FIELDS:
             if hasattr(command, field):
                 sim_state[f"command_{field}"] = _tensor_to_numpy(getattr(command, field)[0])
+    if "success" in unwrapped_env.termination_manager.active_terms:
+        success = unwrapped_env.termination_manager.get_term_cfg("success").func
+        if hasattr(success, "hold_seconds"):
+            sim_state["task_hold_seconds"] = _tensor_to_numpy(success.hold_seconds[0])
+        sim_state["task_episode_step"] = _tensor_to_numpy(unwrapped_env.episode_length_buf[0])
     return sim_state
 
 
@@ -1741,6 +1746,13 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
             if value is not None:
                 target = getattr(command, field)
                 target[0] = _replay_to_tensor_like(value, target[0])
+    hold = _replay_optional_frame(h5, "sim/task_hold_seconds", frame_index)
+    if hold is not None:
+        success = unwrapped_env.termination_manager.get_term_cfg("success").func
+        success.hold_seconds[0] = _replay_to_tensor_like(hold, success.hold_seconds[0])
+    episode_step = _replay_optional_frame(h5, "sim/task_episode_step", frame_index)
+    if episode_step is not None:
+        unwrapped_env.episode_length_buf[0] = _replay_to_tensor_like(episode_step, unwrapped_env.episode_length_buf[0])
 
 
 def _replay_copy_targets_to_actions(actions, targets) -> None:
@@ -1752,6 +1764,11 @@ def _replay_copy_targets_to_actions(actions, targets) -> None:
 
 def _replay_step_action(env, actions, target, real_time_dt: float | None = None) -> None:
     step_start = time.perf_counter()
+    if hasattr(env.unwrapped, "_replay_mapping"):
+        import numpy as np
+
+        target = np.asarray([(target[index] - item["offset"]) / item["scale"]
+                             for index, item in enumerate(env.unwrapped._replay_mapping)], dtype=np.float32)
     _replay_copy_targets_to_actions(
         actions,
         _replay_to_tensor_like(target, actions[0] if actions.ndim == 2 else actions),
@@ -1796,6 +1813,16 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     import h5py
 
     with h5py.File(episode_path, "r") as h5:
+        task_profile = h5.attrs.get("task_profile")
+        native_recording = task_profile is not None
+        if native_recording and task_profile != "grasp_v4":
+            raise ValueError("原生任务回放需要 grasp_v4")
+        environment_mode = h5.attrs.get("environment_mode")
+        physics_dt = h5.attrs.get("physics_dt")
+        reward_discount = h5.attrs.get("reward_discount")
+        source_fps = int(h5.attrs["fps"])
+        camera_sizes = {name: h5[f"observations/images/{name}"].shape[1:3] for name in
+                        ("overhead_camera", "wrist_camera")}
         if "scene_relative_path" in h5.attrs or "scene_sha256" in h5.attrs:
             from openso101.scenes.recording import resolve_recording_scene
 
@@ -1863,9 +1890,25 @@ def _cmd_replay(args: argparse.Namespace) -> int:
             num_envs=args.num_envs,
             use_fabric=not args.disable_fabric,
         )
-        # Replay always runs with teleop action mode + cameras enabled.
-        env_cfg.configure_action_mode("teleop")
+        if native_recording:
+            from openso101.tasks.shared.grasp_v4 import configure_grasp_v4
+            from openso101.tasks.shared.grasp_v3 import configure_environment_mode
+
+            configure_grasp_v4(env_cfg, args.task)
+            configure_environment_mode(env_cfg, environment_mode)
+            env_cfg.reward_discount = float(reward_discount)
+            if not np.isclose(env_cfg.sim.dt, physics_dt) or not np.isclose(
+                    env_cfg.sim.dt * env_cfg.decimation, 1 / source_fps):
+                raise ValueError("原生回放的物理周期与采集配置不一致")
+            from openso101.teleop.replay_validation import native_replay_recorder
+
+            env_cfg.recorders = native_replay_recorder()
+        else:
+            env_cfg.configure_action_mode("teleop")
         env_cfg.configure_cameras(True)
+        for name, (height, width) in camera_sizes.items():
+            camera = getattr(env_cfg.scene, name)
+            camera.height, camera.width = height, width
         if getattr(args, "scene", None):
             env_cfg.configure_scene(args.scene)
 
@@ -1876,6 +1919,12 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         scene = env.unwrapped.scene
         unwrapped_env = env.unwrapped
         env.reset()
+        if native_recording:
+            from openso101.rl.vision_distillation import action_mapping
+
+            unwrapped_env._replay_mapping = action_mapping(unwrapped_env)
+            if any(item["type"] != "position" for item in unwrapped_env._replay_mapping):
+                raise ValueError("原生回放需要绝对关节位置动作")
         if not args.no_camera_viewports:
             open_teleop_viewports(scene)
 
