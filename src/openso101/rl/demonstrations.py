@@ -102,7 +102,7 @@ def prepare_demonstrations(env, cfg, output, task_id, task_profile, resume=None)
     dataset = {name: torch.cat(items) for name, items in buffers.items()}
     torch.save(dataset, output / names[0])
     (output / names[1]).write_text(json.dumps({
-        "schema_version": 1, "task": task_id, "task_profile": task_profile,
+        "schema_version": 2, "task": task_id, "task_profile": task_profile,
         "sources": sources, "frames": len(dataset["actions"]), "gamma": cfg.gamma,
         "successful_episodes": sum(item["success"] for source in sources for item in source["episodes"]),
         "failed_expert_supervision_episodes": sum(item["failed_expert_supervision"] for source in sources for item in source["episodes"]),
@@ -118,6 +118,7 @@ class DemonstrationUpdates:
         self.algorithm, self.cfg = algorithm, cfg
         self.stop_request = stop_request
         metadata = json.loads((folder / "demonstrations.json").read_text())
+        self.metadata = metadata
         if digest(folder / "demonstrations.pt") != metadata["dataset_sha256"]:
             raise ValueError("成功示范 dataset SHA256 不一致")
         self.dataset = {name: value.to(algorithm.device) for name, value in torch.load(
@@ -187,7 +188,9 @@ class DemonstrationUpdates:
             actor, critic, action_mse = self.losses(torch.arange(count, device=self.algorithm.device))
             predictions = policy.act_inference(observations)
             joint_rmse = (predictions - self.dataset["actions"]).square().mean(0).sqrt()
-        report = {"status": "actual_success_demonstration_initialization_completed", "frames": count,
+        report = {"status": "actual_expert_action_initialization_completed", "frames": count,
+                  "successful_episodes": self.metadata["successful_episodes"],
+                  "failed_expert_supervision_episodes": self.metadata["failed_expert_supervision_episodes"],
                   "actor_mse": float(action_mse), "objective_mse": float(actor),
                   "objective": self.cfg.demonstration_objective,
                   "action_margin": self.cfg.demonstration_action_margin,
