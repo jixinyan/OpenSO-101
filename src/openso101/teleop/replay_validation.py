@@ -78,7 +78,8 @@ class ReplayValidation:
         for field in self.report["source_sim_fields"]:
             if field == "environment_origin":
                 continue
-            if field == "cohort_joint_targets" or (field.startswith("cohort_") and not self.report["source_cohort_restored"]):
+            if field in ("cohort_joint_targets", "cohort_policy_actions") or (
+                    field.startswith("cohort_") and not self.report["source_cohort_restored"]):
                 continue
             expected = h5[f"sim/{field}"][frame_index].copy()
             if field in ("object_root_state", "command_goal_pos_w"):

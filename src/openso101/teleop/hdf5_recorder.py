@@ -58,6 +58,7 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "cohort_joint_position",
     "cohort_joint_velocity",
     "cohort_joint_targets",
+    "cohort_policy_actions",
     "cohort_object_root_state",
     "cohort_command_stage",
     "cohort_command_goal_pos_b",
@@ -159,7 +160,7 @@ def validate_hdf5_episode(path: str | Path) -> None:
                 if field not in h5.attrs:
                     raise ValueError(f"并行采集缺少配置: {field}")
             shapes = {"environment_origins": (count, 3), "joint_position": (count, 6),
-                      "joint_velocity": (count, 6), "joint_targets": (count, 6),
+                      "joint_velocity": (count, 6), "joint_targets": (count, 6), "policy_actions": (count, 6),
                       "object_root_state": (count, 13), "task_episode_step": (count,)}
             for field, shape in shapes.items():
                 key = f"sim/cohort_{field}"

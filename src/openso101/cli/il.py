@@ -684,6 +684,7 @@ def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> 
             "cohort_joint_targets": _tensor_to_numpy(torch.cat([
                 unwrapped_env.action_manager.get_term(name).processed_actions
                 for name in unwrapped_env.action_manager.active_terms], dim=-1)),
+            "cohort_policy_actions": _tensor_to_numpy(unwrapped_env.action_manager.action),
         })
     if "object_pose" in unwrapped_env.command_manager.active_terms:
         from openso101.rl.student import student_goal
@@ -1818,9 +1819,11 @@ def _replay_copy_targets_to_actions(actions, targets) -> None:
         actions[:] = targets
 
 
-def _replay_step_action(env, actions, target, real_time_dt: float | None = None) -> None:
+def _replay_step_action(env, actions, target, real_time_dt: float | None = None, *, policy_action=None) -> None:
     step_start = time.perf_counter()
-    if hasattr(env.unwrapped, "_replay_mapping"):
+    if policy_action is not None:
+        target = policy_action
+    elif hasattr(env.unwrapped, "_replay_mapping"):
         import numpy as np
 
         target = np.asarray(target)
@@ -2008,6 +2011,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
         with h5py.File(episode_path, "r") as h5:
             action_dataset = h5["sim/cohort_joint_targets"] if replay_cohort else h5["action"]
+            policy_actions = h5["sim/cohort_policy_actions"] if replay_cohort else None
             fps = int(h5.attrs.get("fps", 30))
             real_time_dt = 1.0 / fps if args.real_time and fps > 0 else None
             validation = None
@@ -2026,6 +2030,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                         actions,
                         np.asarray(action_dataset[frame_index], dtype=np.float32),
                         real_time_dt,
+                        policy_action=policy_actions[frame_index] if replay_cohort else None,
                     )
                     if validation is not None:
                         validation.check_step(unwrapped_env, "warm_start", action_dataset[frame_index])
@@ -2036,7 +2041,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
 
             checkpoint_action = np.asarray(action_dataset[checkpoint_frame], dtype=np.float32)
             for _ in range(max(args.hold_steps, 0)):
-                _replay_step_action(env, actions, checkpoint_action, real_time_dt)
+                _replay_step_action(env, actions, checkpoint_action, real_time_dt,
+                                   policy_action=policy_actions[checkpoint_frame] if replay_cohort else None)
                 if validation is not None:
                     validation.check_step(unwrapped_env, "hold", checkpoint_action)
             print(
@@ -2050,6 +2056,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
                     actions,
                     np.asarray(action_dataset[frame_index], dtype=np.float32),
                     real_time_dt,
+                    policy_action=policy_actions[frame_index] if replay_cohort else None,
                 )
                 if validation is not None:
                     validation.check_step(unwrapped_env, "replay", action_dataset[frame_index])

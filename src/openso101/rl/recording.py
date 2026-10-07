@@ -62,7 +62,8 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, source
                 action=targets[0].cpu().numpy(), qpos=robot.data.joint_pos[0, ids].cpu().numpy(),
                 qvel=robot.data.joint_vel[0, ids].cpu().numpy(), camera_buffers=images,
                 timestamp=runtime.common_step_counter * runtime.step_dt,
-                sim_state=_collect_replay_sim_state(runtime, runtime.scene, include_cohort=scene_metadata is None))
+                sim_state=_collect_replay_sim_state(
+                    runtime, runtime.scene, include_cohort=getattr(runtime.cfg, "scene_spec", None) is None))
             return None, None
 
         def record_post_step(self):
