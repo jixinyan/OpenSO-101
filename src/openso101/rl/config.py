@@ -27,6 +27,7 @@ class TrainCfg(BaseModel):
     max_grad_norm: float = Field(default=1.0, gt=0)
     hidden_dims: tuple[int, ...] = (256, 128, 64)
     normalize_observations: bool = True
+    freeze_demonstration_normalization: bool = False
     replay_size: int = Field(default=100000, gt=0)
     learning_starts: int = Field(default=1000, ge=0)
     environment_mode: Literal["randomized", "nominal"] = "randomized"
@@ -66,6 +67,8 @@ class TrainCfg(BaseModel):
             raise ValueError("成功示范初始化使用 rsl_rl bounded PPO")
         if self.demonstration_updates_per_iteration and not self.demonstration_sources:
             raise ValueError("示范更新需要指定实际成功轨迹")
+        if self.freeze_demonstration_normalization and (not self.normalize_observations or not self.demonstration_sources):
+            raise ValueError("固定示范归一化需要观测归一化和实际示范来源")
         return self
 
     def batch_size(self, num_envs: int) -> int:

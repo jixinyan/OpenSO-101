@@ -7,8 +7,10 @@ from .checked_ppo import CheckedPPO
 
 
 class BoundedActorCritic(ActorCritic):
-    def __init__(self, *args, initial_action_mean=None, **kwargs):
+    def __init__(self, *args, initial_action_mean=None, freeze_demonstration_normalization=False, **kwargs):
         super().__init__(*args, **kwargs)
+        self.freeze_demonstration_normalization = freeze_demonstration_normalization
+        self._normalization_reference = None
         if initial_action_mean is not None:
             mean = torch.as_tensor(initial_action_mean, dtype=self.actor[-1].bias.dtype)
             if mean.shape != self.actor[-1].bias.shape or not torch.isfinite(mean).all() or (mean.abs() >= 1).any():
@@ -16,6 +18,36 @@ class BoundedActorCritic(ActorCritic):
             torch.nn.init.orthogonal_(self.actor[-1].weight, gain=.01)
             with torch.no_grad():
                 self.actor[-1].bias.copy_(mean.atanh())
+
+    def update_normalization(self, obs):
+        if not self.freeze_demonstration_normalization:
+            super().update_normalization(obs)
+
+    def initialize_normalization_reference(self, obs):
+        if not self.freeze_demonstration_normalization:
+            raise ValueError("固定归一化初始化需要对应配置")
+        super().update_normalization(obs)
+        self.pin_normalization_reference()
+
+    def pin_normalization_reference(self):
+        if not self.freeze_demonstration_normalization:
+            raise ValueError("固定归一化记录需要对应配置")
+        normalizers = {"actor": self.actor_obs_normalizer, "critic": self.critic_obs_normalizer}
+        self._normalization_reference = {}
+        for name, normalizer in normalizers.items():
+            state = normalizer.state_dict()
+            if not state or float(state["count"]) <= 0 or any(not torch.isfinite(value).all() for value in state.values()):
+                raise ValueError("固定归一化需要已初始化的实际统计")
+            self._normalization_reference[name] = {key: value.detach().clone() for key, value in state.items()}
+
+    def verify_normalization_reference(self):
+        if self._normalization_reference is None:
+            raise RuntimeError("固定归一化缺少实际统计记录")
+        for name, normalizer in (("actor", self.actor_obs_normalizer), ("critic", self.critic_obs_normalizer)):
+            if any(not torch.equal(value, self._normalization_reference[name][key])
+                   for key, value in normalizer.state_dict().items()):
+                raise RuntimeError("训练期间的固定归一化统计发生改变")
+        return True
 
     def act(self, obs, **kwargs):
         observation = self.actor_obs_normalizer(self.get_actor_obs(obs))
@@ -53,6 +85,8 @@ class BoundedOnPolicyRunner(OnPolicyRunner):
         if demonstrations is not None:
             details["demonstration_optimizer"] = demonstrations.optimizer.state_dict()
             details["demonstration_gradient_steps"] = demonstrations.steps
+        if self.alg.policy.freeze_demonstration_normalization:
+            details["normalization_reference_verified"] = self.alg.policy.verify_normalization_reference()
         return super().save(path, infos=details)
 
     def _construct_algorithm(self, obs):

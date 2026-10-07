@@ -10,7 +10,7 @@ from openso101.rl.initialization import record_initial_std
 
 
 def configuration(cfg: TrainCfg, device: str):
-    return {
+    config = {
         "seed": cfg.seed, "device": device, "num_steps_per_env": cfg.rollout_steps,
         "action_likelihood": "gaussian_latent" if cfg.action_distribution == "tanh_gaussian" else "gaussian",
         "save_interval": min(50, cfg.iterations),
@@ -30,6 +30,9 @@ def configuration(cfg: TrainCfg, device: str):
                       "max_grad_norm": cfg.max_grad_norm, "value_loss_coef": 1.0,
                       "use_clipped_value_loss": True},
     }
+    if cfg.action_distribution == "tanh_gaussian":
+        config["policy"]["freeze_demonstration_normalization"] = cfg.freeze_demonstration_normalization
+    return config
 
 
 class Backend:
@@ -63,12 +66,16 @@ class Backend:
             ):
                 raise ValueError("继续训练需要保持 policy 结构、观测归一化、动作分布和环境设置")
             config["policy"] = json.loads((resume / "backend.json").read_text())["policy"]
+            if cfg.action_distribution == "tanh_gaussian":
+                config["policy"]["freeze_demonstration_normalization"] = cfg.freeze_demonstration_normalization
         write_backend_config(output, config)
         runner = runner_class(config)(RslRlVecEnvWrapper(env), config, log_dir=str(output), device=env.unwrapped.device)
         restored_infos = None
         if resume:
             restored_infos = runner.load(str(resume / CheckpointMeta.read(resume).checkpoint))
             runner.current_learning_iteration += 1
+            if cfg.freeze_demonstration_normalization:
+                runner.alg.policy.pin_normalization_reference()
         std = runner.alg.policy.log_std
         if cfg.action_distribution == "tanh_gaussian":
             std = std.clamp(-5., 2.)

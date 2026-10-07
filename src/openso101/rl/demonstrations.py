@@ -152,7 +152,10 @@ class DemonstrationUpdates:
         observations = TensorDict({"policy": self.dataset["observations"]},
                                   batch_size=[len(self.dataset["actions"])])
         policy.train()
-        policy.update_normalization(observations)
+        if self.cfg.freeze_demonstration_normalization:
+            policy.initialize_normalization_reference(observations)
+        else:
+            policy.update_normalization(observations)
         count = len(self.dataset["actions"])
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.cfg.demonstration_epochs,
