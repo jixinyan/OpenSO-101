@@ -16,7 +16,7 @@ def forward_collision_geometry(model, data):
     mujoco.mj_collision(model, data)
 
 
-def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
+def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None, verified_base_plan=None):
     data = mujoco.MjData(model)
     ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
     gripper = model.body("gripper").id
@@ -119,9 +119,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         starts.insert(0, np.clip(seed + JOINT_OFFSETS[:5], lower, upper).ravel())
     starts.extend(np.tile(arm, waypoint_count) for arm in rng.uniform(lower, upper, size=(31, 5)))
 
-    def feasible(solution):
+    def waypoint_geometry_feasible(arms):
         nonlocal held_transform
-        arms = solution.x.reshape(waypoint_count, 5)
         grasp_position, grasp_rotation, _ = pose(arms[1])
         held_transform = (grasp_rotation.T @ (start - grasp_position), grasp_rotation.T @ object_rotation)
         poses = [pose(arm, jaw=0. if index >= 2 else .8, allow_grasp_contact=index >= 2)
@@ -130,11 +129,14 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         errors = [np.linalg.norm(value[0] + (value[1] @ held_transform[0] if pick_place and index >= 2 else 0.)
                                  - target + (np.array([0., 0., object_offset]) if names[index] == "place" else 0.))
                   for index, (value, target) in enumerate(zip(poses, positions, strict=True))]
-        return (solution.success and all(error <= (lift_radius if names[index] in ("lift", "carry") else .003)
+        return (all(error <= (lift_radius if names[index] in ("lift", "carry") else .003)
                                         and value[2] <= .0001
                                         for index, (value, error) in enumerate(zip(poses, errors, strict=True)))
                 and all(np.linalg.norm(poses[index][1] - poses[index + 1][1]) <= .02 for index in range(2))
                 and (not pick_place or all(value[1][2, 2] >= np.cos(inclination_limit) for value in poses)))
+
+    def feasible(solution):
+        return solution.success and waypoint_geometry_feasible(solution.x.reshape(waypoint_count, 5))
 
     def path_safe(start_arm, end_arm, jaw=.8, allow_grasp_contact=False):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
@@ -199,7 +201,40 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     planned_paths = None
     paths_accepted = False
     candidate_checks = []
-    for guess in starts:
+    if verified_base_plan is not None:
+        if (not pick_place or not verified_base_plan["accepted"]
+                or [target["phase"] for target in verified_base_plan["targets"]] != names):
+            raise ValueError("完整基础规划需要 approach、grasp、lift、carry、place 五个通过检查的阶段")
+        base_paths = [np.asarray(target["path_joint_positions"], dtype=float) + JOINT_OFFSETS[:5]
+                      for target in verified_base_plan["targets"]]
+        if any(path.shape != (64, 5) or not np.isfinite(path).all()
+               or (path < lower).any() or (path > upper).any() for path in base_paths):
+            raise ValueError("完整基础规划需要有效范围内的 64 个实际路径采样点")
+        base_arms = np.asarray([path[-1] for path in base_paths])
+        if not waypoint_geometry_feasible(base_arms):
+            raise RuntimeError("基础规划的实际 waypoint 几何检查未通过")
+        checks = []
+        for index, path in enumerate(base_paths):
+            values = [pose(point, jaw=0. if index >= 2 else .8, allow_grasp_contact=index >= 2,
+                           held=index >= 2) for point in path]
+            accepted = all(value[2] <= .0001 for value in values)
+            if index >= 1:
+                accepted &= all(value[1][2, 2] >= np.cos(inclination_limit) for value in values)
+            if not accepted:
+                raise RuntimeError(f"基础规划的实际路径几何检查未通过: {names[index]}")
+            checks.append({"phase": names[index], "accepted": bool(accepted),
+                           "maximum_penetration_m": float(max(value[2] for value in values))})
+        retreat_path, retreat_accepted, retreat_check = cartesian_path(
+            base_paths[-1][-1], base_paths[3][-1], jaw=.8,
+            allow_grasp_contact=True, transporting=True, released_pose=released_pose)
+        endpoint_depth = pose(retreat_path[-1], jaw=.8, released_pose=released_pose)[2]
+        if not retreat_accepted or endpoint_depth > .0001:
+            raise RuntimeError("释放后的撤离路径几何检查未通过")
+        planned_paths, paths_accepted = [*base_paths, retreat_path], True
+        candidate_checks.append({"source": "verified_base_path_revalidation", "waypoints_accepted": True,
+                                 "paths": [*checks, {"phase": "retreat", **retreat_check,
+                                                      "endpoint_penetration_m": float(endpoint_depth)}]})
+    for guess in starts if verified_base_plan is None else []:
         started = perf_counter()
         candidate = least_squares(
             coupled_residual, guess, bounds=(np.tile(lower, waypoint_count), np.tile(upper, waypoint_count)),
