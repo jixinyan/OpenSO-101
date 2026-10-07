@@ -210,8 +210,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                  "waypoints_accepted": bool(waypoints_accepted), "approach_accepted": bool(approach_accepted),
                  "paths": []}
         candidate_checks.append(check)
-        print({"environment": environment["environment"], "attempt": len(solutions),
-               "waypoints_accepted": waypoints_accepted, "approach_accepted": approach_accepted}, flush=True)
+        print({"environment": environment["environment"], **check}, flush=True)
         if not waypoints_accepted or not approach_accepted:
             continue
         candidate_arms = candidate.x.reshape(waypoint_count, 5)

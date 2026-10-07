@@ -16,10 +16,20 @@ parser.add_argument("--states", type=Path, required=True)
 parser.add_argument("--robot-model", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--collision-bundle", type=Path)
+parser.add_argument("--waypoint-seeds", type=Path)
 args = parser.parse_args()
 if args.output.exists():
     raise FileExistsError(args.output)
 states = json.loads(args.states.read_text())
+seed_records = {}
+if args.waypoint_seeds is not None:
+    seeds = json.loads(args.waypoint_seeds.read_text())
+    if (not args.collision_bundle or seeds["states_sha256"] != digest(args.states)
+            or seeds["robot_model_sha256"] != digest(args.robot_model)
+            or seeds["collision_bundle_sha256"] != digest(args.collision_bundle / "manifest.json")):
+        raise ValueError("waypoint 初始值需要相同的实际环境、机器人与 collision bundle")
+    seed_records = {item["environment"]: [target["joint_position"] for target in item["targets"]]
+                    for item in seeds["environments"]}
 model = (build_model(args.robot_model, states["planner_physics"], args.collision_bundle) if args.collision_bundle
          else mujoco.MjModel.from_xml_path(str(args.robot_model)))
 if tuple(model.joint(index).name for index in range(6)) != JOINT_NAMES:
@@ -34,7 +44,8 @@ records = []
 waypoint_seed = None
 for environment in states["environments"]:
     if args.collision_bundle:
-        record = plan_collision_grasp(model, states, environment, rng, waypoint_seed)
+        initial_waypoints = seed_records.get(environment["environment"], waypoint_seed)
+        record = plan_collision_grasp(model, states, environment, rng, initial_waypoints)
         records.append(record)
         if record["accepted"]:
             waypoint_seed = [target["joint_position"] for target in record["targets"]]
@@ -79,6 +90,7 @@ for environment in states["environments"]:
 report = {"status": "kinematic_plan_verified" if all(item["accepted"] for item in records) else "kinematic_plan_failed",
           "environments": records, "states_sha256": digest(args.states), "robot_model_sha256": digest(args.robot_model),
           "planner_source_sha256": digest(Path(__file__)), "maximum_grasp_inclination_rad": float(np.pi / 4),
+          "waypoint_seed_sha256": digest(args.waypoint_seeds) if args.waypoint_seeds else None,
           "collision_planner_sha256": digest(Path("src/openso101/sim2sim/grasp_planning.py")),
           "grasp_height_fraction_of_object": .25 if args.collision_bundle else 0.,
           "collision_bundle_sha256": digest(args.collision_bundle / "manifest.json") if args.collision_bundle else None,
