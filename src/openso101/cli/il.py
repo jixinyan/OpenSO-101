@@ -1869,7 +1869,8 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     report_path = Path(args.report).expanduser().resolve() if getattr(args, "report", None) else None
     if report_path is not None and report_path.exists():
         raise FileExistsError(f"回放报告已存在: {report_path}")
-    if getattr(args, "hold_steps", 30) < 0:
+    requested_hold_steps = getattr(args, "hold_steps", None)
+    if requested_hold_steps is not None and requested_hold_steps < 0:
         raise ValueError("hold_steps 必须大于或等于 0")
     if getattr(args, "require_task_success", False) and report_path is None:
         raise ValueError("任务成功验收需要提供 --report")
@@ -1913,7 +1914,7 @@ def _cmd_replay(args: argparse.Namespace) -> int:
     args.checkpoint_frame = getattr(args, "checkpoint_frame", None)
     args.checkpoint_index = getattr(args, "checkpoint_index", -1)
     args.warm_start = getattr(args, "warm_start", False)
-    args.hold_steps = getattr(args, "hold_steps", 30)
+    args.hold_steps = requested_hold_steps if requested_hold_steps is not None else (0 if native_recording else 30)
     args.no_camera_viewports = getattr(args, "no_camera_viewports", False)
     if args.task is None:
         # Recover the gym env ID from the HDF5 attrs written at record time.
@@ -2807,7 +2808,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_replay.add_argument("--stop-frame", type=int, default=None)
     p_replay.add_argument("--max-steps", type=int, default=None)
     p_replay.add_argument("--checkpoint-frame", type=int, default=None, help="恢复指定帧的已记录状态。")
-    p_replay.add_argument("--hold-steps", type=int, default=30, help="恢复后保持 checkpoint 动作的步骤数量。")
+    p_replay.add_argument("--hold-steps", type=int, default=None, help="恢复后保持 checkpoint 动作的步骤数量；原生任务默认为零。")
     p_replay.add_argument("--report", default=None, help="保存实际状态恢复、关节与双相机检查的 JSON 报告。")
     p_replay.add_argument("--require-task-success", action="store_true", help="任务成功条件未满足时终止验收，并保存报告。")
     p_replay.add_argument("--real-time", action="store_true")
