@@ -10,7 +10,7 @@
   "gamma": 0.99,
   "entropy_coef": 0.001,
   "hidden_dims": [256, 128, 64],
-  "normalize_observations": false,
+  "normalize_observations": true,
   "action_distribution": "tanh_gaussian",
   "initial_noise_std": 0.12,
   "environment_mode": "nominal",
