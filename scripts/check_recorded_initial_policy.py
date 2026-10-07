@@ -16,7 +16,10 @@ parser.add_argument("--checkpoint", type=Path, required=True)
 parser.add_argument("--native", type=Path, required=True)
 parser.add_argument("--episode", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--arm-target-speed-limit", type=float)
 args = parser.parse_args()
+if args.arm_target_speed_limit is not None and not 0 < args.arm_target_speed_limit <= 1.5:
+    raise ValueError("arm 目标速度需要大于零且不超过实际速度限制 1.5 rad/s")
 configure_visible_gpu()
 if args.output.exists():
     raise FileExistsError(args.output)
@@ -48,6 +51,7 @@ try:
     from openso101.cli.il import _replay_restore_sim_state_from_episode
     from openso101.rl.backends import get_backend
     from openso101.rl.execution import build_environment
+    from openso101.rl.vision_distillation import action_mapping
     from openso101.teleop.replay_validation import native_replay_recorder
 
     args.recorder_cfg = native_replay_recorder()
@@ -67,15 +71,34 @@ try:
                    "source_episode_sha256": digest(args.episode), "source_trace_sha256": source["trace_sha256"]}, stream, indent=2)
     if error > 1e-6:
         raise ValueError(f"恢复后的实际初始 policy 观测与示范不一致: {error}")
+    mapping = action_mapping(runtime)
+    if args.arm_target_speed_limit is not None:
+        arm_mapping = [item for item in mapping if item["joint_name"] != "Jaw"]
+        if len(arm_mapping) != 5 or any(item["type"] != "position" for item in arm_mapping):
+            raise ValueError("arm 目标速度检查需要五个归一化位置控制关节")
+        arm_indices = [item["action_index"] for item in arm_mapping]
+        scales = torch.tensor([item["scale"] for item in arm_mapping], device=runtime.device)
+        offsets = torch.tensor([item["offset"] for item in arm_mapping], device=runtime.device)
+        robot = runtime.scene["robot"]
+        joints = [robot.joint_names.index(item["joint_name"]) for item in arm_mapping]
+        previous_arm = (robot.data.joint_pos[:, joints] - offsets) / scales
+        maximum_delta = args.arm_target_speed_limit * runtime.step_dt / scales
     trajectory, success, task_return = [], False, 0.
     with torch.inference_mode():
         while app.is_running():
             policy_observation = observation["policy"][0].detach().cpu().tolist()
-            action = policy(observation)
+            model_action = policy(observation)
+            action = model_action.clone()
+            if args.arm_target_speed_limit is not None:
+                arm = previous_arm + torch.maximum(torch.minimum(action[:, arm_indices] - previous_arm,
+                                                                  maximum_delta), -maximum_delta)
+                action[:, arm_indices] = arm
+                previous_arm = arm
             observation, reward, terminated, truncated, _ = env.step(action)
             task_return += float(reward[0])
             transition = runtime._replay_transition
             trajectory.append({"policy_observation": policy_observation,
+                               "model_action": model_action[0].cpu().tolist(),
                                "action": action[0].cpu().tolist(), "reward": float(reward[0]),
                                "joint_targets": transition["targets"].cpu().tolist(),
                                "joint_position": transition["joint_position"].cpu().tolist(),
@@ -94,6 +117,7 @@ try:
               "initial_observation_error": error, "trajectory": trajectory,
               "source_episode_sha256": digest(args.episode), "source_trace_sha256": source["trace_sha256"],
               "model_sha256": digest(args.checkpoint / meta.checkpoint), "evaluation_git_sha": git_sha,
+              "arm_target_speed_limit_rad_s": args.arm_target_speed_limit,
               "independent_success_rate_verified": False, "validator_sha256": validator_sha256}
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x") as stream:
