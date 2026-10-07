@@ -7,6 +7,7 @@ export TMPDIR="$PWD/outputs/tmp"
 export PYTHONPATH="$PWD/src"
 export OMP_NUM_THREADS=4
 export OPENBLAS_NUM_THREADS=1
-export LD_LIBRARY_PATH="/home/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:/home/jixin/workspace/envs/edh-graphics/root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
+runtime_lib="$PWD/outputs/ffmpeg/root/usr/lib/x86_64-linux-gnu"
+export LD_LIBRARY_PATH="/home/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:$runtime_lib:$runtime_lib/pulseaudio:$runtime_lib/blas:$runtime_lib/lapack:/home/jixin/workspace/envs/edh-graphics/root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 shift
 /home/jixin/workspace/envs/openso101-v2/bin/python -u "$@"
