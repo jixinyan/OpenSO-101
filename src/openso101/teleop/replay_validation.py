@@ -137,6 +137,9 @@ def native_replay_recorder():
 
             robot = runtime.scene["robot"]
             ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
+            hold = (runtime.command_manager.get_term("object_pose").placement_hold_seconds
+                    if runtime.cfg.task_profile_task == "pick_place"
+                    else runtime.termination_manager.get_term_cfg("success").func.hold_seconds)
             runtime._replay_transition = {
                 "targets": torch.cat([runtime.action_manager.get_term(name).processed_actions[0]
                                       for name in runtime.action_manager.active_terms]).detach().clone(),
@@ -146,7 +149,7 @@ def native_replay_recorder():
                 "object_root_state": runtime.scene["object"].data.root_state_w[0].detach().clone(),
                 "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])[0]
                                             for name in ("gripper_jaw_contact", "moving_jaw_contact")]).detach().clone(),
-                "hold_seconds": runtime.termination_manager.get_term_cfg("success").func.hold_seconds[0].detach().clone(),
+                "hold_seconds": hold[0].detach().clone(),
             }
             return None, None
 
