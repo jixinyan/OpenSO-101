@@ -144,12 +144,16 @@ def native_replay_recorder():
             runtime = self._env
             from openso101.robots import SO101_SIM_JOINT_NAMES
             from openso101.tasks.shared.grasp import _jaw_force_magnitude
+            from isaaclab.utils.math import subtract_frame_transforms
 
             robot = runtime.scene["robot"]
             ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
             hold = (runtime.command_manager.get_term("object_pose").placement_hold_seconds
                     if runtime.cfg.task_profile_task == "pick_place"
                     else runtime.termination_manager.get_term_cfg("success").func.hold_seconds)
+            obj = runtime.scene["object"]
+            object_position, _ = subtract_frame_transforms(robot.data.root_pos_w, robot.data.root_quat_w,
+                                                            obj.data.root_pos_w, obj.data.root_quat_w)
             runtime._replay_transition = {
                 "targets": torch.cat([runtime.action_manager.get_term(name).processed_actions[0]
                                       for name in runtime.action_manager.active_terms]).detach().clone(),
@@ -157,6 +161,7 @@ def native_replay_recorder():
                 "joint_position": robot.data.joint_pos[0, ids].detach().clone(),
                 "joint_velocity": robot.data.joint_vel[0, ids].detach().clone(),
                 "object_root_state": runtime.scene["object"].data.root_state_w[0].detach().clone(),
+                "object_position_root": object_position[0].detach().clone(),
                 "jaw_forces": torch.stack([_jaw_force_magnitude(runtime.scene[name])[0]
                                             for name in ("gripper_jaw_contact", "moving_jaw_contact")]).detach().clone(),
                 "hold_seconds": hold[0].detach().clone(),
