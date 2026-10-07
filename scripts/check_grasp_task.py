@@ -19,6 +19,7 @@ parser.add_argument("--camera-resolution", type=int, default=256)
 parser.add_argument("--recording-output", type=Path)
 parser.add_argument("--arm-target-noise-std", type=float, default=0.)
 parser.add_argument("--arm-target-noise-seed", type=int, default=100042)
+parser.add_argument("--path-speed-rad-s", type=float, default=.75)
 args = parser.parse_args()
 from openso101.rl.gpu_scope import configure_visible_gpu
 
@@ -31,6 +32,8 @@ if args.recording_output is not None and (not args.with_cameras or args.task_pro
     raise ValueError("完整 HDF5 任务采集需要双相机与 grasp_v4")
 if not 0. <= args.arm_target_noise_std <= .04 or (args.arm_target_noise_std and args.task_profile != "grasp_v4"):
     raise ValueError("arm target 扰动需要 grasp_v4，标准差范围为 0 至 0.04 rad")
+if not 0. < args.path_speed_rad_s <= 1.5:
+    raise ValueError("规划路径速度需要位于 0 至 1.5 rad/s")
 args.output.mkdir(parents=True, exist_ok=False)
 pick_place = args.task == "OpenSO101-PickPlace-v0"
 if pick_place and args.task_profile != "grasp_v4":
@@ -276,6 +279,7 @@ try:
         path_distance = torch.zeros(args.num_envs, device=runtime.device)
     finished_success = torch.zeros_like(active)
     contact_hold_steps = torch.zeros_like(phase)
+    release_hold_steps = torch.zeros_like(phase)
     for step in range(runtime.max_episode_length - settling_steps):
         target_index = (phase - (phase >= 2).long()).clamp(0, targets.shape[1] - 1)
         arm_target = targets[torch.arange(args.num_envs, device=runtime.device), target_index]
@@ -286,7 +290,8 @@ try:
             moving = (phase != 2) & active & (tracking_error < .08)
             if pick_place:
                 moving &= phase < 6
-            path_distance = torch.minimum(path_distance + moving * .75 * runtime.step_dt, selected_lengths[:, -1])
+            path_distance = torch.minimum(path_distance + moving * args.path_speed_rad_s * runtime.step_dt,
+                                          selected_lengths[:, -1])
             holding = (phase == 2) | ((phase >= 6) if pick_place else torch.zeros_like(active))
             distance = torch.where(holding, selected_lengths[:, -1], path_distance)
             upper = torch.searchsorted(selected_lengths.contiguous(), distance[:, None].contiguous(), right=True)[:, 0]
@@ -321,7 +326,11 @@ try:
                 advanced |= (phase == 4) & path_finished & (command.stage >= 2)
                 object_root = torch.as_tensor(sample["object_position_root"], device=runtime.device)
                 at_place = torch.linalg.vector_norm(object_root - command.goal_for_stage(2), dim=-1) <= .03
-                advanced |= (phase == 5) & path_finished & at_place
+                arm_stationary = torch.as_tensor(sample["joint_velocity"], device=runtime.device)[:, :5].abs().amax(dim=-1) < .1
+                release_ready = ((phase == 5) & active & at_place & arm_stationary
+                                 & (path_distance >= selected_lengths[:, -1]))
+                release_hold_steps = torch.where(release_ready, release_hold_steps + 1, 0)
+                advanced |= release_ready & (release_hold_steps * runtime.step_dt >= .1)
         forces = torch.as_tensor(sample["jaw_forces"], device=runtime.device)
         contact_hold_steps = torch.where((phase == 2) & (forces > .5).all(dim=-1), contact_hold_steps + 1, 0)
         advanced |= (phase == 2) & (contact_hold_steps * runtime.step_dt >= .1) & active
@@ -364,7 +373,9 @@ try:
               "reused_plan_states_sha256": digest(args.plan_states) if args.plan_states else None,
               "reused_plan_scope": "exact_kinematic_inputs_with_independent_physics_recording" if args.verified_plan else None,
               "settling_steps": settling_steps, "bilateral_hold_before_lift_s": .1,
-              "planned_joint_speed_rad_s": .75 if paths is not None else None,
+              "planned_joint_speed_rad_s": args.path_speed_rad_s if paths is not None else None,
+              "release_condition": {"object_goal_distance_m": .03, "arm_speed_rad_s": .1,
+                                    "hold_seconds": .1, "requires_completed_path": True} if pick_place else None,
               "planned_phases": [item["phase"] for item in plan["environments"][0]["targets"]],
               "path_tracking_pause_error_rad": .08 if paths is not None else None,
               "states_sha256": digest(states_path), "plan_sha256": digest(plan_path),

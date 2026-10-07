@@ -13,6 +13,7 @@ parser.add_argument("folder", type=Path)
 args = parser.parse_args()
 report = json.loads((args.folder / "report.json").read_text())
 plan = json.loads((args.folder / "plan.json").read_text())
+states = json.loads((args.folder / "initial_states.json").read_text())
 if digest(args.folder / "trajectory.hdf5") != report["trace_sha256"]:
     raise ValueError("任务轨迹的 SHA256 检查失败")
 records = []
@@ -47,6 +48,15 @@ with h5py.File(args.folder / "trajectory.hdf5") as trace:
             records[-1]["final_gravity_compensation_nm"] = trace["gravity_compensation"][valid[-1], environment].tolist()
             records[-1]["final_drive_target_difference_rad"] = (
                 trace["joint_targets"][valid[-1], environment] - qpos[-1]).tolist()
+        if report["task"] == "OpenSO101-PickPlace-v0":
+            records[-1]["placement"] = {
+                "maximum_hold_seconds": float(trace["placement_hold_seconds"][valid, environment].max()),
+                "final_hold_seconds": float(trace["placement_hold_seconds"][valid[-1], environment]),
+                "final_jaw_angle_rad": float(qpos[-1, -1]),
+                "final_jaw_forces_n": trace["jaw_forces"][valid[-1], environment].tolist(),
+                "final_goal_distance_m": float(np.linalg.norm(positions[-1] -
+                    np.asarray(states["environments"][environment]["place_goal_position_root"]))),
+            }
         if "jaw_net_force_vectors" in trace:
             net = trace["jaw_net_force_vectors"][valid, environment]
             filtered = trace["jaw_object_force_vectors"][valid, environment]
