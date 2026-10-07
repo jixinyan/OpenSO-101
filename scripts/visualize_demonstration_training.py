@@ -5,6 +5,7 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 from matplotlib import font_manager, pyplot as plt
+from matplotlib.ticker import FuncFormatter, NullFormatter
 import numpy as np
 from PIL import Image
 
@@ -26,6 +27,8 @@ first = json.loads((args.run / "initial_policy_evaluation.json").read_text())
 history = json.loads((args.run / "evaluation_history.json").read_text())
 fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
 axes[0].semilogy([item["epoch"] for item in pretrain], [item["actor_mse"] for item in pretrain], color="#2563eb")
+axes[0].yaxis.set_major_formatter(FuncFormatter(lambda value, position: f"{value:.0e}"))
+axes[0].yaxis.set_minor_formatter(NullFormatter())
 axes[0].set(title="实际成功轨迹的动作拟合", xlabel="监督训练 epochs", ylabel="bounded action MSE")
 names = ("Rotation", "Pitch", "Elbow", "Wrist_Pitch", "Wrist_Roll", "Jaw")
 axes[1].bar(names, initialization["rmse_per_action"], color="#059669")
