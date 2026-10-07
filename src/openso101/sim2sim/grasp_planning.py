@@ -41,6 +41,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                           np.asarray(environment["place_goal_position_root"]) + [0., 0., object_offset]))
         names.extend(("carry", "place"))
     waypoint_count = len(positions)
+    inclination_limit = np.pi / 4
+    inclination_solver_limit = inclination_limit - np.deg2rad(1.)
     object_rotation = Rotation.from_quat(environment["object_quaternion_root"], scalar_first=True).as_matrix()
     held_transform = None
     geometry_names = tuple(model.geom(index).name for index in range(model.ngeom))
@@ -102,7 +104,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                 residuals.append(20 * error)
         residuals.extend((poses[index][1] - poses[index + 1][1]).ravel() for index in range(2))
         if pick_place:
-            residuals.append([max(0., np.cos(np.pi / 4) - value[1][2, 2]) for value in poses[3:]])
+            residuals.append([10 * max(0., np.cos(inclination_solver_limit) - value[1][2, 2])
+                              for value in poses])
         residuals.extend(([.05 * (1 - value[1][2, 2]) for value in poses], [100 * value[2] for value in poses]))
         return np.concatenate(residuals)
 
@@ -129,7 +132,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                                         and value[2] <= .0001
                                         for index, (value, error) in enumerate(zip(poses, errors, strict=True)))
                 and all(np.linalg.norm(poses[index][1] - poses[index + 1][1]) <= .02 for index in range(2))
-                and (not pick_place or all(value[1][2, 2] >= np.cos(np.pi / 4) for value in poses[3:])))
+                and (not pick_place or all(value[1][2, 2] >= np.cos(inclination_limit) for value in poses)))
 
     def path_safe(start_arm, end_arm, jaw=.8, allow_grasp_contact=False):
         return all(pose(point, jaw, allow_grasp_contact)[2] <= .0001
@@ -157,8 +160,10 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
                     position = position + rotation @ held_transform[0]
                 orientation = (.05 * (rotation - previous_rotation).ravel() if transporting
                                else (rotation - target_rotation).ravel())
+                inclination = (10 * max(0., np.cos(inclination_solver_limit) - rotation[2, 2])
+                               if pick_place else 0.)
                 return np.concatenate((20 * (position - target_position), orientation,
-                                       [100 * depth, max(0., np.cos(np.pi / 4) - rotation[2, 2]) if transporting else 0.],
+                                       [100 * depth, inclination],
                                        (.01 if transporting else .0001) * (arm - previous)))
 
             solution = least_squares(residual, np.clip(previous, lower, upper), bounds=(lower, upper),
@@ -166,8 +171,10 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             position, rotation, depth = pose(solution.x, jaw, allow_grasp_contact, held)
             if held:
                 position = position + rotation @ held_transform[0]
-            orientation_accepted = (rotation[2, 2] >= np.cos(np.pi / 4) if transporting
+            orientation_accepted = (rotation[2, 2] >= np.cos(inclination_limit) if transporting
                                     else np.linalg.norm(rotation - target_rotation) <= .02)
+            if pick_place:
+                orientation_accepted &= rotation[2, 2] >= np.cos(inclination_limit)
             position_error = float(np.linalg.norm(position - target_position))
             step_accepted = bool(solution.success and position_error <= .003
                                  and orientation_accepted and depth <= .0001)
@@ -175,6 +182,8 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             checks.append({"sample": len(path), "accepted": step_accepted,
                            "position_error_m": position_error, "penetration_m": float(depth),
                            "orientation_accepted": bool(orientation_accepted),
+                           "gripper_inclination_rad": float(np.arccos(np.clip(rotation[2, 2], -1, 1))),
+                           "rotation_difference_norm": float(np.linalg.norm(rotation - target_rotation)),
                            "solver_success": bool(solution.success), "evaluations": int(solution.nfev)})
             path.append(solution.x)
             previous = solution.x
@@ -195,6 +204,9 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         approach_accepted = path_safe(initial, candidate.x[:5]) if waypoints_accepted else False
         check = {"attempt": len(solutions), "evaluations": int(candidate.nfev),
                  "solver_seconds": perf_counter() - started,
+                 "waypoint_joint_positions": (candidate.x.reshape(waypoint_count, 5) - JOINT_OFFSETS[:5]).tolist(),
+                 "waypoint_inclination_rad": [float(np.arccos(np.clip(pose(arm)[1][2, 2], -1, 1)))
+                                              for arm in candidate.x.reshape(waypoint_count, 5)],
                  "waypoints_accepted": bool(waypoints_accepted), "approach_accepted": bool(approach_accepted),
                  "paths": []}
         candidate_checks.append(check)
@@ -250,4 +262,6 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
             "approach_grasp_rotation_difference": float(np.linalg.norm(pose(arms[0])[1] - pose(arms[1])[1])),
             "grasp_lift_rotation_difference": float(np.linalg.norm(pose(arms[1])[1] - pose(arms[2])[1])),
             "coupled_waypoints": waypoint_count, "native_task_goal_radius_m": states["planner_physics"]["task_goal_radius"],
+            "inclination_limit_rad": float(inclination_limit) if pick_place else None,
+            "inclination_solver_limit_rad": float(inclination_solver_limit) if pick_place else None,
             "planned_lift_center_radius_m": lift_radius}

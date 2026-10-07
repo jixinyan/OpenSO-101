@@ -89,7 +89,7 @@ report = {"status": "kinematic_plan_verified" if all(item["accepted"] for item i
 if args.collision_bundle:
     report["maximum_grasp_inclination_rad"] = None
     report["orientation_constraint"] = (
-        "approach_grasp_lift_rotation_difference_below_0.02_carry_place_tilt_limit_with_joint_continuity"
+        "approach_grasp_lift_rotation_difference_below_0.02_all_waypoints_and_cartesian_samples_tilt_below_pi_over_4"
         if states["task"] == "OpenSO101-PickPlace-v0" else "coupled_waypoints_rotation_matrix_difference_norm_below_0.02")
     report["held_object_collision_verified"] = states["task"] == "OpenSO101-PickPlace-v0" and all(
         item["accepted"] for item in records)
