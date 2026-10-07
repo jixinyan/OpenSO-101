@@ -126,6 +126,8 @@ def validate_hdf5_episode(path: str | Path) -> None:
             if dataset.dtype.kind == "f" and not np.isfinite(dataset[:]).all():
                 raise ValueError(f"{path} camera dataset {camera_name} contains non-finite pixels")
         if "sim" in h5:
+            if "environment_origin" in h5["sim"] and h5["sim/environment_origin"].shape != (frame_count, 3):
+                raise ValueError("environment_origin 必须为每个帧的三维环境原点")
             for name, dataset in h5["sim"].items():
                 if dataset.shape[0] != frame_count:
                     raise ValueError(
