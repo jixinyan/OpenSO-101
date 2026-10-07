@@ -6,6 +6,14 @@ from scipy.spatial.transform import Rotation, Slerp
 from .mujoco import JOINT_NAMES, JOINT_OFFSETS
 
 
+def forward_collision_geometry(model, data):
+    if model.nflex or model.ntendon or model.nplugin:
+        raise ValueError("SO-101 任务规划需要刚体模型")
+    mujoco.mj_kinematics(model, data)
+    mujoco.mj_comPos(model, data)
+    mujoco.mj_collision(model, data)
+
+
 def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     data = mujoco.MjData(model)
     ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
@@ -37,7 +45,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
     def pose(arm, jaw=.8, allow_grasp_contact=False, held=False):
         data.qpos[ids[:5]] = arm
         data.qpos[ids[5]] = jaw
-        mujoco.mj_forward(model, data)
+        mujoco.mj_kinematics(model, data)
         rotation = data.xmat[gripper].reshape(3, 3).copy()
         position = data.xpos[gripper] + rotation @ center
         if held:
@@ -48,7 +56,7 @@ def plan_collision_grasp(model, states, environment, rng, waypoint_seed=None):
         else:
             data.qpos[object_qpos:object_qpos + 3] = start
             data.qpos[object_qpos + 3:object_qpos + 7] = environment["object_quaternion_root"]
-        mujoco.mj_forward(model, data)
+        forward_collision_geometry(model, data)
         depth = 0.
         for contact in data.contact:
             geometries = [model.geom(index).name for index in (contact.geom1, contact.geom2)]
