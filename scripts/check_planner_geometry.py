@@ -26,7 +26,16 @@ states = json.loads((args.native / "initial_states.json").read_text())
 if (digest(args.native / "trajectory.hdf5") != report["trace_sha256"]
         or digest(args.native / "initial_states.json") != report["states_sha256"]):
     raise ValueError("原生轨迹与状态的 SHA256 不一致")
+start = perf_counter()
 model = build_model(args.robot_model, states["planner_physics"], args.collision_bundle)
+build_seconds = perf_counter() - start
+start = perf_counter()
+cached_model = build_model(args.robot_model, states["planner_physics"], args.collision_bundle)
+cache_reuse_seconds = perf_counter() - start
+for field in ("body_mass", "body_inertia", "body_ipos", "body_iquat", "geom_pos", "geom_quat",
+              "geom_friction", "geom_type", "geom_bodyid", "mesh_vert", "mesh_face", "jnt_range"):
+    if not np.array_equal(getattr(model, field), getattr(cached_model, field)):
+        raise ValueError(f"实际缓存模型的物理或几何参数不一致: {field}")
 reference, geometry = mujoco.MjData(model), mujoco.MjData(model)
 joint_ids = [int(model.joint(name).qposadr[0]) for name in JOINT_NAMES]
 object_id = int(model.joint("object_free").qposadr[0])
@@ -66,6 +75,8 @@ for step, environment in np.argwhere(active):
     contacts += reference.ncon
     poses += 1
 result = {"status": "actual_planner_geometry_verified", "poses": poses, "contacts": contacts,
+          "model_build_seconds": build_seconds, "cache_reuse_build_seconds": cache_reuse_seconds,
+          "cache_model_equality_verified": True,
           "maximum_pose_error": maximum_pose_error, "maximum_contact_error": maximum_contact_error,
           "full_forward_seconds": full_seconds, "collision_geometry_seconds": geometry_seconds,
           "speed_ratio": full_seconds / geometry_seconds, "mujoco_version": mujoco.__version__,
