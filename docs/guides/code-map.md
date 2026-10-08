@@ -53,7 +53,7 @@ CUDA_VISIBLE_DEVICES='' OPENSO101_SKIP_ISAAC=1 PYTHONPATH=src \
   --output outputs/rl_progress/source_check
 ```
 
-wheel 构建完成后，通过实际 ZIP、metadata、命令入口和逐文件 SHA256 检查当前源码的打包结果：
+使用 `python -m build --outdir outputs/build` 从 sdist 构建 wheel。构建完成后，通过实际 ZIP、metadata、命令入口和逐文件 SHA256 检查当前源码的打包结果：
 
 ```bash
 CUDA_VISIBLE_DEVICES='' PYTHONPATH=src \
@@ -71,6 +71,12 @@ OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh mujoco \
 ```
 
 GPU 阶段使用相同的源码、配置和输入文件，逐项检查 CPU 报告。设备和停止方式见 [GPU 使用](gpu-usage.md)。当前用户要求保持 GPU 计算停止。
+
+## CPU CI
+
+`.github/workflows/test.yml` 使用 `requirements-cpu-tests.txt` 安装实际运行所需的库。MuJoCo 相机使用 OSMesa。`scripts/fetch_cpu_assets.py` 根据固定 upstream commit 和 SHA256 下载官方 SO-101 XML；已有文件通过同一份 SHA256 检查。
+
+CI 分别保存源码检查、几何与进程检查、PTY 与 Torch 控制检查，以及 sdist、wheel 与 package 核查报告。所执行的检查不启动 Isaac Sim；原生物理和完整任务成功需要对应运行报告。
 
 ## Python import
 

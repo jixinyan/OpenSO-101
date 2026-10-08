@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "path": "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml",
+      "url": "https://raw.githubusercontent.com/TheRobotStudio/SO-ARM100/a758567c3978dfeefe282ede0500085a48fe8f78/Simulation/SO101/so101_old_calib.xml",
+      "sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+      "xml_model": "so101_old_calib"
+    }
+  ]
+}

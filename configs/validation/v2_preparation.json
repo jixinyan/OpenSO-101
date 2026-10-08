@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "physical_gpu": 2,
-  "source_files": ["src", "scripts", "configs", "tests/scenes", "tests/test_gpu_guard.py", "tests/fixtures", "pyproject.toml", "tests/scenes/assets/metric_video/landmarks.mp4"],
+  "source_files": ["src", "scripts", "configs", "tests", "pyproject.toml", "requirements-cpu-tests.txt", "requirements-mujoco.txt", ".github/workflows/test.yml", "tests/scenes/assets/metric_video/landmarks.mp4"],
   "stages": [
     {
       "name": "source_layout", "resource": "cpu",

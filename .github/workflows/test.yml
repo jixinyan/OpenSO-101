@@ -2,106 +2,87 @@ name: test
 
 on:
   push:
-    branches: [main]
+    branches: [main, codex/v2-scenes]
   pull_request:
     branches: [main]
 
-# Cancel in-progress runs when a new commit lands on the same ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Static checks that do NOT need a GPU or Isaac Sim. These run on every
-  # push and on every PR. The full sim-side test suite is intentionally
-  # left out of GitHub-hosted runners (Isaac Sim requires a CUDA GPU);
-  # run those locally per `docs/guides/install.md`.
-  static:
+  cpu:
     runs-on: ubuntu-latest
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      OPENSO101_SKIP_ISAAC: "1"
+      PYTHONPATH: src
+      MUJOCO_GL: osmesa
+      TMPDIR: ${{ github.workspace }}/outputs/tmp
+      OMP_NUM_THREADS: "4"
+      OPENBLAS_NUM_THREADS: "1"
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - name: 创建中间文件目录
+        run: mkdir -p outputs/tmp
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
-      - name: Cache pip
-        uses: actions/cache@v4
+          cache: pip
+          cache-dependency-path: |
+            requirements-cpu-tests.txt
+            requirements-mujoco.txt
+      - name: 安装 CPU renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libosmesa6
+      - name: 安装 CPU 检查依赖
+        run: python -m pip install -r requirements-cpu-tests.txt
+      - name: 验证官方资产来源
+        run: python scripts/fetch_cpu_assets.py --output outputs/ci/assets.json
+      - name: 检查源码与命令入口
+        run: python -m openso101.cli.main validate source --output outputs/ci/source
+      - name: 运行实际几何与进程检查
+        run: python scripts/run_cpu_checks.py --output outputs/ci/geometry
+      - name: 运行终端、控制和配置检查
+        run: |
+          python -m pytest tests/scenes/test_terminal_keyboard.py \
+            tests/scenes/test_controls.py tests/scenes/test_training_config.py \
+            --basetemp=outputs/ci/interfaces --junitxml=outputs/ci/interfaces.xml -q
+      - name: 保存 CPU 检查报告
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/.cache/pip
-          key: pip-${{ hashFiles('pyproject.toml') }}
+          name: cpu-validation
+          path: outputs/ci/
 
-      # Install a minimal subset — no Isaac Sim, no Isaac Lab. Just enough
-      # for the import smoke + unit tests to load.
-      - name: Install CPU-only deps
-        run: |
-          python -m pip install --upgrade pip
-          # Skip the heavy sim deps; install only what the framework code
-          # actually imports without isaaclab in sys.path. 'pip install torch'
-          # resolves a CPU build on the ubuntu runner, which is all the
-          # torch-pure tests (e.g. the shaping-reward primitives) need.
-          python -m pip install numpy matplotlib tensorboard prettytable packaging h5py huggingface_hub pytest torch 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' 'av>=12,<15' 'prompt_toolkit>=3.0.50,<4' 'usd-core>=25,<27' httpx objaverse==0.1.7
-
-      - name: Verify package layout
-        run: |
-          python -c "import sys; sys.path.insert(0, 'src'); import openso101; print('openso101', openso101.__version__)"
-
-      - name: Run CPU-pure test suite (no Isaac Sim, no LeRobot)
-        # The package isn't pip-installed in this minimal job; put src/ on the
-        # path so `import openso101` resolves at test collection (same as the
-        # 'Verify package layout' step above).
-        env:
-          PYTHONPATH: src
-          OPENSO101_SKIP_ISAAC: "1"
-        run: |
-          # 检查实际文件、OpenUSD、Torch 运算、PTY 输入和 CLI。
-          python -m pytest \
-            tests/scenes \
-            tests/test_cpu_regressions.py \
-            tests/test_cli_rl.py \
-            -k 'not eagerly and not model_service and not agent_loop_materializes' \
-            --basetemp=outputs/pytest-cpu \
-            -v --no-header
-
-      - name: Ruff lint (advisory)
-        continue-on-error: true
-        run: |
-          pip install ruff
-          ruff check src/ tests/ --select=E,F --ignore=E501
-
-  # Quick sanity check that pyproject.toml is parseable and the package
-  # builds a wheel cleanly.
   build:
     runs-on: ubuntu-latest
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      OPENSO101_SKIP_ISAAC: "1"
+      PYTHONPATH: src
+      TMPDIR: ${{ github.workspace }}/outputs/tmp
     steps:
       - uses: actions/checkout@v4
+      - name: 创建中间文件目录
+        run: mkdir -p outputs/tmp
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Build wheel
+      - name: 安装打包检查依赖
+        run: python -m pip install build 'pydantic>=2.10,<3'
+      - name: 构建与验证实际 wheel
         run: |
-          python -m pip install --upgrade pip build
-          # A failed build must FAIL the job: no '|| true' masking, and the
-          # wheel must actually exist afterwards. The wheel builds from the
-          # pyproject [project] table alone (setup.py was removed). Build in an
-          # isolated env (the default) so PEP517 provisions the declared
-          # build-system requires (setuptools>=61 + wheel) — the runner's base
-          # env has setuptools but not wheel, so --no-isolation would fail.
-          python -m build --wheel
-          ls -la dist/
-          test -n "$(ls dist/*.whl 2>/dev/null)"
-
-  scenes:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+          python -m build --outdir outputs/build
+          python -m openso101.cli.main validate package \
+            --wheel outputs/build/openso_101-0.1.0-py3-none-any.whl \
+            --output outputs/ci/package
+      - name: 保存 wheel 与核查报告
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          python-version: "3.11"
-      - name: Install scene dependencies
-        run: python -m pip install 'numpy<2' 'pydantic>=2.10,<3' 'trimesh>=4.5,<5' 'scipy>=1.14' 'pillow>=10' 'av>=12,<15' 'prompt_toolkit>=3.0.50,<4' objaverse==0.1.7 'usd-core>=25,<27' pytest torch httpx
-      - name: Verify scenes and USD composition
-        env:
-          PYTHONPATH: src
-        run: python -m pytest --confcutdir=tests/scenes tests/scenes --basetemp=outputs/pytest-scenes -q
+          name: package-validation
+          path: |
+            outputs/build/
+            outputs/ci/package/
