@@ -12,7 +12,8 @@
 - 2703 帧实际示范提供 2523 个连续窗口。来源模型的首步输出逐项一致；实际 previous actions 连续前向计算、Jacobian 与 gradient 更新完成检查。
 - 读取来源模型、Adam optimizer 和 22216 次历史监督更新，完成两次 CPU 更新。全部帧 action MSE 从 1.33694e-5 到 1.32460e-5，观测归一化统计保持原值，新增 RL transitions 为零。
 - 已有导出策略在 MuJoCo 完成四个 episode 和 20,000 个物理步骤。实际速度低于 1.5 rad/s，力矩符合来源限制，预测与实际速度误差为零。实际任务成功为 0/4。
-- 项目 GPU 进程数量为零。已有其他项目作业保持运行，实际占用检查阻止工作程序启动。
+- 项目 GPU 进程数量为零。实际占用检查保存了阻止工作程序启动的记录。
+- 空闲设备检查与启动登记使用禁止 CUDA 的实际 CPU worker 验证，四项 PTY 检查完成后子进程结束。记录见 [CPU worker 启动](idle_cpu_guard.json) 与 [CPU worker 结果](idle_cpu_guard_worker.json)。
 
 ![实际 CPU 记录图表](figures/cpu_validation.png)
 
@@ -23,6 +24,8 @@
 [统一 CPU 记录](suite.json) 保存十个步骤、源码和配置的 SHA256、每个输入、日志与报告 SHA256。报告分别保存在 [键盘 IK](keyboard_ik.json)、[终端输入](terminal_keyboard.json)、[场景检查](scene_batch.json)、[LeRobot 数据](lerobot.json)、[视频标定](metric_video.json)、[连续策略](policy_history.json)、[连续监督](demonstration_updates.json)、[MuJoCo 策略](mujoco_policy.json)、[项目设备查询](gpu_inventory.json) 和 [源码检查](source_checks.json)。完整日志、HDF5、检查后的 CPU 模型、MP4 和 JUnit 文件位于服务器 `outputs/rl_progress/v2_cpu_preparation_20261007/`。
 
 源码的 Python 编译、Shell 语法和七份 RL 配置的 Pydantic 检查均已完成。GPU 阶段保留未执行状态，原生物理运行、人工成功采集、合格 RL teacher、成功策略的 sim2sim、视觉 student 与真机任务各自需要实际验收。
+
+[正式报告核查](published_report_validation.json) 逐项确认十份报告的 SHA256 与统一 CPU 记录相同，并且记录中的源码快照与当前代码相同。
 
 ## 执行方式
 

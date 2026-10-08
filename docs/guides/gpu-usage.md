@@ -11,3 +11,5 @@
 CPU 检查使用 `scripts/run_cpu_python.sh native <程序入口>` 或 `scripts/run_cpu_python.sh mujoco <程序入口>`。这两个入口禁止 CUDA，并配置已安装的 FFmpeg 与 OSMesa 动态库。MuJoCo 与 Isaac 使用独立 Python 环境。
 
 本次实际占用检查已确认 GPU 2 的现有作业阻止 OpenSO-101 启动。真实 CPU 子进程检查覆盖进程组停止与父进程退出后的子进程清理。运行期间的 GPU 竞争检查继续等待实际设备验收。
+
+空闲设备的启动登记已经通过实际 CPU 工作程序验证：启动检查父进程登记 worker，worker 验证来源后执行禁止 CUDA 的终端检查，结束时清理子进程。启动报告的 `gpu_job_started` 表示工作程序已经登记并启动；设备计算与任务结果由工作程序的报告确认。本次 worker 完成四项 PTY 检查，`gpu_tests_started=false`。

@@ -167,7 +167,7 @@
     "src/openso101/teleop/hdf5_recorder.py": "a224de81b6fb566018f1722c5ba40e564b07be6e9e4fda77e072804b9734a318",
     "src/openso101/teleop/replay_validation.py": "43d6927dfed2717dc78f2fbcc0b7c5c7e1079d4e54f0421fffb1b53766ea1cbe",
     "src/openso101/validation/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "src/openso101/validation/suite.py": "021a94be77dc0a392dca12c104d0c0bdc19900205aa2c83c80fc617dadd03330",
+    "src/openso101/validation/suite.py": "22f55c761540e687b6fbe6ec129979ac954c114ae591b5e312ee2f3bd8333023",
     "scripts/audit_rl_workspace.py": "412a8baa2afc4483aeac7fc14d7487df071c3c1fe17e1563d7e177d77de31548",
     "scripts/audit_squint_training.py": "c25750aecce793090db8847a7a9fd5b534a1a143d4052d2e77ff43760702df52",
     "scripts/bootstrap_grasp_policy.py": "17d5c9b94243b50899ff70ab4a9aedcd76eedcc0c764bf0bb252a73435329b26",
@@ -243,7 +243,7 @@
     "scripts/run_scripted_task_check.sh": "802740987ac3f5facab8beaeed6ab4a9e9f9bb6e6fc67e672c44e9b79c8ca82d",
     "scripts/run_native_regressions.py": "4cb66bd4a9b434031c7476bdca40e97fcdc26d6de4895df63afacb4ec1203a15",
     "scripts/validate_lerobot_dataset.py": "25e869b0a3307c5a7771c7d6d7e0db1b2ef7338ba1e22cf36d7485b813fdc0b5",
-    "scripts/run_native_python.sh": "39daabd03db80eeafd76e4c2b6d594d90757137fd12a53cae63ddee95ad0c06e",
+    "scripts/run_native_python.sh": "5695721981b3ecf807ff866f06809bb9d8aee34d3a9521843cea2f6ef7077d1e",
     "scripts/check_planner_geometry.py": "b73d88bccde10c775e5ac37abb66184f71d8d0bb371b7b2f79d2d2473e4bb6d7",
     "scripts/visualize_demonstration_training.py": "7cb869c1364592c34c2a3aaf141411a2a714dfa0b3fc67285a8d525625a8ef10",
     "scripts/inspect_grasp_task.py": "659fe68e62ecde2a8676c490c0aff742ad11fa41ca5d355bb9cabef8cee26411",
@@ -299,9 +299,9 @@
     "pyproject.toml": "d3570d552ac0c707396c991f2382662c69515d07f254f69ec09e1f4614af9acf",
     "tests/scenes/assets/metric_video/landmarks.mp4": "f6bc9ad19b2949e3c78a253bb3f99c0df9d94d5b5c381e0f7749244fdf3cc04c"
   },
-  "git_sha": "9d2667f80d2e158c2856efbdbcb52070bb62959f",
+  "git_sha": "9e7734c04e87ae314b957795d2db6928d853f54d",
   "physical_gpu": 2,
-  "created_at": "2026-10-08T04:04:59.009034+00:00",
+  "created_at": "2026-10-08T04:22:30.311560+00:00",
   "status": "cpu_verified",
   "stages": [
     {
@@ -313,16 +313,16 @@
         "mujoco",
         "scripts/run_cpu_checks.py",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/cpu_geometry"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/cpu_geometry"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:04:59.512228+00:00",
+      "started_at": "2026-10-08T04:22:30.677777+00:00",
       "inputs": {},
       "exit_code": 0,
-      "log_sha256": "8094d9982d72ded1d3f196e603823f120680f6f111c5f79bd64dba648a7de1a3",
-      "completed_at": "2026-10-08T04:05:16.213107+00:00",
+      "log_sha256": "aeac847f162c55cdabd9e29564e43ba44ec76672487115a4aa2e8fe2d6d91786",
+      "completed_at": "2026-10-08T04:22:46.132542+00:00",
       "reports": {
-        "cpu_geometry/report.json": "063a7aa342d0a16c5bd063fdbf13597b78c26713d7071c08ae30cd5a6522d7bb"
+        "cpu_geometry/report.json": "275533c0f10078acc332756ddc82fdaef4b7b03ab3c5e93d93dfda374f9935ec"
       }
     },
     {
@@ -334,16 +334,16 @@
         "mujoco",
         "scripts/check_cpu_interfaces.py",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/terminal_keyboard"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/terminal_keyboard"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:16.654164+00:00",
+      "started_at": "2026-10-08T04:22:46.571650+00:00",
       "inputs": {},
       "exit_code": 0,
-      "log_sha256": "80a192128104fe52d52f66ecd40085336b6f1eacdf73364a3748169c1a7395b2",
-      "completed_at": "2026-10-08T04:05:19.483860+00:00",
+      "log_sha256": "476ae811dda9d440f0a0697b32167cdc17dd32584d2c99c1fe4c57f2b75e40c1",
+      "completed_at": "2026-10-08T04:22:49.077799+00:00",
       "reports": {
-        "terminal_keyboard/report.json": "0f26755de1be05cb9c002771610d55dcabd213344be90199e9b8991713b19195"
+        "terminal_keyboard/report.json": "19ecb4e1b5c03441cf5c452370ead826c2cb6a7efc0a5540872002d17d36e2ef"
       }
     },
     {
@@ -359,17 +359,17 @@
         "--robot-model",
         "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/keyboard_ik.json"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/keyboard_ik.json"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:19.965114+00:00",
+      "started_at": "2026-10-08T04:22:49.565874+00:00",
       "inputs": {
         "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
         "outputs/rl_progress/v4_demonstrations_verified_858bc44_task/trajectory.hdf5": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739"
       },
       "exit_code": 0,
       "log_sha256": "bb78e185a1861944d1c8d8e2c71426fae946b15fe5aa343aa2c002e61d9e641d",
-      "completed_at": "2026-10-08T04:05:26.894256+00:00",
+      "completed_at": "2026-10-08T04:22:56.448319+00:00",
       "reports": {
         "keyboard_ik.json": "4b890fdb567c6a5bd8e260b86f8474d5b0fc1051dae18e888ea79c36a02e03b9"
       }
@@ -383,14 +383,14 @@
         "mujoco",
         "scripts/check_metric_video.py",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/metric_video"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/metric_video"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:27.471912+00:00",
+      "started_at": "2026-10-08T04:22:56.894920+00:00",
       "inputs": {},
       "exit_code": 0,
       "log_sha256": "a922e958ec560b65e3939d5a4ba01d02a3fa04550d801b8e4487ad16bb7892c8",
-      "completed_at": "2026-10-08T04:05:32.793689+00:00",
+      "completed_at": "2026-10-08T04:23:02.379241+00:00",
       "reports": {
         "metric_video/report.json": "11b4a20d9444a0e4e1840489faba9ee1a3daebd6cf392df205cacfe6d192e552"
       }
@@ -408,14 +408,14 @@
         "--phase",
         "cpu",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/scene_batch"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/scene_batch"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:33.217738+00:00",
+      "started_at": "2026-10-08T04:23:02.768668+00:00",
       "inputs": {},
       "exit_code": 0,
       "log_sha256": "a692011207e12ddf2cc76d27086e030fb032b33268cafc848ceeee94880e4eec",
-      "completed_at": "2026-10-08T04:05:36.498199+00:00",
+      "completed_at": "2026-10-08T04:23:05.859306+00:00",
       "reports": {
         "scene_batch/report.json": "af65e42c6002bdf8130ef2ef2fa03d740f545dd1dde0352377d9e24a33304052"
       }
@@ -434,14 +434,14 @@
         "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot",
         "--require-success",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/lerobot.json"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/lerobot.json"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:36.999662+00:00",
+      "started_at": "2026-10-08T04:23:06.321796+00:00",
       "inputs": {},
       "exit_code": 0,
       "log_sha256": "1bd684d7393641239ba35eb7067c091b3a906872c5059b4fb48b46db793c3c8b",
-      "completed_at": "2026-10-08T04:05:52.130372+00:00",
+      "completed_at": "2026-10-08T04:23:20.681893+00:00",
       "reports": {
         "lerobot.json": "d1c29af82e063833d0ca136ba94559efe901d90bde54e3f5d17d13f427db19db"
       }
@@ -459,16 +459,16 @@
         "--checkpoint",
         "outputs/rl_progress/lift_corrective_coverage_continue_20261007",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/policy_history"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/policy_history"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:05:52.540545+00:00",
+      "started_at": "2026-10-08T04:23:21.092811+00:00",
       "inputs": {
         "outputs/rl_progress/lift_corrective_coverage_continue_20261007/demonstrations.pt": "79d4e1956441c95980617fcc5592d391544b1625c2bc9c7452cac703ae5980eb"
       },
       "exit_code": 0,
       "log_sha256": "abafae38584d33a6f19daf3229d6f2b490016b260c6b25e358f06a0351a5c96f",
-      "completed_at": "2026-10-08T04:05:59.573851+00:00",
+      "completed_at": "2026-10-08T04:23:28.386902+00:00",
       "reports": {
         "policy_history/report.json": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b"
       }
@@ -486,14 +486,14 @@
         "--config",
         "configs/rl/grasp_sequence_coverage.json",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/demonstration_updates"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/demonstration_updates"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:06:00.082232+00:00",
+      "started_at": "2026-10-08T04:23:28.908268+00:00",
       "inputs": {},
       "exit_code": 0,
       "log_sha256": "f60728a439da023fbf1e71ed4378be498e975f3520cf68ddb24660c06db72610",
-      "completed_at": "2026-10-08T04:06:06.967892+00:00",
+      "completed_at": "2026-10-08T04:23:35.712317+00:00",
       "reports": {
         "demonstration_updates/report.json": "3a87479f59591744e94aede5817fcee8ee9201b8edad63e1384663a27e3db98e"
       }
@@ -520,10 +520,10 @@
         "--recorded-physics",
         "--constrained-drive",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/mujoco_policy"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/mujoco_policy"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:06:07.510710+00:00",
+      "started_at": "2026-10-08T04:23:36.207424+00:00",
       "inputs": {
         "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.json": "3e78897b1725799db915031972d920cd1c9a8a443acae147e8c37dea609ff5c3",
         "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.pt": "d223b06e6368889239d0c306bd5dcee768c4696a37ba3fbb8a44f9a98892d158",
@@ -531,7 +531,7 @@
       },
       "exit_code": 0,
       "log_sha256": "5a31bc7577d6d94809adb4874e1855392aa691e4c5e676931245a0e0112f8c90",
-      "completed_at": "2026-10-08T04:11:20.840139+00:00",
+      "completed_at": "2026-10-08T04:29:06.782367+00:00",
       "reports": {
         "mujoco_policy/report.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5"
       }
@@ -545,21 +545,22 @@
         "native",
         "scripts/audit_project_gpu.py",
         "--output",
-        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite/gpu_inventory.json"
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/v2_cpu_preparation_20261007/suite_verified/gpu_inventory.json"
       ],
       "status": "verified",
-      "started_at": "2026-10-08T04:11:21.419227+00:00",
+      "started_at": "2026-10-08T04:29:07.372380+00:00",
       "inputs": {},
       "exit_code": 0,
       "log_sha256": "77555938348d33c9a05bdda0c1ce1eccb0bbf1fbe87da08d7c51f07d4cc18ec7",
-      "completed_at": "2026-10-08T04:11:23.655832+00:00",
+      "completed_at": "2026-10-08T04:29:09.873071+00:00",
       "reports": {
-        "gpu_inventory.json": "34b6a42b78b3ca5806f4e7de3d380aff4070ab968c272c145996c3d7120088e6"
+        "gpu_inventory.json": "c55c46adee6d4fc3a1a0cc7c93ca9198e0846e0bf2e476e33533cbd029e34434"
       }
     }
   ],
   "gpu_tests_started": false,
+  "gpu_phase_attempted": false,
   "full_v2_verified": false,
   "hardware_run_verified": false,
-  "completed_at": "2026-10-08T04:11:24.148430+00:00"
+  "completed_at": "2026-10-08T04:29:10.312609+00:00"
 }

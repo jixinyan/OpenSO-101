@@ -1,0 +1,30 @@
+{
+  "created_at": "2026-10-08T04:22:29.375411+00:00",
+  "gpu": 2,
+  "command": [
+    "bash",
+    "scripts/run_cpu_python.sh",
+    "native",
+    "scripts/check_cpu_interfaces.py",
+    "--output",
+    "outputs/rl_progress/v2_cpu_preparation_20261007/idle_cpu_guard_worker"
+  ],
+  "guard_pid": 306101,
+  "status": "completed",
+  "gpu_job_started": true,
+  "protected_users": [
+    "haomin"
+  ],
+  "requires_exclusive_device": true,
+  "initial_device": {
+    "index": 2,
+    "uuid": "GPU-aa3aa801-a799-81e2-996e-e949b2405898",
+    "memory_used_mib": 0.0,
+    "utilization_percent": 0.0,
+    "processes": []
+  },
+  "worker_pid": 306145,
+  "exit_code": 0,
+  "worker_exit_code": 0,
+  "completed_at": "2026-10-08T04:22:34.537834+00:00"
+}

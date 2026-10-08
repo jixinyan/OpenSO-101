@@ -1,6 +1,6 @@
 {
   "status": "project_gpu_processes_absent",
-  "checked_at": "2026-10-08T04:11:23.612220+00:00",
+  "checked_at": "2026-10-08T04:29:09.812531+00:00",
   "stop_requested": false,
   "project_workers": [],
   "remaining_inventory": [

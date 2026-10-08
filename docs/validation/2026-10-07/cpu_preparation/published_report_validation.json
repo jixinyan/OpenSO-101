@@ -1,0 +1,20 @@
+{
+  "status": "published_cpu_reports_and_source_verified",
+  "reports": {
+    "cpu_checks.json": "275533c0f10078acc332756ddc82fdaef4b7b03ab3c5e93d93dfda374f9935ec",
+    "terminal_keyboard.json": "19ecb4e1b5c03441cf5c452370ead826c2cb6a7efc0a5540872002d17d36e2ef",
+    "keyboard_ik.json": "4b890fdb567c6a5bd8e260b86f8474d5b0fc1051dae18e888ea79c36a02e03b9",
+    "metric_video.json": "11b4a20d9444a0e4e1840489faba9ee1a3daebd6cf392df205cacfe6d192e552",
+    "scene_batch.json": "af65e42c6002bdf8130ef2ef2fa03d740f545dd1dde0352377d9e24a33304052",
+    "lerobot.json": "d1c29af82e063833d0ca136ba94559efe901d90bde54e3f5d17d13f427db19db",
+    "policy_history.json": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b",
+    "demonstration_updates.json": "3a87479f59591744e94aede5817fcee8ee9201b8edad63e1384663a27e3db98e",
+    "mujoco_policy.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+    "gpu_inventory.json": "c55c46adee6d4fc3a1a0cc7c93ca9198e0846e0bf2e476e33533cbd029e34434"
+  },
+  "suite_sha256": "a6376356508f4b51ddf6261d489e8f1920fac2d9eed17af5904c5bae62b6ced4",
+  "cpu_stages": 10,
+  "source_sha256": "8966cc102ff2f20e51a853b3c99310cf3b7cdc55d993449820f6c46f1a167677",
+  "gpu_tests_started": false,
+  "full_v2_verified": false
+}
