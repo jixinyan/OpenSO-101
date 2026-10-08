@@ -1,0 +1,28 @@
+{
+  "status": "actual_cpu_cuda_entry_preflight_verified",
+  "rejected_requests": [
+    {
+      "function": "launch_cuda_command",
+      "device": "cuda:0"
+    },
+    {
+      "function": "launch_cuda_command",
+      "device": "cuda:1"
+    },
+    {
+      "function": "verify_cuda_inference",
+      "device": "cuda:0"
+    },
+    {
+      "function": "verify_cuda_inference",
+      "device": "cuda:1"
+    }
+  ],
+  "cpu_inference_allowed": true,
+  "gpu_tests_started": false,
+  "training_started": false,
+  "gpu_competition_verified": false,
+  "hardware_run_verified": false,
+  "source_sha256": "1e3a075292107fe555375d2f0ae932fd03a87cb33f1f77ec4a29447605840e9e",
+  "guard_sha256": "a98ff89bc701962f2dce96226948289781428033e6f26309d9ccd753b49eb800"
+}

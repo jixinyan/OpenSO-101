@@ -1,0 +1,55 @@
+{
+  "status": "recorded_state_cpu_conversion_verified",
+  "frames": 328,
+  "fps": 50,
+  "physics_dt": 0.001,
+  "derived_decimation": 20,
+  "field_errors": {
+    "sim/cohort_command_cube_spawn_xy_b": 0.0,
+    "sim/cohort_command_goal_pos_b": 0.0,
+    "sim/cohort_command_goal_pos_w": 0.0,
+    "sim/cohort_command_placement_hold_seconds": 0.0,
+    "sim/cohort_command_stage": 0.0,
+    "sim/cohort_environment_origins": 0.0,
+    "sim/cohort_joint_position": 0.0,
+    "sim/cohort_joint_targets": 0.0,
+    "sim/cohort_joint_velocity": 0.0,
+    "sim/cohort_object_root_state": 0.0,
+    "sim/cohort_policy_actions": 0.0,
+    "sim/cohort_task_episode_step": 0.0,
+    "sim/cohort_task_hold_seconds": 0.0,
+    "sim/command_cube_spawn_xy_b": 0.0,
+    "sim/command_goal_pos_b": 0.0,
+    "sim/command_goal_pos_w": 0.0,
+    "sim/command_placement_hold_seconds": 0.0,
+    "sim/command_stage": 0.0,
+    "sim/environment_origin": 0.0,
+    "sim/object_root_state": 0.0,
+    "sim/task_episode_step": 0.0,
+    "sim/task_goal_root": 0.0,
+    "sim/task_hold_seconds": 0.0
+  },
+  "episode_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_sha256": "19fdd1682d21688540f0483bf10c1506bef3a11f96edb04419a73daa0906d99f",
+  "sim_state_sha256": "26cb0ff007e385bccc61c746af1e9560b74691765e15f8487592974d62f8a2d2",
+  "timing_sha256": "f3051e3b8962763f4da32421b7f8a301052c98a74c03966a39b976e5f9e75d77",
+  "root_state_transforms": 1312,
+  "root_state_maximum_error": 5.960464477539063e-08,
+  "root_state_source_components_preserved": true,
+  "replay_task_preflight_verified": true,
+  "rejected_tasks": [
+    {
+      "task": "OpenSO101-Lift-v0",
+      "exit_code": 1
+    },
+    {
+      "task": "OpenSO101-Stack-v0",
+      "exit_code": 1
+    }
+  ],
+  "state_records_sha256": "18bd0ebdbfe064b996664c7211f4a94e56c0e03710c3809388f565c061338525",
+  "gpu_tests_started": false,
+  "native_restore_verified": false,
+  "capture_count_preflight_verified": true,
+  "capture_source_sha256": "08662a4a3dd5e6d0e0fdc87e7220a5e898e1ae1b4582027ed37232f62f9fc822"
+}
