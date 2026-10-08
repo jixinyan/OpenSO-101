@@ -1,0 +1,367 @@
+{
+  "status": "actual_il_training_preparation_verified",
+  "policies": {
+    "act": {
+      "report": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/act/report.json",
+      "sha256": "d665fb606d4189de93e1b57e99827373db48c2149364ba9b16d529e9623288c4",
+      "model_graph": {
+        "status": "actual_cpu_model_graph_verified",
+        "initialization": "lerobot_configured_model",
+        "seed": 1000,
+        "batch_size": 1,
+        "sampled_frame_index": 0,
+        "parameters": 51597190,
+        "gradient_parameters": 51597190,
+        "nonzero_gradient_tensors": 150,
+        "maximum_gradient": 41.24913787841797,
+        "loss": 78.98123168945312,
+        "loss_components": {
+          "l1_loss": 1.0449788570404053,
+          "kld_loss": 7.793625354766846
+        },
+        "inference_action": [
+          [
+            -54.46717834472656,
+            7.762433052062988,
+            -23.567840576171875,
+            78.96916961669922,
+            11.637262344360352,
+            -47.56073760986328
+          ]
+        ],
+        "model_state_sha256": "4df3d2c6d9979fde78ecbcd4fa00eefadb7c7c5ce7d2da51eb568afb832077d0",
+        "checkpoint_roundtrip": {
+          "status": "actual_cpu_checkpoint_roundtrip_verified",
+          "directory": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/act/pretrained_model",
+          "initialization": "lerobot_configured_model",
+          "saved_config_device": "cuda:0",
+          "requested_device": "cpu",
+          "model_state_sha256": "4df3d2c6d9979fde78ecbcd4fa00eefadb7c7c5ce7d2da51eb568afb832077d0",
+          "processor_state_tensors": 180,
+          "files": {
+            "config.json": "c1ca06f0faa9e3d86d1c6ee22d23f4ee0a859129e6d7d70c7e114928515227a5",
+            "model.safetensors": "c2d7814096a52b5ea6e5118baf1ed7a7a70723c64b500df65e0e8c768b751123",
+            "policy_preprocessor_step_3_normalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+            "policy_preprocessor.json": "e1ad09fa73a0e3d12be1d9b1442c7eb35672a778ed9902fa516d77845ab44cfc",
+            "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+            "policy_postprocessor.json": "648b415125a183dfd6cbc47c1dc04ab3f2d912654ef22a12ca5e8b93d7d85cdd",
+            "openso101_simulation.json": "a6fcef38c859e874bf3ca3650f992a53cf4ee34757bfad4e8c3ef41d8710b62d"
+          },
+          "maximum_action_error": 0.0,
+          "inference_action": [
+            [
+              -54.46717834472656,
+              7.762433052062988,
+              -23.567840576171875,
+              78.96916961669922,
+              11.637262344360352,
+              -47.56073760986328
+            ]
+          ],
+          "checkpoint_files_unchanged": true,
+          "optimizer_updates": 0,
+          "gpu_tests_started": false,
+          "task_success_verified": false,
+          "simulation_settings": {
+            "schema_version": 1,
+            "fps": 50,
+            "camera_sizes": {
+              "wrist_camera": [
+                256,
+                256
+              ],
+              "overhead_camera": [
+                256,
+                256
+              ]
+            },
+            "joint_names": [
+              "shoulder_pan.pos",
+              "shoulder_lift.pos",
+              "elbow_flex.pos",
+              "wrist_flex.pos",
+              "wrist_roll.pos",
+              "gripper.pos"
+            ],
+            "action_units": "motor_units",
+            "dataset_info_sha256": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05"
+          }
+        },
+        "model_checkpoint_verified": true,
+        "optimizer": "AdamW",
+        "optimizer_learning_rates": [
+          1e-05,
+          1e-05
+        ],
+        "scheduler": null,
+        "optimizer_configuration_verified": true,
+        "optimizer_updates": 0,
+        "model_forward_verified": true,
+        "model_backward_verified": true,
+        "model_inference_verified": true,
+        "gpu_tests_started": false,
+        "task_success_verified": false
+      },
+      "rejected_checkpoints": [
+        {
+          "missing_file": "model.safetensors",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_preprocessor.json",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_postprocessor.json",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_preprocessor_step_3_normalizer_processor.safetensors",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/checkpoint_inputs_act/absent/model",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/act/pretrained_model/config.json",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "invalid name/model",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/act/pretrained_model",
+          "device": "cuda:0",
+          "rejected": true
+        }
+      ],
+      "action_roundtrip_maximum_error": 3.814697265625e-06
+    },
+    "diffusion": {
+      "report": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/diffusion/report.json",
+      "sha256": "734c395a1bfceff83e4998284db3794fa5e0797b5e06ca2b3936b2a543d956bb",
+      "model_graph": {
+        "status": "actual_cpu_model_graph_verified",
+        "initialization": "lerobot_configured_model",
+        "seed": 1000,
+        "batch_size": 1,
+        "sampled_frame_index": 0,
+        "parameters": 266622758,
+        "gradient_parameters": 266622758,
+        "nonzero_gradient_tensors": 212,
+        "maximum_gradient": 0.5173752903938293,
+        "loss": 0.9760904312133789,
+        "loss_components": null,
+        "inference_action": [
+          [
+            12.43328857421875,
+            25.096670150756836,
+            17.81903839111328,
+            41.82215881347656,
+            48.56001281738281,
+            0.9201202392578125
+          ]
+        ],
+        "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+        "checkpoint_roundtrip": {
+          "status": "actual_cpu_checkpoint_roundtrip_verified",
+          "directory": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/diffusion/pretrained_model",
+          "initialization": "lerobot_configured_model",
+          "saved_config_device": "cuda:0",
+          "requested_device": "cpu",
+          "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+          "processor_state_tensors": 180,
+          "files": {
+            "config.json": "dbac3df6f5e400d898364ba92aa5005b1440edec23e2957a7e6910abff4e4b7a",
+            "model.safetensors": "fbfc0c1d147f776ec06702e38cc6fcbf17b507b43b757b4b0a40162aa839740b",
+            "policy_preprocessor_step_3_normalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+            "policy_preprocessor.json": "fa827ac70bacec21a825e4adbe0bd6785657151bf6c9a146b3b9c259d6afc75a",
+            "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+            "policy_postprocessor.json": "ff4666f11949008cb7722e8969ab913f652e6dccc6c06eab40006a464edd276f",
+            "openso101_simulation.json": "a6fcef38c859e874bf3ca3650f992a53cf4ee34757bfad4e8c3ef41d8710b62d"
+          },
+          "maximum_action_error": 0.0,
+          "inference_action": [
+            [
+              6.371940612792969,
+              0.3319138288497925,
+              2.9198837280273438,
+              50.738460540771484,
+              16.45517349243164,
+              -33.80144119262695
+            ]
+          ],
+          "checkpoint_files_unchanged": true,
+          "optimizer_updates": 0,
+          "gpu_tests_started": false,
+          "task_success_verified": false,
+          "simulation_settings": {
+            "schema_version": 1,
+            "fps": 50,
+            "camera_sizes": {
+              "wrist_camera": [
+                256,
+                256
+              ],
+              "overhead_camera": [
+                256,
+                256
+              ]
+            },
+            "joint_names": [
+              "shoulder_pan.pos",
+              "shoulder_lift.pos",
+              "elbow_flex.pos",
+              "wrist_flex.pos",
+              "wrist_roll.pos",
+              "gripper.pos"
+            ],
+            "action_units": "motor_units",
+            "dataset_info_sha256": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05"
+          }
+        },
+        "model_checkpoint_verified": true,
+        "optimizer": "Adam",
+        "optimizer_learning_rates": [
+          0.0
+        ],
+        "scheduler": "LambdaLR",
+        "optimizer_configuration_verified": true,
+        "optimizer_updates": 0,
+        "model_forward_verified": true,
+        "model_backward_verified": true,
+        "model_inference_verified": true,
+        "gpu_tests_started": false,
+        "task_success_verified": false
+      },
+      "rejected_checkpoints": [
+        {
+          "missing_file": "model.safetensors",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_preprocessor.json",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_postprocessor.json",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "missing_file": "policy_preprocessor_step_3_normalizer_processor.safetensors",
+          "rejected": true,
+          "native_startup_prevented": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/checkpoint_inputs_diffusion/absent/model",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/diffusion/pretrained_model/config.json",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "invalid name/model",
+          "device": "cpu",
+          "rejected": true
+        },
+        {
+          "source": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/diffusion/pretrained_model",
+          "device": "cuda:0",
+          "rejected": true
+        }
+      ],
+      "action_roundtrip_maximum_error": 3.814697265625e-06
+    }
+  },
+  "frames": 328,
+  "episodes": 1,
+  "rejected_configs": [
+    {
+      "policy": "act",
+      "arguments": [
+        "--policy.chunk_size=0",
+        "--policy.n_action_steps=0"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "act",
+      "arguments": [
+        "--policy.dim_model=513"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "diffusion",
+      "arguments": [
+        "--policy.horizon=15"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "diffusion",
+      "arguments": [
+        "--policy.crop_shape=[4000,4000]"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "act",
+      "arguments": [
+        "--num_workers=-1"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "act",
+      "arguments": [
+        "--save_checkpoint=false"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "act",
+      "arguments": [
+        "--policy.optimizer_lr=-1"
+      ],
+      "exit_code": 1
+    },
+    {
+      "policy": "diffusion",
+      "arguments": [
+        "--policy.optimizer_lr=nan"
+      ],
+      "exit_code": 1
+    }
+  ],
+  "source_files_unchanged": true,
+  "source_files": {
+    "data/chunk-000/file-000.parquet": "fee5cb4569fd5cacaa52fdd69863d39d4535026b96be4f93f214131ef82839b7",
+    "meta/episodes/chunk-000/file-000.parquet": "04ba807872a82fc26c6a4875bff663536663ba67b00993f745227307b5a75a21",
+    "meta/info.json": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05",
+    "meta/openso101_export.json": "a38804710fac24642fc643e1c020b0153e123138a3a56c717007f03567c91049",
+    "meta/stats.json": "68c9e36154aa21376cb8a5623d947fb9903daf30e15b81e109f2015387b66ef0",
+    "meta/tasks.parquet": "6266a6fad9bb98e2b067f66500ca6438efb0598b7ae663c207bdb5d71dfd1027",
+    "videos/observation.images.overhead_camera/chunk-000/file-000.mp4": "85e54ea72a275240428d6862ed1d6db55fb20448f1e35900ca7e41599d6823d7",
+    "videos/observation.images.wrist_camera/chunk-000/file-000.mp4": "d3b324ef5c9dd1fda1c7a578ff459f96ca15b672da2bb1a460da4654df483d5b"
+  },
+  "gpu_tests_started": false,
+  "training_started": false,
+  "task_success_verified": false,
+  "source_sha256": "c9925b776ddf59d8889a97cc7c88bf3e3eeda48bb77978c41d2a2f38a4a3953f"
+}

@@ -44,6 +44,9 @@
         {"report": "recorded_state.json", "pointer": "/status", "equals": "recorded_state_cpu_conversion_verified"},
         {"report": "recorded_state.json", "pointer": "/frames", "minimum": 328},
         {"report": "recorded_state.json", "pointer": "/capture_count_preflight_verified", "equals": true},
+        {"report": "recorded_state.json", "pointer": "/root_state_transforms", "minimum": 1312},
+        {"report": "recorded_state.json", "pointer": "/root_state_maximum_error", "maximum": 0.000001},
+        {"report": "recorded_state.json", "pointer": "/replay_task_preflight_verified", "equals": true},
         {"report": "recorded_state.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
@@ -228,6 +231,7 @@
       "requirements": [
         {"report": "native_lift_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/training_started", "equals": false}
       ]
@@ -238,6 +242,7 @@
       "requirements": [
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_pick_place_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
       ]
     },
@@ -269,11 +274,23 @@
       "requirements": [
         {"report": "native_stack_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
         {"report": "native_stack_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_stack_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_stack_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
       ]
     },
     {
-      "name": "scene_runtime", "resource": "gpu", "depends_on": ["native_stack_checkpoint"],
+      "name": "native_custom_checkpoint", "resource": "gpu", "depends_on": ["native_stack_checkpoint"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-CustomScene-v0", "--scene", "outputs/rl_progress/agent_runtime_bundle", "--output", "{output}/native_custom_checkpoint"],
+      "requirements": [
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
+      "name": "scene_runtime", "resource": "gpu", "depends_on": ["native_custom_checkpoint"],
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_scene_batch.py", "--cases", "configs/validation/scene_cases.json", "--phase", "gpu", "--cpu-report", "{output}/scene_batch/report.json", "--output", "{output}/scene_runtime"],
       "requirements": [{"report": "scene_runtime/report.json", "pointer": "/status", "equals": "scene_batch_runtime_verified"}]
     },

@@ -32,10 +32,17 @@ def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> 
                 sim_state[name.removeprefix("_")] = _tensor_to_numpy(getattr(unwrapped_env, name)[0])
         sim_state["task_goal_root"] = _tensor_to_numpy(student_goal(unwrapped_env)[0])
         return sim_state
-    if "object" in scene.rigid_objects:
-        sim_state["object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w[0])
-        if include_cohort:
-            sim_state["cohort_object_root_state"] = _tensor_to_numpy(scene["object"].data.root_state_w)
+    for name in ("object", "cube_top", "cube_bottom"):
+        if name in scene.rigid_objects:
+            sim_state[f"{name}_root_state"] = _tensor_to_numpy(scene[name].data.root_state_w[0])
+            if include_cohort and name == "object":
+                sim_state["cohort_object_root_state"] = _tensor_to_numpy(scene[name].data.root_state_w)
+    if "cube_top" in scene.rigid_objects:
+        from openso101.teleop.success import task_success_vector
+
+        task_success_vector(unwrapped_env)
+        sim_state["cube_top_was_lifted"] = _tensor_to_numpy(unwrapped_env._cube_top_was_lifted[0])
+        sim_state["task_episode_step"] = _tensor_to_numpy(unwrapped_env.episode_length_buf[0])
     if include_cohort:
         import torch
 
@@ -176,16 +183,21 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
                 tracker.restore(progress)
         return
 
-    object_root_state = _replay_optional_frame(h5, "sim/object_root_state", frame_index)
-    if object_root_state is None:
-        print("[WARN]: 记录没有 sim/object_root_state，恢复范围包含机器人关节。")
-    else:
-        obj = scene["object"]
-        root_state = _replay_to_tensor_like(object_root_state[None, ...], obj.data.root_state_w)
-        origin = _replay_optional_frame(h5, "sim/environment_origin", frame_index)
-        if origin is not None:
-            root_state[:, :3] += scene.env_origins[0] - _replay_to_tensor_like(origin, scene.env_origins[0])
-        obj.write_root_state_to_sim(root_state)
+    from openso101.teleop.state_records import replay_root_state
+
+    for name in ("object", "cube_top", "cube_bottom"):
+        if name in scene.rigid_objects:
+            obj = scene[name]
+            values = replay_root_state(h5[f"sim/{name}_root_state"][frame_index],
+                                       h5["sim/environment_origin"][frame_index],
+                                       _tensor_to_numpy(scene.env_origins[0]))
+            obj.write_root_state_to_sim(_replay_to_tensor_like(values[None, ...], obj.data.root_state_w))
+    if "cube_top" in scene.rigid_objects:
+        import torch
+
+        unwrapped_env._cube_top_was_lifted = torch.as_tensor(
+            h5["sim/cube_top_was_lifted"][frame_index], device=unwrapped_env.device,
+            dtype=torch.bool).expand(unwrapped_env.num_envs).clone()
     command_values = {
         field: _replay_optional_frame(h5, f"sim/command_{field}", frame_index) for field in _REPLAY_COMMAND_FIELDS
     }

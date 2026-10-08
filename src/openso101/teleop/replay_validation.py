@@ -83,7 +83,7 @@ class ReplayValidation:
                     field.startswith("cohort_") and not self.report["source_cohort_restored"]):
                 continue
             expected = h5[f"sim/{field}"][frame_index].copy()
-            if field in ("object_root_state", "command_goal_pos_w"):
+            if field in ("object_root_state", "cube_top_root_state", "cube_bottom_root_state", "command_goal_pos_w"):
                 expected[:3] += origin_delta
             pairs[field] = (actual_state[field], expected)
         for field, (actual, expected) in pairs.items():
@@ -113,6 +113,9 @@ class ReplayValidation:
                                     for name, value in env._replay_transition.items() if isinstance(value, torch.Tensor)})
         else:
             action = env.action_manager.action[0].detach().cpu().numpy()
+            from openso101.teleop.success import task_success
+
+            self.report["task_success_verified"] |= task_success(env)
         expected_action = np.asarray(expected_action)
         if action.shape != expected_action.shape or not np.isfinite(action).all():
             raise ValueError("回放动作格式错误")
@@ -148,6 +151,8 @@ class ReplayValidation:
             "replay_verified" if self.report["completed_frames"] == self.report["requested_frames"]
             else "replay_interrupted"
         )
+        self.report["observed_task_success"] = self.report["task_success_verified"]
+        self.report["task_success_verified"] &= self.report["status"] == "replay_verified"
         self.report_path.parent.mkdir(parents=True, exist_ok=True)
         self.report_path.write_text(json.dumps(self.report, indent=2), encoding="utf-8")
 

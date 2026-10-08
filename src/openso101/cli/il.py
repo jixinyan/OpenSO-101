@@ -399,20 +399,14 @@ def _cmd_record(args: argparse.Namespace, cleanup: ExitStack) -> int:
             print("[INFO]: 方向键控制 xy，PageUp/PageDown 控制 z，A/D 控制 yaw，Space 打开夹爪，G 关闭夹爪；窗口支持 Shift 关闭夹爪。")
 
         env.reset()
-        # Print the actual post-reset cube position(s) so the operator can
-        # objectively verify the per-process seed is driving fresh randomization
-        # — visual inspection is unreliable because the jitter box is small
-        # (~±3 cm) and the camera angle hides small shifts.
-        try:
-            for cube_key in ("object", "cube_top", "cube_bottom"):
-                if cube_key in scene.keys():
-                    pos = scene[cube_key].data.root_pos_w[0].tolist()
-                    print(
-                        f"[INFO]: After reset, '{cube_key}' world position: "
-                        f"x={pos[0]:.4f} y={pos[1]:.4f} z={pos[2]:.4f}"
-                    )
-        except Exception as exc:
-            print(f"[WARN]: Could not read cube post-reset position: {exc}")
+        # 输出 reset 之后的实际物体位置。
+        for cube_key in ("object", "cube_top", "cube_bottom"):
+            if cube_key in scene.rigid_objects:
+                pos = scene[cube_key].data.root_pos_w[0].tolist()
+                print(
+                    f"[INFO]: After reset, '{cube_key}' world position: "
+                    f"x={pos[0]:.4f} y={pos[1]:.4f} z={pos[2]:.4f}"
+                )
 
         if not args.no_camera_viewports:
             open_teleop_viewports(scene)
@@ -842,6 +836,11 @@ def _cmd_replay(args: argparse.Namespace, cleanup: ExitStack) -> int:
             )
         args.task = env_id.decode() if isinstance(env_id, bytes) else str(env_id)
         print(f"[INFO]: Replay env auto-selected from episode attrs: {args.task}")
+
+    from openso101.teleop.state_records import validate_replay_task_state
+
+    with h5py.File(episode_path, "r") as recording:
+        validate_replay_task_state(recording, args.task)
 
     checkpoint_frame = _replay_select_checkpoint_frame(
         episode_path, args.checkpoint_frame, args.checkpoint_index

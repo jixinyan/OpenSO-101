@@ -39,6 +39,9 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "task_hold_seconds",
     "task_episode_step",
     "object_root_state",
+    "cube_top_root_state",
+    "cube_bottom_root_state",
+    "cube_top_was_lifted",
     "command_stage",
     "command_goal_pos_b",
     "command_goal_pos_w",
@@ -134,6 +137,10 @@ def validate_hdf5_episode(path: str | Path) -> None:
             if "environment_origin" in h5["sim"] and h5["sim/environment_origin"].shape != (frame_count, 3):
                 raise ValueError("environment_origin 必须为每个帧的三维环境原点")
             for name, dataset in h5["sim"].items():
+                if name in ("object_root_state", "cube_top_root_state", "cube_bottom_root_state") and dataset.shape != (frame_count, 13):
+                    raise ValueError(f"sim/{name} 必须为每个帧的十三个物体状态值")
+                if name == "cube_top_was_lifted" and (dataset.shape != (frame_count,) or dataset.dtype.kind != "b"):
+                    raise ValueError("cube_top_was_lifted 必须为每个帧的 bool 状态")
                 if dataset.shape[0] != frame_count:
                     raise ValueError(
                         f"{path} sim/{name} has inconsistent frame count: "

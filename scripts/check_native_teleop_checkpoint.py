@@ -39,6 +39,7 @@ def main():
     env, recorder = None, None
     try:
         import gymnasium as gym
+        import h5py
         import torch
         from isaaclab_tasks.utils import parse_env_cfg
 
@@ -49,6 +50,9 @@ def main():
         from openso101.teleop.recorder.lerobot import collect_camera_buffers, discover_camera_metadata, read_robot_proprio
         from openso101.teleop.timing import _env_control_rate_fps
         from openso101.teleop.success import task_success_vector
+        from openso101.teleop.sim_state import _collect_replay_sim_state, _replay_restore_sim_state_from_episode
+        from openso101.teleop.replay_validation import ReplayValidation
+        from openso101.teleop.state_records import validate_replay_task_state
 
         if args.scene is not None:
             from openso101.scenes.isaaclab.runtime import register_custom_scene
@@ -68,9 +72,15 @@ def main():
         robot = scene["robot"]
         ids = [list(robot.joint_names).index(name) for name in SO101_SIM_JOINT_NAMES]
         held = robot.data.joint_pos[:, ids].clone()
+        scene_metadata = None
+        if args.scene is not None:
+            from openso101.scenes.recording import store_recording_scene
+
+            scene_metadata = store_recording_scene(args.scene, args.output / "dataset")
         recorder = OpenSO101HDF5TeleopRecorder(args.output / "dataset", args.task,
                                              discover_camera_metadata(scene), _env_control_rate_fps(runtime),
-                                             sim_joint_names=SO101_SIM_JOINT_NAMES, env_id=args.task, flush_steps=4)
+                                             sim_joint_names=SO101_SIM_JOINT_NAMES, env_id=args.task, flush_steps=4,
+                                             scene_metadata=scene_metadata)
         recorder.start_episode()
 
         def record_step(action):
@@ -83,7 +93,8 @@ def main():
             qpos, qvel = read_robot_proprio(robot)
             recorder.add_frame(action=action[0].detach().cpu().numpy(), qpos=qpos, qvel=qvel,
                                timestamp=float(runtime.episode_length_buf[0]) * runtime.step_dt,
-                               camera_buffers=collect_camera_buffers(scene))
+                               camera_buffers=collect_camera_buffers(scene),
+                               sim_state=_collect_replay_sim_state(runtime, scene))
 
         with torch.inference_mode():
             for _ in range(4):
@@ -121,10 +132,25 @@ def main():
         saved_frames = recorder.total_frames
         episode = recorder.save_episode(success=False)
         validate_hdf5_episode(episode)
+        recorded_errors = {}
+        with h5py.File(episode, "r") as recording:
+            validate_replay_task_state(recording, args.task)
+            replay = ReplayValidation(episode, args.output / "recorded_restore.json", args.task,
+                                      recording, runtime, range(saved_frames), 0)
+            for frame_index in range(saved_frames):
+                _replay_restore_sim_state_from_episode(runtime, scene, recording, frame_index)
+                runtime.sim.forward()
+                scene.update(0.0)
+                replay.check_restore(runtime, recording, frame_index)
+                for name, error in replay.report["restore_errors"].items():
+                    recorded_errors[name] = max(recorded_errors.get(name, 0.0), error)
         result = {"status": "native_teleop_checkpoint_verified", "task": args.task,
                   "scene": str(args.scene) if args.scene is not None else None, "physical_gpu": physical_gpu,
                   "restored_state_maximum_errors": errors, "saved_frames": saved_frames,
                   "episode": str(episode), "episode_sha256": file_digest(episode),
+                  "recorded_state_restore_errors": recorded_errors, "recorded_frames_restored": saved_frames,
+                  "state_records_source_sha256": file_digest(Path("src/openso101/teleop/state_records.py")),
+                  "sim_state_source_sha256": file_digest(Path("src/openso101/teleop/sim_state.py")),
                   "checkpoint_source_sha256": file_digest(Path("src/openso101/teleop/checkpoints.py")),
                   "validator_source_sha256": file_digest(Path(__file__)),
                   "native_restore_verified": True, "task_success_verified": False, "training_started": False}

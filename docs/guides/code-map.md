@@ -35,6 +35,7 @@
 | IL 逐批评估、结束条件与原生资源关闭 | `src/openso101/il/runners/evaluator.py` |
 | IL 精确 episode 数量和逐环境记录 | `src/openso101/il/evaluation.py` |
 | 遥操作与 IL 的任务成功条件 | `src/openso101/teleop/success.py` |
+| 录制任务检查与物体状态坐标转换 | `src/openso101/teleop/state_records.py` |
 | HDF5 检查与 LeRobot 同步、异步导出 | `src/openso101/il/datasets/export.py` |
 | LeRobot metadata、episode 范围、统计量与视频文件检查 | `src/openso101/il/datasets/validation.py` |
 | IL 关节与 RGB observation | `src/openso101/il/observations.py` |

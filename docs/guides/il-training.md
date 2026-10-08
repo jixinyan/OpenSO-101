@@ -58,6 +58,14 @@ report = prepare_il_policy(
 
 已有 ACT、Diffusion 模型需要明确提供 `--control-fps`；新模型自动读取保存设置。指定频率与保存频率不一致时立即终止。student 的独立仿真验证使用 `rl student-eval`。
 
+## 遥操作状态与回放
+
+Stack 的 HDF5 帧保存 `cube_top_root_state`、`cube_bottom_root_state`、`cube_top_was_lifted` 和 `task_episode_step`。物体状态包含位置、quaternion、线速度与角速度，恢复时使用记录的环境原点。Lift 与 PickPlace 使用 `object_root_state`。回放入口在启动 Isaac 前检查来源 `env_id`、所需字段与物体状态。
+
+回放逐步骤记录实际任务成功；完整执行请求帧数之后保存 `task_success_verified`。中断记录保留 `observed_task_success` 和执行帧数。共享状态与坐标转换位于 `teleop/sim_state.py`、`teleop/state_records.py`，报告检查位于 `teleop/replay_validation.py`。
+
+原生检查覆盖 Lift、PickPlace、Stack 和 CustomScene 的双相机录制、交互 checkpoint，以及保存文件的全部八帧恢复。CustomScene 保存来源 bundle 与 SHA256。这些原生步骤属于统一 GPU 阶段，执行结果继续等待验收。
+
 `il eval` 接收 `--n-episodes`、`--num-envs` 和 `--episode-length-s`，默认 episode 时间为 20 秒。评估配置设置实际 timeout、物体掉下桌面的结束条件和任务成功条件。PickPlace 使用释放后的 0.5 秒稳定条件；Lift 与 Stack 使用对应任务的成功检查；自定义场景使用 bundle 中的任务条件。
 
 每个批次中的环境各执行一个待统计 episode。较早结束的环境完成统计后保持恢复后的关节姿态，等待当前批次的其它环境结束；下一批次统一恢复环境并重置 policy。ACT 的 action queue 和 Diffusion 的 observation history 在整个 episode 中持续保存。最后一个批次按逐环境配额执行统计，报告保存精确的请求数量、每个环境的 episode、结束状态、步数和 Wilson 成功率区间。

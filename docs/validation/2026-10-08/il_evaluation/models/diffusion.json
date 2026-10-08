@@ -1,0 +1,491 @@
+{
+  "status": "actual_lerobot_training_preparation_verified",
+  "git_sha": "bb145ef2a049c5a96fd209765b52ba7b5fdbb84f",
+  "lerobot_version": "0.4.0",
+  "policy": "diffusion",
+  "validation_device": "cpu",
+  "planned_device": "cuda:0",
+  "physical_gpu": 2,
+  "dataset_root": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot",
+  "frames": 328,
+  "episodes": 1,
+  "source_files": {
+    "data/chunk-000/file-000.parquet": "fee5cb4569fd5cacaa52fdd69863d39d4535026b96be4f93f214131ef82839b7",
+    "meta/episodes/chunk-000/file-000.parquet": "04ba807872a82fc26c6a4875bff663536663ba67b00993f745227307b5a75a21",
+    "meta/info.json": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05",
+    "meta/openso101_export.json": "a38804710fac24642fc643e1c020b0153e123138a3a56c717007f03567c91049",
+    "meta/stats.json": "68c9e36154aa21376cb8a5623d947fb9903daf30e15b81e109f2015387b66ef0",
+    "meta/tasks.parquet": "6266a6fad9bb98e2b067f66500ca6438efb0598b7ae663c207bdb5d71dfd1027",
+    "videos/observation.images.overhead_camera/chunk-000/file-000.mp4": "85e54ea72a275240428d6862ed1d6db55fb20448f1e35900ca7e41599d6823d7",
+    "videos/observation.images.wrist_camera/chunk-000/file-000.mp4": "d3b324ef5c9dd1fda1c7a578ff459f96ca15b672da2bb1a460da4654df483d5b"
+  },
+  "source_files_unchanged": true,
+  "cpu_config": {
+    "dataset": {
+      "repo_id": "local/lerobot",
+      "root": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot",
+      "episodes": null,
+      "image_transforms": {
+        "enable": false,
+        "max_num_transforms": 3,
+        "random_order": false,
+        "tfs": {
+          "brightness": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "brightness": [
+                0.8,
+                1.2
+              ]
+            }
+          },
+          "contrast": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "contrast": [
+                0.8,
+                1.2
+              ]
+            }
+          },
+          "saturation": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "saturation": [
+                0.5,
+                1.5
+              ]
+            }
+          },
+          "hue": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "hue": [
+                -0.05,
+                0.05
+              ]
+            }
+          },
+          "sharpness": {
+            "weight": 1.0,
+            "type": "SharpnessJitter",
+            "kwargs": {
+              "sharpness": [
+                0.5,
+                1.5
+              ]
+            }
+          },
+          "affine": {
+            "weight": 1.0,
+            "type": "RandomAffine",
+            "kwargs": {
+              "degrees": [
+                -5.0,
+                5.0
+              ],
+              "translate": [
+                0.05,
+                0.05
+              ]
+            }
+          }
+        }
+      },
+      "revision": null,
+      "use_imagenet_stats": true,
+      "video_backend": "torchcodec",
+      "streaming": false
+    },
+    "env": null,
+    "policy": {
+      "type": "diffusion",
+      "n_obs_steps": 2,
+      "input_features": {
+        "observation.state": {
+          "type": "STATE",
+          "shape": [
+            6
+          ]
+        },
+        "observation.images.wrist_camera": {
+          "type": "VISUAL",
+          "shape": [
+            3,
+            256,
+            256
+          ]
+        },
+        "observation.images.overhead_camera": {
+          "type": "VISUAL",
+          "shape": [
+            3,
+            256,
+            256
+          ]
+        }
+      },
+      "output_features": {
+        "action": {
+          "type": "ACTION",
+          "shape": [
+            6
+          ]
+        }
+      },
+      "device": "cpu",
+      "use_amp": false,
+      "push_to_hub": false,
+      "repo_id": null,
+      "private": null,
+      "tags": null,
+      "license": null,
+      "pretrained_path": null,
+      "horizon": 16,
+      "n_action_steps": 8,
+      "normalization_mapping": {
+        "VISUAL": "MEAN_STD",
+        "STATE": "MIN_MAX",
+        "ACTION": "MIN_MAX"
+      },
+      "drop_n_last_frames": 7,
+      "vision_backbone": "resnet18",
+      "crop_shape": [
+        84,
+        84
+      ],
+      "crop_is_random": true,
+      "pretrained_backbone_weights": null,
+      "use_group_norm": true,
+      "spatial_softmax_num_keypoints": 32,
+      "use_separate_rgb_encoder_per_camera": false,
+      "down_dims": [
+        512,
+        1024,
+        2048
+      ],
+      "kernel_size": 5,
+      "n_groups": 8,
+      "diffusion_step_embed_dim": 128,
+      "use_film_scale_modulation": true,
+      "noise_scheduler_type": "DDPM",
+      "num_train_timesteps": 100,
+      "beta_schedule": "squaredcos_cap_v2",
+      "beta_start": 0.0001,
+      "beta_end": 0.02,
+      "prediction_type": "epsilon",
+      "clip_sample": true,
+      "clip_sample_range": 1.0,
+      "num_inference_steps": null,
+      "do_mask_loss_for_padding": false,
+      "optimizer_lr": 0.0001,
+      "optimizer_betas": [
+        0.95,
+        0.999
+      ],
+      "optimizer_eps": 1e-08,
+      "optimizer_weight_decay": 1e-06,
+      "scheduler_name": "cosine",
+      "scheduler_warmup_steps": 500
+    },
+    "output_dir": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/training_diffusion",
+    "job_name": "diffusion",
+    "resume": false,
+    "seed": 1000,
+    "num_workers": 4,
+    "batch_size": 8,
+    "steps": 100000,
+    "eval_freq": 20000,
+    "log_freq": 200,
+    "save_checkpoint": true,
+    "save_freq": 20000,
+    "use_policy_training_preset": true,
+    "optimizer": {
+      "type": "adam",
+      "lr": 0.0001,
+      "weight_decay": 1e-06,
+      "grad_clip_norm": 10.0,
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "eps": 1e-08
+    },
+    "scheduler": {
+      "type": "diffuser",
+      "num_warmup_steps": 500,
+      "name": "cosine"
+    },
+    "eval": {
+      "n_episodes": 50,
+      "batch_size": 50,
+      "use_async_envs": false
+    },
+    "wandb": {
+      "enable": false,
+      "disable_artifact": false,
+      "project": "lerobot",
+      "entity": null,
+      "notes": null,
+      "run_id": null,
+      "mode": null
+    },
+    "checkpoint_path": null,
+    "rename_map": {}
+  },
+  "training_arguments": [
+    "--policy.type=diffusion",
+    "--policy.device=cuda:0",
+    "--policy.push_to_hub=false",
+    "--output_dir=/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/training_diffusion",
+    "--dataset.repo_id=local/lerobot",
+    "--dataset.root=/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot",
+    "--steps=100000",
+    "--batch_size=8"
+  ],
+  "checked_batches": [
+    {
+      "sample": "first_batch",
+      "shapes": {
+        "action": [
+          8,
+          16,
+          6
+        ],
+        "observation.state": [
+          8,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          8,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          8,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 1
+    },
+    {
+      "sample": "frame_0",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 1
+    },
+    {
+      "sample": "frame_164",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 0
+    },
+    {
+      "sample": "frame_327",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 9.5367431640625e-07,
+      "action_padding_frames": 14
+    }
+  ],
+  "sampled_frame_indices": [
+    0,
+    164,
+    327
+  ],
+  "action_roundtrip_maximum_error": 3.814697265625e-06,
+  "output_directory_created": false,
+  "gpu_tests_started": false,
+  "model_graph": {
+    "status": "actual_cpu_model_graph_verified",
+    "initialization": "lerobot_configured_model",
+    "seed": 1000,
+    "batch_size": 1,
+    "sampled_frame_index": 0,
+    "parameters": 266622758,
+    "gradient_parameters": 266622758,
+    "nonzero_gradient_tensors": 212,
+    "maximum_gradient": 0.5173752903938293,
+    "loss": 0.9760904312133789,
+    "loss_components": null,
+    "inference_action": [
+      [
+        12.43328857421875,
+        25.096670150756836,
+        17.81903839111328,
+        41.82215881347656,
+        48.56001281738281,
+        0.9201202392578125
+      ]
+    ],
+    "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+    "checkpoint_roundtrip": {
+      "status": "actual_cpu_checkpoint_roundtrip_verified",
+      "directory": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_il_evaluation/il_training/diffusion/pretrained_model",
+      "initialization": "lerobot_configured_model",
+      "saved_config_device": "cuda:0",
+      "requested_device": "cpu",
+      "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+      "processor_state_tensors": 180,
+      "files": {
+        "config.json": "dbac3df6f5e400d898364ba92aa5005b1440edec23e2957a7e6910abff4e4b7a",
+        "model.safetensors": "fbfc0c1d147f776ec06702e38cc6fcbf17b507b43b757b4b0a40162aa839740b",
+        "policy_preprocessor_step_3_normalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_preprocessor.json": "fa827ac70bacec21a825e4adbe0bd6785657151bf6c9a146b3b9c259d6afc75a",
+        "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_postprocessor.json": "ff4666f11949008cb7722e8969ab913f652e6dccc6c06eab40006a464edd276f",
+        "openso101_simulation.json": "a6fcef38c859e874bf3ca3650f992a53cf4ee34757bfad4e8c3ef41d8710b62d"
+      },
+      "maximum_action_error": 0.0,
+      "inference_action": [
+        [
+          6.371940612792969,
+          0.3319138288497925,
+          2.9198837280273438,
+          50.738460540771484,
+          16.45517349243164,
+          -33.80144119262695
+        ]
+      ],
+      "checkpoint_files_unchanged": true,
+      "optimizer_updates": 0,
+      "gpu_tests_started": false,
+      "task_success_verified": false,
+      "simulation_settings": {
+        "schema_version": 1,
+        "fps": 50,
+        "camera_sizes": {
+          "wrist_camera": [
+            256,
+            256
+          ],
+          "overhead_camera": [
+            256,
+            256
+          ]
+        },
+        "joint_names": [
+          "shoulder_pan.pos",
+          "shoulder_lift.pos",
+          "elbow_flex.pos",
+          "wrist_flex.pos",
+          "wrist_roll.pos",
+          "gripper.pos"
+        ],
+        "action_units": "motor_units",
+        "dataset_info_sha256": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05"
+      }
+    },
+    "model_checkpoint_verified": true,
+    "optimizer": "Adam",
+    "optimizer_learning_rates": [
+      0.0
+    ],
+    "scheduler": "LambdaLR",
+    "optimizer_configuration_verified": true,
+    "optimizer_updates": 0,
+    "model_forward_verified": true,
+    "model_backward_verified": true,
+    "model_inference_verified": true,
+    "gpu_tests_started": false,
+    "task_success_verified": false
+  },
+  "model_forward_verified": true,
+  "training_started": false,
+  "task_success_verified": false,
+  "source_sha256": {
+    "src/openso101/il/runners/preparation.py": "839b72c07c460a54246de2cda59cea0cfe3d710d04765a8e34cb925f4ff48bd5",
+    "src/openso101/il/runners/trainer.py": "31a19181533d306b2adbb37c92e5f03a2a38341aea6b23568214700b8cd41463",
+    "src/openso101/il/runners/worker.py": "61ee9d9169a97b2252ca1cf645c66e44a1636666982b3e076c56f4919562dac1",
+    "src/openso101/il/runners/model_validation.py": "1af08e97b17e2a9da3d74441b0ccd58b139f29b821d3a31064db4978aaaf438b",
+    "src/openso101/il/policies/factory.py": "240d1d3c7746f320fc1693a6f8a216e5b11b1ef28f4d14e6e756e37047cd7844",
+    "src/openso101/il/policies/validation.py": "a2fb6e21a3864b3fa3ea658dd400294aa2d2417a6f5967df9912533c627af8ea",
+    "src/openso101/il/policies/simulation.py": "7a3c24bca1f82f6094f1a0b8f4b529e308ffa2dddfad50c326c48a72d310483b",
+    "src/openso101/il/datasets/validation.py": "46bb3563b62b899baa6a658ce3b268c429beb72596768051979cddd52a5a88be"
+  }
+}
