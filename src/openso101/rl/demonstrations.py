@@ -129,6 +129,15 @@ class DemonstrationUpdates:
         self.steps = 0
         self.latent_targets = self.dataset["actions"].clamp(
             -1 + cfg.demonstration_action_margin, 1 - cfg.demonstration_action_margin).atanh()
+        self.sequence_windows = None
+        self.last_sequence_action_mse = None
+        if cfg.demonstration_sequence_weight:
+            from .sequence_supervision import demonstration_windows
+
+            self.sequence_windows, self.action_slice, observation_size = demonstration_windows(
+                metadata, len(self.dataset["actions"]), cfg.demonstration_sequence_length, algorithm.device)
+            if observation_size != self.dataset["observations"].shape[1]:
+                raise ValueError("连续监督的实际观测字段数量不一致")
 
     def losses(self, indices):
         observations = TensorDict({"policy": self.dataset["observations"][indices]}, batch_size=[len(indices)])
@@ -146,6 +155,17 @@ class DemonstrationUpdates:
         self.stop_request.check()
         actor, critic, action_mse = self.losses(indices)
         loss = actor + .01 * critic
+        if self.sequence_windows is not None:
+            from .sequence_supervision import sequence_loss
+
+            selected = torch.randint(len(self.sequence_windows), (self.cfg.demonstration_sequence_batch_size,),
+                                     device=self.algorithm.device)
+            actor_sequence, sequence_action_mse = sequence_loss(
+                self.algorithm.policy, self.dataset["observations"], self.dataset["actions"],
+                self.sequence_windows[selected], self.action_slice,
+                margin=self.cfg.demonstration_action_margin, objective="bounded_mse")
+            loss = loss + self.cfg.demonstration_sequence_weight * actor_sequence
+            self.last_sequence_action_mse = float(sequence_action_mse.detach())
         self.algorithm.require_finite("demonstration_loss", loss)
         self.optimizer.zero_grad()
         loss.backward()
@@ -181,6 +201,9 @@ class DemonstrationUpdates:
                               "learning_rate": scheduler.get_last_lr()[0],
                               "critic_smooth_l1": float(np.mean([item[1] for item in losses])),
                               "gradient_steps": self.steps}
+                    if self.sequence_windows is not None:
+                        record["sequence_action_mse"] = self.last_sequence_action_mse
+                        record["sequence_length"] = self.cfg.demonstration_sequence_length
                     stream.write(json.dumps(record) + "\n")
                     stream.flush()
                     print(json.dumps({"demonstration_pretrain": record}), flush=True)
@@ -197,10 +220,19 @@ class DemonstrationUpdates:
                   "rmse_per_action": joint_rmse.tolist(), "critic_smooth_l1": float(critic),
                   "gradient_steps": self.steps, "rl_transitions": 0,
                   "dataset_sha256": digest(folder / "demonstrations.pt"), "task_success_verified": False}
+        if self.sequence_windows is not None:
+            report.update(sequence_length=self.cfg.demonstration_sequence_length,
+                          sequence_weight=self.cfg.demonstration_sequence_weight,
+                          sequence_windows=len(self.sequence_windows),
+                          last_training_sequence_action_mse=self.last_sequence_action_mse,
+                          sequence_objective="bounded_mse",
+                          sequence_scope="actual_recorded_states_with_model_previous_actions")
         (folder / "demonstration_initialization.json").write_text(json.dumps(report, indent=2) + "\n")
         return report
 
     def update(self):
+        for group in self.optimizer.param_groups:
+            group["lr"] = self.cfg.demonstration_online_learning_rate
         losses = []
         for _ in range(self.cfg.demonstration_updates_per_iteration):
             indices = torch.randint(len(self.dataset["actions"]), (self.cfg.demonstration_batch_size,),

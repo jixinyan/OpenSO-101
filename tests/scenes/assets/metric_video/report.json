@@ -1,0 +1,27 @@
+{
+  "status": "simulation_metric_video_verified",
+  "scope": "MuJoCo_CPU_OSMesa_landmarks",
+  "video_sha256": "f6bc9ad19b2949e3c78a253bb3f99c0df9d94d5b5c381e0f7749244fdf3cc04c",
+  "model_sha256": "a64f28446804d2f5597ce3755c33aa15df238ff1d73bd08be2bcbcd346c29a2e",
+  "measurement_sha256": "4b9836b4726a70ba9d30cfcc8b24e2d322e131f5d437a7895fc959aa71d81b8a",
+  "calibration_sha256": "77fe1d5afa020f386c595ab5915fc30e36ac535e8233e06b7e8647cccebde16d",
+  "validation_points": 4,
+  "maximum_position_error_m": 0.0008221066564673876,
+  "reprojection": {
+    "fit": {
+      "points": 8,
+      "maximum_error_px": 0.12510042785569503,
+      "rmse_px": 0.06944137797249121
+    },
+    "validation": {
+      "points": 4,
+      "maximum_error_px": 0.29000120502101323,
+      "rmse_px": 0.185522632218974
+    }
+  },
+  "mujoco_version": "3.14.0",
+  "source_sha256": "009229e31f9c353526dbbf505d5f80311794849eebc131ac85f2922d90de1980",
+  "gpu_tests_started": false,
+  "real_video_reconstruction_verified": false,
+  "robot_task_success_verified": false
+}

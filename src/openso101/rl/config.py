@@ -44,9 +44,13 @@ class TrainCfg(BaseModel):
     demonstration_epochs: int = Field(default=1000, gt=0)
     demonstration_batch_size: int = Field(default=256, gt=1)
     demonstration_learning_rate: float = Field(default=1e-3, gt=0)
+    demonstration_online_learning_rate: float = Field(default=1e-6, gt=0)
     demonstration_updates_per_iteration: int = Field(default=0, ge=0)
     demonstration_objective: Literal["bounded_mse", "latent_mse"] = "bounded_mse"
     demonstration_action_margin: float = Field(default=1e-4, gt=0, lt=.01)
+    demonstration_sequence_length: int = Field(default=1, ge=1, le=96)
+    demonstration_sequence_weight: float = Field(default=0., ge=0)
+    demonstration_sequence_batch_size: int = Field(default=32, gt=1)
 
     @model_validator(mode="after")
     def supported_algorithm(self):
@@ -72,6 +76,10 @@ class TrainCfg(BaseModel):
             raise ValueError("失败过程的动作监督需要实际采集来源")
         if self.freeze_demonstration_normalization and (not self.normalize_observations or not self.demonstration_sources):
             raise ValueError("固定示范归一化需要观测归一化和实际示范来源")
+        if (self.demonstration_sequence_length > 1) != (self.demonstration_sequence_weight > 0):
+            raise ValueError("连续动作监督需要同时指定长度与正权重")
+        if self.demonstration_sequence_weight and not self.demonstration_sources:
+            raise ValueError("连续动作监督需要实际采集来源")
         return self
 
     def batch_size(self, num_envs: int) -> int:

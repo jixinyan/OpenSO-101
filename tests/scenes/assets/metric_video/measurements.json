@@ -1,0 +1,183 @@
+{
+  "camera_model": "opencv_pinhole",
+  "video_sha256": "f6bc9ad19b2949e3c78a253bb3f99c0df9d94d5b5c381e0f7749244fdf3cc04c",
+  "frame_index": 0,
+  "image_size": [
+    640,
+    480
+  ],
+  "intrinsic_matrix": [
+    [
+      461.03571047307986,
+      0.0,
+      319.5
+    ],
+    [
+      0.0,
+      461.03571047307986,
+      239.5
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "distortion": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "fit_points": [
+    {
+      "identifier": "landmark_0",
+      "world_position_m": [
+        0.14,
+        -0.1,
+        0.03
+      ],
+      "pixel_xy": [
+        183.83333333333334,
+        272.5
+      ]
+    },
+    {
+      "identifier": "landmark_1",
+      "world_position_m": [
+        0.245,
+        -0.1,
+        0.045
+      ],
+      "pixel_xy": [
+        272.0,
+        263.0
+      ]
+    },
+    {
+      "identifier": "landmark_2",
+      "world_position_m": [
+        0.35,
+        -0.1,
+        0.06
+      ],
+      "pixel_xy": [
+        363.4054054054054,
+        253.16216216216216
+      ]
+    },
+    {
+      "identifier": "landmark_3",
+      "world_position_m": [
+        0.455,
+        -0.1,
+        0.075
+      ],
+      "pixel_xy": [
+        458.2439024390244,
+        243.0
+      ]
+    },
+    {
+      "identifier": "landmark_4",
+      "world_position_m": [
+        0.14,
+        0.0,
+        0.09
+      ],
+      "pixel_xy": [
+        193.24242424242425,
+        184.0
+      ]
+    },
+    {
+      "identifier": "landmark_5",
+      "world_position_m": [
+        0.245,
+        0.0,
+        0.03
+      ],
+      "pixel_xy": [
+        278.60714285714283,
+        222.17857142857142
+      ]
+    },
+    {
+      "identifier": "landmark_6",
+      "world_position_m": [
+        0.35,
+        0.0,
+        0.045
+      ],
+      "pixel_xy": [
+        357.2142857142857,
+        213.14285714285714
+      ]
+    },
+    {
+      "identifier": "landmark_7",
+      "world_position_m": [
+        0.455,
+        0.0,
+        0.06
+      ],
+      "pixel_xy": [
+        438.0967741935484,
+        203.67741935483872
+      ]
+    }
+  ],
+  "validation_points": [
+    {
+      "identifier": "landmark_8",
+      "world_position_m": [
+        0.14,
+        0.1,
+        0.075
+      ],
+      "pixel_xy": [
+        209.69230769230768,
+        156.5
+      ]
+    },
+    {
+      "identifier": "landmark_9",
+      "world_position_m": [
+        0.245,
+        0.1,
+        0.09
+      ],
+      "pixel_xy": [
+        281.17391304347825,
+        147.0
+      ]
+    },
+    {
+      "identifier": "landmark_10",
+      "world_position_m": [
+        0.35,
+        0.1,
+        0.03
+      ],
+      "pixel_xy": [
+        352.39130434782606,
+        182.95652173913044
+      ]
+    },
+    {
+      "identifier": "landmark_11",
+      "world_position_m": [
+        0.455,
+        0.1,
+        0.045
+      ],
+      "pixel_xy": [
+        423.0,
+        174.17391304347825
+      ]
+    }
+  ],
+  "maximum_reprojection_error_px": 2.0,
+  "measurement_source": "MuJoCo CPU OSMesa actual geom segmentation centroids"
+}

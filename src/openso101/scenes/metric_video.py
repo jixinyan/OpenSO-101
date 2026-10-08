@@ -72,7 +72,7 @@ def _solve_calibration(measurements: CameraMeasurements) -> dict:
     distortion = np.asarray(measurements.distortion, dtype=np.float64)
     objects = np.asarray([point.world_position_m for point in measurements.fit_points], dtype=np.float64)
     pixels = np.asarray([point.pixel_xy for point in measurements.fit_points], dtype=np.float64)
-    successful, rvec, tvec = cv2.solvePnP(objects, pixels, matrix, distortion, flags=cv2.SOLVEPNP_ITERATIVE)
+    successful, rvec, tvec = cv2.solvePnP(objects, pixels, matrix, distortion, flags=cv2.SOLVEPNP_SQPNP)
     if not successful:
         raise RuntimeError("OpenCV 相机标定未成功")
     rvec, tvec = cv2.solvePnPRefineLM(objects, pixels, matrix, distortion, rvec, tvec)

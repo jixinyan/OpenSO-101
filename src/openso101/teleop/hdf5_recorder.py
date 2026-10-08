@@ -44,6 +44,7 @@ SIM_STATE_KEYS: tuple[str, ...] = (
     "scene_success",
     "scene_program_phase",
     "scene_program_hold",
+    "scene_bddl_hold",
     "task_goal_root",
     "task_hold_seconds",
     "task_episode_step",

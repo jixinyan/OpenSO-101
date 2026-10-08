@@ -1,12 +1,14 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
+import math
+
 import torch
 
 
 def differential_ik(jacobian, delta, joint_position, joint_limits, *, dt, damping=0.05, max_speed=1.0):
-    if dt <= 0 or damping <= 0 or max_speed <= 0:
-        raise ValueError("dt、damping 和 max_speed 必须为正数")
+    if any(not math.isfinite(value) or value <= 0 for value in (dt, damping, max_speed)):
+        raise ValueError("dt、damping 和 max_speed 必须为正数有限数值")
     if jacobian.shape[-2] != 4 or delta.shape[-1] != 4:
         raise ValueError("IK 输入必须包含 xyz 和 yaw 四个分量")
     if jacobian.shape[:-2] != joint_position.shape[:-1] or jacobian.shape[-1] != joint_position.shape[-1]:

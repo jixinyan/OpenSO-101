@@ -16,7 +16,8 @@ args.output.mkdir(parents=True, exist_ok=False)
 environment = os.environ.copy()
 environment.update(OPENSO101_SKIP_ISAAC="1", CUDA_VISIBLE_DEVICES="", PYTHONPATH="src")
 tests = ["tests/scenes/test_bundle.py", "tests/scenes/test_editing_capabilities.py", "tests/scenes/test_bddl.py",
-         "tests/scenes/test_validation_suite.py", "tests/scenes/test_metric_video.py"]
+         "tests/scenes/test_validation_suite.py", "tests/scenes/test_metric_video.py",
+         "tests/scenes/test_layout_geometry.py", "tests/test_gpu_guard.py"]
 junit = args.output / "pytest.xml"
 with (args.output / "pytest.log").open("x") as stream:
     result = subprocess.run([sys.executable, "-m", "pytest", *tests, "-q",

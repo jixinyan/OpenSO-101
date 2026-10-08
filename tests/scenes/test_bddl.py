@@ -9,7 +9,7 @@ import trimesh
 
 from openso101.scenes.bddl import BDDLBinding, BDDLTaskTracker, bind_bddl_problem, read_bddl_problem
 from openso101.scenes.catalog import AssetCatalog
-from openso101.scenes.models import Entity, Pose, SceneSpec, Task, file_digest
+from openso101.scenes.models import Entity, Physics, Pose, SceneSpec, Task, file_digest
 
 
 def book_problem():
@@ -47,7 +47,8 @@ def book_scene(tmp_path):
         })
     entities = [Entity(entity_id="container", asset_uid=assets["container"].uid,
                        asset_sha256=assets["container"].sha256,
-                       dimensions_m=(.18, .18, .1), pose=Pose(position=(.3, 0, .05)), dynamic=False)]
+                       dimensions_m=(.18, .18, .1), pose=Pose(position=(.3, 0, .05)), dynamic=False,
+                       physics=Physics(collision="convexDecomposition"))]
     mapping = {"box.n.01_1": "container"}
     for index in range(6):
         name = f"book_{index + 1}"
@@ -121,3 +122,25 @@ def test_bddl_source_modification_is_rejected(book_scene):
     spec, _, _, problem, binding = book_scene
     with pytest.raises(ValueError, match="原文"):
         BDDLTaskTracker({**problem, "source_text": problem["source_text"] + "\n"}, binding, spec)
+
+
+def test_actual_task_checkpoint_preserves_hold_and_validates_source(book_scene):
+    spec, model, data, problem, binding = book_scene
+    tracker = BDDLTaskTracker(problem, binding, spec)
+    for _ in range(100):
+        mujoco.mj_step(model, data)
+        tracker.update(body_states(spec, model, data), True, model.opt.timestep)
+    progress = tracker.snapshot()
+    assert progress.held_seconds == pytest.approx(.2)
+    tracker.reset()
+    assert tracker.elapsed == 0 and tracker.states is None
+    tracker.restore(progress.model_dump(mode="json"))
+    assert tracker.elapsed == pytest.approx(.2) and tracker.states is None
+    mujoco.mj_step(model, data)
+    result = tracker.update(body_states(spec, model, data), True, model.opt.timestep)
+    assert result["held_seconds"] == pytest.approx(.202)
+    changed = spec.model_copy(update={"scene_id": "other_scene"})
+    with pytest.raises(ValueError, match="SHA256"):
+        BDDLTaskTracker(problem, binding, changed).restore(progress)
+    with pytest.raises(ValueError):
+        tracker.restore(progress.model_copy(update={"held_seconds": float("nan")}).model_dump(mode="json"))

@@ -1,6 +1,7 @@
 import json
 from importlib.metadata import version
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 from bddl.activity import Conditions, evaluate_goal_conditions, get_goal_conditions, get_object_scope
@@ -17,6 +18,14 @@ class BDDLBinding(Model):
     source_sha256: Digest
     object_entities: dict[str, Identifier]
     container_regions_m: dict[Identifier, tuple[Vector3, Vector3]] = Field(default_factory=dict)
+
+
+class BDDLProgress(Model):
+    schema_version: Literal[1] = 1
+    source_sha256: Digest
+    binding_sha256: Digest
+    scene_sha256: Digest
+    held_seconds: float = Field(ge=0)
 
 
 def read_bddl_problem(source: Path) -> dict:
@@ -116,6 +125,20 @@ class BDDLTaskTracker:
 
     def reset(self):
         self.elapsed = 0.
+        self.states = None
+
+    def snapshot(self):
+        return BDDLProgress(source_sha256=self.problem["source_sha256"], binding_sha256=self.binding.digest(),
+                            scene_sha256=self.spec.digest(), held_seconds=self.elapsed)
+
+    def restore(self, progress: BDDLProgress):
+        progress = BDDLProgress.model_validate(progress.model_dump() if isinstance(progress, BDDLProgress) else progress)
+        current = self.snapshot()
+        if (progress.source_sha256, progress.binding_sha256, progress.scene_sha256) != (
+                current.source_sha256, current.binding_sha256, current.scene_sha256):
+            raise ValueError("BDDL checkpoint 的来源、绑定与场景 SHA256 不一致")
+        self.elapsed = progress.held_seconds
+        self.states = None
 
     def update(self, states, gripper_open, dt):
         if not np.isfinite(dt) or dt <= 0:

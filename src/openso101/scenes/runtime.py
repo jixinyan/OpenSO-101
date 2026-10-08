@@ -130,6 +130,19 @@ def program_progress(env):
                         env._scene_program_hold, env._scene_hold_seconds), dim=-1)
 
 
+def bddl_trackers(env):
+    if env.cfg.bddl_report is None:
+        return ()
+    if not hasattr(env, "_bddl_trackers"):
+        from .bddl import BDDLBinding, BDDLTaskTracker
+
+        report = env.cfg.bddl_report
+        binding = BDDLBinding.model_validate(report["binding"])
+        env._bddl_trackers = [BDDLTaskTracker(report["problem"], binding, env.cfg.scene_spec)
+                              for _ in range(env.num_envs)]
+    return env._bddl_trackers
+
+
 def task_success(env):
     if not hasattr(env, "_scene_hold_seconds"):
         env._scene_hold_seconds = torch.zeros(env.num_envs, device=env.device)
@@ -145,17 +158,12 @@ def task_success(env):
     forces = scene_jaw_forces(env)
     bddl_valid = None
     if env.cfg.bddl_report is not None:
-        from .bddl import BDDLBinding, BDDLTaskTracker
-
-        report = env.cfg.bddl_report
-        if not hasattr(env, "_bddl_trackers"):
-            binding = BDDLBinding.model_validate(report["binding"])
-            env._bddl_trackers = [BDDLTaskTracker(report["problem"], binding, spec) for _ in range(env.num_envs)]
+        trackers = bddl_trackers(env)
         measured = {name: state.detach().cpu().numpy() for name, state in states.items()}
         opened_values = opened.detach().cpu().tolist()
         results = [tracker.update({name: state[index] for name, state in measured.items()},
                                   opened_values[index], env.step_dt)
-                   for index, tracker in enumerate(env._bddl_trackers)]
+                   for index, tracker in enumerate(trackers)]
         bddl_valid = torch.tensor([item["source_goal_satisfied"] and item["stable"] for item in results],
                                  device=env.device)
         if spec.task.require_released:

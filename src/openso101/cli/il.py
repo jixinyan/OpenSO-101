@@ -147,6 +147,7 @@ class _TeleopSimCheckpoint:
     command_cube_spawn_xy_b: Any | None = None
     command_placement_hold_seconds: Any | None = None
     scene_task_state: Any | None = None
+    bddl_progress: tuple[Any, ...] = ()
 
 
 def _clone_value(value):
@@ -339,6 +340,9 @@ class _TeleopCheckpointStore:
                 ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold")
                 if hasattr(self.env, name)
             }
+            from openso101.scenes.runtime import bddl_trackers
+
+            checkpoint.bddl_progress = tuple(tracker.snapshot() for tracker in bddl_trackers(self.env))
             self.checkpoint = checkpoint
             return
 
@@ -380,6 +384,13 @@ class _TeleopCheckpointStore:
             recorder.restore_checkpoint(checkpoint.recorder_checkpoint)
 
         if checkpoint.entity_states is not None:
+            from openso101.scenes.runtime import bddl_trackers
+
+            trackers = bddl_trackers(self.env)
+            if len(trackers) != len(checkpoint.bddl_progress):
+                raise ValueError("checkpoint 的 BDDL 环境数量不一致")
+            for tracker, progress in zip(trackers, checkpoint.bddl_progress, strict=True):
+                tracker.restore(progress)
             robot = self.scene["robot"]
             robot.write_joint_state_to_sim(checkpoint.robot_joint_pos, checkpoint.robot_joint_vel)
             robot.set_joint_position_target(checkpoint.robot_joint_pos)
@@ -661,6 +672,11 @@ def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> 
 
         forces = scene_jaw_forces(unwrapped_env)
         sim_state["scene_jaw_forces"] = _tensor_to_numpy(torch.stack(list(forces.values()), dim=1)[0])
+        from openso101.scenes.runtime import bddl_trackers
+
+        trackers = bddl_trackers(unwrapped_env)
+        if trackers:
+            sim_state["scene_bddl_hold"] = np.asarray(trackers[0].elapsed)
         for name in ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold"):
             if hasattr(unwrapped_env, name):
                 sim_state[name.removeprefix("_")] = _tensor_to_numpy(getattr(unwrapped_env, name)[0])
@@ -1775,6 +1791,16 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
                 getattr(unwrapped_env, "_" + name).zero_()
         if hasattr(unwrapped_env, "_scene_hold_seconds"):
             unwrapped_env._scene_success_step = -1
+        from openso101.scenes.runtime import bddl_trackers
+
+        trackers = bddl_trackers(unwrapped_env)
+        if trackers:
+            held = _replay_optional_frame(h5, "sim/scene_bddl_hold", frame_index)
+            if held is None:
+                raise ValueError("BDDL 场景回放需要保存的任务保持时间")
+            for tracker in trackers:
+                progress = tracker.snapshot().model_copy(update={"held_seconds": float(held)})
+                tracker.restore(progress)
         return
 
     object_root_state = _replay_optional_frame(h5, "sim/object_root_state", frame_index)
