@@ -24,6 +24,7 @@
 | 每步目标变化限制、恢复姿态保持 | `src/openso101/teleop/controls.py` |
 | 采集 checkpoint、完整场景与任务状态恢复 | `src/openso101/teleop/checkpoints.py` |
 | HDF5 与 LeRobot 录制 | `src/openso101/teleop/recorder/` |
+| LeRobot 直接采集的物理设置、episode 与场景来源 | `src/openso101/teleop/recorder/metadata.py` |
 | LeRobot 动作单位转换 | `src/openso101/teleop/so101_mapping.py` |
 | IL 模型、数据读取与训练 | `src/openso101/il/` |
 | IL 训练参数、CPU 准备与 GPU worker | `src/openso101/il/runners/trainer.py`、`preparation.py`、`worker.py` |

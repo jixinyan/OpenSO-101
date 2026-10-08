@@ -14,6 +14,9 @@ from openso101.scenes.models import file_digest
 from openso101.teleop.checkpoints import _TeleopCheckpointStore
 from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 from openso101.teleop.recorder.lerobot import OpenSO101LeRobotRecorder, _sim_radians_array_to_motor_units
+from openso101.teleop.recorder.metadata import RECORDING_METADATA_FILE, load_recording_metadata
+from openso101.teleop.simulation import recorded_simulation
+from openso101.il.policies.simulation import dataset_simulation
 
 
 def validate_frames(root, repo_id, source, segments):
@@ -56,7 +59,9 @@ def check_case(source, root, asynchronous):
                for name in ("wrist_camera", "overhead_camera")}
     repo_id = f"local/recorder_{'async' if asynchronous else 'sync'}"
     fps = int(source.attrs["fps"])
-    recorder = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps)
+    simulation = recorded_simulation(source.attrs)
+    recorder = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps,
+                                      simulation=simulation)
     recorder.init_dataset()
     if asynchronous:
         recorder._dataset.start_image_writer(num_threads=4)
@@ -102,14 +107,21 @@ def check_case(source, root, asynchronous):
                 raise RuntimeError("LeRobot checkpoint 恢复后的帧数不一致")
             for index in range(start + checkpoint_size, end):
                 add_frame(index)
-            recorder.save_episode()
+            with pytest.raises(ValueError):
+                recorder.save_episode(success=1)
+            if recorder.create_checkpoint() != end - start:
+                raise RuntimeError("无效成功标记更改了正在录制的 episode")
+            recorder.save_episode(success=bool(source.attrs["success"]) if end == 328 else False)
         recorder.start_episode()
+        metadata_digest = file_digest(root / RECORDING_METADATA_FILE)
         add_frame(0)
         pending = [recorder._dataset._get_image_file_path(2, key, 0)
                    for key in recorder._dataset.meta.camera_keys]
         recorder.cancel_episode()
         if any(path.exists() for path in pending) or recorder._dataset.episode_buffer["size"]:
             raise RuntimeError("LeRobot 取消 episode 后仍有待保存的数据")
+        if file_digest(root / RECORDING_METADATA_FILE) != metadata_digest:
+            raise RuntimeError("LeRobot 取消 episode 更改了已有来源记录")
     finally:
         recorder.close()
     if recorder._dataset.image_writer is not None or recorder._dataset.writer is not None or recorder._dataset.meta.writer is not None:
@@ -119,7 +131,9 @@ def check_case(source, root, asynchronous):
     first = validate_frames(root, repo_id, source, [(0, 164), (164, 328)])
     saved_files = {path: file_digest(path) for parent in (root / "data", root / "videos")
                    for path in parent.rglob("*") if path.is_file()}
-    reopened = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps)
+    first_metadata = load_recording_metadata(root)
+    reopened = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps,
+                                      simulation=simulation)
     try:
         reopened.start_episode()
         for index in range(8):
@@ -131,15 +145,33 @@ def check_case(source, root, asynchronous):
     if any(file_digest(path) != digest for path, digest in saved_files.items()):
         raise RuntimeError("重新打开 LeRobot 采集更改了已有数据和视频")
     result = validate_frames(root, repo_id, source, [(0, 164), (164, 328), (0, 8)])
+    metadata = load_recording_metadata(root)
+    if (metadata.simulation != simulation or metadata.episodes[:2] != first_metadata.episodes
+            or [episode.success for episode in metadata.episodes] != [False, bool(source.attrs["success"]), False]
+            or [episode.frames for episode in metadata.episodes] != [164, 164, 8]
+            or dataset_simulation(root, fps, 3) != (simulation, None)):
+        raise RuntimeError("LeRobot 直接采集来源、成功标记或 IL 读取不一致")
     mismatch = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps + 1)
     try:
         with pytest.raises(ValueError, match="FPS"):
             mismatch.init_dataset()
     finally:
         mismatch.close()
+    for requested in (None, simulation.model_copy(update={"env_id": "OpenSO101-Lift-v0"})):
+        mismatch = OpenSO101LeRobotRecorder(repo_id, str(root), str(source.attrs["task"]), cameras, fps,
+                                           simulation=requested)
+        try:
+            with pytest.raises(ValueError, match="仿真来源"):
+                mismatch.init_dataset()
+        finally:
+            mismatch.close()
     result.update({"original_frames_checked": first["frames"], "checkpoint_camera_suffix_removed": True,
                    "cancelled_episode_removed": True, "reopened_dataset_preserved": True,
                    "input_camera_arrays_preserved": True, "writers_closed": True,
+                   "recorded_simulation": simulation.model_dump(mode="json"),
+                   "recording_metadata_sha256": file_digest(root / RECORDING_METADATA_FILE),
+                   "recorded_simulation_preserved": True, "episode_success_preserved": True,
+                   "append_source_preflight_verified": True,
                    "files": {str(path.relative_to(root)): file_digest(path) for path in root.rglob("*") if path.is_file()}})
     return result
 
@@ -170,9 +202,12 @@ def main():
     report = {"status": "actual_lerobot_recorder_verified", "cases": cases,
               "source_episode": str(args.episode), "source_sha256": source_digest,
               "source_unchanged": True, "gpu_tests_started": False, "native_restore_verified": False,
+              "recorded_simulation_preserved": True, "episode_success_preserved": True,
+              "append_source_preflight_verified": True,
               "task_success_verified": False,
               "checkpoint_store_source_sha256": file_digest(Path("src/openso101/teleop/checkpoints.py")),
               "recorder_source_sha256": file_digest(Path("src/openso101/teleop/recorder/lerobot.py")),
+              "metadata_source_sha256": file_digest(Path("src/openso101/teleop/recorder/metadata.py")),
               "validation_source_sha256": file_digest(Path(__file__))}
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({key: report[key] for key in ("status", "source_unchanged", "gpu_tests_started")}))

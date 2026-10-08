@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 from openso101.scenes.models import Digest, Model, file_digest
 from openso101.teleop.so101_mapping import LEROBOT_SO101_ACTION_NAMES
 from openso101.teleop.simulation import RecordedSimulation
+from openso101.teleop.recorder.metadata import RECORDING_METADATA_FILE, load_recording_metadata
 from openso101.teleop.timing import control_rate_fps
 
 
@@ -21,12 +22,15 @@ class SimulationSettings(Model):
     action_units: Literal["motor_units"] = "motor_units"
     dataset_info_sha256: Digest | None = None
     dataset_export_sha256: Digest | None = None
+    dataset_recording_sha256: Digest | None = None
     recorded_simulation: RecordedSimulation | None = None
 
     @model_validator(mode="after")
     def supported_inputs(self):
         if self.joint_names != LEROBOT_SO101_ACTION_NAMES:
             raise ValueError("IL 仿真设置需要 SO-101 的六个 LeRobot 关节名称与顺序")
+        if self.dataset_export_sha256 is not None and self.dataset_recording_sha256 is not None:
+            raise ValueError("IL 数据来源需要明确的导出或直接采集记录")
         if set(self.camera_sizes) != {"wrist_camera", "overhead_camera"}:
             raise ValueError("IL 仿真设置需要 wrist_camera 和 overhead_camera")
         if any(type(value) is not int or value < 16 for shape in self.camera_sizes.values() for value in shape):
@@ -59,6 +63,8 @@ def save_simulation_settings(checkpoint: Path, dataset) -> SimulationSettings:
     settings = SimulationSettings(fps=dataset.meta.fps, camera_sizes=_camera_sizes(configuration),
                                   dataset_info_sha256=file_digest(Path(dataset.root) / "meta/info.json"),
                                   dataset_export_sha256=export_digest,
+                                  dataset_recording_sha256=(file_digest(Path(dataset.root) / RECORDING_METADATA_FILE)
+                                      if (Path(dataset.root) / RECORDING_METADATA_FILE).is_file() else None),
                                   recorded_simulation=simulation)
     with (checkpoint / SIMULATION_SETTINGS_FILE).open("x") as stream:
         stream.write(settings.model_dump_json(indent=2) + "\n")
@@ -67,6 +73,13 @@ def save_simulation_settings(checkpoint: Path, dataset) -> SimulationSettings:
 
 def dataset_simulation(root: Path, fps: int, episodes: int):
     path = root / "meta/openso101_export.json"
+    recorded = load_recording_metadata(root)
+    if recorded is not None:
+        if path.exists():
+            raise ValueError("IL 数据集不能同时包含导出与直接采集来源")
+        if recorded.fps != fps or len(recorded.episodes) != episodes:
+            raise ValueError("IL 直接采集来源与 LeRobot 的 FPS 或 episode 数量不一致")
+        return recorded.simulation, None
     if not path.is_file():
         return None, None
     export = json.loads(path.read_text())

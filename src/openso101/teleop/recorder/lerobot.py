@@ -11,6 +11,11 @@ from typing import Any, Mapping
 import numpy as np
 
 from openso101.robots import SO101_SIM_JOINT_NAMES
+from openso101.scenes.models import file_digest
+from openso101.teleop.simulation import RecordedSimulation
+from openso101.teleop.timing import control_rate_fps
+
+from .metadata import RECORDING_METADATA_FILE, RecordingEpisode, RecordingMetadata, load_recording_metadata
 
 from ..so101_mapping import (
     LEROBOT_SO101_ACTION_NAMES,
@@ -230,13 +235,32 @@ def _sim_radians_array_to_motor_units(values: Any) -> np.ndarray:
 class OpenSO101LeRobotRecorder:
     """使用 LeRobotDataset 采集双相机 episode。"""
 
-    def __init__(self, repo_id: str, root: str, task_name: str, cameras: Mapping[str, Mapping[str, int]], fps: int):
+    def __init__(self, repo_id: str, root: str, task_name: str, cameras: Mapping[str, Mapping[str, int]], fps: int,
+                 *, simulation: RecordedSimulation | None = None, scene: Path | None = None):
         self.repo_id = repo_id
-        self.root = root
+        self.root = str(Path(root).expanduser().resolve())
         self.task_name = task_name
         self.cameras = dict(cameras)
         self.features = build_lerobot_features(self.cameras, fps=fps)
         self.fps = int(fps)
+        if not task_name.strip():
+            raise ValueError("LeRobot 录制需要非空任务名称")
+        if simulation is not None and control_rate_fps(simulation.physics_dt, simulation.decimation) != self.fps:
+            raise ValueError("LeRobot 录制物理周期与 FPS 不一致")
+        self.simulation = simulation
+        self.scene = scene.expanduser().resolve() if scene is not None else None
+        if self.scene is not None:
+            from openso101.scenes.isaaclab.usd import verify_compilation
+
+            dataset_root = Path(root).expanduser().resolve()
+            if self.scene.is_relative_to(dataset_root) or dataset_root.is_relative_to(self.scene):
+                raise ValueError("LeRobot 采集目录需要独立于来源场景目录")
+            if simulation is None or verify_compilation(self.scene)["scene_sha256"] != simulation.scene_sha256:
+                raise ValueError("LeRobot 录制场景与仿真来源不一致")
+        elif simulation is not None and simulation.scene_sha256 is not None:
+            raise ValueError("LeRobot 录制场景需要提供对应来源目录")
+        self._metadata = None
+        self._metadata_digest = None
         self._dataset = None
         self._recording = False
         self._frames_in_episode = 0
@@ -256,6 +280,11 @@ class OpenSO101LeRobotRecorder:
 
         if has_lerobot_metadata(self.root):
             validate_lerobot_metadata(Path(self.root))
+            metadata = load_recording_metadata(Path(self.root))
+            if metadata is None:
+                raise ValueError("追加 LeRobot 采集需要已有 openso101_recording.json 来源记录")
+            if metadata.fps != self.fps or metadata.simulation != self.simulation:
+                raise ValueError("已有 LeRobot 数据集的 FPS 或仿真来源与采集配置不一致")
             self._dataset = LeRobotDataset(self.repo_id, root=self.root)
             if self._dataset.fps != self.fps:
                 raise ValueError("已有 LeRobot 数据集的 FPS 与采集频率不一致")
@@ -263,6 +292,8 @@ class OpenSO101LeRobotRecorder:
                 actual = self._dataset.features[name]
                 if any(actual[key] != expected[key] for key in ("dtype", "names")) or tuple(actual["shape"]) != expected["shape"]:
                     raise ValueError(f"已有 LeRobot 数据集的 {name} 与采集配置不一致")
+            self._metadata = metadata
+            self._metadata_digest = file_digest(Path(self.root) / RECORDING_METADATA_FILE)
             print(f"[INFO]: 已打开 LeRobot 数据集: {self.root}")
             return
 
@@ -276,6 +307,17 @@ class OpenSO101LeRobotRecorder:
             root=self.root,
             robot_type="so101_follower",
         )
+        scene_metadata = {}
+        if self.scene is not None:
+            from openso101.scenes.recording import store_recording_scene
+
+            scene_metadata = store_recording_scene(self.scene, Path(self.root))
+        self._metadata = RecordingMetadata(fps=self.fps, simulation=self.simulation,
+                                          scene_relative_path=scene_metadata.get("scene_relative_path"))
+        path = Path(self.root) / RECORDING_METADATA_FILE
+        with path.open("x") as stream:
+            stream.write(self._metadata.model_dump_json(indent=2) + "\n")
+        self._metadata_digest = file_digest(path)
         print(f"[INFO]: 已创建 LeRobot 数据集: {self.root}")
 
     def start_episode(self) -> None:
@@ -283,6 +325,9 @@ class OpenSO101LeRobotRecorder:
             raise RuntimeError("开始 episode 需要未关闭且没有正在录制的 LeRobot recorder")
         if self._dataset is None:
             self.init_dataset()
+        metadata_path = Path(self.root) / RECORDING_METADATA_FILE
+        if file_digest(metadata_path) != self._metadata_digest or metadata_path.with_suffix(".json.pending").exists():
+            raise RuntimeError("开始 LeRobot 录制需要完整且没有外部更改的来源记录")
         if self._dataset.episode_buffer is None:
             self._dataset.episode_buffer = self._dataset.create_episode_buffer()
         if self._dataset.episode_buffer["size"]:
@@ -337,8 +382,21 @@ class OpenSO101LeRobotRecorder:
         if self._frames_in_episode == 0:
             self.cancel_episode()
             return
+        episode = RecordingEpisode(episode_index=self._dataset.meta.total_episodes,
+                                   frames=self._frames_in_episode, task=self.task_name, success=success)
+        path = Path(self.root) / RECORDING_METADATA_FILE
+        pending = path.with_suffix(".json.pending")
+        if (file_digest(path) != self._metadata_digest or pending.exists()
+                or episode.episode_index != len(self._metadata.episodes)):
+            raise RuntimeError("LeRobot 保存需要完整且没有外部更改的来源记录")
+        metadata = RecordingMetadata.model_validate(self._metadata.model_dump() | {
+            "episodes": [*self._metadata.episodes, episode]})
         self._dataset.save_episode()
         self._recording = False
+        with pending.open("x") as stream:
+            stream.write(metadata.model_dump_json(indent=2) + "\n")
+        pending.replace(path)
+        self._metadata, self._metadata_digest = metadata, file_digest(path)
         print(f"[INFO]: 已保存 LeRobot episode: {self._frames_in_episode} 帧。")
 
     def cancel_episode(self) -> None:

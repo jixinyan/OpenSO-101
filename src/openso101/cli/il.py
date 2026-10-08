@@ -335,9 +335,14 @@ def _cmd_record(args: argparse.Namespace, cleanup: ExitStack) -> int:
         if not args.no_record:
             scene_metadata = None
             if getattr(args, "scene", None):
-                from openso101.scenes.recording import store_recording_scene
+                if args.record_format == "hdf5":
+                    from openso101.scenes.recording import store_recording_scene
 
-                scene_metadata = store_recording_scene(Path(args.scene), Path(args.repo_root))
+                    scene_metadata = store_recording_scene(Path(args.scene), Path(args.repo_root))
+                else:
+                    from openso101.scenes.isaaclab.usd import verify_compilation
+
+                    scene_metadata = {"scene_sha256": verify_compilation(Path(args.scene))["scene_sha256"]}
             if args.record_format == "hdf5":
                 recorder = OpenSO101HDF5TeleopRecorder(
                     root=args.repo_root,
@@ -351,16 +356,14 @@ def _cmd_record(args: argparse.Namespace, cleanup: ExitStack) -> int:
                     simulation=runtime_simulation(unwrapped_env, args.task, scene_metadata),
                 )
             else:
-                # Direct-LeRobot record path (programmatic, not exposed on the
-                # CLI). LeRobotDataset() requires an identifier even for local
-                # datasets — derive it from --repo-root so the Hub upload can
-                # happen later via `il push`.
                 recorder = OpenSO101LeRobotRecorder(
                     repo_id=_record_local_dataset_id,
                     root=args.repo_root,
                     task_name=args.task_name,
                     cameras=camera_metadata,
                     fps=record_fps,
+                    simulation=runtime_simulation(unwrapped_env, args.task, scene_metadata),
+                    scene=Path(args.scene) if getattr(args, "scene", None) else None,
                 )
                 cleanup.callback(recorder.close)
             cleanup.callback(lambda: recorder.cancel_episode() if recorder.recording else None)
@@ -1216,6 +1219,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         ),
     )
     p_rec.add_argument("--no-record", action="store_true")
+    p_rec.add_argument("--record-format", choices=("hdf5", "lerobot"), default="hdf5",
+                       help="保存完整 HDF5 仿真状态或直接采集双相机 LeRobot 数据")
     p_rec.add_argument("--profile-teleop", action="store_true")
     p_rec.add_argument("--no-camera-viewports", action="store_true")
     # Startup home-pose hold: keeps sim at the cube-facing init pose until the

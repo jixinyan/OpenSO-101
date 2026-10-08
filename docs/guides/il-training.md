@@ -58,6 +58,8 @@ report = prepare_il_policy(
 
 HDF5 录制保存实际 `physics_dt`、`decimation` 和任务名称。LeRobot 导出的 `meta/openso101_export.json` 按 episode 保存来源文件 SHA256、任务 profile、environment mode、reward discount 与场景 SHA256。模型准备使用这些记录保存来源物理设置和导出 metadata SHA256；同一模型的数据需要具有一致的物理设置、任务与场景。已有来源缺少这些信息时，模型记录保持明确的缺少状态。
 
+直接 LeRobot 采集使用 `meta/openso101_recording.json` 保存仿真设置和实际 episode 信息。数据读取逐项检查 FPS、episode 数量、帧数、任务标签和场景来源；模型保存相同的来源物理设置与 `dataset_recording_sha256`。导出来源使用 `dataset_export_sha256`，单个数据集具有明确的来源类型。同步与异步直接采集共用 `teleop/recorder/metadata.py`；模型来源读取位于 `il/policies/simulation.py`。
+
 保存了 `grasp_v3` 或 `grasp_v4` 的模型使用对应 profile 的机器人、物体、接触和 actuator 设置，动作使用六个关节的绝对位置目标。控制周期使用记录的物理周期与 `decimation`。Lift 评估需要两侧夹爪接触并持续 0.25 秒；PickPlace 使用 0.5 秒稳定放置。模型与请求任务或场景不一致时，在启动 Isaac 前终止。评估报告需要保存在模型目录之外。原生设置与实际物理结果继续等待 GPU 验收。
 
 已有 ACT、Diffusion 模型需要明确提供 `--control-fps`；新模型自动读取保存设置。指定频率与保存频率不一致时立即终止。student 的独立仿真验证使用 `rl student-eval`。

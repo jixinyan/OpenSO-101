@@ -7,6 +7,8 @@ from pathlib import Path
 
 from openso101.il.datasets import load_lerobot_dataset
 from openso101.il.policies.factory import load_policy
+from openso101.il.policies.simulation import dataset_simulation, load_simulation_settings
+from openso101.teleop.recorder.metadata import RECORDING_METADATA_FILE
 from openso101.scenes.models import file_digest
 
 
@@ -57,6 +59,9 @@ def main():
     if os.environ.get("CUDA_VISIBLE_DEVICES") != "":
         raise ValueError("IL 训练准备验收需要禁止 CUDA")
     handle = load_lerobot_dataset(args.dataset)
+    simulation, export_digest = dataset_simulation(handle.root, handle.dataset.meta.fps, handle.num_episodes)
+    recording_path = handle.root / RECORDING_METADATA_FILE
+    recording_digest = file_digest(recording_path) if recording_path.is_file() else None
     if args.output.exists() or args.output.resolve().is_relative_to(handle.root):
         raise ValueError("IL 检查输出需要使用数据集之外的新目录")
     source_files = sorted(path for folder in ("meta", "data", "videos")
@@ -84,6 +89,10 @@ def main():
                 or report["model_graph"]["optimizer_updates"] != 0 or training_output.exists()):
             raise RuntimeError("IL 实际模型和数据准备验收未通过")
         checkpoint = Path(report["model_graph"]["checkpoint_roundtrip"]["directory"])
+        settings = load_simulation_settings(checkpoint)
+        if (settings.recorded_simulation != simulation or settings.dataset_export_sha256 != export_digest
+                or settings.dataset_recording_sha256 != recording_digest):
+            raise RuntimeError("IL 完整模型没有保存实际导出或直接采集来源")
         rejected_checkpoints = check_checkpoint_inputs(checkpoint, args.output / f"checkpoint_inputs_{policy}")
         reports[policy] = {"report": str(report_path), "sha256": file_digest(report_path),
                            "model_graph": report["model_graph"],
@@ -115,6 +124,9 @@ def main():
         raise RuntimeError("IL 验收期间的数据来源 SHA256 发生变化")
     report = {"status": "actual_il_training_preparation_verified", "policies": reports,
               "frames": handle.num_frames, "episodes": handle.num_episodes,
+              "recorded_simulation_preserved": True,
+              "dataset_recording_source_verified": recording_digest is not None,
+              "dataset_recording_sha256": recording_digest,
               "rejected_configs": rejected, "source_files_unchanged": True,
               "source_files": sources, "gpu_tests_started": False, "training_started": False,
               "task_success_verified": False, "source_sha256": file_digest(Path(__file__))}

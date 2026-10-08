@@ -129,6 +129,9 @@
       "requirements": [
         {"report": "lerobot_recorder/report.json", "pointer": "/status", "equals": "actual_lerobot_recorder_verified"},
         {"report": "lerobot_recorder/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/recorded_simulation_preserved", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/episode_success_preserved", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/append_source_preflight_verified", "equals": true},
         {"report": "lerobot_recorder/report.json", "pointer": "/cases/sync/frames", "minimum": 336},
         {"report": "lerobot_recorder/report.json", "pointer": "/cases/async/frames", "minimum": 336},
         {"report": "lerobot_recorder/report.json", "pointer": "/cases/sync/writers_closed", "equals": true},
@@ -138,10 +141,12 @@
     },
     {
       "name": "il_training_preparation", "resource": "cpu", "depends_on": ["lerobot_recorder"],
-      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "{output}/lerobot_export/sync", "--output", "{output}/il_training"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "{output}/lerobot_recorder/sync", "--output", "{output}/il_training"],
       "requirements": [
         {"report": "il_training/report.json", "pointer": "/status", "equals": "actual_il_training_preparation_verified"},
         {"report": "il_training/report.json", "pointer": "/source_files_unchanged", "equals": true},
+        {"report": "il_training/report.json", "pointer": "/recorded_simulation_preserved", "equals": true},
+        {"report": "il_training/report.json", "pointer": "/dataset_recording_source_verified", "equals": true},
         {"report": "il_training/report.json", "pointer": "/policies/act/model_graph/model_checkpoint_verified", "equals": true},
         {"report": "il_training/report.json", "pointer": "/policies/diffusion/model_graph/model_checkpoint_verified", "equals": true},
         {"report": "il_training/report.json", "pointer": "/training_started", "equals": false},
@@ -233,6 +238,7 @@
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-Lift-v0", "--output", "{output}/native_lift_checkpoint"],
       "requirements": [
         {"report": "native_lift_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/direct_lerobot_source_verified", "equals": true},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_lift_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true},
@@ -244,6 +250,7 @@
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-PickPlace-v0", "--output", "{output}/native_pick_place_checkpoint"],
       "requirements": [
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_pick_place_checkpoint/report.json", "pointer": "/direct_lerobot_source_verified", "equals": true},
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_pick_place_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
@@ -282,6 +289,7 @@
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-Stack-v0", "--output", "{output}/native_stack_checkpoint"],
       "requirements": [
         {"report": "native_stack_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_stack_checkpoint/report.json", "pointer": "/direct_lerobot_source_verified", "equals": true},
         {"report": "native_stack_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
         {"report": "native_stack_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_stack_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
@@ -292,6 +300,7 @@
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-CustomScene-v0", "--scene", "outputs/rl_progress/agent_runtime_bundle", "--output", "{output}/native_custom_checkpoint"],
       "requirements": [
         {"report": "native_custom_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_custom_checkpoint/report.json", "pointer": "/direct_lerobot_source_verified", "equals": true},
         {"report": "native_custom_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
         {"report": "native_custom_checkpoint/report.json", "pointer": "/recorded_frames_restored", "equals": 8},
         {"report": "native_custom_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true},

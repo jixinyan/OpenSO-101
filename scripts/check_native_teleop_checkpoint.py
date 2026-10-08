@@ -1,5 +1,6 @@
 import argparse
 import json
+from contextlib import ExitStack
 from pathlib import Path
 
 from openso101.rl.gpu_scope import configure_visible_gpu
@@ -35,9 +36,9 @@ def main():
     physical_gpu = configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
-    app = AppLauncher(headless=True, enable_cameras=True).app
-    env, recorder = None, None
-    try:
+    with ExitStack() as cleanup:
+        app = AppLauncher(headless=True, enable_cameras=True).app
+        cleanup.callback(app.close)
         import gymnasium as gym
         import h5py
         import torch
@@ -47,7 +48,11 @@ def main():
         from openso101.robots import SO101_SIM_JOINT_NAMES
         from openso101.teleop.checkpoints import _TeleopCheckpointStore
         from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
-        from openso101.teleop.recorder.lerobot import collect_camera_buffers, discover_camera_metadata, read_robot_proprio
+        from openso101.teleop.recorder.lerobot import (
+            OpenSO101LeRobotRecorder, collect_camera_buffers, discover_camera_metadata, read_robot_proprio,
+        )
+        from openso101.teleop.recorder.metadata import RECORDING_METADATA_FILE, load_recording_metadata
+        from openso101.il.datasets.validation import validate_lerobot_metadata
         from openso101.teleop.timing import _env_control_rate_fps
         from openso101.teleop.success import task_success_vector
         from openso101.teleop.sim_state import _collect_replay_sim_state, _replay_restore_sim_state_from_episode
@@ -67,6 +72,7 @@ def main():
         if args.scene is not None:
             cfg.configure_scene(args.scene)
         env = gym.make(args.task, cfg=cfg)
+        cleanup.callback(env.close)
         env.reset()
         runtime = env.unwrapped
         scene = runtime.scene
@@ -83,6 +89,7 @@ def main():
                                              sim_joint_names=SO101_SIM_JOINT_NAMES, env_id=args.task, flush_steps=4,
                                              scene_metadata=scene_metadata,
                                              simulation=runtime_simulation(runtime, args.task, scene_metadata))
+        cleanup.callback(recorder.cancel_episode)
         recorder.start_episode()
 
         def record_step(action):
@@ -134,6 +141,12 @@ def main():
         saved_frames = recorder.total_frames
         episode = recorder.save_episode(success=False)
         validate_hdf5_episode(episode)
+        direct_root = args.output / "lerobot"
+        direct_recorder = OpenSO101LeRobotRecorder("local/native_checkpoint", str(direct_root), args.task,
+            discover_camera_metadata(scene), _env_control_rate_fps(runtime),
+            simulation=recorder.simulation, scene=args.scene)
+        cleanup.callback(direct_recorder.close)
+        direct_recorder.start_episode()
         recorded_errors = {}
         with h5py.File(episode, "r") as recording:
             if recorded_simulation(recording.attrs) != recorder.simulation:
@@ -142,32 +155,34 @@ def main():
             replay = ReplayValidation(episode, args.output / "recorded_restore.json", args.task,
                                       recording, runtime, range(saved_frames), 0)
             for frame_index in range(saved_frames):
+                direct_recorder.add_frame(action=recording["action"][frame_index],
+                    qpos=recording["observations/qpos"][frame_index],
+                    camera_buffers={name: recording[f"observations/images/{name}"][frame_index]
+                                    for name in ("wrist_camera", "overhead_camera")})
                 _replay_restore_sim_state_from_episode(runtime, scene, recording, frame_index)
                 runtime.sim.forward()
                 scene.update(0.0)
                 replay.check_restore(runtime, recording, frame_index)
                 for name, error in replay.report["restore_errors"].items():
                     recorded_errors[name] = max(recorded_errors.get(name, 0.0), error)
+        direct_recorder.save_episode(success=False)
+        direct_recorder.close()
+        validate_lerobot_metadata(direct_root)
+        direct_metadata = load_recording_metadata(direct_root)
+        if direct_metadata.simulation != recorder.simulation or direct_metadata.episodes[0].frames != saved_frames:
+            raise ValueError("原生 LeRobot 采集来源与 HDF5 的物理参数或帧数不一致")
         result = {"status": "native_teleop_checkpoint_verified", "task": args.task,
                   "scene": str(args.scene) if args.scene is not None else None, "physical_gpu": physical_gpu,
                   "restored_state_maximum_errors": errors, "saved_frames": saved_frames,
                   "episode": str(episode), "episode_sha256": file_digest(episode),
                   "recorded_state_restore_errors": recorded_errors, "recorded_frames_restored": saved_frames,
+                  "direct_lerobot_source_verified": True, "direct_lerobot_frames": saved_frames,
+                  "direct_lerobot_metadata_sha256": file_digest(direct_root / RECORDING_METADATA_FILE),
                   "state_records_source_sha256": file_digest(Path("src/openso101/teleop/state_records.py")),
                   "sim_state_source_sha256": file_digest(Path("src/openso101/teleop/sim_state.py")),
                   "checkpoint_source_sha256": file_digest(Path("src/openso101/teleop/checkpoints.py")),
                   "validator_source_sha256": file_digest(Path(__file__)),
                   "native_restore_verified": True, "task_success_verified": False, "training_started": False}
-    finally:
-        try:
-            if recorder is not None:
-                recorder.cancel_episode()
-        finally:
-            try:
-                if env is not None:
-                    env.close()
-            finally:
-                app.close()
     result["native_resources_closed"] = True
     (args.output / "report.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(result, ensure_ascii=False))

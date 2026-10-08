@@ -72,6 +72,9 @@ def validate_lerobot_metadata(root: Path) -> list[Path]:
         frames += metadata.num_rows
     if frames != next_index or frames != info["total_frames"]:
         raise ValueError("LeRobot 实际数据帧数、episode 范围与 total_frames 不一致")
+    from openso101.teleop.recorder.metadata import validate_recording_metadata
+
+    validate_recording_metadata(root, info["fps"], episodes)
     return sorted(files)
 
 

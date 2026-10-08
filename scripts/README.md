@@ -18,7 +18,7 @@
 | 实际 HDF5 状态转换与控制频率 | `check_recorded_state.py` |
 | 实际 HDF5 checkpoint、缓存与数组内容检查 | `check_recorder_checkpoint.py` |
 | 实际记录目标的变化限制和恢复姿态保持 | `check_teleop_controls.py` |
-| LeRobot 直接采集、相机裁剪、取消与追加采集 | `check_lerobot_recorder.py` |
+| LeRobot 直接采集、来源物理设置、成功标记、相机裁剪与追加采集 | `check_lerobot_recorder.py` |
 | 原生场景与采集 checkpoint 恢复检查 | `check_native_teleop_checkpoint.py`，通过 GPU 入口执行 |
 | LeRobot 配置、数据和完整 ACT、Diffusion 模型的 CPU 检查 | `check_il_training.py` |
 | 实际并行轨迹的评估统计与完整模型序列推理 | `check_il_evaluation.py` |
