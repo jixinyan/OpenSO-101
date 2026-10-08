@@ -228,9 +228,11 @@ def train(args):
         CheckpointMeta.read(output)
         print(json.dumps({"run": str(output.resolve()), "checkpoint": checkpoint.name, "status": "trained"}))
     finally:
-        if env is not None:
-            env.close()
-    app.close()
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            app.close()
     return 0
 
 
@@ -366,9 +368,11 @@ def evaluate(args, *, play=False, student_folder=None):
         report.write_text(json.dumps(result, indent=2))
         print(json.dumps({"report": str(report), "success_rate": result["success_rate"]}))
     finally:
-        if env is not None:
-            env.close()
-    app.close()
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            app.close()
     return 0
 
 
@@ -413,7 +417,9 @@ def distill(args):
         train_vision_student(env, teacher, output, args.iterations, args.rollout_steps)
         print(json.dumps({"student": str(output), "status": "trained"}))
     finally:
-        if env is not None:
-            env.close()
-    app.close()
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            app.close()
     return 0

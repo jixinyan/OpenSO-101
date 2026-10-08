@@ -253,7 +253,9 @@ def export(args):
         (output / "validation.json").write_text(json.dumps(summary, indent=2))
         print(json.dumps(summary))
     finally:
-        if env is not None:
-            env.close()
-    app.close()
+        try:
+            if env is not None:
+                env.close()
+        finally:
+            app.close()
     return 0

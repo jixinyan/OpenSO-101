@@ -26,6 +26,13 @@ def main():
     from isaaclab.app import AppLauncher
 
     app = AppLauncher(headless=True, enable_cameras=args.cameras).app
+    try:
+        _validate(args)
+    finally:
+        app.close()
+
+
+def _validate(args):
     import gymnasium as gym
     import h5py
     import numpy as np
@@ -193,7 +200,6 @@ def main():
             json.dump(report, stream, indent=2)
     finally:
         env.close()
-    app.close()
 
 
 if __name__ == "__main__":
