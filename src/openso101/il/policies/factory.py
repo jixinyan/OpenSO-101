@@ -68,7 +68,9 @@ def load_policy(
     local = Path(path).expanduser()
     if (local / "student.json").is_file():
         from openso101.rl.student import RLStudentPolicy
+        from openso101.rl.gpu_guard import verify_cuda_inference
 
+        verify_cuda_inference(device or "cpu")
         return RLStudentPolicy(local.resolve(), device or "cpu")
     ckpt_dir = _resolve_checkpoint_dir(path)
     processors = validate_checkpoint_files(ckpt_dir)
@@ -88,6 +90,9 @@ def load_policy(
         ckpt_dir, cli_overrides=[f"--device={requested}"] if requested is not None else [])
     if requested is not None and cfg.device != requested:
         raise ValueError("模型配置 device 与请求不一致")
+    from openso101.rl.gpu_guard import verify_cuda_inference
+
+    verify_cuda_inference(cfg.device)
     pre_overrides = _processor_overrides(processors[POLICY_PREPROCESSOR_DEFAULT_NAME], cfg.device)
     post_overrides = _processor_overrides(processors[POLICY_POSTPROCESSOR_DEFAULT_NAME], "cpu")
     preprocessor, postprocessor = make_pre_post_processors(

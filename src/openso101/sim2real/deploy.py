@@ -1,30 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Deploy a trained LeRobot policy on the real SO-101 follower arm.
-
-Architecture mirrors :func:`openso101.cli.il._cmd_play` so the same
-checkpoint runs in sim OR on hardware without modification. Only the
-observation source and action sink change:
-
-  ============  ===========================  ============================
-  Component     Sim (`il play`)              Real (`sim2real deploy`)
-  ============  ===========================  ============================
-  Joint obs     scene["robot"].data.joint_*  follower.get_observation()
-  Camera obs    TiledCameraCfg buffers       OpenCV-backed USB cameras
-  Action sink   env.step(actions)            follower.send_action(dict)
-  ============  ===========================  ============================
-
-The dataset's ``observation.state`` and ``action`` schemas are in
-**LeRobot motor units** (``[-100, 100]``) — same on both paths, so the
-trained policy needs zero re-calibration to transfer.
-
-This module is import-light by design: heavy LeRobot + cv2 imports
-happen inside the entrypoint so `openso101 sim2real --help` doesn't
-require the dependencies. Mirrors the lazy-import pattern used
-throughout `openso101.cli.*`.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -44,21 +20,7 @@ _REAL_CAMERA_NAMES: tuple[str, ...] = ("wrist_camera", "overhead_camera")
 
 
 def deploy(args: argparse.Namespace) -> int:
-    """Real-hardware deploy entrypoint dispatched from the CLI.
-
-    Connects the follower arm + USB cameras, loads the LeRobot
-    checkpoint, and runs an inference loop until ``--max-steps`` is
-    reached or the user Ctrl+C's.
-
-    The inference loop mirrors ``openso101.cli.il._cmd_play`` EXACTLY for
-    the normalization plumbing: the LeRobot pre-processor is applied to the
-    observation BEFORE ``select_action`` and the post-processor to the
-    action AFTER. Without them the policy sees / emits N(0, 1) normalized
-    values and the arm barely moves. Unlike ``il play`` we do NOT run
-    ``batched_motor_units_to_action`` here — the real follower's
-    ``send_action`` expects motor units, and that inverse (motor -> sim
-    radians) is only for the SIM env.
-    """
+    """检查模型、设备、频率和停止文件，使用双相机与实际关节状态执行策略。"""
     _validate_camera_arguments(args)
     if args.max_steps is not None and args.max_steps <= 0:
         raise ValueError("max_steps 必须为正数")
@@ -72,6 +34,11 @@ def deploy(args: argparse.Namespace) -> int:
     if _stop_requested(stop_file):
         print("[INFO]: 停止文件存在，部署已终止。")
         return 0
+    from openso101.il.runtime import resolve_policy_path
+    from openso101.rl.gpu_guard import launch_cuda_command
+
+    args.policy_path = str(resolve_policy_path(args.policy_path))
+    launch_cuda_command(args.device)
     policy = _load_lerobot_policy(args.policy_path, device=args.device)
     goal_file = Path(args.goal_file).expanduser().resolve() if getattr(args, "goal_file", None) else None
     if getattr(policy, "metadata", {}).get("goal_input") == "robot_root_xyz_m":
@@ -314,19 +281,7 @@ def _camera_frame_tensor(frame: np.ndarray):
 
 
 def _load_lerobot_policy(checkpoint_path: str, *, device: str):
-    """Resolve a checkpoint path (or its parent) to a PreTrainedPolicy.
-
-    Delegates to `openso101.il.policies.load_policy` so sim playback and
-    real deploy use exactly the same loader — same path resolution, same
-    `PreTrainedConfig` → `get_policy_class` dispatch.
-    """
-    from pathlib import Path
-
-    if (Path(checkpoint_path) / "student.json").is_file():
-        from openso101.rl.student import RLStudentPolicy
-
-        return RLStudentPolicy(Path(checkpoint_path), device)
-
+    """通过共享入口读取模型、配置和 processors。"""
     from openso101.il.policies import load_policy
 
     return load_policy(checkpoint_path, device=device)

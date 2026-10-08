@@ -24,6 +24,11 @@ def validate(args):
     output = Path(args.output).resolve()
     if output.exists():
         raise FileExistsError(output)
+    from openso101.il.runtime import resolve_policy_path
+    from openso101.rl.gpu_guard import launch_cuda_command
+
+    folder = resolve_policy_path(str(folder))
+    launch_cuda_command(args.device)
     policy = load_policy(folder, device=args.device)
     commands = []
     with h5py.File(episode, "r") as recording:

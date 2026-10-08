@@ -1,0 +1,36 @@
+{
+  "status": "student_recorded_observation_inference_verified",
+  "frames": 243,
+  "task": "OpenSO101-Lift-v0",
+  "scene_sha256": null,
+  "student_sha256": "6d1df1cd1feaf96ad7da8ac41c8e17f591b7d84e141c92195f4c3b854050ba85",
+  "episode_sha256": "e87c5375ae29b4064654f5f17b6123c22df32682d99c2a3cafb14edb8a0f84e5",
+  "student_task_profile": "grasp_v3",
+  "source_task_profile": "grasp_v4",
+  "device": "cpu",
+  "gpu_tests_started": false,
+  "rl_policy_success_verified": false,
+  "source_sha256": "b90f527b82b826c370252f5b068aaf13623582faa02965586f5b5a85af1bed3e",
+  "policy_loader_sha256": "960aba5722d023b0b814f3cef010fd18d0a449ed07c885a8da20a8734d5d2285",
+  "observation_sha256": "d9d5fb6a690fe58b86cc026f4fb249edf1925a6b6d09449fe7b8280c7757c7b5",
+  "control_dt": 0.02,
+  "required_fps": 50.0,
+  "motor_minimum": [
+    -0.031036376953125,
+    -0.07977294921875,
+    -35.58512878417969,
+    7.447166442871094,
+    -66.46720123291016,
+    0.0
+  ],
+  "motor_maximum": [
+    34.86308288574219,
+    34.34730529785156,
+    3.3501739501953125,
+    84.82199096679688,
+    -1.835784912109375,
+    1.5211029052734375
+  ],
+  "commands_sha256": "a90f967e8c0e3270e84ea05ff23c14535e0d5fccded90a4ce1e5c2a81fd2fac4",
+  "hardware_run_verified": false
+}

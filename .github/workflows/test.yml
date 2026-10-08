@@ -44,6 +44,8 @@ jobs:
         run: python -m openso101.cli.main validate source --output outputs/ci/source
       - name: 检查未定义名称
         run: python -m ruff check src scripts tests --select F821,F822,F823 --output-format=json > outputs/ci/undefined_names.json
+      - name: 检查 CUDA 推理入口
+        run: python scripts/check_cuda_inference_guard.py --output outputs/ci/cuda_inference_entry.json
       - name: 运行实际几何与进程检查
         run: python scripts/run_cpu_checks.py --output outputs/ci/geometry
       - name: 运行终端、控制和配置检查

@@ -194,3 +194,60 @@ def run_guarded(command, gpu, repo, report):
 
 def automatic_report(repo):
     return repo / "outputs/rl_progress/gpu_guard" / f"{time.time_ns()}_{os.getpid()}.json"
+
+
+def _cuda_device(device):
+    import torch
+
+    requested = torch.device(device)
+    if requested.type == "cuda" and requested.index not in (None, 0):
+        raise ValueError("单张 GPU 的 Torch device 需要使用 cuda:0")
+    return requested
+
+
+def _cuda_receipt():
+    from .gpu_scope import gpu_scope
+
+    if "OPENSO101_GPU_GUARD_PID" not in os.environ or "OPENSO101_GPU_GUARD_REPORT" not in os.environ:
+        raise ValueError("CUDA 推理需要设备检查父进程")
+    receipt = json.loads(Path(os.environ["OPENSO101_GPU_GUARD_REPORT"]).read_text())
+    gpu_scope().validate_allocation([receipt["gpu"]])
+    verify_guard(receipt["gpu"])
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if visible not in (str(receipt["gpu"]), receipt["initial_device"]["uuid"]):
+        raise ValueError("CUDA 可见设备与实际启动记录不一致")
+    return receipt
+
+
+def launch_cuda_command(device):
+    requested = _cuda_device(device)
+    if requested.type != "cuda" or sys.platform != "linux":
+        return
+    if "OPENSO101_GPU_GUARD_PID" not in os.environ:
+        from .gpu_scope import _requested_gpu, gpu_scope
+
+        gpu = _requested_gpu(gpu_scope())
+        repo = Path(__file__).resolve().parents[3]
+        raise SystemExit(run_guarded(sys.orig_argv, gpu, repo, automatic_report(repo)))
+    receipt = _cuda_receipt()
+    import torch
+
+    if torch.cuda.is_initialized() and os.environ["CUDA_VISIBLE_DEVICES"] != receipt["initial_device"]["uuid"]:
+        raise ValueError("CUDA 初始化前需要使用启动记录的设备 UUID")
+    os.environ["CUDA_VISIBLE_DEVICES"] = receipt["initial_device"]["uuid"]
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+
+def verify_cuda_inference(device):
+    requested = _cuda_device(device)
+    if requested.type != "cuda" or sys.platform != "linux":
+        return
+    receipt = _cuda_receipt()
+    import torch
+
+    if torch.cuda.is_initialized() and os.environ["CUDA_VISIBLE_DEVICES"] != receipt["initial_device"]["uuid"]:
+        raise ValueError("CUDA 初始化前需要使用启动记录的设备 UUID")
+    os.environ["CUDA_VISIBLE_DEVICES"] = receipt["initial_device"]["uuid"]
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    if torch.cuda.device_count() != 1:
+        raise ValueError("CUDA 推理需要只看到启动记录指定的单张 GPU")

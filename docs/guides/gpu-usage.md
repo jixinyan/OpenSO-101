@@ -4,6 +4,8 @@
 
 `scripts/run_native_python.sh` 使用 `scripts/run_idle_gpu.py` 检查实际设备清单。直接调用 Isaac 的项目入口同样需要启动检查父进程。启动记录包含物理设备、UUID、运行用户、worker PID、时间与进程状态；记录保存在 `outputs/rl_progress/gpu_guard/`。
 
+Linux 的 `sim2real deploy` 与 `sim2real validate` 使用 CUDA 时经过同一套空闲设备和进程监督。模型与数据文件检查在启动前完成，工作程序使用记录中的设备 UUID。该路径保留相机和串口的实际设备访问。共享模型加载入口要求 CUDA 推理来自有效启动记录，Torch 只看到该单张 GPU，逻辑 device 使用 `cuda:0`。CPU 推理可以独立执行。
+
 运行期间检查 compute 与 graphics 进程。如果出现其他项目的进程，包括 haomin 的进程，检查程序发送 SIGTERM 终止本项目的独立进程组，并等待子进程终止。终止等待时间超过 30 秒时清理仍在运行的本项目子进程。其他项目进程保持独立运行。
 
 `scripts/audit_project_gpu.py --stop --output <新报告>` 根据当前用户、项目目录和程序入口识别实际 GPU 作业，记录终止结果并重新检查设备。仅查询时省略 `--stop`。

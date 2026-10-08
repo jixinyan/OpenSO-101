@@ -29,7 +29,15 @@
       ]
     },
     {
-      "name": "recorded_state", "resource": "cpu", "depends_on": ["cpu_interfaces"],
+      "name": "cuda_inference_entry", "resource": "cpu", "depends_on": ["cpu_interfaces"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_cuda_inference_guard.py", "--output", "{output}/cuda_inference_entry.json"],
+      "requirements": [
+        {"report": "cuda_inference_entry.json", "pointer": "/status", "equals": "actual_cpu_cuda_entry_preflight_verified"},
+        {"report": "cuda_inference_entry.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "recorded_state", "resource": "cpu", "depends_on": ["cuda_inference_entry"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_recorded_state.py", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/recorded_state.json"],
       "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
       "requirements": [

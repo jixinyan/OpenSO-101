@@ -1,0 +1,30 @@
+{
+  "status": "actual_demonstration_update_cpu_verified",
+  "task": "OpenSO101-Lift-v0",
+  "frames": 2703,
+  "sequence_windows": 2523,
+  "sequence_length": 16,
+  "sequence_weight": 1.0,
+  "sequence_objective": "bounded_mse",
+  "gradient_steps": 2,
+  "restored_gradient_steps": 22216,
+  "online_learning_rate": 1e-06,
+  "all_frames_action_mse_before": 1.3369354746828321e-05,
+  "all_frames_action_mse_after": 1.3245952686702367e-05,
+  "action_mse": 1.3736447272094665e-05,
+  "last_sequence_action_mse": 1.4327797543955967e-05,
+  "maximum_parameter_change": 6.809830665588379e-06,
+  "normalization_reference_verified": true,
+  "source_checkpoint_sha256": "0cae9a0fb43f0c4ad512078165d51b7313eb046978ca9c69d7191ec3784761f5",
+  "dataset_sha256": "79d4e1956441c95980617fcc5592d391544b1625c2bc9c7452cac703ae5980eb",
+  "checked_model_sha256": "e3c9f20e7314b6b3c31bf6f93c42b59a49274ee94383a71443f375278873bf47",
+  "requested_config_sha256": "e3344c99805f04ed0ba20b3ba2cbd5e758b8e8b04a5659b85df1d35888bc301a",
+  "source_sha256": {
+    "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/scripts/check_demonstration_updates.py": "1a5a5e3a00cb4b728cd6bf0d3a1001407ce23ca367a02fed04a47511677c7325",
+    "src/openso101/rl/demonstrations.py": "c3e4496483f25dcf8b796e8ec1ac002aae351e7d118deb966f2185514096aa7b",
+    "src/openso101/rl/sequence_supervision.py": "9aacaaf5ae363d39a0c17cbc6da3f917064565ed7bedde7343c24b15d648b56e"
+  },
+  "gpu_tests_started": false,
+  "rl_transitions": 0,
+  "closed_loop_task_success_verified": false
+}

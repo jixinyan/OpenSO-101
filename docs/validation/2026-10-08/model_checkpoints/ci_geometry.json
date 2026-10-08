@@ -1,0 +1,14 @@
+{
+  "status": "cpu_checks_verified",
+  "exit_code": 0,
+  "counts": {
+    "tests": 49,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "junit_sha256": "f89ba4c1417f0f6698b8579a8cdac111ad33460d57e100b3ce1055ed3bbdb784",
+  "source_sha256": "eb103d1bc6a6911ba9fe453c1d06c15c6047a440f5a32c480dc798dd7ddda8fe",
+  "gpu_tests_started": false,
+  "physical_task_verified": false
+}
