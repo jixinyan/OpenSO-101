@@ -1,33 +1,25 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""`openso101 envs ...` subcommands."""
-
 from __future__ import annotations
 
 import argparse
 import sys
+from contextlib import ExitStack
+from pathlib import Path
 
 
 _PREFIX = "OpenSO101-"
 
 
-def _launch_isaac_app(headless: bool = True, enable_cameras: bool = False):
-    """Launch Isaac Sim's SimulationApp and import OpenSO-101 tasks.
-
-    Returns the `SimulationApp` handle (caller is responsible for `.close()`).
-
-    `enable_cameras` MUST be True whenever the env config has any camera
-    sensor attached (e.g. `envs preview`, `envs random/zero --with-cameras`).
-    Without it, the RTX render product is not initialized and `env.step()`
-    silently fails after the first call — symptom is the script exiting in
-    under a second regardless of `--steps`.
-    """
+def _launch_isaac_app(cleanup: ExitStack, headless: bool = True, enable_cameras: bool = False):
+    """启动 SimulationApp，登记关闭操作，并导入任务。"""
     from openso101.rl.gpu_scope import configure_visible_gpu
 
     configure_visible_gpu()
     from isaaclab.app import AppLauncher
     launcher = AppLauncher(headless=headless, enable_cameras=enable_cameras)
+    cleanup.callback(launcher.app.close)
     # Trigger gym.register calls for the built-in tasks.
     import openso101.tasks  # noqa: F401
     return launcher.app
@@ -42,16 +34,13 @@ def list_envs() -> list[str]:
 
 def _cmd_list(args: argparse.Namespace) -> int:
     import sys
-    app = _launch_isaac_app(headless=True)
-    try:
+    with ExitStack() as cleanup:
+        _launch_isaac_app(cleanup, headless=True)
         # Isaac Sim hijacks stdout buffering, so write directly to fd 1.
         out = sys.__stdout__ or sys.stdout
         for eid in list_envs():
             out.write(eid + "\n")
         out.flush()
-    finally:
-        if app is not None:
-            app.close()
     return 0
 
 
@@ -64,7 +53,7 @@ def _build_smoke_env(args, *, force_cameras: bool = False):
     import gymnasium as gym
     from isaaclab_tasks.utils import parse_env_cfg
 
-    num_envs = max(1, int(getattr(args, "num_envs", 1) or 1))
+    num_envs = args.num_envs
     if getattr(args, "scene", None):
         from openso101.scenes.isaaclab.runtime import register_custom_scene
 
@@ -107,43 +96,29 @@ def _step_loop(env, action_fn, steps: int) -> None:
 
 
 def _run_smoke(args, *, force_cameras: bool, action_fn) -> int:
-    """Shared body for envs random / zero / preview.
-
-    Threads `enable_cameras` through to the AppLauncher whenever the env
-    config will attach cameras — without this, env.step() exits silently
-    on the first call. When cameras are enabled, also opens the
-    wrist + overhead viewport panes so the user sees those feeds
-    alongside the main viewport (same helper that `il record` uses).
-    Wraps the step loop in try/except so any other failure surfaces to
-    fd 1 instead of being swallowed by Isaac Sim's stdio hijack.
-    """
+    """执行实际环境的动作和相机检查。"""
     import os
+    if args.steps < 1 or args.num_envs < 1:
+        raise ValueError("steps 和 num_envs 必须为正整数")
+    if getattr(args, "scene", None):
+        from openso101.scenes.isaaclab.usd import verify_compilation
+
+        args.scene = str(Path(args.scene).expanduser().resolve())
+        verify_compilation(Path(args.scene))
     cameras = bool(force_cameras or getattr(args, "with_cameras", False))
-    app = _launch_isaac_app(headless=False, enable_cameras=cameras)
-    try:
+    headless = getattr(args, "headless", False)
+    with ExitStack() as cleanup:
+        _launch_isaac_app(cleanup, headless=headless, enable_cameras=cameras)
         env = _build_smoke_env(args, force_cameras=force_cameras)
+        cleanup.callback(env.close)
         env.reset(seed=0)
         os.write(1, b"[envs] env.reset() complete\n")
-        if cameras:
-            try:
-                from openso101.teleop.camera_viewports import open_teleop_viewports
-                open_teleop_viewports(env.unwrapped.scene)
-                os.write(1, b"[envs] Opened wrist + overhead camera viewports\n")
-            except Exception as exc:
-                os.write(1, f"[envs] Camera viewport open failed: {exc!r}\n".encode())
-        try:
-            _step_loop(env, action_fn, args.steps)
-        except BaseException as exc:
-            # Surface the failure on fd 1 because Isaac Sim's stdio hijack
-            # eats sys.stderr after sim boot.
-            import traceback
-            os.write(1, f"[envs] step loop crashed: {exc!r}\n".encode())
-            os.write(1, traceback.format_exc().encode())
-            raise
-        env.close()
-    finally:
-        if app is not None:
-            app.close()
+        if cameras and not headless:
+            from openso101.teleop.camera_viewports import open_teleop_viewports
+
+            open_teleop_viewports(env.unwrapped.scene)
+            os.write(1, b"[envs] Opened wrist + overhead camera viewports\n")
+        _step_loop(env, action_fn, args.steps)
     return 0
 
 
@@ -188,6 +163,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_random.add_argument("--with-cameras", action="store_true")
     p_random.add_argument("--steps", type=int, default=100)
     p_random.add_argument("--num-envs", type=int, default=1)
+    p_random.add_argument("--headless", action="store_true", help="使用无窗口仿真")
     p_random.set_defaults(func=_cmd_random)
 
     p_zero = sub.add_parser("zero", help="Run N zero-action steps")
@@ -196,6 +172,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_zero.add_argument("--with-cameras", action="store_true")
     p_zero.add_argument("--steps", type=int, default=100)
     p_zero.add_argument("--num-envs", type=int, default=1)
+    p_zero.add_argument("--headless", action="store_true", help="使用无窗口仿真")
     p_zero.set_defaults(func=_cmd_zero)
 
     p_prev = sub.add_parser(
@@ -212,4 +189,5 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_prev.add_argument("--scene")
     p_prev.add_argument("--steps", type=int, default=30)
     p_prev.add_argument("--num-envs", type=int, default=1)
+    p_prev.add_argument("--headless", action="store_true", help="使用无窗口仿真")
     p_prev.set_defaults(func=_cmd_preview)

@@ -25,7 +25,7 @@
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
       "requirements": [
         {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
-        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 49}
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 55}
       ]
     },
     {

@@ -11,6 +11,7 @@ import gymnasium as gym
 from isaaclab.envs import ManagerBasedRLEnv
 
 from .base import OpenSO101EnvCfg
+from contextlib import ExitStack
 
 
 def register_task(
@@ -71,12 +72,17 @@ def register_task(
             for spec_only in tuple(kwargs):
                 if spec_only.endswith("_cfg_entry_point"):
                     kwargs.pop(spec_only)
-            env = ManagerBasedRLEnv(cfg=cfg, **kwargs)
-            if cfg.action_dr_enabled:
-                from openso101.sim2real.domain_randomization.wrapper import ActionDRWrapper
+            with ExitStack() as cleanup:
+                env = ManagerBasedRLEnv(cfg=cfg, **kwargs)
+                cleanup.callback(env.close)
+                if cfg.action_dr_enabled:
+                    from openso101.sim2real.domain_randomization.wrapper import ActionDRWrapper
 
-                return ActionDRWrapper(env)
-            return env
+                    result = ActionDRWrapper(env)
+                else:
+                    result = env
+                cleanup.pop_all()
+                return result
 
         # Expose the cfg class via an `env_cfg_entry_point` string so Isaac
         # Lab's `parse_env_cfg` / `load_cfg_from_registry` can import-and-load

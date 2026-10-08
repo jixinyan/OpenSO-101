@@ -34,3 +34,15 @@ def test_missing_policy_before_native_startup(tmp_path, command):
     assert result.returncode != 0
     assert "policy checkpoint not found" in result.stderr
     assert "AppLauncher" not in result.stderr
+
+
+@pytest.mark.parametrize("command", ["random", "zero", "preview"])
+@pytest.mark.parametrize("argument", ["--steps", "--num-envs"])
+def test_invalid_environment_input_before_native_startup(command, argument):
+    result = subprocess.run([sys.executable, "-m", "openso101.cli.main", "envs", command,
+                             "--task", "OpenSO101-PickPlace-v0", "--headless", argument, "0"],
+                            capture_output=True, text=True, timeout=30,
+                            env={**os.environ, "CUDA_VISIBLE_DEVICES": "", "OPENSO101_SKIP_ISAAC": "1"})
+    assert result.returncode != 0
+    assert "steps 和 num_envs 必须为正整数" in result.stderr
+    assert "AppLauncher" not in result.stderr
