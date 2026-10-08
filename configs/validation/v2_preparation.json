@@ -25,7 +25,7 @@
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
       "requirements": [
         {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
-        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 65}
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 74}
       ]
     },
     {
@@ -89,7 +89,17 @@
       ]
     },
     {
-      "name": "student_recorded_inference", "resource": "cpu", "depends_on": ["lerobot_export"],
+      "name": "il_training_preparation", "resource": "cpu", "depends_on": ["lerobot_export"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--output", "{output}/il_training"],
+      "requirements": [
+        {"report": "il_training/report.json", "pointer": "/status", "equals": "actual_il_training_preparation_verified"},
+        {"report": "il_training/report.json", "pointer": "/source_files_unchanged", "equals": true},
+        {"report": "il_training/report.json", "pointer": "/training_started", "equals": false},
+        {"report": "il_training/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "student_recorded_inference", "resource": "cpu", "depends_on": ["il_training_preparation"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "-m", "openso101.cli.main", "sim2real", "validate", "--policy-path", "outputs/rl_progress/v3_student_a8cc2f8", "--episode", "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5", "--device", "cpu", "--output", "{output}/student_inference"],
       "inputs": {
         "outputs/rl_progress/v3_student_a8cc2f8/student.json": "dbf64d6f451459892406b85e3c253d11e43022a575d99d1e095d84b6b499020f",

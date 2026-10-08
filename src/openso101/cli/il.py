@@ -1345,42 +1345,36 @@ def _cmd_replay(args: argparse.Namespace, cleanup: ExitStack) -> int:
 
 
 # ---------------------------------------------------------------------------
-# il train  (thin wrapper around `lerobot.scripts.train`)
+# il train
 # ---------------------------------------------------------------------------
 
 
 def _cmd_train(args: argparse.Namespace) -> int:
-    """Train an IL policy via LeRobot's training CLI.
+    from openso101.il.runners import prepare_il_policy, train_il_policy
 
-    Thin wrapper that delegates to `openso101.il.runners.train_il_policy`
-    so the CLI and the programmatic Python API behave identically.
-    """
-    from openso101.il.runners import train_il_policy
-
-    result = train_il_policy(
+    options = dict(
         policy=args.policy,
         dataset=args.dataset,
-        output_dir=getattr(args, "output_dir", None) or _default_il_train_output_dir(args.policy),
+        output_dir=args.output_dir,
         repo_id=getattr(args, "repo_id", None),
         steps=getattr(args, "steps", None),
         batch_size=getattr(args, "batch_size", None),
         wandb=bool(getattr(args, "wandb", False)),
         extra_args=getattr(args, "extra_args", None),
+        gpu=args.gpu,
     )
+    if args.prepare_only:
+        report = prepare_il_policy(report_dir=args.preparation_output, **options)
+        print(f"IL CPU 准备检查记录: {report}")
+        return 0
+    if args.preparation_output is not None:
+        raise ValueError("preparation_output 需要同时使用 prepare_only")
+    result = train_il_policy(**options)
     if not result.succeeded:
         print(
-            f"[ERROR]: LeRobot trainer exited with code {result.returncode}. "
-            "If the error mentions a missing LeRobot install, run "
-            "`bash scripts/install.sh` from the repo root."
+            f"LeRobot 训练退出码为 {result.returncode}，GPU 记录: {result.gpu_report}"
         )
     return int(result.returncode)
-
-
-def _default_il_train_output_dir(policy: str) -> str:
-    """Mirror RL's logs/ convention for trained IL checkpoints."""
-    import time
-    stamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-    return f"logs/lerobot/openso101_{policy}/{stamp}"
 
 
 # ---------------------------------------------------------------------------
@@ -1801,10 +1795,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=None,
         help=(
-            "Override the recorded dataset FPS. Defaults to the env's true "
-            "control rate 1/(sim.dt*decimation) (60 Hz for the SO101 tasks). "
-            "If you pass a value that disagrees with the true control rate, a "
-            "[WARN] is printed and the true rate is preferred."
+            "录制 FPS 默认使用实际控制频率 1/(sim.dt*decimation)。"
+            "提供的 FPS 必须与该频率完全一致。"
         ),
     )
     p_rec.add_argument("--no-record", action="store_true")
@@ -1899,16 +1891,18 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_train.add_argument(
         "--output-dir",
         default=None,
-        help="Where to write checkpoints + logs. Defaults to "
-             "logs/lerobot/openso101_<policy>/<timestamp>/.",
+        help="模型和日志目录，默认 outputs/rl_progress/il/<policy>/<timestamp>/。目录必须尚未存在。",
     )
     p_train.add_argument("--steps", type=int, default=None, help="Override LeRobot's default training steps.")
     p_train.add_argument("--batch-size", type=int, default=None)
     p_train.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging.")
+    p_train.add_argument("--gpu", type=int, default=None, help="物理 GPU 编号，默认使用 GPU 范围配置。")
+    p_train.add_argument("--prepare-only", action="store_true", help="在 CPU 检查配置、数据序列和 normalization。")
+    p_train.add_argument("--preparation-output", help="CPU 准备检查记录的新目录，需要位于 outputs。")
     p_train.add_argument(
         "extra_args",
         nargs=argparse.REMAINDER,
-        help="Extra args passed verbatim to `lerobot.scripts.train` after `--`.",
+        help="额外 LeRobot 参数放在 -- 后，使用 --name=value。",
     )
     p_train.set_defaults(func=_cmd_train)
 

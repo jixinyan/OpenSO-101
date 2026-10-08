@@ -24,6 +24,8 @@
 | HDF5 与 LeRobot 录制 | `src/openso101/teleop/recorder/` |
 | LeRobot 动作单位转换 | `src/openso101/teleop/so101_mapping.py` |
 | IL 模型、数据读取与训练 | `src/openso101/il/` |
+| IL 训练参数、CPU 准备与 GPU worker | `src/openso101/il/runners/trainer.py`、`preparation.py`、`worker.py` |
+| ACT、Diffusion 完整模型的 CPU forward、gradient 与 inference | `src/openso101/il/runners/model_validation.py` |
 | HDF5 检查与 LeRobot 同步、异步导出 | `src/openso101/il/datasets/export.py` |
 | LeRobot metadata、episode 范围、统计量与视频文件检查 | `src/openso101/il/datasets/validation.py` |
 | IL 关节与 RGB observation | `src/openso101/il/observations.py` |
@@ -93,6 +95,8 @@ Ruff 的 `F821`、`F822`、`F823` 检查覆盖源码、脚本和测试中的未�
 IL 参数与缺少模型的检查通过实际命令入口执行。完整 CPU 流程使用现有双相机 episode 分别执行同步和异步导出，并通过 LeRobot 读取全部帧，检查 RGB、动作、状态、时间、来源 SHA256 和编码线程关闭。
 
 `recorded_state` 检查实际 HDF5 的全部状态帧在 CPU 上的转换，以及保存的 FPS 和 physics_dt。`student_recorded_inference` 读取已有 student 权重与实际双相机 Lift 记录，验证共享模型入口、RGB 处理与动作单位转换。这两个阶段分别保存原生状态恢复和独立任务成功的验收状态。
+
+`il_training_preparation` 使用实际 LeRobot 数据集，检查 ACT、Diffusion 配置、时间窗口、normalization 和完整 CPU 模型程序。运行入口和记录内容见 [IL 配置与模型检查](il-training.md)。
 
 ## Python import
 

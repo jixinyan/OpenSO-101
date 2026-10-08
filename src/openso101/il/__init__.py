@@ -28,13 +28,16 @@ from .policies import (
     load_policy,
     policy_class,
 )
-from .runners import TrainResult, train_il_policy
+from .runners import TrainPlan, TrainResult, build_train_plan, prepare_il_policy, train_il_policy
 
 __all__ = [
     "ACTPolicy",
     "DiffusionPolicy",
     "LeRobotDatasetHandle",
     "TrainResult",
+    "TrainPlan",
+    "build_train_plan",
+    "prepare_il_policy",
     "load_act_policy",
     "load_diffusion_policy",
     "load_lerobot_dataset",

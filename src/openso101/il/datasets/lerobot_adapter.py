@@ -80,6 +80,28 @@ def _resolve_local_root(p: Path) -> Path:
     return p
 
 
+def resolve_lerobot_source(source: str | Path, *, repo_id: str | None = None) -> tuple[Path | None, str]:
+    source_path = Path(source).expanduser()
+    root = None
+    if source_path.exists():
+        if not source_path.is_dir():
+            raise ValueError(f"dataset source exists but is not a directory: {source_path}")
+        root = _resolve_local_root(source_path.resolve())
+        if not (root / "meta/info.json").is_file():
+            raise FileNotFoundError(f"LeRobot 数据集缺少 meta/info.json: {root}")
+        effective_repo_id = repo_id or f"local/{root.name}"
+    else:
+        if isinstance(source, Path) or str(source).startswith(("/", ".", "~")) or len(source_path.parts) != 2:
+            raise FileNotFoundError(f"LeRobot 数据集目录不存在: {source_path}")
+        if repo_id is not None:
+            raise ValueError("repo_id 参数只用于本地 LeRobot 数据集")
+        effective_repo_id = str(source)
+    from huggingface_hub.utils import validate_repo_id
+
+    validate_repo_id(effective_repo_id)
+    return root, effective_repo_id
+
+
 def load_lerobot_dataset(
     source: str | Path,
     *,
@@ -107,28 +129,18 @@ def load_lerobot_dataset(
         Includes the live dataset object, the effective repo_id, and the
         on-disk root (None for Hub-backed datasets).
     """
-    source_path = Path(str(source)).expanduser()
     if episodes is not None:
         if any(not isinstance(index, int) or isinstance(index, bool) or index < 0 for index in episodes):
             raise ValueError("episodes must contain non-negative integer indices")
 
-    # Path validation runs before the LeRobot import so callers get a
-    # crisp FileNotFoundError without paying the import cost.
-    if source_path.exists() and not source_path.is_dir():
-        raise ValueError(f"dataset source exists but is not a directory: {source_path}")
-    is_local = source_path.exists() and source_path.is_dir()
-    if is_local:
-        root = _resolve_local_root(source_path.resolve())
-        if not _is_local_dataset_dir(root):
-            raise FileNotFoundError(
-                f"{root} does not look like a LeRobot dataset directory "
-                "(no meta/info.json). Did you run `openso101 il record` here?"
-            )
+    root, effective_repo_id = resolve_lerobot_source(source, repo_id=repo_id)
+    if root is not None:
+        from .validation import validate_lerobot_metadata
 
+        validate_lerobot_metadata(root)
     from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
-    if is_local:
-        effective_repo_id = repo_id or f"local/{root.name}"
+    if root is not None:
         kwargs: dict[str, Any] = {"root": root}
         if episodes is not None:
             kwargs["episodes"] = episodes
@@ -139,8 +151,8 @@ def load_lerobot_dataset(
     kwargs = {}
     if episodes is not None:
         kwargs["episodes"] = episodes
-    dataset = LeRobotDataset(str(source), **kwargs)
-    return LeRobotDatasetHandle(dataset=dataset, repo_id=str(source), root=None)
+    dataset = LeRobotDataset(effective_repo_id, **kwargs)
+    return LeRobotDatasetHandle(dataset=dataset, repo_id=effective_repo_id, root=None)
 
 
 def summarize_lerobot_dataset(handle: LeRobotDatasetHandle) -> None:
