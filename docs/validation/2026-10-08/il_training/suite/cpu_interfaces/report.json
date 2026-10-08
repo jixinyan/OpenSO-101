@@ -1,0 +1,13 @@
+{
+  "status": "actual_cpu_interfaces_verified",
+  "counts": {
+    "tests": 74,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "junit_sha256": "f826f93478d6a5a3add5bdd94d338c9279d0532755ab88aaac88a3836c208903",
+  "source_sha256": "7f7a5ffa67c47979b7db60b4e5ca0df7fa49a78fec68cc4fc44e644e529a950f",
+  "gpu_tests_started": false,
+  "physics_keyboard_collection_verified": false
+}
