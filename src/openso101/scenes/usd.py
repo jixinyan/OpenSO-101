@@ -134,7 +134,7 @@ def compile_bundle(bundle: Path, output: Path) -> Path:
         if not Path(dependency).resolve().is_relative_to(output):
             raise ValueError(f"USD 依赖位于输出目录以外：{dependency}")
     (output / "scene.json").write_text(spec.model_dump_json(indent=2))
-    for name in ("task_intent.json", "task_program.json", "provenance.json"):
+    for name in ("task_intent.json", "task_program.json", "provenance.json", "bddl.json"):
         if (bundle / name).is_file():
             shutil.copyfile(bundle / name, output / name)
     (output / "compilation.json").write_text(json.dumps({

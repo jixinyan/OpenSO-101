@@ -24,7 +24,7 @@ class JobLimits(Model):
 
 def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output: Path,
                        *, limits: JobLimits | None = None, runtime_output: Path | None = None,
-                       asset_index: Path | None = None):
+                       asset_index: Path | None = None, capability_probes: dict | None = None):
     limits = limits or JobLimits()
     if service.requests:
         raise ValueError("场景任务需要独立 ModelService 请求记录")
@@ -61,7 +61,8 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
         return result
 
     save("started")
-    intent = tool("extract_intent", {"instruction": instruction}, lambda: extract_intent(instruction, service))
+    intent = tool("extract_intent", {"instruction": instruction},
+                  lambda: extract_intent(instruction, service, probe_requests=capability_probes))
     (output / "task_intent.json").write_text(intent.model_dump_json(indent=2))
     job["intent_sha256"] = intent.digest()
     if intent.clarifications:
@@ -100,7 +101,11 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
     if not assets or len(assets) > limits.max_candidates:
         save("failed")
         raise ValueError("资产候选数量必须位于当前预算范围")
-    asset_records = [item.model_dump() for item in assets]
+    from .inspection import inspect_asset
+
+    asset_records = [item.model_dump() | {"inspection": tool("inspect_asset", {"asset_uid": item.uid},
+                                                              lambda uid=item.uid: inspect_asset(catalog, uid))}
+                     for item in assets]
     tool("read_catalog", {"catalog": str(catalog.root)}, lambda: asset_records)
     save("assets_ready")
     payload = {"intent": intent.model_dump(), "assets": asset_records,
@@ -126,6 +131,26 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
                                       or item.asset_uid not in candidate_uids[item.entity_id] for item in spec.entities):
                 raise ValueError("场景实体必须使用其检索结果中的资产")
             program = compile_program(intent, spec)
+            capability_reports = []
+            if capability_probes:
+                from .capabilities import GeometryProbe, probe_geometry
+
+                by_id = {entity.entity_id: entity for entity in spec.entities}
+                for entity_id, probes in capability_probes.items():
+                    if entity_id not in by_id:
+                        raise ValueError(f"能力检查引用了未知实体：{entity_id}")
+                    entity = by_id[entity_id]
+                    for value in probes:
+                        probe = GeometryProbe.model_validate(value)
+                        if probe.dimensions_m != entity.dimensions_m or probe.collision != entity.physics.collision:
+                            raise ValueError("能力检查的尺度或 collision 与场景配置不一致")
+                        measured = tool("probe_geometry", {"entity_id": entity_id, "probe_sha256": probe.digest()},
+                                        lambda: probe_geometry(catalog, entity.asset_uid, probe))
+                        capability_reports.append({**measured, "entity_id": entity_id})
+                if not all(report["geometry_accepted"] for report in capability_reports):
+                    payload.update(scene=spec.model_dump(), capability_diagnostics=capability_reports)
+                    diagnostics = {"status": "capability_checks_failed", "pending_checks": ["asset_capabilities"]}
+                    continue
             diagnostics = tool("validate_layout", {"scene_sha256": spec.digest()},
                                lambda: diagnose_layout(spec, catalog))
             if diagnostics["status"] == "static_checks_passed":
@@ -139,10 +164,20 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
                       "job_limits": limits.model_dump(), "downloaded_bytes": 0,
                       "asset_index_sha256": job.get("asset_index_sha256"),
                       "entity_candidates": {name: sorted(uids) for name, uids in candidate_uids.items()}}
+        provenance["capability_reports"] = capability_reports
+        checked = {(report["entity_id"], report["probe"]["capability"]) for report in capability_reports}
+        unchecked = [{"entity_id": item.entity_id, "capability": capability}
+                     for item in intent.objects for capability in item.required_capabilities
+                     if (item.entity_id, capability) not in checked]
+        provenance["unverified_capabilities"] = unchecked
         bundle = export_bundle(spec, catalog, output / "bundle", intent=intent, program=program,
                                provenance=provenance)
         job.update(scene_sha256=spec.digest(), task_program_sha256=program.digest(), bundle=str(bundle),
                    pending_checks=diagnostics["pending_checks"])
+        job["capability_reports"] = capability_reports
+        job["unverified_capabilities"] = unchecked
+        if unchecked:
+            job["pending_checks"] = sorted(set(job["pending_checks"]) | {"asset_capabilities"})
         if runtime_output is not None:
             from .preparation import prepare_scene
 
@@ -150,6 +185,8 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
                             lambda: prepare_scene(bundle, runtime_output, timeout_seconds=limits.max_runtime_seconds))
             job.update(compiled_scene=prepared["compiled_scene"], runtime_report_sha256=prepared["runtime_report_sha256"],
                        pending_checks=prepared["pending_checks"])
+            if unchecked:
+                job["pending_checks"] = sorted(set(job["pending_checks"]) | {"asset_capabilities"})
             save("simulation_ready")
         else:
             save("layout_valid")

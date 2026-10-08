@@ -73,10 +73,7 @@ def sample_rgb_video(
         raise FileNotFoundError(source)
     if output.exists():
         raise FileExistsError(output)
-    try:
-        import av
-    except ImportError as exc:
-        raise ImportError("视频抽帧需要 PyAV：安装 openso-101[scenes]") from exc
+    import av
     with av.open(str(source)) as container:
         if not container.streams.video:
             raise ValueError("输入文件没有视频轨道")

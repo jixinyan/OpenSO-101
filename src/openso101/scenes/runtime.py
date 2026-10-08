@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
+import json
 from pathlib import Path
 
 import torch
@@ -65,6 +66,10 @@ def reset_objects(env, env_ids):
         env._scene_success_step = -1
     env._scene_hold_seconds[env_ids] = 0
     env._scene_success[env_ids] = False
+    env._scene_success_step = -1
+    if hasattr(env, "_bddl_trackers"):
+        for index in env_ids.tolist():
+            env._bddl_trackers[index].reset()
     if env.cfg.task_program is not None:
         if not hasattr(env, "_scene_program_phase"):
             env._scene_program_phase = torch.zeros(env.num_envs, dtype=torch.int64, device=env.device)
@@ -138,6 +143,25 @@ def task_success(env):
     jaw_id = env.scene["robot"].joint_names.index("Jaw")
     opened = env.scene["robot"].data.joint_pos[:, jaw_id] > .4
     forces = scene_jaw_forces(env)
+    bddl_valid = None
+    if env.cfg.bddl_report is not None:
+        from .bddl import BDDLBinding, BDDLTaskTracker
+
+        report = env.cfg.bddl_report
+        if not hasattr(env, "_bddl_trackers"):
+            binding = BDDLBinding.model_validate(report["binding"])
+            env._bddl_trackers = [BDDLTaskTracker(report["problem"], binding, spec) for _ in range(env.num_envs)]
+        measured = {name: state.detach().cpu().numpy() for name, state in states.items()}
+        opened_values = opened.detach().cpu().tolist()
+        results = [tracker.update({name: state[index] for name, state in measured.items()},
+                                  opened_values[index], env.step_dt)
+                   for index, tracker in enumerate(env._bddl_trackers)]
+        bddl_valid = torch.tensor([item["source_goal_satisfied"] and item["stable"] for item in results],
+                                 device=env.device)
+        if spec.task.require_released:
+            bddl_valid &= opened
+            for subject in env._bddl_trackers[0].subject_ids:
+                bddl_valid &= (forces[subject] <= .1).all(dim=-1)
     if env.cfg.task_program is not None:
         if not hasattr(env, "_scene_program_phase"):
             env._scene_program_phase = torch.zeros(env.num_envs, dtype=torch.int64, device=env.device)
@@ -156,8 +180,16 @@ def task_success(env):
         final = torch.stack([program_condition(env, item, states, forces, opened)
                              for item in program.final_conditions]).all(dim=0)
         eligible = (env._scene_program_phase == len(program.phases)) & final
+        if bddl_valid is not None:
+            eligible &= bddl_valid
         env._scene_hold_seconds = torch.where(eligible, env._scene_hold_seconds + env.step_dt, 0.)
         env._scene_success = env._scene_hold_seconds + 1e-7 >= program.settle_seconds
+        env._scene_success_step = env.common_step_counter
+        return env._scene_success
+    if bddl_valid is not None:
+        valid = bddl_valid
+        env._scene_hold_seconds = torch.where(valid, env._scene_hold_seconds + env.step_dt, 0.)
+        env._scene_success = env._scene_hold_seconds + 1e-7 >= spec.task.settle_seconds
         env._scene_success_step = env.common_step_counter
         return env._scene_success
     valid = torch.ones(env.num_envs, dtype=torch.bool, device=env.device)
@@ -262,6 +294,7 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
     scene_spec: SceneSpec | None = None
     compiled_scene: str = ""
     task_program: object | None = None
+    bddl_report: dict | None = None
 
     def __post_init__(self):
         self.decimation = 2
@@ -278,6 +311,11 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
             raise ValueError("场景缺少 environment.usda，请重新编译 scene bundle")
         self.scene_spec = spec = SceneSpec.read(folder / "scene.json")
         self.compiled_scene = str(folder)
+        self.bddl_report = None
+        self.task_program = None
+        self.observations.policy.task_program = None
+        if (folder / "bddl.json").is_file():
+            self.bddl_report = json.loads((folder / "bddl.json").read_text())
         self.scene.content = AssetBaseCfg(
             prim_path="{ENV_REGEX_NS}/Content", spawn=sim_utils.UsdFileCfg(usd_path=str(folder / "environment.usda")),
         )

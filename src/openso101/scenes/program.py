@@ -1,4 +1,5 @@
 import hashlib
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -147,7 +148,7 @@ def compile_program(intent: TaskIntent, spec: SceneSpec) -> TaskProgram:
     return program
 
 
-def extract_intent(instruction, service):
+def extract_intent(instruction, service, *, probe_requests=None):
     if not instruction.strip():
         raise ValueError("任务描述不能为空")
     intent = service.complete(
@@ -159,9 +160,11 @@ def extract_intent(instruction, service):
                 "默认桌面属于 SceneSpec.table，使用 at 目标表示桌面放置，不创建 table 实体引用。"
                 "每个实体提供英文 asset_query、米制 dimensions_m 与 initial_pose。用户提供的尺寸、"
                 "位置和旋转完整保存到这些字段；未提供的参数采用 SO-101 桌面默认布局并记录到 confirmed_defaults。"
-                "容器内部区域和其他缺少必要测量依据的信息填写 clarifications；"
+                "geometry_probe_requests 为用户指定的检查参数，几何检查会在选取资产后执行。"
+                "参数没有覆盖的容器内部区域和其他缺少必要测量依据的信息填写 clarifications；"
                 "不得编造测量结果或删除用户条件。"),
-        prompt=instruction, schema=TaskIntent,
+        prompt=instruction if probe_requests is None else json.dumps(
+            {"instruction": instruction, "geometry_probe_requests": probe_requests}, ensure_ascii=False), schema=TaskIntent,
     )
     if intent.instruction != instruction or intent.schema_version != 2:
         raise ValueError("TaskIntent 必须保留完整任务文本")
@@ -200,7 +203,7 @@ class TaskProgramTracker:
         result = evaluate_goals(self.spec.model_copy(update={"task": task}), states, gripper_open)
         return result["conditions"][0]["reached"]
 
-    def update(self, states, jaw_forces, gripper_open, dt):
+    def update(self, states, jaw_forces, gripper_open, dt, *, additional_eligible=True):
         if not np.isfinite(dt) or dt <= 0:
             raise ValueError("TaskProgram dt 必须为正数有限数值")
         active = self.phase
@@ -212,7 +215,7 @@ class TaskProgramTracker:
                 self.phase += 1
                 self.phase_hold_seconds = 0.
         final = [self.condition(item, states, jaw_forces, gripper_open) for item in self.program.final_conditions]
-        eligible = self.phase == len(self.program.phases) and all(final)
+        eligible = self.phase == len(self.program.phases) and all(final) and additional_eligible
         self.final_hold_seconds = self.final_hold_seconds + dt if eligible else 0.
         return {"phase_before": active, "phase": self.phase, "phase_count": len(self.program.phases),
                 "final_conditions": final, "held_seconds": self.final_hold_seconds,

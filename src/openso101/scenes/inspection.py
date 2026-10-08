@@ -7,7 +7,7 @@ import trimesh
 from .catalog import AssetCatalog
 
 
-def inspect_asset(catalog: AssetCatalog, uid: str) -> dict:
+def inspect_asset(catalog: AssetCatalog, uid: str, *, probe=None) -> dict:
     asset = catalog.read(uid)
     if asset.format == "glb":
         geometry = trimesh.load(catalog.directory(uid) / "model.glb", force="mesh", process=False)
@@ -26,7 +26,7 @@ def inspect_asset(catalog: AssetCatalog, uid: str) -> dict:
                   "source_dimensions": np.diff(asset.bounds, axis=0)[0].tolist(),
                   "meters_per_unit": UsdGeom.GetStageMetersPerUnit(stage),
                   "vertices": asset.vertices, "faces": asset.faces}
-    return {
+    result = {
         "asset_uid": uid,
         "asset_sha256": asset.sha256,
         "source": asset.source_url,
@@ -37,3 +37,13 @@ def inspect_asset(catalog: AssetCatalog, uid: str) -> dict:
         )},
         "required_instance_properties": ["dimensions_m", "physics", "robot"],
     }
+    if probe is not None:
+        from .capabilities import probe_geometry
+
+        evidence = probe_geometry(catalog, uid, probe)
+        capability = "container_interior" if probe.capability == "container" else probe.capability
+        result["capabilities"][capability].update(
+            geometry_status="verified" if evidence["geometry_accepted"] else "rejected",
+            evidence=[evidence],
+        )
+    return result

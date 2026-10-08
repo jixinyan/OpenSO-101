@@ -48,6 +48,13 @@ def main():
     cfg.scene.num_envs = args.num_envs
     trackers = ([TaskProgramTracker(cfg.scene_spec, cfg.task_program) for _ in range(args.num_envs)]
                 if cfg.task_program is not None else [])
+    bddl_trackers = []
+    if cfg.bddl_report is not None:
+        from .bddl import BDDLBinding, BDDLTaskTracker
+
+        binding = BDDLBinding.model_validate(cfg.bddl_report["binding"])
+        bddl_trackers = [BDDLTaskTracker(cfg.bddl_report["problem"], binding, cfg.scene_spec)
+                         for _ in range(args.num_envs)]
     trace = []
     dynamic = [item.entity_id for item in cfg.scene_spec.entities if item.dynamic]
 
@@ -56,6 +63,8 @@ def main():
             for index in env_ids.tolist():
                 if trackers:
                     trackers[index].reset()
+                if bddl_trackers:
+                    bddl_trackers[index].reset()
             return None, None
 
         def record_post_step(self):
@@ -70,11 +79,27 @@ def main():
                           else np.zeros(args.num_envs))
             held = runtime._scene_hold_seconds.cpu().numpy().copy()
             success = runtime._scene_success.cpu().numpy().copy()
+            bddl_eligible = []
+            for index, tracker in enumerate(bddl_trackers):
+                measured = {item.entity_id: states[index, column]
+                            for column, item in enumerate(cfg.scene_spec.entities)}
+                result = tracker.update(measured, bool(opened[index]), runtime.step_dt)
+                eligible = result["source_goal_satisfied"] and result["stable"]
+                if cfg.scene_spec.task.require_released:
+                    eligible = eligible and bool(opened[index]) and all(
+                        (forces[name][index] <= .1).all() for name in tracker.subject_ids)
+                bddl_eligible.append(bool(eligible))
+                if not trackers:
+                    tracker.elapsed = tracker.elapsed if eligible else 0.
+                    expected = eligible and tracker.elapsed + 1e-7 >= cfg.scene_spec.task.settle_seconds
+                    if expected != success[index] or abs(tracker.elapsed - held[index]) > 1e-5:
+                        raise RuntimeError(f"BDDL 的实际状态检查失败：environment={index}")
             for index, tracker in enumerate(trackers):
                 values = {item.entity_id: states[index, column]
                           for column, item in enumerate(cfg.scene_spec.entities)}
                 contacts = {name: value[index] for name, value in forces.items()}
-                result = tracker.update(values, contacts, bool(opened[index]), runtime.step_dt)
+                result = tracker.update(values, contacts, bool(opened[index]), runtime.step_dt,
+                                        additional_eligible=bddl_eligible[index] if bddl_trackers else True)
                 if (result["phase"] != phase[index] or result["success"] != success[index]
                         or abs(tracker.phase_hold_seconds - phase_hold[index]) > 1e-5
                         or abs(result["held_seconds"] - held[index]) > 1e-5):
@@ -156,6 +181,9 @@ def main():
             "observation_shape": list(observation["policy"].shape),
             "trace_sha256": file_digest(trace_path),
             "program_conditions_verified": bool(trackers),
+            "bddl_conditions_verified": bool(bddl_trackers),
+            "bddl_checked_frames": args.steps * args.num_envs if bddl_trackers else 0,
+            "bddl_initial_conditions_verified": False,
             "program_checked_frames": args.steps * args.num_envs if trackers else 0,
             "program_maximum_phase": int(max(item["phase"].max() for item in trace)),
             "observed_dual_contact_frames": int(sum((item["jaw_forces"] > .5).all(axis=-1).sum() for item in trace)),

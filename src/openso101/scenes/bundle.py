@@ -57,7 +57,7 @@ def validate_layout(spec: SceneSpec, catalog: AssetCatalog) -> dict:
 
 
 def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path, *, intent=None, program=None,
-                  provenance: dict | None = None) -> Path:
+                  provenance: dict | None = None, bddl_report: dict | None = None) -> Path:
     if (intent is None) != (program is None):
         raise ValueError("SceneBundle 需要同时提供 TaskIntent 与 TaskProgram")
     if intent is not None:
@@ -66,6 +66,12 @@ def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path, *, 
         if compile_program(intent, spec) != program:
             raise ValueError("TaskProgram 必须保留 TaskIntent 的完整条件")
     report = validate_layout(spec, catalog)
+    if bddl_report is not None:
+        from .bddl import BDDLBinding, BDDLTaskTracker
+
+        if bddl_report["scene_sha256"] != spec.digest():
+            raise ValueError("BDDL 报告与场景版本不一致")
+        BDDLTaskTracker(bddl_report["problem"], BDDLBinding.model_validate(bddl_report["binding"]), spec)
     destination = destination.resolve()
     # 已存在的 bundle 保持不可变，更新配置使用新的输出目录。
     destination.mkdir(parents=True, exist_ok=False)
@@ -78,6 +84,8 @@ def export_bundle(spec: SceneSpec, catalog: AssetCatalog, destination: Path, *, 
         (destination / "task_program.json").write_text(program.model_dump_json(indent=2))
     if provenance is not None:
         (destination / "provenance.json").write_text(json.dumps(provenance, ensure_ascii=False, indent=2))
+    if bddl_report is not None:
+        (destination / "bddl.json").write_text(json.dumps(bddl_report, ensure_ascii=False, indent=2))
     (destination / "validation.json").write_text(json.dumps(report, indent=2))
     files = {
         path.relative_to(destination).as_posix(): file_digest(path)
@@ -145,3 +153,12 @@ def verify_program_documents(root: Path, spec: SceneSpec, files: dict):
         intent = TaskIntent.model_validate_json((root / "task_intent.json").read_text())
         if read_program(root / "task_program.json", spec) != compile_program(intent, spec):
             raise ValueError("TaskProgram 与 TaskIntent 的任务条件不一致")
+    if (root / "bddl.json").exists() or "bddl.json" in files:
+        from .bddl import BDDLBinding, BDDLTaskTracker
+
+        if "bddl.json" not in files:
+            raise ValueError("BDDL 文档必须包含在文件校验清单中")
+        report = json.loads((root / "bddl.json").read_text())
+        if report["scene_sha256"] != spec.digest():
+            raise ValueError("BDDL 文档与场景 SHA256 不一致")
+        BDDLTaskTracker(report["problem"], BDDLBinding.model_validate(report["binding"]), spec)

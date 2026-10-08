@@ -48,6 +48,7 @@ dependencies = [
     "prettytable",
     "prompt_toolkit>=3.0.50,<4",
     "packaging",
+    "jsonpointer>=3,<4",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +70,9 @@ scenes = [
     "httpx-sse==0.4.*",
     "sentence-transformers==5.1.2",
     "transformers==4.57.1",
+    "rtree>=1.3,<2",
+    "opencv-python-headless==4.11.0.86",
+    "bddl==3.6.0",
 ]
 scene-tests = ["pytest>=7", "usd-core>=25,<27"]
 

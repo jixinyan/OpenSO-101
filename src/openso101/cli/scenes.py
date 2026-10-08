@@ -120,7 +120,49 @@ def add_subparsers(parser: argparse.ArgumentParser):
     generate.add_argument("--max-revisions", type=int, default=3)
     generate.add_argument("--runtime-output", type=Path)
     generate.add_argument("--runtime-budget-seconds", type=float, default=600)
+    generate.add_argument("--capability-probes", type=Path)
     generate.set_defaults(func=_generate)
+    edit = sub.add_parser("edit", help="根据自然语言修改已有场景并保存独立版本")
+    edit.add_argument("bundle", type=Path)
+    edit.add_argument("--instruction", required=True)
+    edit.add_argument("--output", type=Path, required=True)
+    edit.add_argument("--edit-file", type=Path)
+    edit.add_argument("--catalog", type=Path)
+    edit.add_argument("--store", type=Path)
+    edit.add_argument("--expected-revision", type=int)
+    edit.add_argument("--base-url", default=os.environ.get("SCENE_MODEL_BASE_URL"))
+    edit.add_argument("--model", default=os.environ.get("SCENE_MODEL_NAME"))
+    edit.add_argument("--api-key-env", default="SCENE_MODEL_API_KEY")
+    edit.add_argument("--codex-config", type=Path)
+    edit.add_argument("--runtime-output", type=Path)
+    edit.set_defaults(func=_edit)
+    bddl = sub.add_parser("read-bddl", help="使用官方 BDDL 库读取完整外部任务")
+    bddl.add_argument("source", type=Path)
+    bddl.add_argument("--output", type=Path, required=True)
+    bddl.add_argument("--scene-file", type=Path)
+    bddl.add_argument("--binding", type=Path)
+    bddl.add_argument("--bundle-output", type=Path)
+    bddl.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    bddl.set_defaults(func=_read_bddl)
+    calibrate = sub.add_parser("calibrate-video", help="使用实际测量点与独立验证点标定视频相机")
+    calibrate.add_argument("video", type=Path)
+    calibrate.add_argument("--measurements", type=Path, required=True)
+    calibrate.add_argument("--output", type=Path, required=True)
+    calibrate.set_defaults(func=_calibrate_video)
+    metric = sub.add_parser("metric-layout", help="根据标定相机与已知参考高度恢复实际物体位置")
+    metric.add_argument("scene_file", type=Path)
+    metric.add_argument("--calibration", type=Path, required=True)
+    metric.add_argument("--observations", type=Path, required=True)
+    metric.add_argument("--video", type=Path, required=True)
+    metric.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    metric.add_argument("--output", type=Path, required=True)
+    metric.set_defaults(func=_metric_layout)
+    preview = sub.add_parser("preview", help="生成包含实际 mesh 与官方机器人模型的交互式场景预览")
+    preview.add_argument("bundle", type=Path)
+    preview.add_argument("--output", type=Path, required=True)
+    preview.add_argument("--robot-model", type=Path)
+    preview.add_argument("--joint-positions", nargs=6, type=float)
+    preview.set_defaults(func=_preview)
     import_asset = sub.add_parser("import", help="Import a user-provided GLB into the asset catalog")
     import_asset.add_argument("file", type=Path)
     import_asset.add_argument("--name", required=True)
@@ -144,6 +186,8 @@ def add_subparsers(parser: argparse.ArgumentParser):
     inspect = sub.add_parser("inspect", help="Measure asset geometry and list capability evidence")
     inspect.add_argument("uid")
     inspect.add_argument("--catalog", type=Path, default=Path("outputs/assets"))
+    inspect.add_argument("--probe", type=Path)
+    inspect.add_argument("--output", type=Path)
     inspect.set_defaults(func=_inspect)
     layout = sub.add_parser("layout", help="Solve tabletop footprint placement and reset clearance")
     layout.add_argument("scene_file", type=Path)
@@ -259,7 +303,9 @@ def _generate(args):
     limits = JobLimits(max_model_requests=args.max_model_requests, max_revisions=args.max_revisions,
                        max_runtime_seconds=args.runtime_budget_seconds)
     result = generate_scene_job(args.instruction, AssetCatalog(args.catalog), service, args.output,
-                                limits=limits, runtime_output=args.runtime_output, asset_index=args.asset_index)
+                                limits=limits, runtime_output=args.runtime_output, asset_index=args.asset_index,
+                                capability_probes=json.loads(args.capability_probes.read_text())
+                                if args.capability_probes else None)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
@@ -388,7 +434,124 @@ def _inspect(args):
     from openso101.scenes.catalog import AssetCatalog
     from openso101.scenes.inspection import inspect_asset
 
-    print(json.dumps(inspect_asset(AssetCatalog(args.catalog), args.uid), ensure_ascii=False, indent=2))
+    from openso101.scenes.capabilities import GeometryProbe
+
+    probe = GeometryProbe.model_validate_json(args.probe.read_text()) if args.probe else None
+    report = inspect_asset(AssetCatalog(args.catalog), args.uid, probe=probe)
+    if args.output is not None:
+        with args.output.open("x") as stream:
+            stream.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+
+def _edit(args):
+    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.editing import SceneEdit, interpret_scene_edit, revise_bundle
+    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
+    from openso101.scenes.store import SceneStore
+
+    if args.output.exists():
+        raise FileExistsError(args.output)
+    if (args.store is None) != (args.expected_revision is None):
+        raise ValueError("版本保存需要同时提供 --store 与 --expected-revision")
+    requests = []
+    catalog = AssetCatalog(args.catalog) if args.catalog else None
+    if args.edit_file is not None:
+        edit = SceneEdit.model_validate_json(args.edit_file.read_text())
+        if edit.instruction != args.instruction:
+            raise ValueError("修改文件与用户描述不一致")
+    else:
+        config = load_codex_runtime_config(args.codex_config) if args.codex_config else None
+        if config and config.bearer_token and not os.environ.get(args.api_key_env, "").strip():
+            os.environ[args.api_key_env] = config.bearer_token
+        base_url = args.base_url or (config.base_url if config else None)
+        model = args.model or (config.model if config else None)
+        if not base_url or not model:
+            raise ValueError("自然语言修改需要配置实际模型服务")
+        service = ModelService(base_url, model, args.api_key_env, wire_api=config.wire_api if config else "chat",
+                               reasoning_effort=config.reasoning_effort if config else "xhigh", max_requests=3)
+        edit = interpret_scene_edit(args.bundle, args.instruction, service, catalog=catalog)
+        requests = service.requests
+    result = revise_bundle(args.bundle, edit, args.output,
+                           store=SceneStore(args.store) if args.store else None,
+                           expected_revision=args.expected_revision, model_requests=requests, catalog=catalog)
+    if args.runtime_output is not None:
+        from openso101.scenes.preparation import prepare_scene
+
+        result["runtime"] = prepare_scene(args.output, args.runtime_output)
+        result["pending_checks"] = result["runtime"]["pending_checks"]
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _read_bddl(args):
+    from openso101.scenes.bddl import BDDLBinding, bind_bddl_problem, read_bddl_problem
+    from openso101.scenes.models import SceneSpec
+
+    if args.bundle_output and not args.binding:
+        raise ValueError("BDDL bundle 导出需要完整场景与 binding")
+    if (args.scene_file is None) != (args.binding is None):
+        raise ValueError("BDDL 目标绑定需要同时提供场景与 binding")
+    if args.binding:
+        result = bind_bddl_problem(args.source, BDDLBinding.model_validate_json(args.binding.read_text()),
+                                   SceneSpec.read(args.scene_file), args.output)
+    else:
+        result = read_bddl_problem(args.source)
+        with args.output.open("x") as stream:
+            stream.write(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    if args.bundle_output:
+        from openso101.scenes.bundle import export_bundle
+        from openso101.scenes.catalog import AssetCatalog
+
+        export_bundle(SceneSpec.read(args.scene_file), AssetCatalog(args.catalog), args.bundle_output,
+                      bddl_report=result, provenance={"operation": "bind_bddl", "task_success_verified": False})
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+
+
+def _calibrate_video(args):
+    from openso101.scenes.metric_video import CameraMeasurements, calibrate_camera
+
+    report = calibrate_camera(CameraMeasurements.model_validate_json(args.measurements.read_text()), args.video)
+    with args.output.open("x") as stream:
+        stream.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+
+def _metric_layout(args):
+    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.layout import diagnose_layout
+    from openso101.scenes.metric_video import ObjectImageMeasurement, apply_metric_positions, verify_calibration
+    from openso101.scenes.models import SceneSpec, file_digest
+
+    if args.output.exists():
+        raise FileExistsError(args.output)
+    observations = tuple(ObjectImageMeasurement.model_validate(item) for item in json.loads(args.observations.read_text()))
+    calibration = json.loads(args.calibration.read_text())
+    verify_calibration(calibration, args.video)
+    scene = apply_metric_positions(SceneSpec.read(args.scene_file), observations, calibration)
+    diagnostics = diagnose_layout(scene, AssetCatalog(args.catalog))
+    if diagnostics["status"] != "static_checks_passed":
+        raise ValueError(f"视频恢复布局未通过检查：{diagnostics}")
+    with args.output.open("x") as stream:
+        stream.write(scene.model_dump_json(indent=2))
+    report = {"scene_sha256": scene.digest(), "status": "metric_layout_created",
+              "source_scene_sha256": SceneSpec.read(args.scene_file).digest(),
+              "video_sha256": file_digest(args.video), "calibration_sha256": file_digest(args.calibration),
+              "observations_sha256": file_digest(args.observations),
+              "observations": [item.model_dump(mode="json") for item in observations],
+              "scene_reconstruction_verified": False, "task_success_verified": False,
+              "pending_checks": diagnostics["pending_checks"]}
+    with args.output.with_suffix(".provenance.json").open("x") as stream:
+        stream.write(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    print(json.dumps(report))
+
+
+def _preview(args):
+    from openso101.scenes.preview import export_preview
+
+    if args.joint_positions is not None and args.robot_model is None:
+        raise ValueError("机器人关节位置需要同时指定官方 MJCF 文件")
+    report = export_preview(args.bundle, args.output, robot_model=args.robot_model, joint_positions=args.joint_positions)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
 def _layout(args):
