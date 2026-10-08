@@ -1,0 +1,229 @@
+{
+  "status": "project_gpu_processes_absent",
+  "checked_at": "2026-10-08T15:25:55.592206+00:00",
+  "stop_requested": false,
+  "project_workers": [],
+  "remaining_inventory": [
+    {
+      "index": 0,
+      "uuid": "GPU-5cf6a186-7f53-8fd0-d20d-b49bed3a4ea4",
+      "memory_used_mib": 143.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 5476,
+          "owner": "haomin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        },
+        {
+          "pid": 210620,
+          "owner": "haomin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        },
+        {
+          "pid": 349317,
+          "owner": "haomin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        },
+        {
+          "pid": 351808,
+          "owner": "jixin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        },
+        {
+          "pid": 416099,
+          "owner": "haomin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        },
+        {
+          "pid": 529553,
+          "owner": "haomin",
+          "type": "G",
+          "used_memory": "7 MiB"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "uuid": "GPU-6e8cfa71-6a6f-db71-ac8f-1f118a0d7ae0",
+      "memory_used_mib": 1.0,
+      "utilization_percent": 0.0,
+      "processes": []
+    },
+    {
+      "index": 2,
+      "uuid": "GPU-aa3aa801-a799-81e2-996e-e949b2405898",
+      "memory_used_mib": 41342.0,
+      "utilization_percent": 94.0,
+      "processes": [
+        {
+          "pid": 351808,
+          "owner": "jixin",
+          "type": "C+G",
+          "used_memory": "8633 MiB"
+        },
+        {
+          "pid": 351808,
+          "owner": "jixin",
+          "type": "C",
+          "used_memory": "8633 MiB"
+        },
+        {
+          "pid": 383503,
+          "owner": "jixin",
+          "type": "C",
+          "used_memory": "5094 MiB"
+        },
+        {
+          "pid": 403829,
+          "owner": "jixin",
+          "type": "C",
+          "used_memory": "27474 MiB"
+        },
+        {
+          "pid": 416265,
+          "owner": "jixin",
+          "type": "C",
+          "used_memory": "1382 MiB"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "uuid": "GPU-0ed402a2-31fd-8980-2fbc-25ca3d9f8d76",
+      "memory_used_mib": 44738.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 406594,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "35662 MiB"
+        },
+        {
+          "pid": 416099,
+          "owner": "haomin",
+          "type": "C+G",
+          "used_memory": "9004 MiB"
+        },
+        {
+          "pid": 416099,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "9004 MiB"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "uuid": "GPU-0b5d4e54-90f6-bafd-936f-d5bfc93267f8",
+      "memory_used_mib": 45649.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 513415,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "35704 MiB"
+        },
+        {
+          "pid": 529553,
+          "owner": "haomin",
+          "type": "C+G",
+          "used_memory": "9873 MiB"
+        },
+        {
+          "pid": 529553,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "9873 MiB"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "uuid": "GPU-ab126311-272f-01a9-03dc-c7c76fdeb9f8",
+      "memory_used_mib": 45641.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 5476,
+          "owner": "haomin",
+          "type": "C+G",
+          "used_memory": "9873 MiB"
+        },
+        {
+          "pid": 5476,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "9873 MiB"
+        },
+        {
+          "pid": 649764,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "35696 MiB"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "uuid": "GPU-1a97b6c5-d430-d6fc-f64b-3408553ec57a",
+      "memory_used_mib": 45673.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 194924,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "35730 MiB"
+        },
+        {
+          "pid": 210620,
+          "owner": "haomin",
+          "type": "C+G",
+          "used_memory": "9871 MiB"
+        },
+        {
+          "pid": 210620,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "9871 MiB"
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "uuid": "GPU-7297b5d9-db92-689e-7d74-d1b464f64905",
+      "memory_used_mib": 44618.0,
+      "utilization_percent": 0.0,
+      "processes": [
+        {
+          "pid": 338141,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "35670 MiB"
+        },
+        {
+          "pid": 349317,
+          "owner": "haomin",
+          "type": "C+G",
+          "used_memory": "8876 MiB"
+        },
+        {
+          "pid": 349317,
+          "owner": "haomin",
+          "type": "C",
+          "used_memory": "8876 MiB"
+        }
+      ]
+    }
+  ],
+  "source_sha256": "4de51c8dddf7aafd9c8dea883f67120cbf1cce862540b8017c21c982b6be7f33",
+  "other_projects_terminated": false
+}

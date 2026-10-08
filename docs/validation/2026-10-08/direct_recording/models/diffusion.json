@@ -1,0 +1,506 @@
+{
+  "status": "actual_lerobot_training_preparation_verified",
+  "git_sha": "707ee0b158d9aefd3e513d8adf81f8d1bdf1e489",
+  "lerobot_version": "0.4.0",
+  "policy": "diffusion",
+  "validation_device": "cpu",
+  "planned_device": "cuda:0",
+  "physical_gpu": 2,
+  "dataset_root": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/lerobot_recorder/sync",
+  "frames": 336,
+  "episodes": 3,
+  "source_files": {
+    "data/chunk-000/file-000.parquet": "bf333aa5cc3cd0d795550243c0f9df559dcd2deff8c3c89ba901980bce5e4b19",
+    "data/chunk-000/file-001.parquet": "47f8b72f27ae8500a04e776ffcdf9e76888865ef852216d99b572a3428aeee36",
+    "meta/episodes/chunk-000/file-000.parquet": "6ddf2f476bf57f1de75c613d3c43784f7b17d08d789ad9a412131136c19af392",
+    "meta/episodes/chunk-000/file-001.parquet": "f869af6f38a8147af8239149a95e308464e8d8585d3948fa0a691048f6fcc4e4",
+    "meta/info.json": "454a8da2f5083e129830ba37b4cd28ec3fd167de6100e3d299a8b5b46792c9bf",
+    "meta/openso101_recording.json": "94ca093c6bc435886465a57a9307f2ce6f42ab2a3a9a02e157fea58bec6110e8",
+    "meta/stats.json": "34749263bae10742c63521234a023ec2a650700117d0ce9c567897c5a735b425",
+    "meta/tasks.parquet": "6266a6fad9bb98e2b067f66500ca6438efb0598b7ae663c207bdb5d71dfd1027",
+    "videos/observation.images.overhead_camera/chunk-000/file-000.mp4": "9613d6c91128adeac299985b57315290f9b506fbd7f9f21afbc4bb4fe6652916",
+    "videos/observation.images.overhead_camera/chunk-000/file-001.mp4": "150795c44a1c0cadea0285a263796208b082edfecac03a2a675a1030ed473e5f",
+    "videos/observation.images.wrist_camera/chunk-000/file-000.mp4": "b2c3365732a057a842e2466a715fc78e5c9d37e6e016b2a589b6e4eec6abc8f0",
+    "videos/observation.images.wrist_camera/chunk-000/file-001.mp4": "027906bc492ed448397c56b5652655451aed6c5a282ee7357863a289b28349b9"
+  },
+  "source_files_unchanged": true,
+  "cpu_config": {
+    "dataset": {
+      "repo_id": "local/sync",
+      "root": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/lerobot_recorder/sync",
+      "episodes": null,
+      "image_transforms": {
+        "enable": false,
+        "max_num_transforms": 3,
+        "random_order": false,
+        "tfs": {
+          "brightness": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "brightness": [
+                0.8,
+                1.2
+              ]
+            }
+          },
+          "contrast": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "contrast": [
+                0.8,
+                1.2
+              ]
+            }
+          },
+          "saturation": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "saturation": [
+                0.5,
+                1.5
+              ]
+            }
+          },
+          "hue": {
+            "weight": 1.0,
+            "type": "ColorJitter",
+            "kwargs": {
+              "hue": [
+                -0.05,
+                0.05
+              ]
+            }
+          },
+          "sharpness": {
+            "weight": 1.0,
+            "type": "SharpnessJitter",
+            "kwargs": {
+              "sharpness": [
+                0.5,
+                1.5
+              ]
+            }
+          },
+          "affine": {
+            "weight": 1.0,
+            "type": "RandomAffine",
+            "kwargs": {
+              "degrees": [
+                -5.0,
+                5.0
+              ],
+              "translate": [
+                0.05,
+                0.05
+              ]
+            }
+          }
+        }
+      },
+      "revision": null,
+      "use_imagenet_stats": true,
+      "video_backend": "torchcodec",
+      "streaming": false
+    },
+    "env": null,
+    "policy": {
+      "type": "diffusion",
+      "n_obs_steps": 2,
+      "input_features": {
+        "observation.state": {
+          "type": "STATE",
+          "shape": [
+            6
+          ]
+        },
+        "observation.images.wrist_camera": {
+          "type": "VISUAL",
+          "shape": [
+            3,
+            256,
+            256
+          ]
+        },
+        "observation.images.overhead_camera": {
+          "type": "VISUAL",
+          "shape": [
+            3,
+            256,
+            256
+          ]
+        }
+      },
+      "output_features": {
+        "action": {
+          "type": "ACTION",
+          "shape": [
+            6
+          ]
+        }
+      },
+      "device": "cpu",
+      "use_amp": false,
+      "push_to_hub": false,
+      "repo_id": null,
+      "private": null,
+      "tags": null,
+      "license": null,
+      "pretrained_path": null,
+      "horizon": 16,
+      "n_action_steps": 8,
+      "normalization_mapping": {
+        "VISUAL": "MEAN_STD",
+        "STATE": "MIN_MAX",
+        "ACTION": "MIN_MAX"
+      },
+      "drop_n_last_frames": 7,
+      "vision_backbone": "resnet18",
+      "crop_shape": [
+        84,
+        84
+      ],
+      "crop_is_random": true,
+      "pretrained_backbone_weights": null,
+      "use_group_norm": true,
+      "spatial_softmax_num_keypoints": 32,
+      "use_separate_rgb_encoder_per_camera": false,
+      "down_dims": [
+        512,
+        1024,
+        2048
+      ],
+      "kernel_size": 5,
+      "n_groups": 8,
+      "diffusion_step_embed_dim": 128,
+      "use_film_scale_modulation": true,
+      "noise_scheduler_type": "DDPM",
+      "num_train_timesteps": 100,
+      "beta_schedule": "squaredcos_cap_v2",
+      "beta_start": 0.0001,
+      "beta_end": 0.02,
+      "prediction_type": "epsilon",
+      "clip_sample": true,
+      "clip_sample_range": 1.0,
+      "num_inference_steps": null,
+      "do_mask_loss_for_padding": false,
+      "optimizer_lr": 0.0001,
+      "optimizer_betas": [
+        0.95,
+        0.999
+      ],
+      "optimizer_eps": 1e-08,
+      "optimizer_weight_decay": 1e-06,
+      "scheduler_name": "cosine",
+      "scheduler_warmup_steps": 500
+    },
+    "output_dir": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/il_training/training_diffusion",
+    "job_name": "diffusion",
+    "resume": false,
+    "seed": 1000,
+    "num_workers": 4,
+    "batch_size": 8,
+    "steps": 100000,
+    "eval_freq": 20000,
+    "log_freq": 200,
+    "save_checkpoint": true,
+    "save_freq": 20000,
+    "use_policy_training_preset": true,
+    "optimizer": {
+      "type": "adam",
+      "lr": 0.0001,
+      "weight_decay": 1e-06,
+      "grad_clip_norm": 10.0,
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "eps": 1e-08
+    },
+    "scheduler": {
+      "type": "diffuser",
+      "num_warmup_steps": 500,
+      "name": "cosine"
+    },
+    "eval": {
+      "n_episodes": 50,
+      "batch_size": 50,
+      "use_async_envs": false
+    },
+    "wandb": {
+      "enable": false,
+      "disable_artifact": false,
+      "project": "lerobot",
+      "entity": null,
+      "notes": null,
+      "run_id": null,
+      "mode": null
+    },
+    "checkpoint_path": null,
+    "rename_map": {}
+  },
+  "training_arguments": [
+    "--policy.type=diffusion",
+    "--policy.device=cuda:0",
+    "--policy.push_to_hub=false",
+    "--output_dir=/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/il_training/training_diffusion",
+    "--dataset.repo_id=local/sync",
+    "--dataset.root=/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/lerobot_recorder/sync",
+    "--steps=100000",
+    "--batch_size=8"
+  ],
+  "checked_batches": [
+    {
+      "sample": "first_batch",
+      "shapes": {
+        "action": [
+          8,
+          16,
+          6
+        ],
+        "observation.state": [
+          8,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          8,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          8,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 1
+    },
+    {
+      "sample": "frame_0",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 1
+    },
+    {
+      "sample": "frame_168",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.814697265625e-06,
+      "action_padding_frames": 0
+    },
+    {
+      "sample": "frame_335",
+      "shapes": {
+        "action": [
+          1,
+          16,
+          6
+        ],
+        "observation.state": [
+          1,
+          2,
+          6
+        ],
+        "observation.images.wrist_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ],
+        "observation.images.overhead_camera": [
+          1,
+          2,
+          3,
+          256,
+          256
+        ]
+      },
+      "action_roundtrip_maximum_error": 3.5762786865234375e-07,
+      "action_padding_frames": 14
+    }
+  ],
+  "sampled_frame_indices": [
+    0,
+    168,
+    335
+  ],
+  "action_roundtrip_maximum_error": 3.814697265625e-06,
+  "output_directory_created": false,
+  "gpu_tests_started": false,
+  "model_graph": {
+    "status": "actual_cpu_model_graph_verified",
+    "initialization": "lerobot_configured_model",
+    "seed": 1000,
+    "batch_size": 1,
+    "sampled_frame_index": 0,
+    "parameters": 266622758,
+    "gradient_parameters": 266622758,
+    "nonzero_gradient_tensors": 212,
+    "maximum_gradient": 0.5173752903938293,
+    "loss": 0.9760904312133789,
+    "loss_components": null,
+    "inference_action": [
+      [
+        12.43328857421875,
+        25.096670150756836,
+        17.81903839111328,
+        41.82215881347656,
+        48.56001281738281,
+        0.9201202392578125
+      ]
+    ],
+    "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+    "checkpoint_roundtrip": {
+      "status": "actual_cpu_checkpoint_roundtrip_verified",
+      "directory": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/il_training/diffusion/pretrained_model",
+      "initialization": "lerobot_configured_model",
+      "saved_config_device": "cuda:0",
+      "requested_device": "cpu",
+      "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+      "processor_state_tensors": 180,
+      "files": {
+        "config.json": "dbac3df6f5e400d898364ba92aa5005b1440edec23e2957a7e6910abff4e4b7a",
+        "model.safetensors": "fbfc0c1d147f776ec06702e38cc6fcbf17b507b43b757b4b0a40162aa839740b",
+        "policy_preprocessor_step_3_normalizer_processor.safetensors": "bc0177f8e9a4740287ef1903b7d871cbfa5fa6f81eb87a3d77099ad86ee1da2f",
+        "policy_preprocessor.json": "fa827ac70bacec21a825e4adbe0bd6785657151bf6c9a146b3b9c259d6afc75a",
+        "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "bc0177f8e9a4740287ef1903b7d871cbfa5fa6f81eb87a3d77099ad86ee1da2f",
+        "policy_postprocessor.json": "ff4666f11949008cb7722e8969ab913f652e6dccc6c06eab40006a464edd276f",
+        "openso101_simulation.json": "775f35821c2ea11145d5dec1830c196732952b36a0017ca8681b96845bd2082f"
+      },
+      "maximum_action_error": 0.0,
+      "inference_action": [
+        [
+          6.371940612792969,
+          0.3319138288497925,
+          2.9198837280273438,
+          50.738460540771484,
+          16.45517349243164,
+          -33.80144119262695
+        ]
+      ],
+      "checkpoint_files_unchanged": true,
+      "optimizer_updates": 0,
+      "gpu_tests_started": false,
+      "task_success_verified": false,
+      "simulation_settings": {
+        "schema_version": 1,
+        "fps": 50,
+        "camera_sizes": {
+          "wrist_camera": [
+            256,
+            256
+          ],
+          "overhead_camera": [
+            256,
+            256
+          ]
+        },
+        "joint_names": [
+          "shoulder_pan.pos",
+          "shoulder_lift.pos",
+          "elbow_flex.pos",
+          "wrist_flex.pos",
+          "wrist_roll.pos",
+          "gripper.pos"
+        ],
+        "action_units": "motor_units",
+        "dataset_info_sha256": "454a8da2f5083e129830ba37b4cd28ec3fd167de6100e3d299a8b5b46792c9bf",
+        "dataset_export_sha256": null,
+        "dataset_recording_sha256": "94ca093c6bc435886465a57a9307f2ce6f42ab2a3a9a02e157fea58bec6110e8",
+        "recorded_simulation": {
+          "env_id": "OpenSO101-PickPlace-v0",
+          "task_profile": "grasp_v4",
+          "physics_dt": 0.001,
+          "decimation": 20,
+          "environment_mode": "nominal",
+          "reward_discount": 0.99,
+          "scene_sha256": null
+        }
+      }
+    },
+    "model_checkpoint_verified": true,
+    "optimizer": "Adam",
+    "optimizer_learning_rates": [
+      0.0
+    ],
+    "scheduler": "LambdaLR",
+    "optimizer_configuration_verified": true,
+    "optimizer_updates": 0,
+    "model_forward_verified": true,
+    "model_backward_verified": true,
+    "model_inference_verified": true,
+    "gpu_tests_started": false,
+    "task_success_verified": false
+  },
+  "model_forward_verified": true,
+  "training_started": false,
+  "task_success_verified": false,
+  "source_sha256": {
+    "src/openso101/il/runners/preparation.py": "f016d18cb0c9bcd41ea942073236c70e09136b7f1a23fd1d7d8f1754b235ebeb",
+    "src/openso101/il/runners/trainer.py": "31a19181533d306b2adbb37c92e5f03a2a38341aea6b23568214700b8cd41463",
+    "src/openso101/il/runners/worker.py": "61ee9d9169a97b2252ca1cf645c66e44a1636666982b3e076c56f4919562dac1",
+    "src/openso101/il/runners/model_validation.py": "1af08e97b17e2a9da3d74441b0ccd58b139f29b821d3a31064db4978aaaf438b",
+    "src/openso101/il/policies/factory.py": "240d1d3c7746f320fc1693a6f8a216e5b11b1ef28f4d14e6e756e37047cd7844",
+    "src/openso101/il/policies/validation.py": "a2fb6e21a3864b3fa3ea658dd400294aa2d2417a6f5967df9912533c627af8ea",
+    "src/openso101/il/policies/simulation.py": "2fd192fbd870e5f746a3141d11e90c52d7d72637111f6d3693255e56d393f873",
+    "src/openso101/il/datasets/validation.py": "6ce2ab87a6f462fb7e78126dc52a046e73b31924951ebb7f6aff3b11ce038792"
+  }
+}

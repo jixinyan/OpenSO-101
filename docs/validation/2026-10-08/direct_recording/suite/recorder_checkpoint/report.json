@@ -1,0 +1,38 @@
+{
+  "status": "actual_hdf5_checkpoint_verified",
+  "cases": {
+    "disk": {
+      "checkpoint_frames": 8,
+      "written_frames_before_restore": 24,
+      "saved_frames": 16,
+      "actual_fields": 29,
+      "all_arrays_equal": true,
+      "saved_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/recorder_checkpoint/disk/episodes/episode_000000.hdf5",
+      "sha256": "4d175c5ab55f2568abfcb1db36a1ffa0552ba738e234a7507478a811159f37c8",
+      "task_success_verified": false
+    },
+    "buffer": {
+      "checkpoint_frames": 20,
+      "written_frames_before_restore": 25,
+      "saved_frames": 32,
+      "actual_fields": 29,
+      "all_arrays_equal": true,
+      "saved_episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_direct_recording/recorder_checkpoint/buffer/episodes/episode_000000.hdf5",
+      "sha256": "6b4aec3fa9b16405aa58eaa5398fc7ea64f9394b88c413980dc29f3942c6d2c8",
+      "task_success_verified": false
+    }
+  },
+  "source_episode": "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_unchanged": true,
+  "input_arrays_preserved": true,
+  "invalid_fps_rejected": true,
+  "inactive_checkpoint_rejected": true,
+  "gpu_tests_started": false,
+  "native_restore_verified": false,
+  "task_success_verified": false,
+  "checkpoint_store_source_sha256": "d616c50fea76a363898cdeb89346a3cac40fc3541828f4b39d09aefe2af8dc0d",
+  "recorded_simulation_preserved": true,
+  "recorder_source_sha256": "93b6aaf5334f6eaf0b219ed077794567f42300c114adcf3ee3029f8ac5760548",
+  "validation_source_sha256": "b6cd8e3f452b231daf88374a89961243886229ddd5f20358351d8da63d96d116"
+}
