@@ -1,0 +1,211 @@
+{
+  "status": "scene_batch_cpu_verified",
+  "cases_sha256": "19a78e325fcfb5a78f381cdd30f0e9d2098cb7eb78cfc6c5100d33447b4187f9",
+  "cases": [
+    {
+      "name": "mouse_pad",
+      "bundle": "outputs/robotwin_tasks_verified/mouse_pad/bundle",
+      "scene_sha256": "76e2fd6cab409a6b98dd6085fe8416a927525fa4a93e7dac3d81cbfc456f896e",
+      "manifest_sha256": "680d1eca470ffd2a81c4adb5b5e39dc5d250a6fd43a53c61361cddb4878a86d0",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "stapler_pad",
+      "bundle": "outputs/robotwin_tasks_verified/stapler_pad/bundle",
+      "scene_sha256": "821392784223807426aef0dcba924fd94e68bf93687baee8c905110e6edd7920",
+      "manifest_sha256": "fe1019080157143806b01f5950927635b0697a774cc1b9e7ee86394c1df3ded2",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "pillbottle_pad",
+      "bundle": "outputs/robotwin_tasks_verified/pillbottle_pad/bundle",
+      "scene_sha256": "cc175db5609356f32233fe801e89bf0d7a6d120b49dd70e45c8a57552587a7d8",
+      "manifest_sha256": "1ac466262fd54b209566f6cde1bc55c6361c0ef0da4079719d16d941e83a1959",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "object_scale",
+      "bundle": "outputs/robotwin_tasks_verified/object_scale/bundle",
+      "scene_sha256": "d105380e25431234d2d2a503554c398ba5609170f86381ee1188944493354b36",
+      "manifest_sha256": "690e943ad5f545cb30b2397ea0f6fba9b16c76797e3eb61479c1a7c0bb9244bd",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "stack_blocks",
+      "bundle": "outputs/robotwin_tasks_verified/stack_blocks/bundle",
+      "scene_sha256": "d0a5be6c412df565494ac1efb54b871f844f69077b07d3cb30ca56cd61770c0d",
+      "manifest_sha256": "aa0920acc2025ec7676478f64250b9708041cc037d88e0f333e88a506e8a5e45",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "indexed_scene",
+      "bundle": "outputs/rl_progress/v3_indexed_scene_exact/bundle",
+      "scene_sha256": "5e6e98ed5a21caaac57e87e3c4c97a9d4108d65581e581c0fcecbdbde7a1239e",
+      "manifest_sha256": "50087767504b866a7e48bc60f24086cc8defa3c5f39a63556f052293e1b03633",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "agent_runtime",
+      "bundle": "outputs/rl_progress/agent_runtime_bundle",
+      "scene_sha256": "f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537",
+      "manifest_sha256": "3917a983bc4f226203061e2d1a09ef025eb796f2489d658d31219901f7eca80a",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "edit_revision_1",
+      "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_1",
+      "scene_sha256": "05c783b2c1e4fa98d630432ddfe3301fff911add76e4218173412c152be6d635",
+      "manifest_sha256": "a2e5b8a6c69e45409988081d0ae431cd76f385cdf5f8b3cd110c7eaa70f25b05",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "edit_revision_2",
+      "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_2",
+      "scene_sha256": "96b9f62384db6ce7d4a5230625386cdfc4280c009f1b3a3dff6d93df79c8a474",
+      "manifest_sha256": "bb034b4b886d106fe93d8b24349755d51f166b5eda0f5622eeac0d55ee962bb1",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    },
+    {
+      "name": "edit_revision_3",
+      "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_3",
+      "scene_sha256": "a9c479b7e1ab320ec63690ddf0126a3533ff4a2568a8b630f4fa5c705a73b0e5",
+      "manifest_sha256": "5d3ca1da66a872178ad4633244020348797d95220d1b64af27235637c9d1ed44",
+      "diagnostics": {
+        "status": "static_checks_passed",
+        "collisions": [],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": false,
+        "relation_errors": [],
+        "pending_checks": [
+          "stability",
+          "reachability",
+          "contact_geometry",
+          "cameras",
+          "collection"
+        ]
+      }
+    }
+  ],
+  "count": 10,
+  "source_sha256": "368b32427c05383d3c2361367249986ebef1d5e73c86325d3881c5c05b431a28",
+  "gpu_tests_started": false,
+  "task_success_verified": false,
+  "dataset_verified": false
+}

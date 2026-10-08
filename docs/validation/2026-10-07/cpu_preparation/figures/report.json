@@ -1,0 +1,15 @@
+{
+  "status": "actual_cpu_evidence_figure_verified",
+  "image_sha256": "d8185c9b9f8f0dcc9c188ffee6d5ad558706b0557275cdb0131920d9af4d2159",
+  "image_size": [
+    2560,
+    800
+  ],
+  "trajectory_sha256": "cbc683fb050636d927b476ef26736b955c7285dd310c41a7512ea13278f6d1b5",
+  "mujoco_report_sha256": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+  "history_report_sha256": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b",
+  "source_sha256": "07c4ca4609289d97977c23520ea9c289e87367218743da4c4137ae3ade162f13",
+  "policy_task_successes": 0,
+  "policy_task_episodes": 4,
+  "gpu_tests_started": false
+}
