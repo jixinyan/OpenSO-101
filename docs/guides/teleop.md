@@ -130,17 +130,12 @@ openso101 il record --task OpenSO101-PickPlace-v0 \
 
 ### 录制操作
 
-- `S`: mark the current episode SUCCESS, save it, and exit.
-- `Q`: cancel the active episode and exit (data discarded).
-- `C`: checkpoint the current frame (robot pose + env state + recording
-  position).
-- `R`: restore robot pose + env state to the most recent checkpoint.
-  The sim snaps back to the checkpoint pose; the leader takes over on
-  the next frame (no leader-pose sync required — by design).
+- `S`：人工标记成功，保存当前 episode 并退出。
+- `Q`：取消当前 episode 并退出。
+- `C`：保存机器人、场景状态与录制位置的 checkpoint。
+- `R`：恢复最近的 checkpoint。键盘控制参考同时更新；leader 模式等待实际关节与恢复位置满足同步阈值后继续控制。
 
-The auto-detected goal-success path (run with `--goal-region`) prompts
-`[y/N]` for save by default; pass `--auto-save` to commit without the
-prompt for unattended batch capture.
+任务成功条件满足时，录制默认显示 `[y/N]` 保存提示；`--auto-save` 自动保存满足条件的 episode。
 
 ## Export To LeRobot Later
 
@@ -156,6 +151,8 @@ openso101 il export \
 ```
 
 默认仅导出成功 episode，跳过每个 episode 开头的五帧，并要求剩余至少十帧。检查控制与记录流程时，可以设置 `--include-failures --skip-leading-frames 0` 保留全部帧。`meta/openso101_export.json` 保存源文件 SHA256、源帧数、导出帧数、成功标记和筛选配置；自定义场景同时保存场景副本与 `meta/scenes.json`。双相机视频、动作和关节观测均包含在导出的数据中。
+
+导出前检查全部源 HDF5、整数 FPS、图像格式、筛选结果与场景文件。异步模式使用单个工作线程保存 episode，并在下一次写入 dataset buffer 前等待保存完成。`--no-async-flush` 使用同步保存。已有输出需要明确设置 `--overwrite-export`，覆盖操作保留原数据目录。同步与异步导出的全部帧检查见 [CPU、LeRobot 导出与打包验证](../validation/2026-10-08/il_pipeline/README.md)。
 
 使用 Hub 上传入口发布数据集：
 

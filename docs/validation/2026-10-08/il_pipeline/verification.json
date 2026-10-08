@@ -1,0 +1,33 @@
+{
+  "status": "current_source_cpu_ci_and_package_verified",
+  "git_sha": "d367309b9f1fb5e4496822178f40f7c7298260f9",
+  "cpu_stages": 12,
+  "ci_tests": 104,
+  "source_modules": 183,
+  "project_imports": 789,
+  "reports": {
+    "suite.json": "63f0a50167c030ba68d516e6a7608003c0076c1d6a684864073a450bc73694aa",
+    "ci_run.json": "e78b5723850ae29e5b9695d6e3e708279c4878b0a093e01936900566222d1890",
+    "ci_source.json": "475923d3e86268b2db0fa74b98e9497a82f2112b14b27e9ce9d29cbd54476087",
+    "ci_geometry.json": "4214485395a50088a4cba9cba683fcb36ae69007b7dcd06e80469e05dd814401",
+    "ci_interfaces.xml": "854c745beb4f7decb0d2d940aaffa545f5db6f464cc21ef622440f6ea1958580",
+    "package.json": "4e560e6e75accca4db31153e55e151b4ac34b8632e43d2f283d39920d14a426e",
+    "ci_package.json": "3409bdc148c1f28a171166c5cda1cff0743a02d15059562d92d26c97657b7ec4",
+    "ci_undefined_names.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "suite/source_layout/report.json": "475923d3e86268b2db0fa74b98e9497a82f2112b14b27e9ce9d29cbd54476087",
+    "suite/cpu_geometry/report.json": "0d77cdbfb8f510a1a0f9c44768f25e76c270036edcca70af14b198a541845855",
+    "suite/cpu_interfaces/report.json": "ee09b3c8cc24edcec293b7fda066b9e70c182f68cd2dd2f537c7ae2e17322d73",
+    "suite/keyboard_ik.json": "4b890fdb567c6a5bd8e260b86f8474d5b0fc1051dae18e888ea79c36a02e03b9",
+    "suite/metric_video/report.json": "11b4a20d9444a0e4e1840489faba9ee1a3daebd6cf392df205cacfe6d192e552",
+    "suite/scene_batch/report.json": "0a410fbb53b370f43cdadb7ab5046e209697e1d6bd1a729c12d4773a017ef7b2",
+    "suite/lerobot.json": "fdfed93b5be9452bc85d5b15676a30cf817fb5e03d65d96f186590fc0278f624",
+    "suite/lerobot_export/report.json": "de076b4654488824f32278e757db6650ae31ead991f13f82d76bf01ec3fb9cca",
+    "suite/policy_history/report.json": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b",
+    "suite/demonstration_updates/report.json": "3a87479f59591744e94aede5817fcee8ee9201b8edad63e1384663a27e3db98e",
+    "suite/mujoco_policy/report.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+    "suite/gpu_inventory.json": "d7073897c8027365cfa28f5f92aa2dcf88e956439693151b202ec11cece9a88b"
+  },
+  "gpu_tests_started": false,
+  "native_physics_verified": false,
+  "full_v2_verified": false
+}
