@@ -4,10 +4,12 @@
 import itertools
 
 import numpy as np
+import trimesh
 from scipy.optimize import Bounds, LinearConstraint, milp
 
 from .bundle import entity_bounds, validate_layout
 from .catalog import AssetCatalog
+from .capabilities import instance_mesh
 from .models import Pose, SceneSpec
 
 
@@ -64,6 +66,12 @@ def solve_layout(spec: SceneSpec, catalog: AssetCatalog, *, locked=(), clearance
     objective[2 * n:4 * n] = 1
     table_lower = np.array(spec.table.center_xy_m) - np.array(spec.table.size_xy_m) / 2
     table_upper = np.array(spec.table.center_xy_m) + np.array(spec.table.size_xy_m) / 2
+    current_fits = all(np.all(shape[0, :2] + entity.pose.position[:2] >= table_lower)
+                       and np.all(shape[1, :2] + entity.pose.position[:2] <= table_upper)
+                       and shape[0, 2] + entity.pose.position[2] >= spec.table.top_z_m - 1e-6
+                       for shape, entity in zip(reset_shapes, spec.entities))
+    if current_fits and diagnose_layout(spec, catalog, clearance_m=clearance_m)["status"] == "static_checks_passed":
+        return spec
     rows, row_lower, row_upper = [], [], []
 
     def constraint(coefficients, lo=-np.inf, hi=np.inf):
@@ -113,8 +121,27 @@ def solve_layout(spec: SceneSpec, catalog: AssetCatalog, *, locked=(), clearance
             )
         )
     solved = SceneSpec.model_validate(spec.model_dump() | {"entities": entities})
-    validate_layout(solved, catalog)
+    if diagnose_layout(solved, catalog)["status"] != "static_checks_passed":
+        raise ValueError("求解位置未通过实际 mesh 碰撞检查")
     return solved
+
+
+def _collision_mesh(entity, catalog):
+    mesh = instance_mesh(catalog, entity.asset_uid, entity.dimensions_m,
+                         require_volume=entity.physics.collision == "convexDecomposition")
+    if entity.physics.collision == "convexHull":
+        mesh = mesh.convex_hull
+    transform = trimesh.transformations.quaternion_matrix(entity.pose.quaternion_wxyz)
+    transform[:3, 3] = entity.pose.position
+    mesh.apply_transform(transform)
+    return mesh
+
+
+def _intersects_material(first, second):
+    manager = trimesh.collision.CollisionManager()
+    manager.add_object("first", first)
+    return bool(manager.in_collision_single(second) or first.contains(second.vertices).any()
+                or second.contains(first.vertices).any())
 
 
 def diagnose_layout(
@@ -123,24 +150,21 @@ def diagnose_layout(
     *,
     clearance_m: float = 0.0,
 ) -> dict:
-    """Run inexpensive geometry checks that do not require Isaac Sim.
-
-    ``validate_layout`` checks tabletop and asset integrity.  This companion
-    report covers the remaining static checks that can be decided from the
-    scene schema: initial AABB collisions and whether relation goals have
-    enough target area/volume for the moved object.  Robot reachability,
-    contact geometry and dynamic stability remain runtime checks.
-    """
     if clearance_m < 0 or not np.isfinite(clearance_m):
         raise ValueError("clearance_m must be a non-negative finite number")
     validate_layout(spec, catalog)
     bounds = {entity.entity_id: entity_bounds(entity) for entity in spec.entities}
     collisions: list[tuple[str, str]] = []
+    meshes = {}
     for first, second in itertools.combinations(spec.entities, 2):
         a, b = bounds[first.entity_id], bounds[second.entity_id]
         overlap = np.minimum(a[1], b[1]) - np.maximum(a[0], b[0])
         if np.all(overlap > clearance_m):
-            collisions.append((first.entity_id, second.entity_id))
+            for entity in (first, second):
+                if entity.entity_id not in meshes:
+                    meshes[entity.entity_id] = _collision_mesh(entity, catalog)
+            if _intersects_material(meshes[first.entity_id], meshes[second.entity_id]):
+                collisions.append((first.entity_id, second.entity_id))
 
     relation_errors: list[str] = []
     entities = {entity.entity_id: entity for entity in spec.entities}
@@ -163,6 +187,8 @@ def diagnose_layout(
     return {
         "status": "static_checks_passed" if not collisions and not relation_errors else "static_checks_failed",
         "collisions": [list(pair) for pair in collisions],
+        "collision_scope": "instance_mesh_and_configured_convex_hulls",
+        "physics_collision_cooking_verified": False,
         "relation_errors": relation_errors,
         "pending_checks": ["stability", "reachability", "contact_geometry", "cameras", "collection"],
     }

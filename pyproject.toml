@@ -49,6 +49,8 @@ dependencies = [
     "prompt_toolkit>=3.0.50,<4",
     "packaging",
     "jsonpointer>=3,<4",
+    "psutil>=6,<8",
+    "filelock>=3.16,<4",
 ]
 
 [project.optional-dependencies]
@@ -63,9 +65,10 @@ scenes = [
     "objaverse==0.1.7",
     "pydantic>=2.10,<3",
     "trimesh>=4.5,<5",
+    "python-fcl>=0.7,<0.8",
     "scipy>=1.14",
     "pillow>=10",
-    "av>=12,<15",
+    "av>=15.1,<16",
     "httpx>=0.27,<1",
     "httpx-sse==0.4.*",
     "sentence-transformers==5.1.2",

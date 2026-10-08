@@ -37,12 +37,24 @@ def configure_visible_gpu():
     if sys.platform == "linux" and os.environ.get("OPENSO101_GPU_NAMESPACE") == "1":
         physical_gpu = int(os.environ["OPENSO101_PHYSICAL_GPU"])
         scope.validate_allocation([physical_gpu])
+        from .gpu_guard import verify_guard
+
+        verify_guard(physical_gpu)
         if list(Path("/dev").glob("nvidia[0-9]*")) != [Path(f"/dev/nvidia{physical_gpu}")]:
             raise RuntimeError("GPU 设备目录必须只包含指定物理设备")
         renderer_gpu = 0
     else:
         physical_gpu = _requested_gpu(scope)
         if sys.platform == "linux":
+            guard_pid = os.environ.get("OPENSO101_GPU_GUARD_PID")
+            if guard_pid is None:
+                from .gpu_guard import automatic_report, run_guarded
+
+                repo = Path(__file__).resolve().parents[3]
+                raise SystemExit(run_guarded(sys.orig_argv, physical_gpu, repo, automatic_report(repo)))
+            from .gpu_guard import verify_guard
+
+            verify_guard(physical_gpu)
             _isolate_gpu(physical_gpu)
         os.environ["CUDA_VISIBLE_DEVICES"] = str(physical_gpu)
         renderer_gpu = physical_gpu
