@@ -98,12 +98,9 @@ def _push_validate_local_dataset(root: Path, input_format: str = "auto") -> list
     episodes = _push_lerobot_episode_files(root)
     if not episodes:
         raise ValueError(f"LeRobot 数据集没有 episode Parquet: {root / 'data'}")
-    import pyarrow.parquet as parquet
+    from openso101.il.datasets.validation import validate_lerobot_metadata
 
-    for episode in episodes:
-        if parquet.read_metadata(episode).num_rows <= 0:
-            raise ValueError(f"LeRobot episode 没有数据帧: {episode}")
-    return episodes
+    return validate_lerobot_metadata(root)
 
 
 def _push_convert_hdf5_to_lerobot(

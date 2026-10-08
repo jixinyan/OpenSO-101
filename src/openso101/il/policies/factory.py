@@ -1,38 +1,10 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Generic policy loader — wraps LeRobot's factory.
-
-`load_policy(path)` is the single entry point used by `openso101 il play`,
-`openso101 sim2real deploy`, and downstream consumers. It accepts the same
-on-disk checkpoint layout that `lerobot.scripts.train` writes
-(`outputs/train/<run>/checkpoints/last/pretrained_model`) as well as the
-common shorthand `outputs/train/<run>` (in which case we walk down to
-`checkpoints/last/pretrained_model` automatically).
-"""
-
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
-
-
-# Env-var escape hatch mirroring the ``allow_unnormalized`` kwarg. Set
-# ``OPENSO101_ALLOW_UNNORMALIZED=1`` to downgrade a missing-processor hard
-# error back to a WARN (e.g. for an unpowered dry run or a very old
-# checkpoint). Off by default so play/deploy fail loudly when normalization
-# stats are missing.
-_ALLOW_UNNORMALIZED_ENV = "OPENSO101_ALLOW_UNNORMALIZED"
-
-
-def _env_allows_unnormalized() -> bool:
-    return os.environ.get(_ALLOW_UNNORMALIZED_ENV, "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
 
 
 def _looks_like_hub_repo_id(s: str) -> bool:
@@ -65,7 +37,7 @@ def _resolve_checkpoint_dir(path: str | Path) -> Path:
         local HF cache and return the snapshot dir.
     """
     s = str(path)
-    if _looks_like_hub_repo_id(s):
+    if not Path(path).expanduser().exists() and _looks_like_hub_repo_id(s):
         # HF Hub repo id — download to the local HF cache and return the
         # cached snapshot dir. Idempotent: subsequent calls hit the cache.
         from huggingface_hub import snapshot_download
@@ -109,28 +81,8 @@ def load_policy(
     path: str | Path,
     *,
     device: str | None = None,
-    allow_unnormalized: bool = False,
 ) -> Any:
-    """Load a LeRobot-trained policy checkpoint into an inference-ready instance.
-
-    Two-step pattern (required because `PreTrainedPolicy` is abstract):
-        1. `PreTrainedConfig.from_pretrained(path)` reads `config.json` and
-           returns the concrete config object (which knows its `type`).
-        2. `get_policy_class(cfg.type).from_pretrained(path)` instantiates
-           the concrete subclass (ACTPolicy, DiffusionPolicy, ...).
-
-    By default, failing to load the pre/post-processor pipelines (which carry
-    the dataset normalization stats) is a HARD ERROR: a policy without them
-    consumes / emits N(0, 1) normalized values, which on hardware produces
-    near-stationary or drifting behavior — a silent, dangerous failure. Pass
-    ``allow_unnormalized=True`` (or set ``OPENSO101_ALLOW_UNNORMALIZED=1``) to
-    downgrade the error to a WARN and return a policy with
-    ``openso101_preprocessor``/``openso101_postprocessor`` set to ``None`` —
-    only appropriate for an unpowered dry run or a legacy checkpoint.
-    """
-    # Resolve the path first so callers get a clear FileNotFoundError before
-    # we pay the cost of importing LeRobot (and so tests can exercise the
-    # path-resolution logic without LeRobot installed).
+    """读取实际权重、配置与 observation/action processors，返回推理模型。"""
     local = Path(path).expanduser()
     if (local / "student.json").is_file():
         from openso101.rl.student import RLStudentPolicy
@@ -138,14 +90,7 @@ def load_policy(
         return RLStudentPolicy(local.resolve(), device or "cpu")
     ckpt_dir = _resolve_checkpoint_dir(path)
 
-    # Importing `lerobot.policies` triggers the @register_subclass calls in
-    # each policy's configuration module, which is what populates the draccus
-    # choice registry that PreTrainedConfig.from_pretrained reads. Without
-    # this, `from_pretrained` raises
-    # `DecodingError: Couldn't find a choice class for 'act'` because the
-    # subclass was never imported. LeRobot's own train script does this
-    # transitively; our `il play` doesn't, so we need to be explicit.
-    import lerobot.policies  # noqa: F401 — for side-effect registration
+    import lerobot.policies  # noqa: F401  注册实际 policy 配置类型。
 
     from lerobot.configs.policies import PreTrainedConfig
 
@@ -156,51 +101,11 @@ def load_policy(
         policy = policy.to(device)
     policy.eval()
 
-    # LeRobot's `policy.select_action(obs)` returns NORMALIZED actions
-    # (and expects NORMALIZED observations) — the normalization stats live
-    # in separate processor pipelines that the saved checkpoint stores
-    # alongside the model weights. Without applying them, the env sees the
-    # raw model output in N(0, 1) space and the arm barely moves.
-    # Load the pre/post-processor pipelines and stash them on the policy
-    # object so the caller (e.g. `il play`) can apply them.
     from lerobot.policies.factory import make_pre_post_processors
 
-    try:
-        preprocessor, postprocessor = make_pre_post_processors(
-            policy_cfg=cfg, pretrained_path=str(ckpt_dir),
-        )
-        # Stash on the policy so callers don't need to thread three return
-        # values through their loop. They're discoverable via the attrs.
-        policy.openso101_preprocessor = preprocessor
-        policy.openso101_postprocessor = postprocessor
-    except Exception as exc:
-        # If the processors can't be loaded (very old checkpoint format,
-        # missing files, etc.) this is a HARD ERROR by default: without the
-        # normalization stats the policy emits N(0, 1) values and the arm
-        # barely moves — a silent failure that is especially dangerous on
-        # real hardware. The opt-in escape hatch (allow_unnormalized kwarg or
-        # OPENSO101_ALLOW_UNNORMALIZED=1) downgrades it to a WARN.
-        message = (
-            f"Could not load pre/post processors from {ckpt_dir}: "
-            f"{type(exc).__name__}: {exc}. Policy actions would be in raw "
-            "(normalized) units, which usually produces near-stationary "
-            "behavior. Verify the checkpoint contains "
-            "policy_preprocessor.json + policy_postprocessor.json."
-        )
-        if not (allow_unnormalized or _env_allows_unnormalized()):
-            raise RuntimeError(
-                f"[ERROR]: {message} Refusing to return an unnormalized "
-                "policy. Pass allow_unnormalized=True or set "
-                f"{_ALLOW_UNNORMALIZED_ENV}=1 to override (dry runs only)."
-            ) from exc
-        print(
-            f"[WARN]: {message} Continuing with an UNNORMALIZED policy "
-            f"because allow_unnormalized was requested ({_ALLOW_UNNORMALIZED_ENV} "
-            "or kwarg)."
-        )
-        policy.openso101_preprocessor = None
-        policy.openso101_postprocessor = None
-
+    preprocessor, postprocessor = make_pre_post_processors(policy_cfg=cfg, pretrained_path=str(ckpt_dir))
+    policy.openso101_preprocessor = preprocessor
+    policy.openso101_postprocessor = postprocessor
     return policy
 
 

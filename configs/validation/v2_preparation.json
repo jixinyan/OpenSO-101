@@ -25,7 +25,18 @@
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
       "requirements": [
         {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
-        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 55}
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 65}
+      ]
+    },
+    {
+      "name": "recorded_state", "resource": "cpu", "depends_on": ["cpu_interfaces"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_recorded_state.py", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/recorded_state.json"],
+      "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
+      "requirements": [
+        {"report": "recorded_state.json", "pointer": "/status", "equals": "recorded_state_cpu_conversion_verified"},
+        {"report": "recorded_state.json", "pointer": "/frames", "minimum": 328},
+        {"report": "recorded_state.json", "pointer": "/capture_count_preflight_verified", "equals": true},
+        {"report": "recorded_state.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
     {
@@ -72,7 +83,23 @@
         {"report": "lerobot_export/report.json", "pointer": "/worker_threads_closed", "equals": true},
         {"report": "lerobot_export/report.json", "pointer": "/modes/async/frames", "minimum": 328},
         {"report": "lerobot_export/report.json", "pointer": "/modes/sync/frames", "minimum": 328},
+        {"report": "lerobot_export/report.json", "pointer": "/metadata_frame_ranges_and_files_verified", "equals": true},
+        {"report": "lerobot_export/report.json", "pointer": "/missing_actual_video_rejected", "equals": true},
         {"report": "lerobot_export/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "student_recorded_inference", "resource": "cpu", "depends_on": ["lerobot_export"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "-m", "openso101.cli.main", "sim2real", "validate", "--policy-path", "outputs/rl_progress/v3_student_a8cc2f8", "--episode", "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5", "--device", "cpu", "--output", "{output}/student_inference"],
+      "inputs": {
+        "outputs/rl_progress/v3_student_a8cc2f8/student.json": "dbf64d6f451459892406b85e3c253d11e43022a575d99d1e095d84b6b499020f",
+        "outputs/rl_progress/v3_student_a8cc2f8/student.pt": "6d1df1cd1feaf96ad7da8ac41c8e17f591b7d84e141c92195f4c3b854050ba85",
+        "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5": "e87c5375ae29b4064654f5f17b6123c22df32682d99c2a3cafb14edb8a0f84e5"
+      },
+      "requirements": [
+        {"report": "student_inference/report.json", "pointer": "/status", "equals": "student_recorded_observation_inference_verified"},
+        {"report": "student_inference/report.json", "pointer": "/frames", "minimum": 243},
+        {"report": "student_inference/report.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
     {
@@ -119,7 +146,7 @@
       ]
     },
     {
-      "name": "native_regressions", "resource": "gpu", "depends_on": ["gpu_process_inventory", "scene_batch", "metric_video", "lerobot_export"],
+      "name": "native_regressions", "resource": "gpu", "depends_on": ["gpu_process_inventory", "scene_batch", "metric_video", "lerobot_export", "recorded_state"],
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/run_native_regressions.py", "--worker-report", "{output}/native_regressions.json"],
       "requirements": [{"report": "native_regressions.json", "pointer": "/status", "equals": "native_program_checks_verified"}]
     },

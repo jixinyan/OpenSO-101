@@ -31,9 +31,10 @@ git_sha = subprocess.run(["git", "rev-parse", "HEAD"], check=True, text=True,
 from isaaclab.app import AppLauncher
 
 app = AppLauncher(headless=True).app
-import pytest
 
 try:
+    import pytest
+
     junit = args.worker_report.with_suffix(".xml")
     result = pytest.main([
         "tests/scenes/test_usd.py", "tests/scenes/test_terminal_keyboard.py", "tests/scenes/test_training_config.py",

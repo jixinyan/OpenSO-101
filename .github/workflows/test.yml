@@ -52,6 +52,7 @@ jobs:
             tests/scenes/test_controls.py tests/scenes/test_training_config.py \
             tests/scenes/test_evaluation.py tests/test_cli_rl.py \
             tests/test_cli_il.py tests/test_lerobot_push_dataset.py \
+            tests/scenes/test_recording_timing.py \
             --basetemp=outputs/ci/interfaces --junitxml=outputs/ci/interfaces.xml -q
       - name: 保存 CPU 检查报告
         if: always()

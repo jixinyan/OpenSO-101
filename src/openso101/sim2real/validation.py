@@ -6,7 +6,8 @@ import numpy as np
 import torch
 
 from openso101.rl.config import digest
-from openso101.rl.student import RLStudentPolicy
+from openso101.il.observations import camera_to_policy
+from openso101.il.policies import load_policy
 from openso101.robots.so101.constants import SO101_SIM_JOINT_NAMES
 from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 from openso101.teleop.so101_mapping import batched_action_to_motor_units
@@ -20,9 +21,10 @@ def validate(args):
     folder = Path(args.policy_path).resolve()
     episode = Path(args.episode).resolve()
     validate_hdf5_episode(episode)
-    policy = RLStudentPolicy(folder, args.device)
     output = Path(args.output).resolve()
-    output.mkdir(parents=True, exist_ok=False)
+    if output.exists():
+        raise FileExistsError(output)
+    policy = load_policy(folder, device=args.device)
     commands = []
     with h5py.File(episode, "r") as recording:
         metadata = policy.metadata
@@ -34,6 +36,7 @@ def validate(args):
             raise ValueError("录制场景与 student 场景不一致")
         if tuple(recording.attrs["sim_joint_names"]) != SO101_SIM_JOINT_NAMES:
             raise ValueError("录制关节顺序不一致")
+        source_profile = str(recording.attrs.get("task_profile", ""))
         frames = len(recording["action"])
         for start in range(0, frames, args.batch_size):
             end = min(start + args.batch_size, frames)
@@ -44,18 +47,25 @@ def validate(args):
                                                                     device=args.device, dtype=torch.float32)
             for name in ("wrist_camera", "overhead_camera"):
                 images = torch.as_tensor(recording[f"observations/images/{name}"][start:end], device=args.device)
-                observation[f"observation.images.{name}"] = images.permute(0, 3, 1, 2).float() / 255.
+                observation[f"observation.images.{name}"] = camera_to_policy(images)
             with torch.inference_mode():
                 actions = policy.decode_actions(policy.select_action(policy.preprocess(observation))).cpu().numpy()
             commands.extend(_clamp_motor_units(action) for action in actions)
     commands = np.asarray(commands)
     if commands.shape != (frames, 6) or not np.isfinite(commands).all():
         raise RuntimeError("student 推理结果形状或数值无效")
+    output.mkdir(parents=True, exist_ok=False)
     np.save(output / "motor_commands.npy", commands)
     report = {
         "status": "student_recorded_observation_inference_verified", "frames": frames,
         "task": metadata["task_id"], "scene_sha256": metadata.get("scene_sha256"),
         "student_sha256": metadata["files"]["student.pt"], "episode_sha256": digest(episode),
+        "student_task_profile": metadata["task_profile"], "source_task_profile": source_profile,
+        "device": str(policy.device), "gpu_tests_started": torch.device(args.device).type == "cuda",
+        "rl_policy_success_verified": False,
+        "source_sha256": digest(Path(__file__)),
+        "policy_loader_sha256": digest(Path("src/openso101/il/policies/factory.py")),
+        "observation_sha256": digest(Path("src/openso101/il/observations.py")),
         "control_dt": metadata["control_dt"], "required_fps": 1 / metadata["control_dt"],
         "motor_minimum": commands.min(axis=0).tolist(), "motor_maximum": commands.max(axis=0).tolist(),
         "commands_sha256": digest(output / "motor_commands.npy"), "hardware_run_verified": False,

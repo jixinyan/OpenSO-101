@@ -48,7 +48,7 @@ app = AppLauncher(headless=True).app
 env = None
 try:
     import torch
-    from openso101.cli.il import _replay_restore_sim_state_from_episode
+    from openso101.teleop.sim_state import _replay_restore_sim_state_from_episode
     from openso101.rl.backends import get_backend
     from openso101.rl.execution import build_environment
     from openso101.rl.vision_distillation import action_mapping
@@ -124,6 +124,8 @@ try:
         json.dump(result, stream, indent=2)
     print(json.dumps({key: value for key, value in result.items() if key != "trajectory"}), flush=True)
 finally:
-    if env is not None:
-        env.close()
-app.close()
+    try:
+        if env is not None:
+            env.close()
+    finally:
+        app.close()

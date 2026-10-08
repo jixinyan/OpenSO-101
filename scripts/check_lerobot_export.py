@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import subprocess
+import shutil
 import sys
 import threading
 from pathlib import Path
@@ -42,6 +43,17 @@ for mode, async_flush in (("async", True), ("sync", False)):
         raise ValueError("输入检查终止后原有导出内容发生改变")
 if any(thread.name.startswith("lerobot-flush") for thread in threading.enumerate()):
     raise RuntimeError("导出完成后仍有编码线程")
+incomplete = args.output / "missing_video"
+shutil.copytree(args.output / "sync", incomplete)
+missing_video = next((incomplete / "videos").rglob("*.mp4"))
+missing_video.unlink()
+try:
+    _push_validate_local_dataset(incomplete, input_format="lerobot")
+except FileNotFoundError as exc:
+    if str(missing_video.resolve()) not in str(exc):
+        raise
+else:
+    raise RuntimeError("实际视频文件缺少时需要在数据读取前终止")
 if any(file_digest(Path(path)) != expected for path, expected in source_hashes.items()):
     raise ValueError("实际来源数据发生改变")
 for key in ("frames", "episodes", "source_task_successes", "maximum_action_error_motor_units",
@@ -53,6 +65,9 @@ result = {"status": "actual_sync_async_export_verified", "modes": results,
           "invalid_export_preserves_existing_data": True,
           "rl_policy_success_verified": False,
           "source_sha256": file_digest(Path(__file__)),
-          "exporter_sha256": file_digest(Path("src/openso101/il/datasets/export.py"))}
+          "exporter_sha256": file_digest(Path("src/openso101/il/datasets/export.py")),
+          "metadata_validation_sha256": file_digest(Path("src/openso101/il/datasets/validation.py")),
+          "metadata_frame_ranges_and_files_verified": True,
+          "missing_actual_video_rejected": True}
 (args.output / "report.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps(result, ensure_ascii=False), flush=True)

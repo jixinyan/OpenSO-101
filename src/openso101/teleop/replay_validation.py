@@ -58,10 +58,11 @@ class ReplayValidation:
             "physics_state_reproducibility_verified": False,
             "validator_sha256": _file_sha256(Path(__file__)),
             "cli_sha256": _file_sha256(Path(__file__).parents[1] / "cli" / "il.py"),
+            "sim_state_sha256": _file_sha256(Path(__file__).with_name("sim_state.py")),
         }
 
     def check_restore(self, env, h5, frame_index: int) -> None:
-        from openso101.cli.il import _collect_replay_sim_state, _replay_robot_joint_indices
+        from openso101.teleop.sim_state import _collect_replay_sim_state, _replay_robot_joint_indices
 
         robot = env.scene["robot"]
         ids = _replay_robot_joint_indices(robot)

@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
-from openso101.il.datasets.export import _push_hdf5_radians_to_motor_units
+from openso101.il.datasets.export import _push_hdf5_radians_to_motor_units, _push_validate_local_dataset
 from openso101.il.observations import camera_to_policy
 from openso101.rl.config import digest
 from openso101.teleop.recorder.hdf5 import validate_hdf5_dataset
@@ -26,6 +26,7 @@ if not 0 < args.maximum_encoding_mae < 1:
     raise ValueError("maximum_encoding_mae 需要位于零与一之间")
 sources = {path.name: path for path in validate_hdf5_dataset(args.source)}
 metadata = json.loads((args.dataset / "meta/openso101_export.json").read_text())
+_push_validate_local_dataset(args.dataset, input_format="lerobot")
 dataset = LeRobotDataset(metadata["repo_id"], root=args.dataset, download_videos=False)
 expected_count = sum(item["exported_frames"] for item in metadata["episodes"])
 if len(dataset) != expected_count or dataset.meta.total_episodes != len(metadata["episodes"]):
@@ -62,6 +63,9 @@ for item in metadata["episodes"]:
                     raise ValueError("IL observation 相机转换与来源数值不一致")
                 if rgb.shape != expected.shape or not torch.isfinite(rgb).all() or float(rgb.min()) < 0 or float(rgb.max()) > 1:
                     raise ValueError(f"LeRobot 相机数据格式错误: {name}")
+                converted = camera_to_policy(rgb.permute(1, 2, 0).unsqueeze(0))[0]
+                if not torch.equal(converted, rgb):
+                    raise ValueError(f"IL observation 浮点 RGB 与实际视频读取不一致: {name}")
                 pixel_std = float(rgb.std())
                 if pixel_std <= 0:
                     raise ValueError(f"LeRobot 相机数据没有像素变化: {name}")
@@ -77,6 +81,7 @@ result = {"status": "all_lerobot_frames_verified", "frames": frames,
           "maximum_action_error_motor_units": action_error, "maximum_state_error_motor_units": state_error,
           "maximum_timestamp_error_seconds": time_error, "camera_checks": camera_checks,
           "maximum_encoding_mae_allowed": args.maximum_encoding_mae,
+          "policy_observation_uint8_and_float_verified": True,
           "export_manifest_sha256": digest(args.dataset / "meta/openso101_export.json"),
           "validator_sha256": digest(Path(__file__)), "rl_policy_success_verified": False}
 args.output.parent.mkdir(parents=True, exist_ok=True)

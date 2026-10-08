@@ -6,7 +6,7 @@ from isaaclab.managers import RecorderManagerBaseCfg, RecorderTerm, RecorderTerm
 from isaaclab.managers.recorder_manager import DatasetExportMode
 from isaaclab.utils import configclass
 
-from openso101.cli.il import _collect_replay_sim_state
+from openso101.teleop.sim_state import _collect_replay_sim_state
 from openso101.robots import SO101_SIM_JOINT_NAMES
 from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
 from openso101.teleop.recorder.lerobot import collect_camera_buffers
