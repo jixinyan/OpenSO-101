@@ -14,6 +14,7 @@
 | 实际 MP4 标定检查 | `check_metric_video.py` |
 | 实际 SO-101 键盘 IK 检查 | `check_keyboard_kinematics.py` |
 | LeRobot 全部帧读取 | `validate_lerobot_dataset.py` |
+| 实际 HDF5 的同步、异步导出与比较 | `check_lerobot_export.py` |
 | 保存模型的 previous actions 分析 | `audit_policy_history.py` |
 | 保存 optimizer 的 CPU 更新检查 | `check_demonstration_updates.py` |
 | 项目 GPU 查询与停止 | `audit_project_gpu.py` |

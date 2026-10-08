@@ -24,6 +24,10 @@
 | HDF5 与 LeRobot 录制 | `src/openso101/teleop/recorder/` |
 | LeRobot 动作单位转换 | `src/openso101/teleop/so101_mapping.py` |
 | IL 模型、数据读取与训练 | `src/openso101/il/` |
+| HDF5 检查与 LeRobot 同步、异步导出 | `src/openso101/il/datasets/export.py` |
+| IL 关节与 RGB observation | `src/openso101/il/observations.py` |
+| IL 原生应用启动、参数检查与关闭 | `src/openso101/il/runtime.py` |
+| 窗口与终端录制按键 | `src/openso101/teleop/devices/recording_keys.py` |
 | MuJoCo 模型、驱动与比较 | `src/openso101/sim2sim/` |
 | Domain randomization、student 验证与部署 | `src/openso101/sim2real/` |
 | 源码、wheel 和阶段验证 | `src/openso101/validation/` |
@@ -82,6 +86,8 @@ GPU 阶段使用相同的源码、配置和输入文件，逐项检查 CPU 报�
 CI 分别保存源码检查、几何与进程检查、PTY 与 Torch 控制检查，以及 sdist、wheel 与 package 核查报告。所执行的检查不启动 Isaac Sim；原生物理和完整任务成功需要对应运行报告。
 
 Ruff 的 `F821`、`F822`、`F823` 检查覆盖源码、脚本和测试中的未定义名称。CPU 接口检查包含实际 PTY、控制数值、配置、RL 命令与 episode 统计。
+
+IL 参数与缺少模型的检查通过实际命令入口执行。完整 CPU 流程使用现有双相机 episode 分别执行同步和异步导出，并通过 LeRobot 读取全部帧，检查 RGB、动作、状态、时间、来源 SHA256 和编码线程关闭。
 
 ## Python import
 

@@ -68,13 +68,7 @@ def _resolve_checkpoint_dir(path: str | Path) -> Path:
     if _looks_like_hub_repo_id(s):
         # HF Hub repo id — download to the local HF cache and return the
         # cached snapshot dir. Idempotent: subsequent calls hit the cache.
-        try:
-            from huggingface_hub import snapshot_download
-        except ImportError as exc:
-            raise RuntimeError(
-                f"'{s}' looks like a HF Hub repo id but huggingface_hub is "
-                "not installed; either install it or pass a local path."
-            ) from exc
+        from huggingface_hub import snapshot_download
         snapshot = Path(snapshot_download(repo_id=s, repo_type="model"))
         if not (snapshot / "config.json").exists():
             raise FileNotFoundError(
@@ -169,9 +163,9 @@ def load_policy(
     # raw model output in N(0, 1) space and the arm barely moves.
     # Load the pre/post-processor pipelines and stash them on the policy
     # object so the caller (e.g. `il play`) can apply them.
-    try:
-        from lerobot.policies.factory import make_pre_post_processors
+    from lerobot.policies.factory import make_pre_post_processors
 
+    try:
         preprocessor, postprocessor = make_pre_post_processors(
             policy_cfg=cfg, pretrained_path=str(ckpt_dir),
         )

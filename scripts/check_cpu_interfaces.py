@@ -19,14 +19,15 @@ junit = args.output / "pytest.xml"
 with (args.output / "pytest.log").open("x") as stream:
     result = subprocess.run([sys.executable, "-m", "pytest", "tests/scenes/test_terminal_keyboard.py",
                              "tests/scenes/test_controls.py", "tests/scenes/test_training_config.py",
-                             "tests/scenes/test_evaluation.py", "tests/test_cli_rl.py", "-q",
+                             "tests/scenes/test_evaluation.py", "tests/test_cli_rl.py", "tests/test_cli_il.py",
+                             "tests/test_lerobot_push_dataset.py", "-q",
                              f"--basetemp={args.output / 'pytest_files'}", f"--junitxml={junit}"],
                             stdout=stream, stderr=subprocess.STDOUT)
 root = ElementTree.parse(junit).getroot()
 counts = {key: sum(int(suite.attrib[key]) for suite in root.findall("testsuite"))
           for key in ("tests", "errors", "failures", "skipped")}
-if result.returncode or counts["tests"] != 34 or any(counts[key] for key in ("errors", "failures", "skipped")):
-    raise RuntimeError("实际 PTY、控制、配置、RL 命令与评估接口检查未通过")
+if result.returncode or counts["tests"] != 49 or any(counts[key] for key in ("errors", "failures", "skipped")):
+    raise RuntimeError("实际 PTY、控制、配置、RL/IL 命令与评估接口检查未通过")
 report = {"status": "actual_cpu_interfaces_verified", "counts": counts,
           "junit_sha256": file_digest(junit), "source_sha256": file_digest(Path(__file__)),
           "gpu_tests_started": False, "physics_keyboard_collection_verified": False}

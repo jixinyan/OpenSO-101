@@ -5,7 +5,7 @@ import time
 import pytest
 
 from openso101.teleop.devices.terminal import TerminalKeyboard
-from openso101.cli.il import _TeleopKeyboard
+from openso101.teleop.devices.recording_keys import _TeleopKeyboard
 from openso101.cli.main import build_parser
 
 

@@ -25,7 +25,7 @@
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
       "requirements": [
         {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
-        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 34}
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 49}
       ]
     },
     {
@@ -62,6 +62,17 @@
         {"report": "lerobot.json", "pointer": "/frames", "minimum": 328},
         {"report": "lerobot.json", "pointer": "/maximum_action_error_motor_units", "maximum": 0.0001},
         {"report": "lerobot.json", "pointer": "/maximum_state_error_motor_units", "maximum": 0.0001}
+      ]
+    },
+    {
+      "name": "lerobot_export", "resource": "cpu", "depends_on": ["lerobot_data"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_lerobot_export.py", "--source", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset", "--output", "{output}/lerobot_export"],
+      "requirements": [
+        {"report": "lerobot_export/report.json", "pointer": "/status", "equals": "actual_sync_async_export_verified"},
+        {"report": "lerobot_export/report.json", "pointer": "/worker_threads_closed", "equals": true},
+        {"report": "lerobot_export/report.json", "pointer": "/modes/async/frames", "minimum": 328},
+        {"report": "lerobot_export/report.json", "pointer": "/modes/sync/frames", "minimum": 328},
+        {"report": "lerobot_export/report.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
     {
@@ -108,7 +119,7 @@
       ]
     },
     {
-      "name": "native_regressions", "resource": "gpu", "depends_on": ["gpu_process_inventory", "scene_batch", "metric_video", "lerobot_data"],
+      "name": "native_regressions", "resource": "gpu", "depends_on": ["gpu_process_inventory", "scene_batch", "metric_video", "lerobot_export"],
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/run_native_regressions.py", "--worker-report", "{output}/native_regressions.json"],
       "requirements": [{"report": "native_regressions.json", "pointer": "/status", "equals": "native_program_checks_verified"}]
     },
