@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from .lerobot_recorder import REQUIRED_CAMERA_NAMES, get_scene_entity, has_scene_entity
+from .recorder.lerobot import REQUIRED_CAMERA_NAMES, get_scene_entity, has_scene_entity
 
 
 @dataclass(frozen=True)

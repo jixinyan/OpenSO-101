@@ -1,8 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""`openso101` top-level CLI entry point."""
-
 from __future__ import annotations
 
 import argparse
@@ -50,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_scenes = sub.add_parser("scenes", help="Objaverse assets and custom scenes")
     scenes_cli.add_subparsers(p_scenes)
+
+    from . import validate as validate_cli
+
+    p_validate = sub.add_parser("validate", help="源码检查与统一运行验证")
+    validate_cli.add_subparsers(p_validate)
 
     return parser
 

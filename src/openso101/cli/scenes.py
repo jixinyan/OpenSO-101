@@ -11,7 +11,7 @@ from pathlib import Path
 
 def _run(args):
     from openso101.scenes.bundle import export_bundle, validate_layout, verify_bundle
-    from openso101.scenes.catalog import AssetCatalog, search_categories
+    from openso101.scenes.assets.catalog import AssetCatalog, search_categories
     from openso101.scenes.layout import diagnose_layout
     from openso101.scenes.models import Entity, Pose, SceneSpec, Task
 
@@ -270,14 +270,14 @@ def add_subparsers(parser: argparse.ArgumentParser):
 
 def _compile(args):
     from openso101.scenes.bundle import verify_bundle
-    from openso101.scenes.usd import verify_compilation
+    from openso101.scenes.isaaclab.usd import verify_compilation
 
     verify_bundle(args.bundle)
     if args.output.exists():
         raise FileExistsError(args.output)
 
     subprocess.run([
-        sys.executable, "-m", "openso101.scenes.worker",
+        sys.executable, "-m", "openso101.scenes.isaaclab.worker",
         str(args.bundle.resolve()), str(args.output.resolve()),
     ], check=True)
     report = verify_compilation(args.output)
@@ -285,9 +285,9 @@ def _compile(args):
 
 
 def _generate(args):
-    from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
-    from openso101.scenes.workflow import JobLimits, generate_scene_job
+    from openso101.scenes.assets.catalog import AssetCatalog
+    from openso101.scenes.agent.model_client import ModelService, load_codex_runtime_config
+    from openso101.scenes.agent.workflow import JobLimits, generate_scene_job
 
     config = load_codex_runtime_config(args.codex_config) if args.codex_config is not None else None
     if config is not None and config.bearer_token and not os.environ.get(args.api_key_env, "").strip():
@@ -310,8 +310,8 @@ def _generate(args):
 
 
 def _index_assets(args):
-    from openso101.scenes.asset_index import AssetIndex
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.index import AssetIndex
+    from openso101.scenes.assets.catalog import AssetCatalog
 
     report = AssetIndex.build(AssetCatalog(args.catalog), args.output, model=args.embedding_model,
                               revision=args.model_revision)
@@ -319,8 +319,8 @@ def _index_assets(args):
 
 
 def _retrieve_assets(args):
-    from openso101.scenes.asset_index import AssetIndex
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.index import AssetIndex
+    from openso101.scenes.assets.catalog import AssetCatalog
 
     report = AssetIndex(AssetCatalog(args.catalog), args.index).search(
         args.query, limit=args.limit, minimum_similarity=args.minimum_similarity)
@@ -328,7 +328,7 @@ def _retrieve_assets(args):
 
 
 def _agent_loop(args):
-    from openso101.scenes.agent_loop import (
+    from openso101.scenes.agent.loop import (
         AstraScenePlanner,
         RGBVideoInput,
         Real2SimAgentLoop,
@@ -337,8 +337,8 @@ def _agent_loop(args):
     )
     from openso101.scenes.video import sample_rgb_video
     from openso101.scenes.video import SceneContext
-    from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
+    from openso101.scenes.assets.catalog import AssetCatalog
+    from openso101.scenes.agent.model_client import ModelService, load_codex_runtime_config
 
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -400,7 +400,7 @@ def _agent_loop(args):
     )
     result = loop.run(video, output=args.output)
     if args.runtime_output is not None:
-        from openso101.scenes.preparation import prepare_scene
+        from openso101.scenes.isaaclab.preparation import prepare_scene
 
         prepared = prepare_scene(
             Path(result.bundle), args.runtime_output, num_envs=args.runtime_num_envs,
@@ -418,7 +418,7 @@ def _agent_loop(args):
 
 
 def _import_asset(args):
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.catalog import AssetCatalog
     from openso101.scenes.models import file_digest
 
     if args.file.suffix.lower() != ".glb":
@@ -431,10 +431,10 @@ def _import_asset(args):
 
 
 def _inspect(args):
-    from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.inspection import inspect_asset
+    from openso101.scenes.assets.catalog import AssetCatalog
+    from openso101.scenes.assets.inspection import inspect_asset
 
-    from openso101.scenes.capabilities import GeometryProbe
+    from openso101.scenes.assets.capabilities import GeometryProbe
 
     probe = GeometryProbe.model_validate_json(args.probe.read_text()) if args.probe else None
     report = inspect_asset(AssetCatalog(args.catalog), args.uid, probe=probe)
@@ -445,10 +445,10 @@ def _inspect(args):
 
 
 def _edit(args):
-    from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.editing import SceneEdit, interpret_scene_edit, revise_bundle
-    from openso101.scenes.model_client import ModelService, load_codex_runtime_config
-    from openso101.scenes.store import SceneStore
+    from openso101.scenes.assets.catalog import AssetCatalog
+    from openso101.scenes.editor.editing import SceneEdit, interpret_scene_edit, revise_bundle
+    from openso101.scenes.agent.model_client import ModelService, load_codex_runtime_config
+    from openso101.scenes.editor.store import SceneStore
 
     if args.output.exists():
         raise FileExistsError(args.output)
@@ -476,7 +476,7 @@ def _edit(args):
                            store=SceneStore(args.store) if args.store else None,
                            expected_revision=args.expected_revision, model_requests=requests, catalog=catalog)
     if args.runtime_output is not None:
-        from openso101.scenes.preparation import prepare_scene
+        from openso101.scenes.isaaclab.preparation import prepare_scene
 
         result["runtime"] = prepare_scene(args.output, args.runtime_output)
         result["pending_checks"] = result["runtime"]["pending_checks"]
@@ -500,7 +500,7 @@ def _read_bddl(args):
             stream.write(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
     if args.bundle_output:
         from openso101.scenes.bundle import export_bundle
-        from openso101.scenes.catalog import AssetCatalog
+        from openso101.scenes.assets.catalog import AssetCatalog
 
         export_bundle(SceneSpec.read(args.scene_file), AssetCatalog(args.catalog), args.bundle_output,
                       bddl_report=result, provenance={"operation": "bind_bddl", "task_success_verified": False})
@@ -517,7 +517,7 @@ def _calibrate_video(args):
 
 
 def _metric_layout(args):
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.catalog import AssetCatalog
     from openso101.scenes.layout import diagnose_layout
     from openso101.scenes.metric_video import ObjectImageMeasurement, apply_metric_positions, verify_calibration
     from openso101.scenes.models import SceneSpec, file_digest
@@ -546,7 +546,7 @@ def _metric_layout(args):
 
 
 def _preview(args):
-    from openso101.scenes.preview import export_preview
+    from openso101.scenes.editor.preview import export_preview
 
     if args.joint_positions is not None and args.robot_model is None:
         raise ValueError("机器人关节位置需要同时指定官方 MJCF 文件")
@@ -555,7 +555,7 @@ def _preview(args):
 
 
 def _layout(args):
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.catalog import AssetCatalog
     from openso101.scenes.layout import solve_layout
     from openso101.scenes.models import SceneSpec
 
@@ -567,8 +567,8 @@ def _layout(args):
 
 
 def _import_external(args):
-    from openso101.scenes.catalog import AssetCatalog
-    from openso101.scenes.importers import import_robotwin, import_usd
+    from openso101.scenes.assets.catalog import AssetCatalog
+    from openso101.scenes.assets.importers import import_robotwin, import_usd
 
     catalog = AssetCatalog(args.catalog)
     if args.command == "import-usd":
@@ -579,7 +579,7 @@ def _import_external(args):
 
 
 def _robotwin_task(args):
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.catalog import AssetCatalog
     from openso101.scenes.templates import create_robotwin_task
 
     path = create_robotwin_task(args.name, args.source, AssetCatalog(args.catalog), args.output,
@@ -589,9 +589,9 @@ def _robotwin_task(args):
 
 def _save(args):
     from openso101.scenes.bundle import validate_layout
-    from openso101.scenes.catalog import AssetCatalog
+    from openso101.scenes.assets.catalog import AssetCatalog
     from openso101.scenes.models import SceneSpec
-    from openso101.scenes.store import SceneStore
+    from openso101.scenes.editor.store import SceneStore
 
     spec = SceneSpec.read(args.scene_file)
     validate_layout(spec, AssetCatalog(args.catalog))
@@ -600,7 +600,7 @@ def _save(args):
 
 
 def _read(args):
-    from openso101.scenes.store import SceneStore
+    from openso101.scenes.editor.store import SceneStore
 
     revision, spec = SceneStore(args.store).read(args.scene_id, args.revision)
     with args.output.open("x") as stream:
@@ -609,12 +609,12 @@ def _read(args):
 
 
 def _validate_runtime(args):
-    from openso101.scenes.usd import verify_compilation
+    from openso101.scenes.isaaclab.usd import verify_compilation
 
     compilation = verify_compilation(args.scene)
     if args.output.exists():
         raise FileExistsError(args.output)
-    command = [sys.executable, "-u", "-m", "openso101.scenes.validation_worker",
+    command = [sys.executable, "-u", "-m", "openso101.scenes.isaaclab.validation_worker",
                str(args.scene.resolve()), str(args.output.resolve()), "--num-envs", str(args.num_envs),
                "--steps", str(args.steps), "--resets", str(args.resets)]
     if args.cameras:
@@ -631,7 +631,7 @@ def _validate_runtime(args):
 
 
 def _prepare(args):
-    from openso101.scenes.preparation import prepare_scene
+    from openso101.scenes.isaaclab.preparation import prepare_scene
 
     report = prepare_scene(args.bundle, args.output, num_envs=args.num_envs, steps=args.steps, resets=args.resets)
     print(json.dumps(report, ensure_ascii=False, indent=2))

@@ -21,7 +21,7 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
     import openso101.tasks  # noqa: F401
 
     if scene:
-        from openso101.scenes.runtime import register_custom_scene
+        from openso101.scenes.isaaclab.runtime import register_custom_scene
 
         register_custom_scene()
         if args.task != "OpenSO101-CustomScene-v0":
@@ -123,7 +123,7 @@ def train(args):
             scene = recorded
     scene_sha = None
     if scene:
-        from openso101.scenes.usd import verify_compilation
+        from openso101.scenes.isaaclab.usd import verify_compilation
 
         scene_sha = verify_compilation(scene)["scene_sha256"]
         shutil.copytree(scene, output / "scene")
@@ -352,7 +352,7 @@ def evaluate(args, *, play=False, student_folder=None):
                           goal_input=student.metadata["goal_input"], camera_observation=True,
                           teacher_metadata_sha256=digest(folder / "checkpoint.json"))
         if recording_output is not None:
-            from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+            from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 
             episodes = list(Path(recording_output).rglob("episode_*.hdf5"))
             if len(episodes) != 1:

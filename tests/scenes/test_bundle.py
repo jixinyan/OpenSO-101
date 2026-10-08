@@ -15,10 +15,10 @@ from openso101.scenes.bundle import (
     validate_layout,
     verify_bundle,
 )
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.layout import solve_layout
 from openso101.scenes.models import Entity, Physics, Pose, SceneSpec, Task
-from openso101.scenes.store import SceneStore
+from openso101.scenes.editor.store import SceneStore
 
 
 @pytest.fixture

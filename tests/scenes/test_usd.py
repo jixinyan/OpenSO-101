@@ -6,10 +6,10 @@ import shutil
 import numpy as np
 from pxr import Gf, Usd, UsdGeom, UsdPhysics
 
-from openso101.scenes.catalog import AssetCatalog
-from openso101.scenes.importers import import_usd
+from openso101.scenes.assets.catalog import AssetCatalog
+from openso101.scenes.assets.importers import import_usd
 from openso101.scenes.models import Entity, Pose, SceneSpec, Task, file_digest
-from openso101.scenes.usd import compose_stage
+from openso101.scenes.isaaclab.usd import compose_stage
 
 
 def test_compose_real_usd_geometry(tmp_path):

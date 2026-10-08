@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import trimesh
 
-from openso101.scenes.capabilities import GeometryProbe
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.capabilities import GeometryProbe
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.models import file_digest
 from openso101.validation.suite import ValidationSuite, run_suite
 

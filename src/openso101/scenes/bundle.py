@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from .catalog import AssetCatalog
+from .assets.catalog import AssetCatalog
 from .models import Entity, SceneSpec, file_digest, scene_document_digest
 
 

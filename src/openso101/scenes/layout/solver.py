@@ -7,10 +7,10 @@ import numpy as np
 import trimesh
 from scipy.optimize import Bounds, LinearConstraint, milp
 
-from .bundle import entity_bounds, validate_layout
-from .catalog import AssetCatalog
-from .capabilities import instance_mesh
-from .models import Pose, SceneSpec
+from ..bundle import entity_bounds, validate_layout
+from ..assets.catalog import AssetCatalog
+from ..assets.capabilities import instance_mesh
+from ..models import Pose, SceneSpec
 
 
 def sample_reset_positions(

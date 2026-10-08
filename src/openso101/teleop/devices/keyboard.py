@@ -1,9 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-from dataclasses import dataclass
 import math
-from typing import Protocol
 
 import torch
 
@@ -13,23 +11,7 @@ from openso101.robots.so101.constants import (
 )
 from openso101.robots.so101.ik import differential_ik
 from openso101.teleop.so101_mapping import SO101_TELEOP_CONTROL_JOINT_NAMES
-
-
-@dataclass(frozen=True)
-class JointTargets:
-    positions: torch.Tensor
-
-
-@dataclass(frozen=True)
-class CartesianDelta:
-    delta: torch.Tensor
-    gripper: float
-
-
-class TeleopDevice(Protocol):
-    def connect(self) -> None: ...
-    def disconnect(self) -> None: ...
-    def get_command(self) -> JointTargets | CartesianDelta: ...
+from .base import CartesianDelta
 
 
 class KeyboardDevice:
@@ -58,7 +40,7 @@ class KeyboardDevice:
 
     def connect(self):
         if self.input_mode == "terminal":
-            from openso101.teleop.terminal import TerminalKeyboard
+            from .terminal import TerminalKeyboard
 
             self.terminal = TerminalKeyboard()
             self.terminal.connect()

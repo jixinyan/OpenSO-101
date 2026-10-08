@@ -6,12 +6,12 @@ import pytest
 import trimesh
 
 from openso101.scenes.bundle import export_bundle, verify_bundle
-from openso101.scenes.capabilities import GeometryProbe, probe_geometry, verify_geometry_report
-from openso101.scenes.catalog import AssetCatalog
-from openso101.scenes.editing import EntityChange, SceneEdit, revise_bundle
+from openso101.scenes.assets.capabilities import GeometryProbe, probe_geometry, verify_geometry_report
+from openso101.scenes.assets.catalog import AssetCatalog
+from openso101.scenes.editor.editing import EntityChange, SceneEdit, revise_bundle
 from openso101.scenes.models import Entity, Goal, Pose, SceneSpec, Task, file_digest
 from openso101.scenes.program import IntentAction, IntentObject, TaskCondition, TaskIntent, compile_program
-from openso101.scenes.store import SceneStore
+from openso101.scenes.editor.store import SceneStore
 
 
 @pytest.fixture

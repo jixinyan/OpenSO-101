@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from .catalog import AssetCatalog
-from .models import Asset, file_digest
+from ..models import Asset, file_digest
 
 
 def import_robotwin(catalog: AssetCatalog, model_directory: Path, model_id: int, *, license: str, author: str) -> Asset:

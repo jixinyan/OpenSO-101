@@ -35,9 +35,9 @@ def main():
     from isaaclab.utils import configclass
 
     from .runtime import CustomSceneEnvCfg, register_custom_scene, scene_states, scene_jaw_forces
-    from .program import TaskProgramTracker
+    from ..program import TaskProgramTracker
     from .usd import verify_compilation
-    from .models import file_digest
+    from ..models import file_digest
 
     compilation = verify_compilation(args.scene)
     register_custom_scene()
@@ -50,7 +50,7 @@ def main():
                 if cfg.task_program is not None else [])
     bddl_trackers = []
     if cfg.bddl_report is not None:
-        from .bddl import BDDLBinding, BDDLTaskTracker
+        from ..bddl import BDDLBinding, BDDLTaskTracker
 
         binding = BDDLBinding.model_validate(cfg.bddl_report["binding"])
         bddl_trackers = [BDDLTaskTracker(cfg.bddl_report["problem"], binding, cfg.scene_spec)

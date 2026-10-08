@@ -6,7 +6,7 @@ import trimesh
 from pydantic import Field, model_validator
 
 from .catalog import AssetCatalog
-from .models import Digest, Dimensions, Model, Vector3, file_digest
+from ..models import Digest, Dimensions, Model, Vector3, file_digest
 
 
 class GeometryProbe(Model):

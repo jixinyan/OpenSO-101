@@ -5,7 +5,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from openso101.scenes.model_client import ModelService, load_codex_runtime_config
+from openso101.scenes.agent.model_client import ModelService, load_codex_runtime_config
 from openso101.scenes.models import Model
 
 

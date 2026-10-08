@@ -3,11 +3,11 @@ from pathlib import Path
 
 from pydantic import Field, model_validator
 
-from .bundle import export_bundle, verify_bundle
-from .catalog import AssetCatalog
-from .layout import diagnose_layout
-from .models import Digest, Dimensions, Entity, Goal, Identifier, Model, Physics, Pose, SceneSpec, file_digest
-from .program import IntentObject, TaskIntent, compile_program
+from ..bundle import export_bundle, verify_bundle
+from ..assets.catalog import AssetCatalog
+from ..layout import diagnose_layout
+from ..models import Digest, Dimensions, Entity, Goal, Identifier, Model, Physics, Pose, SceneSpec, file_digest
+from ..program import IntentObject, TaskIntent, compile_program
 from .store import SceneStore
 
 

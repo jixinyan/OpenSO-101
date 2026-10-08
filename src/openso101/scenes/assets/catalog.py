@@ -11,7 +11,7 @@ import numpy as np
 import objaverse
 import trimesh
 
-from .models import Asset, file_digest
+from ..models import Asset, file_digest
 
 
 class AssetCatalog:

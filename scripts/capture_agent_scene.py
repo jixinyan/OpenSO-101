@@ -27,8 +27,8 @@ import torch
 
 from openso101.cli.il import _replay_set_robot_proprio
 from openso101.scenes.models import file_digest
-from openso101.scenes.runtime import CustomSceneEnvCfg, register_custom_scene
-from openso101.scenes.usd import verify_compilation
+from openso101.scenes.isaaclab.runtime import CustomSceneEnvCfg, register_custom_scene
+from openso101.scenes.isaaclab.usd import verify_compilation
 
 compilation = verify_compilation(args.scene)
 register_custom_scene()

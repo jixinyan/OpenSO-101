@@ -9,7 +9,7 @@ from openso101.cli.il import (
     _replay_resolve_episode_path,
     _replay_select_checkpoint_frame,
 )
-from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder
+from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder
 
 
 CAMERAS = {

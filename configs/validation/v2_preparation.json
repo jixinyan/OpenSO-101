@@ -4,7 +4,15 @@
   "source_files": ["src", "scripts", "configs", "tests/scenes", "tests/test_gpu_guard.py", "tests/fixtures", "pyproject.toml", "tests/scenes/assets/metric_video/landmarks.mp4"],
   "stages": [
     {
-      "name": "cpu_geometry", "resource": "cpu",
+      "name": "source_layout", "resource": "cpu",
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "-m", "openso101.cli.main", "validate", "source", "--output", "{output}/source_layout"],
+      "requirements": [
+        {"report": "source_layout/report.json", "pointer": "/status", "equals": "source_and_cli_verified"},
+        {"report": "source_layout/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "cpu_geometry", "resource": "cpu", "depends_on": ["source_layout"],
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/run_cpu_checks.py", "--output", "{output}/cpu_geometry"],
       "requirements": [
         {"report": "cpu_geometry/report.json", "pointer": "/status", "equals": "cpu_checks_verified"},

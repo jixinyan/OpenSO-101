@@ -17,8 +17,8 @@ torch = pytest.importorskip("torch")
 from pydantic import BaseModel
 
 from openso101.il.datasets.lerobot_adapter import LeRobotDatasetHandle
-from openso101.scenes import model_client
-from openso101.scenes.agent_loop import (
+from openso101.scenes.agent import model_client
+from openso101.scenes.agent.loop import (
     DraftEntity,
     PlausibilityReview,
     RGBVideoInput,
@@ -29,11 +29,11 @@ from openso101.scenes.agent_loop import (
     VideoObject,
     VideoSceneDescription,
 )
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.bundle import verify_bundle
 from openso101.scenes.models import Asset
 from openso101.scenes.video import sample_rgb_video
-from openso101.teleop.hdf5_recorder import (
+from openso101.teleop.recorder.hdf5 import (
     OpenSO101HDF5TeleopRecorder,
     validate_hdf5_episode,
 )

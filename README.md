@@ -66,7 +66,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About the Project
 
-v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL backend、键盘采集和视觉蒸馏。当前功能、实际检查范围及尚未完成的验收见 [v2 状态记录](docs/guides/v2-status-2026-09-29.md)；使用方法见 [自定义场景](docs/guides/custom-scenes.md) 和 [训练与蒸馏](docs/guides/v2-training.md)。生成场景的成功采集、策略收敛与真机任务仍需验收。
+v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL backend、键盘采集和视觉蒸馏。当前功能、实际检查范围及尚未完成的验收见 [v2 状态记录](docs/guides/v2-status-2026-10-07.md)；使用方法见 [自定义场景](docs/guides/custom-scenes.md) 和 [训练与蒸馏](docs/guides/v2-training.md)。生成场景的成功采集、策略收敛与真机任务仍需验收。
 
 当前优先验收 MuJoCo sim2sim 的实际动力学、夹爪接触与策略反馈，键盘遥操作和 agentic real2sim 同步推进。RL 训练保持停止，真机工作暂缓。验收条件见 [v2 迭代安排](docs/guides/v2-priorities.md)。
 
@@ -95,32 +95,21 @@ The project is organized so a researcher can clone, install, and reach a working
 
 ### Repository Layout
 
-```
-OpenSO-101/
-├── src/openso101/
-│   ├── cli/                  # `openso101 {envs,rl,il,sim2real}` dispatch
-│   ├── envs/                 # OpenSO101EnvCfg base + register_task decorator
-│   ├── robots/so101/         # SO-101 ArticulationCfg, USD spawn, cameras, pose constants
-│   ├── tasks/                # Built-in tasks: lift, pick_place, stack (+ shared/)
-│   ├── scenes/               # Objaverse catalog, scene bundles, Astra real2sim loop
-│   ├── real2sim/             # Public real2sim orchestration exports
-│   ├── teleop/               # LeRobot leader-arm → simulated follower (async daemon poll)
-│   ├── rl/                   # rsl_rl-backed PPO + BestCheckpointRunner; Distillation cfgs
-│   ├── il/
-│   │   ├── policies/         # ACTPolicy, DiffusionPolicy, load_policy (LeRobot wrappers)
-│   │   ├── runners/          # train_il_policy() — programmatic LeRobot trainer
-│   │   └── datasets/         # load_lerobot_dataset() — Hub id OR local recorder dir
-│   └── sim2real/
-│       ├── domain_randomization/  # visual / observation / physics DR (all three tasks)
-│       └── deploy.py              # real-arm deploy bridge (LeRobot SO101Follower)
-├── scripts/
-│   └── install.sh            # uv-based installer (resolves isaaclab/lerobot conflict)
-├── docs/guides/              # User-facing guides (install, quickstart, teleop, add_a_task)
-├── tests/                    # pytest suite (~21 test modules; full run needs a CUDA GPU + Isaac Sim, a CPU-only subset runs anywhere)
-├── constraints.txt           # `setuptools<81` for flatdict's legacy sdist
-├── requirements-cuda.txt     # torch cu128 wheels (Blackwell-compatible)
-└── pyproject.toml            # `openso101` console_scripts + [tool.uv] resolver overrides
-```
+| 路径 | 功能 |
+|---|---|
+| `src/openso101/cli/` | `openso101` 命令入口 |
+| `src/openso101/robots/so101/`、`tasks/` | 机器人配置、IK 与任务 MDP |
+| `src/openso101/scenes/` | `assets/`、`agent/`、`layout/`、`editor/`、`isaaclab/` |
+| `src/openso101/teleop/` | `devices/`、`recorder/`、相机与动作转换 |
+| `src/openso101/rl/`、`il/` | RL backend、连续监督、IL 模型与数据 |
+| `src/openso101/sim2sim/`、`sim2real/` | MuJoCo、Domain randomization 与部署 |
+| `src/openso101/validation/` | 源码、打包与 CPU/GPU 阶段检查 |
+| `scripts/`、`scripts/visualization/` | 运行脚本与实际记录图表 |
+| `docs/guides/`、`docs/validation/` | 操作指南与验收报告 |
+| `configs/`、`tests/` | 配置与检查 |
+| `outputs/` | 模型、数据、视频与日志 |
+
+具体文件、Python import 和验证命令见 [代码目录](docs/guides/code-map.md)，脚本入口见 [脚本目录](scripts/README.md)。
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

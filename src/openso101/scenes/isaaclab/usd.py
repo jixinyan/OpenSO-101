@@ -9,9 +9,9 @@ import os
 import shutil
 from pathlib import Path
 
-from .bundle import verify_bundle
-from .catalog import AssetCatalog
-from .models import SceneSpec, file_digest, scene_document_digest
+from ..bundle import verify_bundle
+from ..assets.catalog import AssetCatalog
+from ..models import SceneSpec, file_digest, scene_document_digest
 
 
 async def convert_glb(source: Path, target: Path):
@@ -156,7 +156,7 @@ def verify_compilation(output: Path) -> dict:
         if not path.is_relative_to(output) or file_digest(path) != expected:
             raise ValueError(f"编译文件校验失败：{relative}")
     spec = SceneSpec.read(output / "scene.json")
-    from .bundle import verify_program_documents
+    from ..bundle import verify_program_documents
 
     verify_program_documents(output, spec, report["files"])
     if scene_document_digest(output / "scene.json") != report["scene_sha256"]:

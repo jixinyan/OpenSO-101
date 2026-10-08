@@ -4,7 +4,7 @@
 import shutil
 from pathlib import Path
 
-from .usd import verify_compilation
+from .isaaclab.usd import verify_compilation
 
 
 def store_recording_scene(compiled_scene: Path, dataset_root: Path) -> dict[str, str]:

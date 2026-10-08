@@ -16,7 +16,7 @@ parser.add_argument("--dynamics", type=Path, required=True)
 parser.add_argument("--table", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 args = parser.parse_args()
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[2]
 args.output.mkdir(parents=True, exist_ok=False)
 dynamics = json.loads((args.dynamics / "dynamics_report.json").read_text())
 table = json.loads((args.table / "dynamics_report.json").read_text())

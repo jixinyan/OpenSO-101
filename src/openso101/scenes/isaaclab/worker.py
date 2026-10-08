@@ -18,10 +18,12 @@ def main():
 
     app = SimulationApp({"headless": True, "multi_gpu": False,
                          "active_gpu": 0, "physics_gpu": 0, "max_gpu_count": 1})
-    from openso101.scenes.usd import compile_bundle
+    from .usd import compile_bundle
 
-    compile_bundle(args.bundle, args.output)
-    app.close()
+    try:
+        compile_bundle(args.bundle, args.output)
+    finally:
+        app.close()
 
 
 if __name__ == "__main__":

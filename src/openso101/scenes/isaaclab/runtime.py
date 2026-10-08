@@ -23,7 +23,7 @@ from isaaclab.utils.math import matrix_from_quat, quat_apply_inverse
 from openso101.envs.base import OpenSO101EnvCfg, TeleopActionsCfg
 from openso101.robots.so101.so_arm101 import SO101_USD_TABLETOP_ROOT_Z, SO_ARM101_CFG
 
-from .models import Goal, SceneSpec
+from ..models import Goal, SceneSpec
 from .usd import verify_compilation
 
 
@@ -134,7 +134,7 @@ def bddl_trackers(env):
     if env.cfg.bddl_report is None:
         return ()
     if not hasattr(env, "_bddl_trackers"):
-        from .bddl import BDDLBinding, BDDLTaskTracker
+        from ..bddl import BDDLBinding, BDDLTaskTracker
 
         report = env.cfg.bddl_report
         binding = BDDLBinding.model_validate(report["binding"])
@@ -344,7 +344,7 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
                                                      filter_prim_paths_expr=filters))
         program_path = folder / "task_program.json"
         if program_path.is_file():
-            from .program import read_program
+            from ..program import read_program
 
             self.task_program = read_program(program_path, spec)
             self.observations.policy.task_program = ObservationTermCfg(func=program_progress)

@@ -1,9 +1,7 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""RGB-video real2sim orchestration for OpenSO-101."""
-
-from openso101.scenes.agent_loop import (
+from openso101.scenes.agent.loop import (
     AgentLoopError,
     AgentLoopResult,
     AstraScenePlanner,

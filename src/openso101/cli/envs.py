@@ -66,7 +66,7 @@ def _build_smoke_env(args, *, force_cameras: bool = False):
 
     num_envs = max(1, int(getattr(args, "num_envs", 1) or 1))
     if getattr(args, "scene", None):
-        from openso101.scenes.runtime import register_custom_scene
+        from openso101.scenes.isaaclab.runtime import register_custom_scene
 
         register_custom_scene()
     cameras = bool(force_cameras or getattr(args, "with_cameras", False))

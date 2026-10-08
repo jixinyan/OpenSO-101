@@ -7,10 +7,10 @@ import trimesh
 from scipy.spatial.transform import Rotation
 from trimesh.viewer.notebook import scene_to_html
 
-from .bundle import verify_bundle
-from .capabilities import instance_mesh
-from .catalog import AssetCatalog
-from .models import file_digest
+from ..bundle import verify_bundle
+from ..assets.capabilities import instance_mesh
+from ..assets.catalog import AssetCatalog
+from ..models import file_digest
 
 
 def export_preview(bundle: Path, output: Path, *, robot_model: Path | None = None, joint_positions=None):

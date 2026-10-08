@@ -1,8 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""LeRobot dataset recording helpers for OpenSO-101 teleoperation."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,7 +11,7 @@ import numpy as np
 
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
-from .so101_mapping import (
+from ..so101_mapping import (
     LEROBOT_SO101_ACTION_NAMES,
     SO101_TELEOP_CONTROL_JOINT_NAMES,
     batched_action_to_motor_units,

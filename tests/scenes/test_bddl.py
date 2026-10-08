@@ -8,7 +8,7 @@ import pytest
 import trimesh
 
 from openso101.scenes.bddl import BDDLBinding, BDDLTaskTracker, bind_bddl_problem, read_bddl_problem
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.models import Entity, Physics, Pose, SceneSpec, Task, file_digest
 
 

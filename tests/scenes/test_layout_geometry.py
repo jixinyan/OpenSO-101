@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import trimesh
 
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.layout import diagnose_layout, solve_layout
 from openso101.scenes.models import Entity, Physics, Pose, SceneSpec, Task, file_digest
 

@@ -3,8 +3,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from .bundle import verify_bundle
-from .models import file_digest
+from ..bundle import verify_bundle
+from ..models import file_digest
 from .usd import verify_compilation
 
 
@@ -26,14 +26,14 @@ def prepare_scene(bundle: Path, output: Path, *, num_envs: int = 4, steps: int =
     if timeout_seconds is not None and (not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
         raise ValueError("场景运行预算必须为正数有限数值")
     started = time.monotonic()
-    subprocess.run([sys.executable, "-u", "-m", "openso101.scenes.worker", str(bundle), str(compiled)],
+    subprocess.run([sys.executable, "-u", "-m", "openso101.scenes.isaaclab.worker", str(bundle), str(compiled)],
                    check=True, timeout=timeout_seconds)
     compilation = verify_compilation(compiled)
     remaining = None if timeout_seconds is None else timeout_seconds - (time.monotonic() - started)
     if remaining is not None and remaining <= 0:
         raise TimeoutError("场景编译已达到运行预算上限")
     subprocess.run([
-        sys.executable, "-u", "-m", "openso101.scenes.validation_worker", str(compiled), str(runtime_path),
+        sys.executable, "-u", "-m", "openso101.scenes.isaaclab.validation_worker", str(compiled), str(runtime_path),
         "--num-envs", str(num_envs), "--steps", str(steps), "--resets", str(resets), "--cameras",
     ], check=True, timeout=remaining)
     runtime = json.loads(runtime_path.read_text())

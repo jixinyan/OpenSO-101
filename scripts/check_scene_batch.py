@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import Field, model_validator
 
 from openso101.scenes.bundle import verify_bundle
-from openso101.scenes.catalog import AssetCatalog
+from openso101.scenes.assets.catalog import AssetCatalog
 from openso101.scenes.layout import diagnose_layout
 from openso101.scenes.models import Identifier, Model, file_digest
 
@@ -57,7 +57,7 @@ if args.phase == "gpu":
     previous = json.loads(args.cpu_report.read_text())
     if previous != report:
         raise ValueError("GPU 场景验收的输入与通过 CPU 检查的记录不一致")
-    from openso101.scenes.preparation import prepare_scene
+    from openso101.scenes.isaaclab.preparation import prepare_scene
 
     report.update(status="scene_batch_gpu_running", gpu_tests_started=True, runtime_results=[])
     for case in cases.cases:

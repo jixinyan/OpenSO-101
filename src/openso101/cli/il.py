@@ -46,7 +46,7 @@ def _launch_isaac_app(args: argparse.Namespace, enable_cameras: bool = True):
         args.disable_fabric = False
     app_launcher = AppLauncher(args)
     if getattr(args, "scene", None):
-        from openso101.scenes.runtime import register_custom_scene
+        from openso101.scenes.isaaclab.runtime import register_custom_scene
 
         register_custom_scene()
     return app_launcher.app
@@ -340,7 +340,7 @@ class _TeleopCheckpointStore:
                 ("_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold")
                 if hasattr(self.env, name)
             }
-            from openso101.scenes.runtime import bddl_trackers
+            from openso101.scenes.isaaclab.runtime import bddl_trackers
 
             checkpoint.bddl_progress = tuple(tracker.snapshot() for tracker in bddl_trackers(self.env))
             self.checkpoint = checkpoint
@@ -384,7 +384,7 @@ class _TeleopCheckpointStore:
             recorder.restore_checkpoint(checkpoint.recorder_checkpoint)
 
         if checkpoint.entity_states is not None:
-            from openso101.scenes.runtime import bddl_trackers
+            from openso101.scenes.isaaclab.runtime import bddl_trackers
 
             trackers = bddl_trackers(self.env)
             if len(trackers) != len(checkpoint.bddl_progress):
@@ -554,7 +554,7 @@ def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
     """Return true when the teleop object reaches the final pick/place goal."""
 
     if getattr(env.cfg, "scene_spec", None) is not None:
-        from openso101.scenes.runtime import task_success
+        from openso101.scenes.isaaclab.runtime import task_success
 
         return bool(task_success(env)[0])
     try:
@@ -589,7 +589,7 @@ def _teleop_goal_success_vec(env, command_name: str = "object_pose"):
     can fall back gracefully.
     """
     if getattr(env.cfg, "scene_spec", None) is not None:
-        from openso101.scenes.runtime import task_success
+        from openso101.scenes.isaaclab.runtime import task_success
 
         return task_success(env)
     try:
@@ -664,15 +664,15 @@ _REPLAY_COMMAND_FIELDS = (
 def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> dict[str, Any]:
     sim_state: dict[str, Any] = {"environment_origin": _tensor_to_numpy(scene.env_origins[0])}
     if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
-        from openso101.scenes.runtime import scene_states
+        from openso101.scenes.isaaclab.runtime import scene_states
 
         sim_state["scene_entity_states"] = _tensor_to_numpy(scene_states(unwrapped_env)[0])
-        from openso101.scenes.runtime import scene_jaw_forces
+        from openso101.scenes.isaaclab.runtime import scene_jaw_forces
         import torch
 
         forces = scene_jaw_forces(unwrapped_env)
         sim_state["scene_jaw_forces"] = _tensor_to_numpy(torch.stack(list(forces.values()), dim=1)[0])
-        from openso101.scenes.runtime import bddl_trackers
+        from openso101.scenes.isaaclab.runtime import bddl_trackers
 
         trackers = bddl_trackers(unwrapped_env)
         if trackers:
@@ -831,9 +831,9 @@ def _cmd_record(args: argparse.Namespace) -> int:
 
     import openso101.tasks  # noqa: F401
     from openso101.teleop.camera_viewports import open_teleop_viewports
-    from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder
+    from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder
     from openso101.teleop.lerobot_interface import LeRobotSO101Leader
-    from openso101.teleop.lerobot_recorder import (
+    from openso101.teleop.recorder.lerobot import (
         OpenSO101LeRobotRecorder,
         collect_camera_buffers,
         discover_camera_metadata,
@@ -970,7 +970,7 @@ def _cmd_record(args: argparse.Namespace) -> int:
             )
 
         if args.teleop_device == "keyboard":
-            from openso101.teleop.devices import KeyboardDevice
+            from openso101.teleop.devices.keyboard import KeyboardDevice
 
             leader = KeyboardDevice(unwrapped_env, input_mode=keyboard_input, on_key=keyboard.request_key)
         else:
@@ -1268,8 +1268,8 @@ def _push_archive_existing_export(root: Path) -> Path:
 
 
 def _push_validate_local_dataset(root: Path, input_format: str = "auto") -> list[Path]:
-    from openso101.teleop.hdf5_recorder import validate_hdf5_dataset
-    from openso101.teleop.lerobot_recorder import has_lerobot_metadata
+    from openso101.teleop.recorder.hdf5 import validate_hdf5_dataset
+    from openso101.teleop.recorder.lerobot import has_lerobot_metadata
 
     if not root.exists():
         raise SystemExit(f"Local dataset root does not exist: {root}")
@@ -1329,7 +1329,7 @@ def _push_convert_hdf5_to_lerobot(
     import threading
     import time
 
-    from openso101.teleop.hdf5_recorder import validate_hdf5_dataset
+    from openso101.teleop.recorder.hdf5 import validate_hdf5_dataset
 
     if skip_leading_frames < 0:
         raise ValueError("skip_leading_frames 必须大于或等于 0")
@@ -1791,7 +1791,7 @@ def _replay_restore_sim_state_from_episode(unwrapped_env, scene, h5, frame_index
                 getattr(unwrapped_env, "_" + name).zero_()
         if hasattr(unwrapped_env, "_scene_hold_seconds"):
             unwrapped_env._scene_success_step = -1
-        from openso101.scenes.runtime import bddl_trackers
+        from openso101.scenes.isaaclab.runtime import bddl_trackers
 
         trackers = bddl_trackers(unwrapped_env)
         if trackers:
@@ -1881,7 +1881,7 @@ def _replay_print_checkpoints(episode_path: Path) -> None:
 
 
 def _cmd_replay(args: argparse.Namespace) -> int:
-    from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+    from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 
     # Resolve the episode path. The new CLI exposes a single --episode flag
     # which is the explicit path; the legacy CLI also supported --repo-root /
@@ -2320,7 +2320,7 @@ def _build_il_policy_observation(unwrapped_env, scene) -> dict:
     import numpy as np
     import torch
 
-    from openso101.teleop.lerobot_recorder import collect_camera_buffers, read_robot_proprio
+    from openso101.teleop.recorder.lerobot import collect_camera_buffers, read_robot_proprio
     from openso101.teleop.so101_mapping import (
         batched_action_to_motor_units,
         get_sim_joint_names,
@@ -2367,7 +2367,7 @@ def _build_il_policy_observation_batched(scene) -> dict:
     """
     import torch
 
-    from openso101.teleop.lerobot_recorder import REQUIRED_CAMERA_NAMES, get_scene_entity
+    from openso101.teleop.recorder.lerobot import REQUIRED_CAMERA_NAMES, get_scene_entity
     from openso101.teleop.so101_mapping import (
         batched_action_to_motor_units,
         get_sim_joint_names,

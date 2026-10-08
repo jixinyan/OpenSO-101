@@ -1,14 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""The RGB-video to real2sim scene-agent loop.
-
-The loop deliberately keeps model calls, Objaverse access, generated assets and
-Isaac runtime checks behind small interfaces.  This lets the orchestration run
-in a CPU-only checkout while the same state machine can be connected to
-GPT-6 Astra, an Objaverse mirror, an asset-generation service and Isaac Lab.
-"""
-
 from __future__ import annotations
 
 import json
@@ -20,11 +12,11 @@ from typing import Any, Callable, Literal, Protocol, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from .bundle import export_bundle
-from .catalog import AssetCatalog, search_categories
-from .layout import diagnose_layout
+from ..bundle import export_bundle
+from ..assets.catalog import AssetCatalog, search_categories
+from ..layout import diagnose_layout
 from .model_client import ModelService
-from .models import (
+from ..models import (
     Asset,
     Digest,
     Dimensions,
@@ -38,7 +30,7 @@ from .models import (
     Vector3,
     file_digest,
 )
-from .video import RGBVideoInput
+from ..video import RGBVideoInput
 
 
 class VideoObject(BaseModel):

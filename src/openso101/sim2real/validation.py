@@ -8,7 +8,7 @@ import torch
 from openso101.rl.config import digest
 from openso101.rl.student import RLStudentPolicy
 from openso101.robots.so101.constants import SO101_SIM_JOINT_NAMES
-from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 from openso101.teleop.so101_mapping import batched_action_to_motor_units
 
 from .deploy import _clamp_motor_units

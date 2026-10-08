@@ -9,7 +9,7 @@ from lerobot.datasets.lerobot_dataset import LeRobotDataset
 
 from openso101.cli.il import _push_hdf5_radians_to_motor_units
 from openso101.rl.config import digest
-from openso101.teleop.hdf5_recorder import validate_hdf5_dataset
+from openso101.teleop.recorder.hdf5 import validate_hdf5_dataset
 
 
 parser = argparse.ArgumentParser()

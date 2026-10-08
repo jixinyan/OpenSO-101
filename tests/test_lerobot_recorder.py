@@ -2,7 +2,7 @@ import pytest
 
 import numpy as np
 
-from openso101.teleop.lerobot_recorder import (
+from openso101.teleop.recorder.lerobot import (
     REQUIRED_CAMERA_NAMES,
     build_lerobot_features,
     collect_camera_buffers,

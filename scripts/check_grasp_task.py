@@ -493,7 +493,7 @@ try:
                            "camera_order": ["overhead_camera", "wrist_camera"],
                            "scripted_task_success": bool(finished_success[0]), "rl_policy_success_verified": False}
     if args.recording_output is not None:
-        from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+        from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 
         episodes = list(args.recording_output.glob("episodes/episode_*.hdf5"))
         if len(episodes) != 1:

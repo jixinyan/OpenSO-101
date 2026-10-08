@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 
 from openso101.scenes.bundle import verify_bundle
-from openso101.scenes.editing import interpret_scene_edit, revise_bundle
-from openso101.scenes.model_client import ModelService, load_codex_runtime_config
+from openso101.scenes.editor.editing import interpret_scene_edit, revise_bundle
+from openso101.scenes.agent.model_client import ModelService, load_codex_runtime_config
 from openso101.scenes.models import file_digest
 
 

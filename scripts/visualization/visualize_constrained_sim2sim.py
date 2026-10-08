@@ -22,7 +22,7 @@ parser.add_argument("--linux-reports", type=Path, required=True)
 parser.add_argument("--baseline-gripper", type=Path)
 args = parser.parse_args()
 args.output.mkdir(parents=True, exist_ok=False)
-root = Path(__file__).resolve().parents[1]
+root = Path(__file__).resolve().parents[2]
 evidence = []
 metrics = []
 fig, axes = plt.subplots(2, 2, figsize=(13, 8), layout="constrained")

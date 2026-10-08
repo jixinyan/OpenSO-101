@@ -4,11 +4,11 @@
 import json
 from pathlib import Path
 
-from .bundle import validate_layout
-from .catalog import AssetCatalog
-from .layout import diagnose_layout
+from ..bundle import validate_layout
+from ..assets.catalog import AssetCatalog
+from ..layout import diagnose_layout
 from .model_client import ModelService, schema_instruction
-from .models import SceneSpec
+from ..models import SceneSpec
 
 
 def propose_scene(instruction: str, catalog: AssetCatalog, service: ModelService) -> SceneSpec:

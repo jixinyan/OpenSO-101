@@ -7,7 +7,7 @@ from huggingface_hub import model_info
 from sentence_transformers import SentenceTransformer
 
 from .catalog import AssetCatalog
-from .models import file_digest
+from ..models import file_digest
 
 DEFAULT_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 

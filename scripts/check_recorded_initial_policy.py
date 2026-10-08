@@ -8,7 +8,7 @@ import numpy as np
 
 from openso101.rl.config import CheckpointMeta, digest
 from openso101.rl.gpu_scope import configure_visible_gpu
-from openso101.teleop.hdf5_recorder import validate_hdf5_episode
+from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
 
 
 parser = argparse.ArgumentParser()

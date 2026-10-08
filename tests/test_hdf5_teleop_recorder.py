@@ -3,7 +3,7 @@ import pytest
 import h5py
 import numpy as np
 
-from openso101.teleop.hdf5_recorder import OpenSO101HDF5TeleopRecorder, validate_hdf5_dataset
+from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_dataset
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
 

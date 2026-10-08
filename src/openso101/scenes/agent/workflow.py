@@ -7,11 +7,11 @@ from pathlib import Path
 
 from pydantic import Field
 
-from .bundle import export_bundle
-from .catalog import AssetCatalog
-from .layout import diagnose_layout
-from .models import Model, SceneSpec, file_digest
-from .program import compile_program, extract_intent
+from ..bundle import export_bundle
+from ..assets.catalog import AssetCatalog
+from ..layout import diagnose_layout
+from ..models import Model, SceneSpec, file_digest
+from ..program import compile_program, extract_intent
 
 
 class JobLimits(Model):
@@ -76,7 +76,7 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
         save("failed")
         raise ValueError("任务实体数量达到预算上限")
     if asset_index is not None:
-        from .asset_index import AssetIndex
+        from ..assets.index import AssetIndex
 
         index = None
 
@@ -101,7 +101,7 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
     if not assets or len(assets) > limits.max_candidates:
         save("failed")
         raise ValueError("资产候选数量必须位于当前预算范围")
-    from .inspection import inspect_asset
+    from ..assets.inspection import inspect_asset
 
     asset_records = [item.model_dump() | {"inspection": tool("inspect_asset", {"asset_uid": item.uid},
                                                               lambda uid=item.uid: inspect_asset(catalog, uid))}
@@ -133,7 +133,7 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
             program = compile_program(intent, spec)
             capability_reports = []
             if capability_probes:
-                from .capabilities import GeometryProbe, probe_geometry
+                from ..assets.capabilities import GeometryProbe, probe_geometry
 
                 by_id = {entity.entity_id: entity for entity in spec.entities}
                 for entity_id, probes in capability_probes.items():
@@ -179,7 +179,7 @@ def generate_scene_job(instruction: str, catalog: AssetCatalog, service, output:
         if unchecked:
             job["pending_checks"] = sorted(set(job["pending_checks"]) | {"asset_capabilities"})
         if runtime_output is not None:
-            from .preparation import prepare_scene
+            from ..isaaclab.preparation import prepare_scene
 
             prepared = tool("prepare_scene", {"bundle": str(bundle), "num_envs": 4, "steps": 200, "resets": 100},
                             lambda: prepare_scene(bundle, runtime_output, timeout_seconds=limits.max_runtime_seconds))

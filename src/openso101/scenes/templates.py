@@ -6,8 +6,8 @@ from pathlib import Path
 import trimesh
 
 from .bundle import export_bundle
-from .catalog import AssetCatalog
-from .importers import import_robotwin
+from .assets.catalog import AssetCatalog
+from .assets.importers import import_robotwin
 from .models import Entity, Goal, Physics, Pose, SceneSpec, Task, file_digest
 
 ROBOTWIN_TASKS = ("mouse_pad", "stapler_pad", "pillbottle_pad", "object_scale", "stack_blocks")

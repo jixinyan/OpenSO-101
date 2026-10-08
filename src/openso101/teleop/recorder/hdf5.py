@@ -1,17 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Local HDF5 recording for OpenSO-101 teleoperation episodes.
-
-The recorder streams chunked, resizable datasets to disk as frames arrive so a
-crash mid-episode does not lose previously captured frames. Frames are
-buffered in RAM up to ``flush_steps`` and then appended to the on-disk
-datasets in a single write per field. Existing public API (class name,
-constructor signature, ``start_episode`` / ``add_frame`` / ``save_episode`` /
-``cancel_episode`` / ``create_checkpoint`` / ``restore_checkpoint``) is
-preserved.
-"""
-
 from __future__ import annotations
 
 import math
@@ -21,10 +10,10 @@ from typing import Any, Mapping
 import h5py
 import numpy as np
 
-from .lerobot_recorder import REQUIRED_CAMERA_NAMES, ensure_required_cameras
+from .lerobot import REQUIRED_CAMERA_NAMES, ensure_required_cameras
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
-from .so101_mapping import LEROBOT_SO101_ACTION_NAMES, SO101_TELEOP_CONTROL_JOINT_NAMES
+from ..so101_mapping import LEROBOT_SO101_ACTION_NAMES, SO101_TELEOP_CONTROL_JOINT_NAMES
 
 HDF5_EPISODE_GLOB = "episode_*.hdf5"
 REQUIRED_HDF5_DATASETS: tuple[str, ...] = (

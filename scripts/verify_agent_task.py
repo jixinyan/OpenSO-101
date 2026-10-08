@@ -2,10 +2,10 @@ import argparse
 import json
 from pathlib import Path
 
-from openso101.scenes.agent_loop import AgentLoopResult
+from openso101.scenes.agent.loop import AgentLoopResult
 from openso101.scenes.bundle import verify_bundle
 from openso101.scenes.models import file_digest
-from openso101.scenes.usd import verify_compilation
+from openso101.scenes.isaaclab.usd import verify_compilation
 
 parser = argparse.ArgumentParser()
 parser.add_argument("prepared", type=Path)
@@ -61,7 +61,7 @@ report = {
     "preparation_sha256": file_digest(preparation_path),
     "runtime_report_sha256": file_digest(runtime_path),
     "verifier_sha256": file_digest(Path(__file__)),
-    "agent_loop_sha256": file_digest(Path(__file__).resolve().parents[1] / "src/openso101/scenes/agent_loop.py"),
+    "agent_loop_sha256": file_digest(Path(__file__).resolve().parents[1] / "src/openso101/scenes/agent/loop.py"),
     "runtime": {
         "num_envs": runtime["num_envs"], "resets": runtime["resets"],
         "steps": runtime["steps"], "camera_checks": runtime["camera_checks"],
