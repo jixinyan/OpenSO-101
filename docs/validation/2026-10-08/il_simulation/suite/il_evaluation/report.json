@@ -1,0 +1,520 @@
+{
+  "status": "actual_recorded_il_evaluation_verified",
+  "statistics": {
+    "source_report_sha256": "eefe151db521e22fec9299b87446587f01061627af74cde27a98e82f103f4ee3",
+    "source_trace_sha256": "f6eca574e07e6cc7a7f7b2577f15cb5f29681cd5c9dae28d6a74638580e5f827",
+    "source_environments": 4,
+    "source_control_steps": 349,
+    "source_episode_steps": [
+      328,
+      329,
+      349,
+      286
+    ],
+    "statistics_playbacks": [
+      {
+        "n": 1,
+        "requested_episodes": 1,
+        "success_count": 1,
+        "success_rate": 1.0,
+        "success_rate_wilson_95": [
+          0.20654931437723745,
+          1.0
+        ],
+        "mean_steps_to_success": 328.0,
+        "episodes_per_environment": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "episode_quotas": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "cohorts": 1,
+        "episodes": [
+          {
+            "environment": 0,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          }
+        ],
+        "policy_reset_scope": "completed_cohort",
+        "success_sampling": "post_physics_before_reset"
+      },
+      {
+        "n": 3,
+        "requested_episodes": 3,
+        "success_count": 3,
+        "success_rate": 1.0,
+        "success_rate_wilson_95": [
+          0.4385029682449546,
+          1.0
+        ],
+        "mean_steps_to_success": 335.3333333333333,
+        "episodes_per_environment": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "episode_quotas": [
+          1,
+          1,
+          1,
+          0
+        ],
+        "cohorts": 1,
+        "episodes": [
+          {
+            "environment": 0,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 1,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 329,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 2,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 349,
+            "terminated": true,
+            "truncated": false
+          }
+        ],
+        "policy_reset_scope": "completed_cohort",
+        "success_sampling": "post_physics_before_reset"
+      },
+      {
+        "n": 4,
+        "requested_episodes": 4,
+        "success_count": 4,
+        "success_rate": 1.0,
+        "success_rate_wilson_95": [
+          0.5101091635454027,
+          1.0
+        ],
+        "mean_steps_to_success": 323.0,
+        "episodes_per_environment": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "episode_quotas": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "cohorts": 1,
+        "episodes": [
+          {
+            "environment": 3,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 286,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 0,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 1,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 329,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 2,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 349,
+            "terminated": true,
+            "truncated": false
+          }
+        ],
+        "policy_reset_scope": "completed_cohort",
+        "success_sampling": "post_physics_before_reset"
+      },
+      {
+        "n": 5,
+        "requested_episodes": 5,
+        "success_count": 5,
+        "success_rate": 1.0,
+        "success_rate_wilson_95": [
+          0.5655175352168254,
+          1.0
+        ],
+        "mean_steps_to_success": 324.0,
+        "episodes_per_environment": [
+          2,
+          1,
+          1,
+          1
+        ],
+        "episode_quotas": [
+          2,
+          1,
+          1,
+          1
+        ],
+        "cohorts": 2,
+        "episodes": [
+          {
+            "environment": 3,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 286,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 0,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 1,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 329,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 2,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 349,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 0,
+            "cohort": 2,
+            "episode": 2,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          }
+        ],
+        "policy_reset_scope": "completed_cohort",
+        "success_sampling": "post_physics_before_reset"
+      },
+      {
+        "n": 7,
+        "requested_episodes": 7,
+        "success_count": 7,
+        "success_rate": 1.0,
+        "success_rate_wilson_95": [
+          0.6456695649333126,
+          1.0
+        ],
+        "mean_steps_to_success": 328.2857142857143,
+        "episodes_per_environment": [
+          2,
+          2,
+          2,
+          1
+        ],
+        "episode_quotas": [
+          2,
+          2,
+          2,
+          1
+        ],
+        "cohorts": 2,
+        "episodes": [
+          {
+            "environment": 3,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 286,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 0,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 1,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 329,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 2,
+            "cohort": 1,
+            "episode": 1,
+            "success": true,
+            "steps": 349,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 0,
+            "cohort": 2,
+            "episode": 2,
+            "success": true,
+            "steps": 328,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 1,
+            "cohort": 2,
+            "episode": 2,
+            "success": true,
+            "steps": 329,
+            "terminated": true,
+            "truncated": false
+          },
+          {
+            "environment": 2,
+            "cohort": 2,
+            "episode": 2,
+            "success": true,
+            "steps": 349,
+            "terminated": true,
+            "truncated": false
+          }
+        ],
+        "policy_reset_scope": "completed_cohort",
+        "success_sampling": "post_physics_before_reset"
+      }
+    ],
+    "unfinished_cohort_reset_rejected": true,
+    "partial_report": {
+      "n": 0,
+      "requested_episodes": 4,
+      "success_count": 0,
+      "success_rate": null,
+      "success_rate_wilson_95": null,
+      "mean_steps_to_success": null,
+      "episodes_per_environment": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "episode_quotas": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "cohorts": 1,
+      "episodes": [],
+      "policy_reset_scope": "completed_cohort",
+      "success_sampling": "post_physics_before_reset"
+    },
+    "independent_task_success_verified": false
+  },
+  "policies": {
+    "act": {
+      "policy": "act",
+      "model_state_sha256": "4df3d2c6d9979fde78ecbcd4fa00eefadb7c7c5ce7d2da51eb568afb832077d0",
+      "checkpoint_files": {
+        "config.json": "c1ca06f0faa9e3d86d1c6ee22d23f4ee0a859129e6d7d70c7e114928515227a5",
+        "model.safetensors": "c2d7814096a52b5ea6e5118baf1ed7a7a70723c64b500df65e0e8c768b751123",
+        "policy_preprocessor_step_3_normalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_preprocessor.json": "e1ad09fa73a0e3d12be1d9b1442c7eb35672a778ed9902fa516d77845ab44cfc",
+        "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_postprocessor.json": "648b415125a183dfd6cbc47c1dc04ab3f2d912654ef22a12ca5e8b93d7d85cdd",
+        "openso101_simulation.json": "73c6413c67c4e32c28bb45a63f43daa6da16a05792e883398aab7b6ada84dace"
+      },
+      "observation_frames": 48,
+      "environments": 3,
+      "cohorts": 2,
+      "select_action_calls": 16,
+      "maximum_action_error_rad": 0.0,
+      "model_files_unchanged": true,
+      "simulation_settings": {
+        "schema_version": 1,
+        "fps": 50,
+        "camera_sizes": {
+          "wrist_camera": [
+            256,
+            256
+          ],
+          "overhead_camera": [
+            256,
+            256
+          ]
+        },
+        "joint_names": [
+          "shoulder_pan.pos",
+          "shoulder_lift.pos",
+          "elbow_flex.pos",
+          "wrist_flex.pos",
+          "wrist_roll.pos",
+          "gripper.pos"
+        ],
+        "action_units": "motor_units",
+        "dataset_info_sha256": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05",
+        "dataset_export_sha256": "085e9a3af639af59747f7d74ab79bb79b6c851fe21a76fba09f563b499813817",
+        "recorded_simulation": {
+          "env_id": "OpenSO101-PickPlace-v0",
+          "task_profile": "grasp_v4",
+          "physics_dt": 0.001,
+          "decimation": 20,
+          "environment_mode": "nominal",
+          "reward_discount": 0.99,
+          "scene_sha256": null
+        }
+      },
+      "optimizer_updates": 0,
+      "task_success_verified": false
+    },
+    "diffusion": {
+      "policy": "diffusion",
+      "model_state_sha256": "c2738b233a06272be3093d9ef46406d1bf1205c2b4dea0eb5ca54bfd4a1b18e8",
+      "checkpoint_files": {
+        "config.json": "dbac3df6f5e400d898364ba92aa5005b1440edec23e2957a7e6910abff4e4b7a",
+        "model.safetensors": "fbfc0c1d147f776ec06702e38cc6fcbf17b507b43b757b4b0a40162aa839740b",
+        "policy_preprocessor_step_3_normalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_preprocessor.json": "fa827ac70bacec21a825e4adbe0bd6785657151bf6c9a146b3b9c259d6afc75a",
+        "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "6f3cd2111b4d393e4147f2c8a2bec157d331164519e15e99642e26e42a444e6b",
+        "policy_postprocessor.json": "ff4666f11949008cb7722e8969ab913f652e6dccc6c06eab40006a464edd276f",
+        "openso101_simulation.json": "73c6413c67c4e32c28bb45a63f43daa6da16a05792e883398aab7b6ada84dace"
+      },
+      "observation_frames": 48,
+      "environments": 3,
+      "cohorts": 2,
+      "select_action_calls": 16,
+      "maximum_action_error_rad": 0.0,
+      "model_files_unchanged": true,
+      "simulation_settings": {
+        "schema_version": 1,
+        "fps": 50,
+        "camera_sizes": {
+          "wrist_camera": [
+            256,
+            256
+          ],
+          "overhead_camera": [
+            256,
+            256
+          ]
+        },
+        "joint_names": [
+          "shoulder_pan.pos",
+          "shoulder_lift.pos",
+          "elbow_flex.pos",
+          "wrist_flex.pos",
+          "wrist_roll.pos",
+          "gripper.pos"
+        ],
+        "action_units": "motor_units",
+        "dataset_info_sha256": "9b8e62b3ec5bcedcfa3f417d4c989a127c952c8f1a127b70ec5ab66df4181a05",
+        "dataset_export_sha256": "085e9a3af639af59747f7d74ab79bb79b6c851fe21a76fba09f563b499813817",
+        "recorded_simulation": {
+          "env_id": "OpenSO101-PickPlace-v0",
+          "task_profile": "grasp_v4",
+          "physics_dt": 0.001,
+          "decimation": 20,
+          "environment_mode": "nominal",
+          "reward_discount": 0.99,
+          "scene_sha256": null
+        }
+      },
+      "optimizer_updates": 0,
+      "task_success_verified": false
+    }
+  },
+  "source_episode_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_unchanged": true,
+  "checkpoint_simulation_settings_verified": true,
+  "recorded_simulation_preserved": true,
+  "rejected_requests": [
+    {
+      "arguments": [
+        "play",
+        "--task",
+        "OpenSO101-Lift-v0"
+      ],
+      "native_startup_prevented": true
+    },
+    {
+      "arguments": [
+        "eval",
+        "--task",
+        "OpenSO101-Lift-v0"
+      ],
+      "native_startup_prevented": true
+    },
+    {
+      "arguments": [
+        "eval",
+        "--task",
+        "OpenSO101-PickPlace-v0",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/refactor_20261008/suite_profile_source/il_training/act/pretrained_model/evaluation.json"
+      ],
+      "native_startup_prevented": true
+    }
+  ],
+  "source_files": {
+    "src/openso101/il/evaluation.py": "9278a3bf74d33eb9ed3b6ff30ddc9c5396d2d247e4ea316a6cc538ddb0b5f027",
+    "src/openso101/il/policies/inference.py": "9381f853e457200985cf7d21880991cfc82235adda1ae239176917697f93aede",
+    "src/openso101/il/policies/simulation.py": "f80bd5087ed7582b451c515030461a00c6e3218f718ef070623bb20d78cbc042",
+    "src/openso101/il/runners/evaluator.py": "4569bd46bfca56eb6b8ef12e785151afdc251c6e00e40fc86de0006eb82be883",
+    "src/openso101/teleop/success.py": "b8f801c931126aa0e616140d4c5104b5500a4eff2e436fd824dbae46c97a8155",
+    "src/openso101/teleop/simulation.py": "9b59d3546df9f327c454dff5f6de145ef3f3bee33612b3b328222d65b22cb2e2"
+  },
+  "validator_sha256": "f16236c4a3c102d439622be0d538a8c61e0f3b739bb9e4a410275e2879afa7cf",
+  "gpu_tests_started": false,
+  "native_physics_verified": false,
+  "new_policy_task_success_verified": false,
+  "training_started": false
+}

@@ -1,0 +1,74 @@
+{
+  "status": "actual_lerobot_recorder_verified",
+  "cases": {
+    "sync": {
+      "frames": 336,
+      "episodes": 3,
+      "maximum_action_error_motor_units": 0.0,
+      "maximum_state_error_motor_units": 0.0,
+      "maximum_timestamp_error_seconds": 1.1444091807533141e-07,
+      "camera_maximum_encoding_mae": {
+        "wrist_camera": 0.008717655204236507,
+        "overhead_camera": 0.005949870217591524
+      },
+      "original_frames_checked": 328,
+      "checkpoint_camera_suffix_removed": true,
+      "cancelled_episode_removed": true,
+      "reopened_dataset_preserved": true,
+      "input_camera_arrays_preserved": true,
+      "writers_closed": true,
+      "files": {
+        "meta/info.json": "454a8da2f5083e129830ba37b4cd28ec3fd167de6100e3d299a8b5b46792c9bf",
+        "meta/tasks.parquet": "6266a6fad9bb98e2b067f66500ca6438efb0598b7ae663c207bdb5d71dfd1027",
+        "meta/stats.json": "3cf93903f2dd29a5780d5f28020bca9979407f0b9805a1fb8119edcca23acbd2",
+        "meta/episodes/chunk-000/file-000.parquet": "6ddf2f476bf57f1de75c613d3c43784f7b17d08d789ad9a412131136c19af392",
+        "meta/episodes/chunk-000/file-001.parquet": "f869af6f38a8147af8239149a95e308464e8d8585d3948fa0a691048f6fcc4e4",
+        "data/chunk-000/file-000.parquet": "bf333aa5cc3cd0d795550243c0f9df559dcd2deff8c3c89ba901980bce5e4b19",
+        "data/chunk-000/file-001.parquet": "47f8b72f27ae8500a04e776ffcdf9e76888865ef852216d99b572a3428aeee36",
+        "videos/observation.images.wrist_camera/chunk-000/file-000.mp4": "b2c3365732a057a842e2466a715fc78e5c9d37e6e016b2a589b6e4eec6abc8f0",
+        "videos/observation.images.wrist_camera/chunk-000/file-001.mp4": "027906bc492ed448397c56b5652655451aed6c5a282ee7357863a289b28349b9",
+        "videos/observation.images.overhead_camera/chunk-000/file-000.mp4": "9613d6c91128adeac299985b57315290f9b506fbd7f9f21afbc4bb4fe6652916",
+        "videos/observation.images.overhead_camera/chunk-000/file-001.mp4": "150795c44a1c0cadea0285a263796208b082edfecac03a2a675a1030ed473e5f"
+      }
+    },
+    "async": {
+      "frames": 336,
+      "episodes": 3,
+      "maximum_action_error_motor_units": 0.0,
+      "maximum_state_error_motor_units": 0.0,
+      "maximum_timestamp_error_seconds": 1.1444091807533141e-07,
+      "camera_maximum_encoding_mae": {
+        "wrist_camera": 0.008717655204236507,
+        "overhead_camera": 0.005949870217591524
+      },
+      "original_frames_checked": 328,
+      "checkpoint_camera_suffix_removed": true,
+      "cancelled_episode_removed": true,
+      "reopened_dataset_preserved": true,
+      "input_camera_arrays_preserved": true,
+      "writers_closed": true,
+      "files": {
+        "meta/info.json": "454a8da2f5083e129830ba37b4cd28ec3fd167de6100e3d299a8b5b46792c9bf",
+        "meta/tasks.parquet": "6266a6fad9bb98e2b067f66500ca6438efb0598b7ae663c207bdb5d71dfd1027",
+        "meta/stats.json": "3cf93903f2dd29a5780d5f28020bca9979407f0b9805a1fb8119edcca23acbd2",
+        "meta/episodes/chunk-000/file-000.parquet": "6ddf2f476bf57f1de75c613d3c43784f7b17d08d789ad9a412131136c19af392",
+        "meta/episodes/chunk-000/file-001.parquet": "f869af6f38a8147af8239149a95e308464e8d8585d3948fa0a691048f6fcc4e4",
+        "data/chunk-000/file-000.parquet": "bf333aa5cc3cd0d795550243c0f9df559dcd2deff8c3c89ba901980bce5e4b19",
+        "data/chunk-000/file-001.parquet": "47f8b72f27ae8500a04e776ffcdf9e76888865ef852216d99b572a3428aeee36",
+        "videos/observation.images.wrist_camera/chunk-000/file-000.mp4": "b2c3365732a057a842e2466a715fc78e5c9d37e6e016b2a589b6e4eec6abc8f0",
+        "videos/observation.images.wrist_camera/chunk-000/file-001.mp4": "027906bc492ed448397c56b5652655451aed6c5a282ee7357863a289b28349b9",
+        "videos/observation.images.overhead_camera/chunk-000/file-000.mp4": "9613d6c91128adeac299985b57315290f9b506fbd7f9f21afbc4bb4fe6652916",
+        "videos/observation.images.overhead_camera/chunk-000/file-001.mp4": "150795c44a1c0cadea0285a263796208b082edfecac03a2a675a1030ed473e5f"
+      }
+    }
+  },
+  "source_episode": "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_unchanged": true,
+  "gpu_tests_started": false,
+  "native_restore_verified": false,
+  "task_success_verified": false,
+  "checkpoint_store_source_sha256": "d616c50fea76a363898cdeb89346a3cac40fc3541828f4b39d09aefe2af8dc0d",
+  "recorder_source_sha256": "198b0d254a4f0b9e1a6bced4d1e9691b88ca6ebeb4280b0ae470272b6c4f1eeb",
+  "validation_source_sha256": "67ffb7cfa62e9e8807ebaa250787f601736b0f40b3080fbac4abe277e7d3dfdb"
+}
