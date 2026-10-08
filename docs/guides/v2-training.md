@@ -55,7 +55,7 @@ rsl_rl PPO 使用 log 参数表示探索标准差，每个 iteration 保存中�
 
 `configs/rl/grasp_corrective_demonstrations.json` 另外读取实际控制扰动下的成功轨迹。采集使用独立随机数生成器对 arm targets 添加 0.015 rad 标准差的扰动，保持 jaw 控制和真实任务成功条件。actor 标签读取动作前计算的 `expert_policy_action`；`policy_action` 保存实际执行动作，critic reward 来自该执行动作产生的真实 transition。示范准备只读取从初始状态到 success termination 的完整成功 episode。
 
-单张 GPU 的 Linux 主机入口为 `scripts/run_rl_worker.sh`。当前 `configs/runtime/gpu_scope.json` 限定物理 GPU 2；训练、独立评估和 renderer 均使用同一设备。`scripts/run_native_python.sh` 提供相同设备限制、Isaac 依赖与 LeRobot 所需 FFmpeg 动态库。最新实际任务结果见 [v2 状态](v2-status-2026-10-06.md)。
+单张 GPU 的 Linux 主机入口为 `scripts/run_rl_worker.sh`。当前 `configs/runtime/gpu_scope.json` 限定物理 GPU 2；训练、独立评估和 renderer 均使用同一设备。`scripts/run_native_python.sh` 提供相同设备限制、Isaac 依赖与 LeRobot 所需 FFmpeg 动态库。最新实际任务结果见 [v2 状态](v2-status-2026-10-08.md)。
 
 评估按照环境分配 episode 数量，完整完成请求的数量后生成报告。Lift 和 PickPlace 报告包含接近物体、两侧夹爪接触、物体高度、持物抬升及 PickPlace 阶段统计；这些诊断在控制步骤开始前采样。任务成功率读取实际 success termination，报告同时保存模型 SHA256、训练和评估代码版本、训练 transitions、运行设备及 Torch 版本。
 

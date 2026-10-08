@@ -114,6 +114,8 @@ openso101 il record --task OpenSO101-PickPlace-v0 \
 
 键盘控制使用机器人实际 Jacobian，执行关节限位与速度限制，并按照仿真控制周期处理输入。释放方向按键后保持最近的关节目标，恢复 checkpoint 时更新控制参考。终端使用 prompt_toolkit 读取按键；方向按键在最后一次输入后 150ms 释放，持续按住按键通过终端重复输入继续移动。
 
+录制 FPS 根据 `sim.dt * decimation` 计算。当前 LeRobot 导出要求整数 FPS；指定 `--fps` 时必须与实际控制频率相同。频率与录制处理位于 `teleop/timing.py`，采集和回放状态位于 `teleop/sim_state.py`。
+
 | 按键 | 操作 |
 |---|---|
 | ↑ / ↓ | 沿世界坐标的 +x / −x 移动 |
@@ -153,6 +155,8 @@ openso101 il export \
 默认仅导出成功 episode，跳过每个 episode 开头的五帧，并要求剩余至少十帧。检查控制与记录流程时，可以设置 `--include-failures --skip-leading-frames 0` 保留全部帧。`meta/openso101_export.json` 保存源文件 SHA256、源帧数、导出帧数、成功标记和筛选配置；自定义场景同时保存场景副本与 `meta/scenes.json`。双相机视频、动作和关节观测均包含在导出的数据中。
 
 导出前检查全部源 HDF5、整数 FPS、图像格式、筛选结果与场景文件。异步模式使用单个工作线程保存 episode，并在下一次写入 dataset buffer 前等待保存完成。`--no-async-flush` 使用同步保存。已有输出需要明确设置 `--overwrite-export`，覆盖操作保留原数据目录。同步与异步导出的全部帧检查见 [CPU、LeRobot 导出与打包验证](../validation/2026-10-08/il_pipeline/README.md)。
+
+本地 LeRobot metadata 检查读取实际 info、tasks、episodes、stats 与 Parquet。episode 范围必须连续，帧数与实际 Parquet 一致；动作和状态的六个关节顺序、双相机视频文件、视频 FPS 与有限统计量均需要完整。视频缺少时在 LeRobot 数据读取之前终止。
 
 使用 Hub 上传入口发布数据集：
 
