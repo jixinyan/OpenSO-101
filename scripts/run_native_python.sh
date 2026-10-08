@@ -12,4 +12,8 @@ runtime_lib="$PWD/outputs/ffmpeg/root/usr/lib/x86_64-linux-gnu"
 export LD_LIBRARY_PATH="/home/jixin/workspace/envs/openso101-v2/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:$runtime_lib:$runtime_lib/pulseaudio:$runtime_lib/blas:$runtime_lib/lapack:/home/jixin/workspace/envs/edh-graphics/root/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH:-}"
 shift
 native_python=/home/jixin/workspace/envs/openso101-v2/bin/python
-exec "$native_python" -u scripts/run_idle_gpu.py --gpu "$physical_gpu" -- "$native_python" -u "$@"
+guard_options=()
+if [[ -n "${OPENSO101_GPU_LAUNCH_REPORT:-}" ]]; then
+    guard_options=(--report "$OPENSO101_GPU_LAUNCH_REPORT")
+fi
+exec "$native_python" -u scripts/run_idle_gpu.py --gpu "$physical_gpu" "${guard_options[@]}" -- "$native_python" -u "$@"

@@ -103,12 +103,13 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
                    "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip(),
                    "physical_gpu": suite.physical_gpu, "created_at": datetime.now(UTC).isoformat(),
                    "status": "cpu_running", "stages": [], "gpu_tests_started": False,
+                   "gpu_phase_attempted": False,
                    "full_v2_verified": False, "hardware_run_verified": False}
     else:
         receipt = json.loads(receipt_path.read_text())
         if receipt["manifest_sha256"] != file_digest(manifest) or receipt["source_files"] != snapshot:
             raise ValueError("统一 GPU 验收需要使用通过 CPU 检查的相同源码与配置")
-        if receipt["gpu_tests_started"]:
+        if receipt["gpu_tests_started"] or receipt.get("gpu_phase_attempted", False):
             raise ValueError("GPU 验收已经执行；保留本次记录并创建明确的新批次")
         records = {item["name"]: item for item in receipt["stages"]}
         for stage in suite.stages:
@@ -118,7 +119,7 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
                 _verify_stage_inputs(stage, repo)
                 if records[stage.name]["reports"] != _accept_reports(stage, output):
                     raise ValueError("CPU 验收报告的内容或 SHA256 已改变")
-        receipt.update(status="gpu_running", gpu_tests_started=True)
+        receipt.update(status="gpu_running", gpu_phase_attempted=True)
 
     def save():
         receipt_path.write_text(json.dumps(receipt, ensure_ascii=False, indent=2) + "\n")
@@ -128,6 +129,8 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
         if stage.resource != phase:
             continue
         if _sources(repo, suite) != snapshot:
+            receipt["status"] = "source_changed"
+            save()
             raise ValueError("验收期间源码或配置发生改变")
         records = {item["name"]: item for item in receipt["stages"]}
         if any(name not in records or records[name]["status"] != "verified" for name in stage.depends_on):
@@ -143,6 +146,8 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
         environment = os.environ.copy()
         if phase == "cpu":
             environment.update(CUDA_VISIBLE_DEVICES="", OPENSO101_SKIP_ISAAC="1")
+        else:
+            environment["OPENSO101_GPU_LAUNCH_REPORT"] = str(output / f"{stage.name}.gpu.json")
         log = output / f"{stage.name}.log"
         record = {"name": stage.name, "resource": phase, "command": command, "status": "running",
                   "started_at": datetime.now(UTC).isoformat(), "inputs": stage.inputs}
@@ -152,6 +157,17 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
             completed = subprocess.run(command, cwd=repo, env=environment, stdout=stream, stderr=subprocess.STDOUT)
         record.update(exit_code=completed.returncode, log_sha256=file_digest(log),
                       completed_at=datetime.now(UTC).isoformat())
+        if phase == "gpu":
+            launch_path = Path(environment["OPENSO101_GPU_LAUNCH_REPORT"])
+            record["status"] = "gpu_launch_record_not_verified"
+            receipt["status"] = "gpu_launch_record_not_verified"
+            save()
+            launch = json.loads(launch_path.read_text())
+            if launch["gpu"] != suite.physical_gpu or type(launch["gpu_job_started"]) is not bool:
+                raise ValueError("GPU 启动记录中的设备或程序启动状态无效")
+            record.update(gpu_launch_report_sha256=file_digest(launch_path),
+                          gpu_worker_started=launch["gpu_job_started"], gpu_launch_status=launch["status"])
+            receipt["gpu_tests_started"] |= launch["gpu_job_started"]
         if completed.returncode:
             record["status"] = "process_failed"
             receipt["status"] = "failed"
@@ -166,6 +182,8 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
         save()
     receipt["status"] = "cpu_verified" if phase == "cpu" else "declared_suite_verified"
     if _sources(repo, suite) != snapshot:
+        receipt["status"] = "source_changed"
+        save()
         raise ValueError("验收期间源码或配置发生改变")
     receipt["completed_at"] = datetime.now(UTC).isoformat()
     save()
