@@ -116,6 +116,8 @@ openso101 il record --task OpenSO101-PickPlace-v0 \
 
 录制 FPS 根据 `sim.dt * decimation` 计算。当前 LeRobot 导出要求整数 FPS；指定 `--fps` 时必须与实际控制频率相同。频率与录制处理位于 `teleop/timing.py`，采集和回放状态位于 `teleop/sim_state.py`。
 
+HDF5 录制器在接收帧时复制动作、关节、图像和场景数组。checkpoint 恢复同时处理缓存与已写入文件的帧数；操作需要正在录制的 episode，恢复位置使用整数帧数。文件关闭与取消操作中的错误立即报告。
+
 | 按键 | 操作 |
 |---|---|
 | ↑ / ↓ | 沿世界坐标的 +x / −x 移动 |

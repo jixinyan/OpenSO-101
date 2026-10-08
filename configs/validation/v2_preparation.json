@@ -40,6 +40,17 @@
       ]
     },
     {
+      "name": "recorder_checkpoint", "resource": "cpu", "depends_on": ["recorded_state"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_recorder_checkpoint.py", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/recorder_checkpoint"],
+      "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
+      "requirements": [
+        {"report": "recorder_checkpoint/report.json", "pointer": "/status", "equals": "actual_hdf5_checkpoint_verified"},
+        {"report": "recorder_checkpoint/report.json", "pointer": "/input_arrays_preserved", "equals": true},
+        {"report": "recorder_checkpoint/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "recorder_checkpoint/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
       "name": "keyboard_ik", "resource": "cpu", "depends_on": ["cpu_interfaces"],
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_keyboard_kinematics.py", "--native", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--output", "{output}/keyboard_ik.json"],
       "inputs": {"outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task/trajectory.hdf5": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739"},
@@ -76,7 +87,7 @@
       ]
     },
     {
-      "name": "lerobot_export", "resource": "cpu", "depends_on": ["lerobot_data"],
+      "name": "lerobot_export", "resource": "cpu", "depends_on": ["lerobot_data", "recorder_checkpoint"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_lerobot_export.py", "--source", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset", "--output", "{output}/lerobot_export"],
       "requirements": [
         {"report": "lerobot_export/report.json", "pointer": "/status", "equals": "actual_sync_async_export_verified"},

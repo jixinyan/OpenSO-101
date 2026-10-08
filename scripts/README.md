@@ -16,6 +16,7 @@
 | LeRobot 全部帧读取 | `validate_lerobot_dataset.py` |
 | 实际 HDF5 的同步、异步导出与比较 | `check_lerobot_export.py` |
 | 实际 HDF5 状态转换与控制频率 | `check_recorded_state.py` |
+| 实际 HDF5 checkpoint、缓存与数组内容检查 | `check_recorder_checkpoint.py` |
 | LeRobot 配置、数据和完整 ACT、Diffusion 模型的 CPU 检查 | `check_il_training.py` |
 | 保存的 student 在实际记录上的 CPU 推理 | `openso101 sim2real validate --device cpu` |
 | 保存模型的 previous actions 分析 | `audit_policy_history.py` |

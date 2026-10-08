@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import math
+from numbers import Integral
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -206,8 +207,8 @@ class OpenSO101HDF5TeleopRecorder:
         self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
         self.sim_joint_names = tuple(sim_joint_names or SO101_SIM_JOINT_NAMES)
         ensure_required_cameras(self.cameras)
-        if int(fps) <= 0:
-            raise ValueError(f"fps must be positive, got {fps}")
+        if isinstance(fps, bool) or not isinstance(fps, Integral) or fps <= 0:
+            raise ValueError("fps 必须为正整数")
         if len(self.sim_joint_names) != len(SO101_TELEOP_CONTROL_JOINT_NAMES):
             raise ValueError(
                 "sim_joint_names must contain exactly "
@@ -365,6 +366,8 @@ class OpenSO101HDF5TeleopRecorder:
     def create_checkpoint(self) -> int:
         """Return a restore point for the current episode."""
 
+        if not self._recording or self._h5 is None:
+            raise RuntimeError("checkpoint 需要正在录制的 HDF5 episode")
         checkpoint = self.total_frames
         replay_frame = max(checkpoint - 1, 0)
         if not self._checkpoints or self._checkpoints[-1] != replay_frame:
@@ -374,8 +377,10 @@ class OpenSO101HDF5TeleopRecorder:
     def restore_checkpoint(self, checkpoint: int) -> None:
         """Truncate buffered and on-disk frames back to ``checkpoint``."""
 
-        if int(checkpoint) != checkpoint:
-            raise ValueError(f"checkpoint must be an integer, got {checkpoint!r}")
+        if not self._recording or self._h5 is None:
+            raise RuntimeError("checkpoint 恢复需要正在录制的 HDF5 episode")
+        if isinstance(checkpoint, bool) or not isinstance(checkpoint, Integral):
+            raise ValueError("checkpoint 必须为整数帧数")
         target = int(checkpoint)
         if target < 0 or target > self.total_frames:
             raise ValueError(
@@ -462,7 +467,7 @@ class OpenSO101HDF5TeleopRecorder:
             if unknown:
                 raise ValueError(f"未知 sim state 字段: {sorted(unknown)}")
             frame_sim = {
-                key: np.asarray(value)
+                key: np.asarray(value).copy()
                 for key, value in sim_state.items()
             }
             for key, value in frame_sim.items():
@@ -487,12 +492,12 @@ class OpenSO101HDF5TeleopRecorder:
                 self._create_sim_datasets(frame_sim)
         self._buffer.append(
             {
-                "action": np.asarray(action, dtype=np.float32),
-                "qpos": np.asarray(qpos, dtype=np.float32),
-                "qvel": np.asarray(qvel, dtype=np.float32),
+                "action": np.asarray(action, dtype=np.float32).copy(),
+                "qpos": np.asarray(qpos, dtype=np.float32).copy(),
+                "qvel": np.asarray(qvel, dtype=np.float32).copy(),
                 "timestamp": float(timestamp),
                 "camera_buffers": {
-                    camera_name: np.asarray(camera_buffers[camera_name], dtype=np.uint8)
+                    camera_name: np.asarray(camera_buffers[camera_name], dtype=np.uint8).copy()
                     for camera_name in REQUIRED_CAMERA_NAMES
                 },
                 "sim_state": frame_sim,
@@ -614,10 +619,7 @@ class OpenSO101HDF5TeleopRecorder:
         episode_path = self._episode_path
         self._close_file()
         if episode_path is not None and episode_path.exists():
-            try:
-                episode_path.unlink()
-            except OSError:
-                pass
+            episode_path.unlink()
         self._buffer = []
         self._flushed_frames = 0
         self._checkpoints = []
@@ -627,8 +629,5 @@ class OpenSO101HDF5TeleopRecorder:
 
     def _close_file(self) -> None:
         if self._h5 is not None:
-            try:
-                self._h5.close()
-            except Exception:
-                pass
+            self._h5.close()
             self._h5 = None
