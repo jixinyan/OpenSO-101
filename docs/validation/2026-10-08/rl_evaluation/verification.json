@@ -1,0 +1,32 @@
+{
+  "status": "current_source_cpu_ci_and_package_verified",
+  "git_sha": "1a07ae4679850dfac15f790eacf9c4b997d30906",
+  "cpu_stages": 11,
+  "ci_tests": 83,
+  "source_modules": 179,
+  "project_imports": 778,
+  "reports": {
+    "suite.json": "f2de62131379b45c0f9762a0b07649556f41b061fdf1770cedf4f639746111b7",
+    "ci_run.json": "7c1fe8b260b1775cfd7fdc4273fccc8c59b20fa7ccdbb7473846bb9f21ae3a8e",
+    "ci_source.json": "d7c547dc2ba007623f3d1bb06ae469105fb4e134a1452e365ab0e1c6404e65be",
+    "ci_geometry.json": "1cd4636979b0adcf123acad78673d35013b28330c608a7fed8b4eaf3b413ee16",
+    "ci_interfaces.xml": "a570890220d0b22389f215241ae47281b6f737b6220be27725703c45a935cd06",
+    "package.json": "c210dfe4e3bf45a3beec7254890ba63b3252a460bb6a01fd7f34e2af14d9d850",
+    "ci_package.json": "2f66b33fec0ae6b35f94b8c61c67086d528f2973369484d9617407495ba06f4c",
+    "ci_undefined_names.json": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "suite/source_layout/report.json": "d7c547dc2ba007623f3d1bb06ae469105fb4e134a1452e365ab0e1c6404e65be",
+    "suite/cpu_geometry/report.json": "ad81940d70936871bbb703c7faff646850bc08a9f94f3ccbd47b875a65079312",
+    "suite/cpu_interfaces/report.json": "5f6b295840e53eecb16038e2b77ced0fad8294498e80aedfc6d4628e6f9960dc",
+    "suite/keyboard_ik.json": "4b890fdb567c6a5bd8e260b86f8474d5b0fc1051dae18e888ea79c36a02e03b9",
+    "suite/metric_video/report.json": "11b4a20d9444a0e4e1840489faba9ee1a3daebd6cf392df205cacfe6d192e552",
+    "suite/scene_batch/report.json": "0a410fbb53b370f43cdadb7ab5046e209697e1d6bd1a729c12d4773a017ef7b2",
+    "suite/lerobot.json": "184a27e4beb241dc2109bdb2e2c5e0be14d9500024cf066aa1aa97d76c9c90fd",
+    "suite/policy_history/report.json": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b",
+    "suite/demonstration_updates/report.json": "3a87479f59591744e94aede5817fcee8ee9201b8edad63e1384663a27e3db98e",
+    "suite/mujoco_policy/report.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+    "suite/gpu_inventory.json": "4f894a7ea06d6b6c52db99cc17e23add46a89778b3b0c00ad35ed83fad21ce12"
+  },
+  "gpu_tests_started": false,
+  "native_physics_verified": false,
+  "full_v2_verified": false
+}

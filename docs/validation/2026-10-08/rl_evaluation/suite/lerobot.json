@@ -1,0 +1,24 @@
+{
+  "status": "all_lerobot_frames_verified",
+  "frames": 328,
+  "episodes": 1,
+  "source_task_successes": 1,
+  "maximum_action_error_motor_units": 0.0,
+  "maximum_state_error_motor_units": 0.0,
+  "maximum_timestamp_error_seconds": 2.2888183615066282e-07,
+  "camera_checks": {
+    "wrist_camera": {
+      "frames": 328,
+      "minimum_pixel_std": 0.22388872504234314,
+      "maximum_encoding_mae": 0.008717655204236507
+    },
+    "overhead_camera": {
+      "frames": 328,
+      "minimum_pixel_std": 0.06344100087881088,
+      "maximum_encoding_mae": 0.005949870217591524
+    }
+  },
+  "export_manifest_sha256": "a38804710fac24642fc643e1c020b0153e123138a3a56c717007f03567c91049",
+  "validator_sha256": "6da9478135e7b99479d12f777d8636ee8232cc31fa6102c017bc9602dd72e550",
+  "rl_policy_success_verified": false
+}
