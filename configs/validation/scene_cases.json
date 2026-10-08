@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {"name": "mouse_pad", "bundle": "outputs/robotwin_tasks_verified/mouse_pad/bundle"},
+    {"name": "stapler_pad", "bundle": "outputs/robotwin_tasks_verified/stapler_pad/bundle"},
+    {"name": "pillbottle_pad", "bundle": "outputs/robotwin_tasks_verified/pillbottle_pad/bundle"},
+    {"name": "object_scale", "bundle": "outputs/robotwin_tasks_verified/object_scale/bundle"},
+    {"name": "stack_blocks", "bundle": "outputs/robotwin_tasks_verified/stack_blocks/bundle"},
+    {"name": "indexed_scene", "bundle": "outputs/rl_progress/v3_indexed_scene_exact/bundle"},
+    {"name": "agent_runtime", "bundle": "outputs/rl_progress/agent_runtime_bundle"},
+    {"name": "edit_revision_1", "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_1"},
+    {"name": "edit_revision_2", "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_2"},
+    {"name": "edit_revision_3", "bundle": "outputs/rl_progress/v2_cpu_preparation_20261007/actual_scene_edits/revision_3"}
+  ]
+}

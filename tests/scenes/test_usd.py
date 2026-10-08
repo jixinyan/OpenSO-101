@@ -8,7 +8,7 @@ from pxr import Gf, Usd, UsdGeom, UsdPhysics
 
 from openso101.scenes.catalog import AssetCatalog
 from openso101.scenes.importers import import_usd
-from openso101.scenes.models import Entity, Pose, SceneSpec, Task
+from openso101.scenes.models import Entity, Pose, SceneSpec, Task, file_digest
 from openso101.scenes.usd import compose_stage
 
 
@@ -25,9 +25,9 @@ def test_compose_real_usd_geometry(tmp_path):
     mesh.CreateFaceVertexIndicesAttr([0, 2, 1, 0, 1, 3, 0, 3, 2, 1, 2, 3])
     mesh.CreateSubdivisionSchemeAttr("none")
     stage.GetRootLayer().Save()
-    uid = "b" * 32
+    uid = file_digest(source)[:32]
     spec = SceneSpec(scene_id="usd_test", entities=(Entity(
-        entity_id="object", asset_uid=uid, asset_sha256="c" * 64,
+        entity_id="object", asset_uid=uid, asset_sha256=file_digest(source),
         dimensions_m=(0.04, 0.06, 0.08), pose=Pose(position=(0.25, 0, 0.04)),
     ),), task=Task(task_id="place", object_id="object", goal_position_m=(0.25, 0.15, 0.04)))
     output = tmp_path / "scene.usda"

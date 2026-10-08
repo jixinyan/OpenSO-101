@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "physical_gpu": 2,
+  "source_files": ["src", "scripts", "configs", "tests/scenes", "tests/test_gpu_guard.py", "tests/fixtures", "pyproject.toml", "tests/scenes/assets/metric_video/landmarks.mp4"],
+  "stages": [
+    {
+      "name": "cpu_geometry", "resource": "cpu",
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/run_cpu_checks.py", "--output", "{output}/cpu_geometry"],
+      "requirements": [
+        {"report": "cpu_geometry/report.json", "pointer": "/status", "equals": "cpu_checks_verified"},
+        {"report": "cpu_geometry/report.json", "pointer": "/counts/tests", "minimum": 49},
+        {"report": "cpu_geometry/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "terminal_keyboard", "resource": "cpu", "depends_on": ["cpu_geometry"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/terminal_keyboard"],
+      "requirements": [{"report": "terminal_keyboard/report.json", "pointer": "/status", "equals": "actual_terminal_keyboard_interface_verified"}]
+    },
+    {
+      "name": "keyboard_ik", "resource": "cpu", "depends_on": ["terminal_keyboard"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_keyboard_kinematics.py", "--native", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--output", "{output}/keyboard_ik.json"],
+      "inputs": {"outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task/trajectory.hdf5": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739"},
+      "requirements": [
+        {"report": "keyboard_ik.json", "pointer": "/status", "equals": "actual_mjcf_keyboard_ik_verified"},
+        {"report": "keyboard_ik.json", "pointer": "/commands", "minimum": 512}
+      ]
+    },
+    {
+      "name": "metric_video", "resource": "cpu", "depends_on": ["cpu_geometry"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_metric_video.py", "--output", "{output}/metric_video"],
+      "requirements": [
+        {"report": "metric_video/report.json", "pointer": "/status", "equals": "simulation_metric_video_verified"},
+        {"report": "metric_video/report.json", "pointer": "/maximum_position_error_m", "maximum": 0.003},
+        {"report": "metric_video/report.json", "pointer": "/reprojection/validation/maximum_error_px", "maximum": 1.0}
+      ]
+    },
+    {
+      "name": "scene_batch", "resource": "cpu", "depends_on": ["cpu_geometry"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_scene_batch.py", "--cases", "configs/validation/scene_cases.json", "--phase", "cpu", "--output", "{output}/scene_batch"],
+      "requirements": [
+        {"report": "scene_batch/report.json", "pointer": "/status", "equals": "scene_batch_cpu_verified"},
+        {"report": "scene_batch/report.json", "pointer": "/count", "minimum": 10}
+      ]
+    },
+    {
+      "name": "lerobot_data", "resource": "cpu", "depends_on": ["terminal_keyboard"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/validate_lerobot_dataset.py", "--source", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--require-success", "--output", "{output}/lerobot.json"],
+      "requirements": [
+        {"report": "lerobot.json", "pointer": "/status", "equals": "all_lerobot_frames_verified"},
+        {"report": "lerobot.json", "pointer": "/frames", "minimum": 328},
+        {"report": "lerobot.json", "pointer": "/maximum_action_error_motor_units", "maximum": 0.0001},
+        {"report": "lerobot.json", "pointer": "/maximum_state_error_motor_units", "maximum": 0.0001}
+      ]
+    },
+    {
+      "name": "policy_history", "resource": "cpu", "depends_on": ["cpu_geometry"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/audit_policy_history.py", "--run", "outputs/rl_progress/lift_corrective_coverage_continue_20261007", "--checkpoint", "outputs/rl_progress/lift_corrective_coverage_continue_20261007", "--output", "{output}/policy_history"],
+      "inputs": {"outputs/rl_progress/lift_corrective_coverage_continue_20261007/demonstrations.pt": "79d4e1956441c95980617fcc5592d391544b1625c2bc9c7452cac703ae5980eb"},
+      "requirements": [
+        {"report": "policy_history/report.json", "pointer": "/status", "equals": "actual_policy_history_audited"},
+        {"report": "policy_history/report.json", "pointer": "/first_step_maximum_error", "maximum": 0.000001},
+        {"report": "policy_history/report.json", "pointer": "/gradient_check_objective_reduced", "equals": true}
+      ]
+    },
+    {
+      "name": "demonstration_updates", "resource": "cpu", "depends_on": ["policy_history"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_demonstration_updates.py", "--run", "outputs/rl_progress/lift_corrective_coverage_continue_20261007", "--config", "configs/rl/grasp_sequence_coverage.json", "--output", "{output}/demonstration_updates"],
+      "requirements": [
+        {"report": "demonstration_updates/report.json", "pointer": "/status", "equals": "actual_demonstration_update_cpu_verified"},
+        {"report": "demonstration_updates/report.json", "pointer": "/normalization_reference_verified", "equals": true},
+        {"report": "demonstration_updates/report.json", "pointer": "/all_frames_action_mse_after", "maximum": 0.0001},
+        {"report": "demonstration_updates/report.json", "pointer": "/rl_transitions", "equals": 0}
+      ]
+    },
+    {
+      "name": "mujoco_policy", "resource": "cpu", "depends_on": ["keyboard_ik"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "-m", "openso101.cli.main", "sim2sim", "mujoco", "--policy", "outputs/rl_progress/v4_seed44_99_b49353f_portable", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--collision-bundle", "outputs/rl_progress/gripper_collision", "--episodes", "4", "--recorded-physics", "--constrained-drive", "--output", "{output}/mujoco_policy"],
+      "inputs": {
+        "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.json": "3e78897b1725799db915031972d920cd1c9a8a443acae147e8c37dea609ff5c3",
+        "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.pt": "d223b06e6368889239d0c306bd5dcee768c4696a37ba3fbb8a44f9a98892d158",
+        "outputs/rl_progress/v4_seed44_99_b49353f_portable/isaac_validation.hdf5": "e995154c74facc8f7ee7b11a75930d2b0c6b698ac34252d1d7f4375a0b3e3a03"
+      },
+      "requirements": [
+        {"report": "mujoco_policy/report.json", "pointer": "/status", "equals": "mujoco_policy_evaluation_completed"},
+        {"report": "mujoco_policy/report.json", "pointer": "/actual_velocity_limits_verified", "equals": true},
+        {"report": "mujoco_policy/report.json", "pointer": "/kinematics/maximum_position_error_m", "maximum": 0.001},
+        {"report": "mujoco_policy/report.json", "pointer": "/kinematics/maximum_rotation_error_rad", "maximum": 0.001}
+      ]
+    },
+    {
+      "name": "gpu_process_inventory", "resource": "cpu", "depends_on": ["demonstration_updates", "mujoco_policy"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/audit_project_gpu.py", "--output", "{output}/gpu_inventory.json"],
+      "requirements": [
+        {"report": "gpu_inventory.json", "pointer": "/status", "equals": "project_gpu_processes_absent"},
+        {"report": "gpu_inventory.json", "pointer": "/other_projects_terminated", "equals": false}
+      ]
+    },
+    {
+      "name": "native_regressions", "resource": "gpu", "depends_on": ["gpu_process_inventory", "scene_batch", "metric_video", "lerobot_data"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/run_native_regressions.py", "--worker-report", "{output}/native_regressions.json"],
+      "requirements": [{"report": "native_regressions.json", "pointer": "/status", "equals": "native_program_checks_verified"}]
+    },
+    {
+      "name": "scene_runtime", "resource": "gpu", "depends_on": ["native_regressions"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_scene_batch.py", "--cases", "configs/validation/scene_cases.json", "--phase", "gpu", "--cpu-report", "{output}/scene_batch/report.json", "--output", "{output}/scene_runtime"],
+      "requirements": [{"report": "scene_runtime/report.json", "pointer": "/status", "equals": "scene_batch_runtime_verified"}]
+    },
+    {
+      "name": "recorded_initial_policy", "resource": "gpu", "depends_on": ["native_regressions", "demonstration_updates"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_recorded_initial_policy.py", "--checkpoint", "outputs/rl_progress/lift_corrective_coverage_continue_20261007", "--native", "outputs/rl_progress/lift_success_dataset_verified_20261006", "--episode", "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5", "--output", "{output}/recorded_initial_policy.json"],
+      "inputs": {"outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5": "e87c5375ae29b4064654f5f17b6123c22df32682d99c2a3cafb14edb8a0f84e5"},
+      "requirements": [
+        {"report": "recorded_initial_policy.json", "pointer": "/scope", "equals": "recorded_initial_state"},
+        {"report": "recorded_initial_policy.json", "pointer": "/initial_observation_error", "maximum": 0.000001},
+        {"report": "recorded_initial_policy.json", "pointer": "/steps", "minimum": 1}
+      ]
+    }
+  ]
+}

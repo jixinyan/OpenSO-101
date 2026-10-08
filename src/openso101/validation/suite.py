@@ -17,11 +17,12 @@ class ReportRequirement(Model):
     pointer: str
     equals: bool | float | str | None = None
     minimum: float | None = None
+    maximum: float | None = None
 
     @model_validator(mode="after")
     def explicit_requirement(self):
-        if (self.equals is None) == (self.minimum is None):
-            raise ValueError("验收要求必须指定 equals 或 minimum")
+        if sum(value is not None for value in (self.equals, self.minimum, self.maximum)) != 1:
+            raise ValueError("验收要求必须指定 equals、minimum 或 maximum 中的一个条件")
         if self.pointer and not self.pointer.startswith("/"):
             raise ValueError("报告字段需要使用 JSON Pointer")
         return self
@@ -126,6 +127,8 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
     for stage in suite.stages:
         if stage.resource != phase:
             continue
+        if _sources(repo, suite) != snapshot:
+            raise ValueError("验收期间源码或配置发生改变")
         records = {item["name"]: item for item in receipt["stages"]}
         if any(name not in records or records[name]["status"] != "verified" for name in stage.depends_on):
             receipt["status"] = "dependency_not_verified"
@@ -162,6 +165,8 @@ def run_suite(manifest: Path, output: Path, *, phase: Literal["cpu", "gpu"], rep
         receipt["status"] = f"{phase}_running"
         save()
     receipt["status"] = "cpu_verified" if phase == "cpu" else "declared_suite_verified"
+    if _sources(repo, suite) != snapshot:
+        raise ValueError("验收期间源码或配置发生改变")
     receipt["completed_at"] = datetime.now(UTC).isoformat()
     save()
     return receipt
@@ -179,10 +184,12 @@ def _accept_reports(stage, output):
         path = _inside(output, requirement.report)
         report = json.loads(path.read_text())
         actual = resolve_pointer(report, requirement.pointer)
-        if requirement.minimum is not None:
+        if requirement.minimum is not None or requirement.maximum is not None:
             if (isinstance(actual, bool) or not isinstance(actual, (float, int))
-                    or not math.isfinite(actual) or actual < requirement.minimum):
-                raise ValueError(f"{stage.name} 未达到 {requirement.pointer} >= {requirement.minimum}：{actual}")
+                    or not math.isfinite(actual)
+                    or (requirement.minimum is not None and actual < requirement.minimum)
+                    or (requirement.maximum is not None and actual > requirement.maximum)):
+                raise ValueError(f"{stage.name} 的 {requirement.pointer} 未达到数值验收要求：{actual}")
         elif (actual != requirement.equals or (isinstance(requirement.equals, bool) and type(actual) is not bool)
               or (isinstance(requirement.equals, float) and isinstance(actual, bool))):
             raise ValueError(f"{stage.name} 的 {requirement.pointer} 与验收要求不一致：{actual}")
