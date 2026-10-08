@@ -27,7 +27,7 @@ with (args.output / "pytest.log").open("x") as stream:
 root = ElementTree.parse(junit).getroot()
 counts = {key: sum(int(suite.attrib[key]) for suite in root.findall("testsuite"))
           for key in ("tests", "errors", "failures", "skipped")}
-if result.returncode or counts["tests"] != 74 or any(counts[key] for key in ("errors", "failures", "skipped")):
+if result.returncode or counts["tests"] != 80 or any(counts[key] for key in ("errors", "failures", "skipped")):
     raise RuntimeError("实际 PTY、控制、配置、RL/IL 命令与评估接口检查未通过")
 report = {"status": "actual_cpu_interfaces_verified", "counts": counts,
           "junit_sha256": file_digest(junit), "source_sha256": file_digest(Path(__file__)),

@@ -25,7 +25,7 @@
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
       "requirements": [
         {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
-        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 74}
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 80}
       ]
     },
     {
@@ -144,7 +144,24 @@
       ]
     },
     {
-      "name": "student_recorded_inference", "resource": "cpu", "depends_on": ["il_training_preparation"],
+      "name": "il_recorded_evaluation", "resource": "cpu", "depends_on": ["il_training_preparation"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_evaluation.py", "--source", "outputs/rl_progress/pickplace_cohort_replay_20261007", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--checkpoints", "{output}/il_training", "--output", "{output}/il_evaluation"],
+      "inputs": {
+        "outputs/rl_progress/pickplace_cohort_replay_20261007/trajectory.hdf5": "f6eca574e07e6cc7a7f7b2577f15cb5f29681cd5c9dae28d6a74638580e5f827",
+        "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"
+      },
+      "requirements": [
+        {"report": "il_evaluation/report.json", "pointer": "/status", "equals": "actual_recorded_il_evaluation_verified"},
+        {"report": "il_evaluation/report.json", "pointer": "/policies/act/maximum_action_error_rad", "maximum": 0.000001},
+        {"report": "il_evaluation/report.json", "pointer": "/policies/diffusion/maximum_action_error_rad", "maximum": 0.000001},
+        {"report": "il_evaluation/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "il_evaluation/report.json", "pointer": "/checkpoint_simulation_settings_verified", "equals": true},
+        {"report": "il_evaluation/report.json", "pointer": "/gpu_tests_started", "equals": false},
+        {"report": "il_evaluation/report.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
+      "name": "student_recorded_inference", "resource": "cpu", "depends_on": ["il_recorded_evaluation"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "-m", "openso101.cli.main", "sim2real", "validate", "--policy-path", "outputs/rl_progress/v3_student_a8cc2f8", "--episode", "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5", "--device", "cpu", "--output", "{output}/student_inference"],
       "inputs": {
         "outputs/rl_progress/v3_student_a8cc2f8/student.json": "dbf64d6f451459892406b85e3c253d11e43022a575d99d1e095d84b6b499020f",
@@ -225,7 +242,29 @@
       ]
     },
     {
-      "name": "native_stack_checkpoint", "resource": "gpu", "depends_on": ["native_pick_place_checkpoint"],
+      "name": "native_act_inference", "resource": "gpu", "depends_on": ["native_pick_place_checkpoint", "il_recorded_evaluation"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "-m", "openso101.cli.main", "il", "eval", "--task", "OpenSO101-PickPlace-v0", "--policy-path", "{output}/il_training/act/pretrained_model", "--num-envs", "2", "--n-episodes", "3", "--episode-length-s", "0.1", "--seed", "42", "--headless", "--output", "{output}/native_act_inference.json"],
+      "requirements": [
+        {"report": "native_act_inference.json", "pointer": "/status", "equals": "il_evaluation_completed"},
+        {"report": "native_act_inference.json", "pointer": "/n", "equals": 3},
+        {"report": "native_act_inference.json", "pointer": "/policy_resets", "equals": 2},
+        {"report": "native_act_inference.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_act_inference.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
+      "name": "native_diffusion_inference", "resource": "gpu", "depends_on": ["native_act_inference"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "-m", "openso101.cli.main", "il", "eval", "--task", "OpenSO101-PickPlace-v0", "--policy-path", "{output}/il_training/diffusion/pretrained_model", "--num-envs", "2", "--n-episodes", "3", "--episode-length-s", "0.1", "--seed", "42", "--headless", "--output", "{output}/native_diffusion_inference.json"],
+      "requirements": [
+        {"report": "native_diffusion_inference.json", "pointer": "/status", "equals": "il_evaluation_completed"},
+        {"report": "native_diffusion_inference.json", "pointer": "/n", "equals": 3},
+        {"report": "native_diffusion_inference.json", "pointer": "/policy_resets", "equals": 2},
+        {"report": "native_diffusion_inference.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_diffusion_inference.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
+      "name": "native_stack_checkpoint", "resource": "gpu", "depends_on": ["native_diffusion_inference"],
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-Stack-v0", "--output", "{output}/native_stack_checkpoint"],
       "requirements": [
         {"report": "native_stack_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},

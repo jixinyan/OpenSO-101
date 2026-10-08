@@ -49,3 +49,19 @@ report = prepare_il_policy(
 ## 保存模型的读取
 
 `il/policies/factory.py` 接收 `pretrained_model/`、训练输出目录或 Hub repo_id。本地 `Path` 始终按照目录读取，Hub 名称通过 `huggingface_hub` 的官方检查。完整模型需要 `config.json`、`model.safetensors` 和两个 processor 配置及引用的状态文件。指定 `device` 时，模型构建、权重加载与 preprocessing 使用该设备；postprocessing 返回 CPU 动作。缺少文件或设备不可用时立即终止。
+
+## 仿真评估
+
+`il play` 与 `il eval` 共用 `il/policies/inference.py` 的 observation 检查、processors 与动作转换。输入具有明确的环境数量，输出为 `[N, 6]` 的 SO-101 绝对关节目标。非有限数值和错误形状立即终止推理。
+
+准备检查在模型目录保存 `openso101_simulation.json`，包含采集 FPS、双相机尺寸、SO-101 关节名称、动作单位和来源 metadata SHA256。训练进程结束后，同一设置保存到全部已产生的 `pretrained_model/`。模型文件、optimizer 与已有记录全部保留。仿真入口读取保存的频率和 `input_features` 对应的相机尺寸，创建环境之前检查名称与尺寸。
+
+已有 ACT、Diffusion 模型需要明确提供 `--control-fps`；新模型自动读取保存设置。指定频率与保存频率不一致时立即终止。student 的独立仿真验证使用 `rl student-eval`。
+
+`il eval` 接收 `--n-episodes`、`--num-envs` 和 `--episode-length-s`，默认 episode 时间为 20 秒。评估配置设置实际 timeout、物体掉下桌面的结束条件和任务成功条件。PickPlace 使用释放后的 0.5 秒稳定条件；Lift 与 Stack 使用对应任务的成功检查；自定义场景使用 bundle 中的任务条件。
+
+每个批次中的环境各执行一个待统计 episode。较早结束的环境完成统计后保持恢复后的关节姿态，等待当前批次的其它环境结束；下一批次统一恢复环境并重置 policy。ACT 的 action queue 和 Diffusion 的 observation history 在整个 episode 中持续保存。最后一个批次按逐环境配额执行统计，报告保存精确的请求数量、每个环境的 episode、结束状态、步数和 Wilson 成功率区间。
+
+成功与 timeout 在物理步骤结束、环境恢复之前通过 Isaac Lab recorder 回调保存，包含最后一个控制步骤。报告写入发生在应用与环境关闭之后；中断执行保留已完成的 episode，并返回未完成状态。
+
+`scripts/check_il_evaluation.py` 读取已保存的四环境轨迹，验证不同请求数量、较早结束的环境与最后一批次的统计。完整 ACT、Diffusion 模型在实际双相机记录上各执行三环境、两个批次和 16 次序列推理，并与 LeRobot 的实际推理结果比较。该检查使用 CPU，模型 optimizer 更新次数为零。统一 GPU 阶段包含两个完整模型的原生推理与 timeout 检查；GPU 运行保持待执行状态。

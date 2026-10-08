@@ -21,6 +21,7 @@
 | LeRobot 直接采集、相机裁剪、取消与追加采集 | `check_lerobot_recorder.py` |
 | 原生场景与采集 checkpoint 恢复检查 | `check_native_teleop_checkpoint.py`，通过 GPU 入口执行 |
 | LeRobot 配置、数据和完整 ACT、Diffusion 模型的 CPU 检查 | `check_il_training.py` |
+| 实际并行轨迹的评估统计与完整模型序列推理 | `check_il_evaluation.py` |
 | 保存的 student 在实际记录上的 CPU 推理 | `openso101 sim2real validate --device cpu` |
 | 保存模型的 previous actions 分析 | `audit_policy_history.py` |
 | 保存 optimizer 的 CPU 更新检查 | `check_demonstration_updates.py` |

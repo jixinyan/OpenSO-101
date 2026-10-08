@@ -30,6 +30,11 @@
 | ACT、Diffusion 完整模型的 CPU forward、gradient 与 inference | `src/openso101/il/runners/model_validation.py` |
 | LeRobot 权重、processors 与明确 device 加载 | `src/openso101/il/policies/factory.py` |
 | 完整模型 checkpoint 保存、加载与实际动作比较 | `src/openso101/il/policies/validation.py` |
+| IL 仿真中的 processors、动作格式与单位转换 | `src/openso101/il/policies/inference.py` |
+| IL 模型的采集频率、图像尺寸与 checkpoint 保存 | `src/openso101/il/policies/simulation.py` |
+| IL 逐批评估、结束条件与原生资源关闭 | `src/openso101/il/runners/evaluator.py` |
+| IL 精确 episode 数量和逐环境记录 | `src/openso101/il/evaluation.py` |
+| 遥操作与 IL 的任务成功条件 | `src/openso101/teleop/success.py` |
 | HDF5 检查与 LeRobot 同步、异步导出 | `src/openso101/il/datasets/export.py` |
 | LeRobot metadata、episode 范围、统计量与视频文件检查 | `src/openso101/il/datasets/validation.py` |
 | IL 关节与 RGB observation | `src/openso101/il/observations.py` |

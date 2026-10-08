@@ -113,6 +113,7 @@ def prepare(arguments: list[str], report_dir: Path, physical_gpu: int):
                   "src/openso101/il/runners/preparation.py", "src/openso101/il/runners/trainer.py",
                   "src/openso101/il/runners/worker.py", "src/openso101/il/runners/model_validation.py",
                   "src/openso101/il/policies/factory.py", "src/openso101/il/policies/validation.py",
+                  "src/openso101/il/policies/simulation.py",
                   "src/openso101/il/datasets/validation.py")}}
     (report_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({key: report[key] for key in ("status", "policy", "frames", "action_roundtrip_maximum_error",

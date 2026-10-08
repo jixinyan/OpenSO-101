@@ -48,6 +48,7 @@ def main():
         from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
         from openso101.teleop.recorder.lerobot import collect_camera_buffers, discover_camera_metadata, read_robot_proprio
         from openso101.teleop.timing import _env_control_rate_fps
+        from openso101.teleop.success import task_success_vector
 
         if args.scene is not None:
             from openso101.scenes.isaaclab.runtime import register_custom_scene
@@ -76,6 +77,9 @@ def main():
             _, _, terminated, truncated, _ = env.step(action)
             if bool((terminated | truncated).any()):
                 raise RuntimeError("原生 checkpoint 检查期间 episode 已经终止")
+            success = task_success_vector(runtime)
+            if success.shape != (1,) or success.dtype != torch.bool:
+                raise ValueError("原生遥操任务需要明确的成功状态")
             qpos, qvel = read_robot_proprio(robot)
             recorder.add_frame(action=action[0].detach().cpu().numpy(), qpos=qpos, qvel=qvel,
                                timestamp=float(runtime.episode_length_buf[0]) * runtime.step_dt,

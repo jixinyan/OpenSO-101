@@ -146,7 +146,12 @@ def train_il_policy(
     command = [sys.executable, "-m", "openso101.il.runners.worker",
                "--log", str(preparation.parent / "training.log"), "--", *plan.command]
     print(f"[openso101.il] 训练命令: {shlex.join(plan.command)}", flush=True)
-    returncode = run_guarded(command, plan.physical_gpu, repo, gpu_report)
+    from openso101.il.policies.simulation import attach_simulation_settings, SIMULATION_SETTINGS_FILE
+
+    try:
+        returncode = run_guarded(command, plan.physical_gpu, repo, gpu_report)
+    finally:
+        attach_simulation_settings(plan.output_dir, preparation.parent / "pretrained_model" / SIMULATION_SETTINGS_FILE)
     result = TrainResult(returncode, plan.output_dir, plan.command, preparation, gpu_report)
     if check and not result.succeeded:
         raise RuntimeError(f"LeRobot 训练退出码为 {returncode}，GPU 记录: {gpu_report}")

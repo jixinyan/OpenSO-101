@@ -10,7 +10,7 @@ import sys
 import time
 from contextlib import ExitStack, nullcontext
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 from openso101.il.datasets.export import (
     _DEFAULT_MIN_EPISODE_FRAMES,
@@ -29,6 +29,8 @@ from openso101.teleop.sim_state import (
     _replay_to_tensor_like,
 )
 from openso101.teleop.timing import _env_control_rate_fps, _resolve_record_fps
+from openso101.teleop.success import task_success as _teleop_goal_success
+from openso101.teleop.success import task_success_vector as _teleop_goal_success_vec
 
 
 def _handle_recording_key_events(keyboard, recorder, checkpoints=None, resume_hold=None) -> bool:
@@ -141,56 +143,6 @@ def _handle_successful_episode(
 # Backward-compatible alias retained so external callers / tests that
 # imported the legacy name keep working.
 _prompt_save_successful_episode = _handle_successful_episode
-
-
-def _teleop_goal_success(env, command_name: str = "object_pose") -> bool:
-    """Return true when the teleop object reaches the final pick/place goal."""
-
-    if getattr(env.cfg, "scene_spec", None) is not None:
-        from openso101.scenes.isaaclab.runtime import task_success
-
-        return bool(task_success(env)[0])
-    try:
-        command = env.command_manager.get_term(command_name)
-        if hasattr(command, "placement_hold_seconds"):
-            return bool(command.placement_hold_seconds[0] >= 0.5)
-        stage = command.stage
-        if not bool((stage[0] >= 2).item()):
-            return False
-
-        from isaaclab.utils.math import subtract_frame_transforms
-
-        cube_pos_b, _ = subtract_frame_transforms(
-            command.robot.data.root_pos_w,
-            command.robot.data.root_quat_w,
-            command.object.data.root_pos_w,
-        )
-        final_goal_b = command.goal_for_stage(2)
-        return bool(command.is_touching_goal(cube_pos_b, final_goal_b)[0].item())
-    except Exception:
-        return False
-
-
-def _teleop_goal_success_vec(env, command_name: str = "object_pose"):
-    """读取每个环境的任务成功状态。"""
-    if getattr(env.cfg, "scene_spec", None) is not None:
-        from openso101.scenes.isaaclab.runtime import task_success
-
-        return task_success(env)
-    import torch
-    from isaaclab.utils.math import subtract_frame_transforms
-
-    command = env.command_manager.get_term(command_name)
-    if hasattr(command, "placement_hold_seconds"):
-        return command.placement_hold_seconds >= 0.5
-    cube_pos_b, _ = subtract_frame_transforms(
-        command.robot.data.root_pos_w,
-        command.robot.data.root_quat_w,
-        command.object.data.root_pos_w,
-    )
-    final_goal_b = command.goal_for_stage(2)
-    touching = command.is_touching_goal(cube_pos_b, final_goal_b)
-    return torch.logical_and(touching, command.stage >= 2)
 
 
 def _build_home_target_tensor(device):
@@ -1086,11 +1038,15 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
     args.steps = getattr(args, "steps", None)
     validate_positive_count("num_envs", args.num_envs)
     validate_positive_count("steps", args.steps)
+    validate_positive_count("control_fps", getattr(args, "control_fps", None))
     if args.num_envs not in (None, 1):
         raise ValueError("il play 要求 num_envs 为 1；并行评估使用 il eval")
     if getattr(args, "action_mode", "teleop") != "teleop":
         raise ValueError("LeRobot 绝对关节位置控制需要 teleop action mode")
     args.policy_path = str(resolve_policy_path(args.policy_path))
+    from openso101.il.policies.simulation import load_simulation_settings, apply_simulation_settings
+
+    settings = load_simulation_settings(Path(args.policy_path), getattr(args, "control_fps", None))
 
     simulation_app = _launch_isaac_app(args, cleanup, enable_cameras=True)
 
@@ -1117,6 +1073,7 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
         env_cfg.configure_cameras(True)
         if getattr(args, "scene", None):
             env_cfg.configure_scene(args.scene)
+        apply_simulation_settings(env_cfg, settings)
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
 
@@ -1151,9 +1108,7 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
         actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
         step = 0
         max_steps = int(args.steps) if args.steps is not None else None
-        policy_device = env.unwrapped.device
-        preprocessor = getattr(policy, "openso101_preprocessor", None)
-        postprocessor = getattr(policy, "openso101_postprocessor", None)
+        from openso101.il.policies.inference import select_sim_action
         while simulation_app.is_running():
             with torch.inference_mode():
                 obs = _build_il_policy_observation(unwrapped_env, scene)
@@ -1161,29 +1116,7 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
                     from openso101.rl.student import student_goal
 
                     obs["observation.goal"] = student_goal(unwrapped_env)[:1]
-                # Move obs to the policy's device so ACT's internal
-                # latent_sample (which lands on batch[OBS_STATE].device)
-                # stays consistent with the model weights.
-                obs = {
-                    k: v.to(policy_device) if hasattr(v, "to") else v
-                    for k, v in obs.items()
-                }
-                # Apply the preprocessor pipeline (normalization stats from
-                # the training dataset) before feeding to the policy. The
-                # pipeline takes a dict and returns a dict.
-                if preprocessor is not None:
-                    obs = preprocessor(obs)
-                action = policy.select_action(obs)
-                # Apply the postprocessor (unnormalization) — the policy's
-                # raw output is in N(0, 1) space; we need motor units to
-                # convert to radians for env.step.
-                if postprocessor is not None:
-                    action = postprocessor(action)
-                # Convert motor units -> sim radians for the env.
-                action = action.to(env.unwrapped.device)
-                from openso101.teleop.so101_mapping import batched_motor_units_to_action
-                action_rad = batched_motor_units_to_action(action)
-                actions.copy_(action_rad.reshape(actions.shape))
+                actions.copy_(select_sim_action(policy, obs, env.unwrapped.device, 1))
                 env.step(actions)
             step += 1
             # Success detection: cube reached the on-table place sphere.
@@ -1217,221 +1150,10 @@ def _load_lerobot_policy(checkpoint_path: str, *, device):
     return load_policy(checkpoint_path, device=device_str)
 
 
-# Per-episode step budget for `il eval`. Teleop mode uses ~1-hour episodes so
-# the env never truncates on its own; eval overrides episode_length_s to this
-# many seconds (at the 60 Hz control rate) so each parallel env truncates and
-# auto-resets, giving clean episode boundaries to accumulate success over. The
-# value is a generous upper bound on a place demo (the RL variant uses 8 s).
-_IL_EVAL_EPISODE_LENGTH_S = 20.0
+def _cmd_il_eval(args: argparse.Namespace) -> int:
+    from openso101.il.runners.evaluator import evaluate_il_policy
 
-
-@_with_cleanup
-def _cmd_il_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
-    """Vectorized success-rate evaluation of a trained IL policy.
-
-    Runs ``--num-envs`` parallel rollouts of the same ``_cmd_play`` policy
-    pipeline (load_policy + openso101_preprocessor/postprocessor + motor-unit ->
-    radians), latching per-env success via :func:`_teleop_goal_success_vec`
-    (the SAME teleop-mode final place goal used by ``il record`` / ``il play``),
-    auto-resetting each env on episode end, until ``--n-episodes`` episodes have
-    completed. Prints and writes JSON:
-    ``{success_rate, n, mean_steps_to_success}``.
-
-    NOTE: IL success here is defined by the teleop-mode final place goal (the
-    on-table place sphere), NOT an RL success termination — eval runs the
-    teleop env variant the policy was trained from.
-    """
-    import json
-    from openso101.il.observations import _build_il_policy_observation_batched
-    from openso101.rl.evaluation import episode_quotas, success_interval
-    from openso101.scenes.models import file_digest
-
-    args.no_camera_viewports = getattr(args, "no_camera_viewports", True)
-    num_envs = getattr(args, "num_envs", 16)
-    n_episodes = getattr(args, "n_episodes", 50)
-    validate_positive_count("num_envs", num_envs)
-    validate_positive_count("n_episodes", n_episodes)
-    args.policy_path = str(resolve_policy_path(args.policy_path))
-    requested_output = getattr(args, "output", None)
-    output = Path(requested_output).expanduser().resolve() if requested_output else Path(
-        f"outputs/rl_progress/il_eval_{time.time_ns()}.json"
-    ).resolve()
-    if output.exists():
-        raise FileExistsError(f"评估报告已经存在: {output}")
-    policy_folder = Path(args.policy_path)
-    policy_sources = {str(path.relative_to(policy_folder)): file_digest(path)
-                      for path in sorted(policy_folder.rglob("*")) if path.is_file()}
-    seed = getattr(args, "seed", None)
-
-    simulation_app = _launch_isaac_app(args, cleanup, enable_cameras=True)
-
-    import gymnasium as gym
-    import torch
-
-    import isaaclab_tasks  # noqa: F401
-    from isaaclab_tasks.utils import parse_env_cfg
-
-    import openso101.tasks  # noqa: F401
-
-    env = None
-    policy = None
-    result: dict[str, Any] = {}
-    try:
-        env_cfg = parse_env_cfg(
-            args.task,
-            device=args.device,
-            num_envs=num_envs,
-            use_fabric=not args.disable_fabric,
-        )
-        # Evaluate against the SAME env variant the policy was trained from:
-        # teleop action mode (6-dim absolute joint positions, place sphere
-        # locked at the final goal). configure_action_mode("teleop") forces
-        # num_envs back to 1 and episode_length_s to 3600 s, so re-assert the
-        # requested parallel env count and a modest per-episode budget AFTER it
-        # so eval episodes truncate + auto-reset.
-        env_cfg.configure_action_mode("teleop")
-        env_cfg.configure_cameras(True)
-        if getattr(args, "scene", None):
-            env_cfg.configure_scene(args.scene)
-        env_cfg.scene.num_envs = num_envs
-        env_cfg.episode_length_s = _IL_EVAL_EPISODE_LENGTH_S
-        if seed is not None:
-            env_cfg.seed = int(seed)
-        try:
-            env_cfg.scene.ee_frame.debug_vis = False
-        except AttributeError:
-            pass
-
-        env = gym.make(args.task, cfg=env_cfg)
-        cleanup.callback(env.close)
-        unwrapped_env = env.unwrapped
-        scene = unwrapped_env.scene
-        policy_device = unwrapped_env.device
-
-        # Reuse _cmd_play's exact policy load + processor application path.
-        policy = _load_lerobot_policy(args.policy_path, device=policy_device)
-        if "control_dt" in getattr(policy, "metadata", {}) and abs(policy.metadata["control_dt"] - env.unwrapped.step_dt) > 1e-6:
-            raise ValueError("student 控制周期与当前环境不一致，请使用 rl student-eval")
-        print(f"[INFO]: Loaded LeRobot policy from {args.policy_path}.")
-        if hasattr(policy, "reset"):
-            policy.reset()
-        preprocessor = getattr(policy, "openso101_preprocessor", None)
-        postprocessor = getattr(policy, "openso101_postprocessor", None)
-
-        env.reset()
-        actions = torch.zeros(env.action_space.shape, device=policy_device)
-
-        from openso101.teleop.so101_mapping import batched_motor_units_to_action
-
-        n = num_envs
-        # Per-env episode bookkeeping.
-        succeeded = torch.zeros(n, dtype=torch.bool, device=policy_device)
-        steps_in_episode = torch.zeros(n, dtype=torch.long, device=policy_device)
-        success_step = torch.full((n,), -1, dtype=torch.long, device=policy_device)
-        quotas = episode_quotas(n_episodes, n, policy_device)
-        completed = torch.zeros(n, dtype=torch.long, device=policy_device)
-
-        episodes_done = 0
-        success_total = 0
-        steps_to_success: list[int] = []
-
-        print(
-            f"[INFO]: il eval — task={args.task} num_envs={n} "
-            f"n_episodes={n_episodes}. Success = teleop final place goal."
-        )
-
-        while simulation_app.is_running() and episodes_done < n_episodes:
-            with torch.inference_mode():
-                success_vec = _teleop_goal_success_vec(unwrapped_env)
-                if success_vec is None:
-                    raise ValueError("当前任务需要提供明确的逐环境成功条件")
-                success_vec = success_vec.to(policy_device)
-                if success_vec.shape != (n,):
-                    raise ValueError("任务成功条件的环境数量不一致")
-                newly = success_vec & (~succeeded)
-                success_step[newly] = steps_in_episode[newly]
-                succeeded |= success_vec
-                obs = _build_il_policy_observation_batched(scene)
-                if getattr(policy, "metadata", {}).get("goal_input") == "robot_root_xyz_m":
-                    from openso101.rl.student import student_goal
-
-                    obs["observation.goal"] = student_goal(env.unwrapped)
-                obs = {
-                    k: v.to(policy_device) if hasattr(v, "to") else v
-                    for k, v in obs.items()
-                }
-                if preprocessor is not None:
-                    obs = preprocessor(obs)
-                action = policy.select_action(obs)
-                if postprocessor is not None:
-                    action = postprocessor(action)
-                action = action.to(policy_device)
-                action_rad = batched_motor_units_to_action(action)
-                actions.copy_(action_rad.reshape(actions.shape))
-                _, _, terminated, truncated, _ = env.step(actions)
-                # ManagerBasedRLEnv returns torch tensors, but a gym wrapper
-                # may hand back numpy — coerce to bool tensors on the policy
-                # device so the boolean indexing below is uniform.
-                terminated = torch.as_tensor(
-                    terminated, dtype=torch.bool, device=policy_device
-                ).reshape(-1)
-                truncated = torch.as_tensor(
-                    truncated, dtype=torch.bool, device=policy_device
-                ).reshape(-1)
-
-                steps_in_episode += 1
-
-                # 成功状态在控制步骤之前记录；env.step 会恢复结束的环境。
-                done = terminated | truncated
-                if bool(done.any().item()):
-                    done_ids = torch.nonzero(done & (completed < quotas), as_tuple=False).flatten()
-                    for env_id in done_ids.tolist():
-                        completed[env_id] += 1
-                        episodes_done += 1
-                        if bool(succeeded[env_id].item()):
-                            success_total += 1
-                            step_idx = int(success_step[env_id].item())
-                            if step_idx >= 0:
-                                steps_to_success.append(step_idx)
-                    # Reset bookkeeping for the envs that just ended.
-                    succeeded[done] = False
-                    steps_in_episode[done] = 0
-                    success_step[done] = -1
-                    if hasattr(policy, "reset"):
-                        policy.reset()
-
-        success_rate = (success_total / episodes_done) if episodes_done else None
-        interval = success_interval(success_total, episodes_done) if episodes_done else None
-        mean_steps = (
-            sum(steps_to_success) / len(steps_to_success) if steps_to_success else None
-        )
-        result = {
-            "status": "il_evaluation_completed" if episodes_done == n_episodes else "il_evaluation_interrupted",
-            "success_rate": success_rate,
-            "n": episodes_done,
-            "mean_steps_to_success": mean_steps,
-            "requested_episodes": n_episodes,
-            "episodes_per_environment": completed.tolist(),
-            "episode_quotas": quotas.tolist(),
-            "success_count": success_total,
-            "success_rate_wilson_95": interval,
-            "success_sampling": "before_control_step",
-            "task": args.task,
-            "scene": getattr(args, "scene", None),
-            "seed": seed,
-            "control_dt": float(unwrapped_env.step_dt),
-            "policy_sources": policy_sources,
-            "source_sha256": file_digest(Path(__file__)),
-        }
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with output.open("x") as stream:
-            json.dump(result, stream, ensure_ascii=False, indent=2)
-        print(json.dumps(result, ensure_ascii=False))
-        if episodes_done != n_episodes:
-            raise RuntimeError(f"评估尚未完成，已保存当前记录: {output}")
-    finally:
-        cleanup.close()
-    return 0
+    return evaluate_il_policy(args)
 
 
 # ---------------------------------------------------------------------------
@@ -1624,6 +1346,7 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
             "regardless (also matches teleop)."
         ),
     )
+    p_play.add_argument("--control-fps", type=int, default=None, help="已有模型的采集频率；新模型自动读取保存的频率。")
     p_play.set_defaults(func=_cmd_play)
 
     p_eval = sub.add_parser(
@@ -1633,6 +1356,8 @@ def add_subparsers(parser: argparse.ArgumentParser) -> None:
     p_eval.add_argument("--task", required=True)
     p_eval.add_argument("--scene", help="已编译的自定义场景目录")
     p_eval.add_argument("--output", help="保存独立评估 JSON；已有文件会终止运行")
+    p_eval.add_argument("--episode-length-s", type=float, default=20.0, help="每个 episode 的最大模拟时间，单位为秒。")
+    p_eval.add_argument("--control-fps", type=int, default=None, help="已有模型的采集频率；新模型自动读取保存的频率。")
     p_eval.add_argument(
         "--policy-path",
         required=True,

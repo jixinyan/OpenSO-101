@@ -6,6 +6,8 @@ from lerobot.optim.factory import make_optimizer_and_scheduler
 from lerobot.policies.factory import make_policy, make_pre_post_processors
 
 from openso101.il.policies.validation import model_state_digest, validate_checkpoint
+from openso101.il.policies.simulation import save_simulation_settings, SIMULATION_SETTINGS_FILE
+from openso101.scenes.models import file_digest
 
 
 def validate_model_graph(cfg, dataset, checkpoint_dir):
@@ -55,6 +57,9 @@ def validate_model_graph(cfg, dataset, checkpoint_dir):
     if losses is not None and any(not math.isfinite(float(value)) for value in losses.values()):
         raise ValueError("IL 模型 loss 分量包含非有限数值")
     checkpoint = validate_checkpoint(policy, preprocessor, postprocessor, current, checkpoint_dir, cfg.seed)
+    settings = save_simulation_settings(checkpoint_dir, dataset)
+    checkpoint["files"][SIMULATION_SETTINGS_FILE] = file_digest(checkpoint_dir / SIMULATION_SETTINGS_FILE)
+    checkpoint["simulation_settings"] = settings.model_dump(mode="json")
     return {"status": "actual_cpu_model_graph_verified", "initialization": "lerobot_configured_model",
             "seed": cfg.seed, "batch_size": 1, "sampled_frame_index": 0,
             "parameters": sum(value.numel() for value in policy.parameters()),

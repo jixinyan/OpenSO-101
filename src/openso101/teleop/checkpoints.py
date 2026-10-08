@@ -4,7 +4,8 @@ from typing import Any
 from .sim_state import _REPLAY_COMMAND_FIELDS
 
 
-_ENV_FIELDS = ("episode_length_buf", "_scene_hold_seconds", "_scene_success", "_scene_program_phase", "_scene_program_hold")
+_ENV_FIELDS = ("episode_length_buf", "_cube_top_was_lifted", "_scene_hold_seconds", "_scene_success",
+               "_scene_program_phase", "_scene_program_hold")
 _COMMAND_FIELDS = (*_REPLAY_COMMAND_FIELDS, "time_left", "command_counter", "just_completed_stage")
 
 
@@ -104,6 +105,10 @@ class _TeleopCheckpointStore:
         if self.env is not None:
             if self.env.num_envs != 1:
                 raise ValueError("人工遥操 checkpoint 需要一个环境")
+            if "cube_top" in self.scene.rigid_objects:
+                from openso101.tasks.stack.mdp.rewards import get_cube_top_was_lifted
+
+                get_cube_top_was_lifted(self.env)
             checkpoint.scene_state = self.scene.get_state(is_relative=False)
             _validate_scene_state(checkpoint.scene_state, checkpoint.scene_state)
             checkpoint.collection_states = {name: entity.data.object_state_w.clone()
