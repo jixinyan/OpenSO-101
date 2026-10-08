@@ -41,14 +41,16 @@ def _launch_isaac_app(args, cleanup: ExitStack, enable_cameras: bool = True):
 
 
 def resolve_policy_path(path: str) -> Path:
-    from openso101.il.policies.factory import _resolve_checkpoint_dir
+    from openso101.il.policies.factory import _resolve_checkpoint_dir, validate_checkpoint_files
 
     local = Path(path).expanduser()
     if (local / "student.json").is_file():
         if not (local / "student.pt").is_file():
             raise FileNotFoundError(f"student 权重文件不存在: {local / 'student.pt'}")
         return local.resolve()
-    return _resolve_checkpoint_dir(path)
+    root = _resolve_checkpoint_dir(path)
+    validate_checkpoint_files(root)
+    return root
 
 
 def validate_positive_count(name: str, value: int | None) -> None:

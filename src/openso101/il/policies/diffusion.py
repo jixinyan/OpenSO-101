@@ -1,16 +1,6 @@
 # Copyright (c) 2026, Jixin Yan
 # SPDX-License-Identifier: MIT
 
-"""Diffusion policy — thin wrapper over LeRobot.
-
-See `openso101.il.policies.act` for the rationale: we re-export LeRobot's
-maintained Diffusion implementation rather than maintain a duplicate.
-
-This module is **fully functional**: `DiffusionPolicy(cfg)` builds a real
-trainable model, `load_diffusion_policy(path)` loads a checkpoint trained
-by `lerobot.scripts.train --policy.type diffusion`.
-"""
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,7 +14,7 @@ def _import_diffusion_class() -> type:
 
 
 class _DiffusionProxy:
-    """Lazy proxy — see `_ACTProxy` for the rationale."""
+    """调用 DiffusionPolicy(cfg) 时构造并返回实际 LeRobot 模型。"""
 
     def __new__(cls, *args, **kwargs):
         real_cls = _import_diffusion_class()
@@ -35,7 +25,7 @@ DiffusionPolicy: Any = _DiffusionProxy
 
 
 def load_diffusion_policy(path: str | Path, *, device: str | None = None):
-    """Load a Diffusion checkpoint trained by LeRobot."""
+    """根据 checkpoint 配置读取模型及 processors。"""
     from .factory import load_policy
 
     return load_policy(path, device=device)

@@ -91,7 +91,7 @@ def prepare(arguments: list[str], report_dir: Path, physical_gpu: int):
             key: list(normalized[key].shape) for key in ("action", "observation.state", *cfg.policy.image_features)},
             "action_roundtrip_maximum_error": error,
             "action_padding_frames": int(batch["action_is_pad"].sum())})
-    model = validate_model_graph(cfg, dataset)
+    model = validate_model_graph(cfg, dataset, report_dir / "pretrained_model")
     if {str(path.relative_to(root)): file_digest(path) for path in source_files} != source_hashes:
         raise RuntimeError("IL 准备检查期间的数据来源 SHA256 发生变化")
     if cfg.output_dir.exists():
@@ -112,8 +112,8 @@ def prepare(arguments: list[str], report_dir: Path, physical_gpu: int):
               "source_sha256": {name: file_digest(repo / name) for name in (
                   "src/openso101/il/runners/preparation.py", "src/openso101/il/runners/trainer.py",
                   "src/openso101/il/runners/worker.py", "src/openso101/il/runners/model_validation.py",
+                  "src/openso101/il/policies/factory.py", "src/openso101/il/policies/validation.py",
                   "src/openso101/il/datasets/validation.py")}}
-    report_dir.mkdir(parents=True, exist_ok=False)
     (report_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({key: report[key] for key in ("status", "policy", "frames", "action_roundtrip_maximum_error",
                                                  "gpu_tests_started", "training_started")}))

@@ -28,6 +28,8 @@
 | IL 模型、数据读取与训练 | `src/openso101/il/` |
 | IL 训练参数、CPU 准备与 GPU worker | `src/openso101/il/runners/trainer.py`、`preparation.py`、`worker.py` |
 | ACT、Diffusion 完整模型的 CPU forward、gradient 与 inference | `src/openso101/il/runners/model_validation.py` |
+| LeRobot 权重、processors 与明确 device 加载 | `src/openso101/il/policies/factory.py` |
+| 完整模型 checkpoint 保存、加载与实际动作比较 | `src/openso101/il/policies/validation.py` |
 | HDF5 检查与 LeRobot 同步、异步导出 | `src/openso101/il/datasets/export.py` |
 | LeRobot metadata、episode 范围、统计量与视频文件检查 | `src/openso101/il/datasets/validation.py` |
 | IL 关节与 RGB observation | `src/openso101/il/observations.py` |

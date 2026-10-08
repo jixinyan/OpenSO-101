@@ -129,6 +129,8 @@
       "requirements": [
         {"report": "il_training/report.json", "pointer": "/status", "equals": "actual_il_training_preparation_verified"},
         {"report": "il_training/report.json", "pointer": "/source_files_unchanged", "equals": true},
+        {"report": "il_training/report.json", "pointer": "/policies/act/model_graph/model_checkpoint_verified", "equals": true},
+        {"report": "il_training/report.json", "pointer": "/policies/diffusion/model_graph/model_checkpoint_verified", "equals": true},
         {"report": "il_training/report.json", "pointer": "/training_started", "equals": false},
         {"report": "il_training/report.json", "pointer": "/gpu_tests_started", "equals": false}
       ]

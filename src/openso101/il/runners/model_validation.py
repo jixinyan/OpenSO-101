@@ -1,4 +1,3 @@
-import hashlib
 import math
 
 import torch
@@ -6,16 +5,18 @@ from torch.utils.data._utils.collate import default_collate
 from lerobot.optim.factory import make_optimizer_and_scheduler
 from lerobot.policies.factory import make_policy, make_pre_post_processors
 
+from openso101.il.policies.validation import model_state_digest, validate_checkpoint
 
-def validate_model_graph(cfg, dataset):
+
+def validate_model_graph(cfg, dataset, checkpoint_dir):
     if cfg.policy.device != "cpu":
         raise ValueError("IL 模型程序检查需要使用 CPU")
     if cfg.seed is None:
         raise ValueError("IL 模型程序检查需要指定 seed")
+    if not math.isfinite(cfg.optimizer.lr) or cfg.optimizer.lr <= 0:
+        raise ValueError("IL optimizer lr 必须为有限正数")
     torch.manual_seed(cfg.seed)
     policy = make_policy(cfg.policy, ds_meta=dataset.meta, rename_map=cfg.rename_map)
-    if not math.isfinite(cfg.optimizer.lr):
-        raise ValueError("IL optimizer lr 必须为有限数值")
     optimizer, scheduler = make_optimizer_and_scheduler(cfg, policy)
     preprocessor, postprocessor = make_pre_post_processors(cfg.policy, dataset_stats=dataset.meta.stats)
     raw_batch = default_collate([dataset[0]])
@@ -53,16 +54,14 @@ def validate_model_graph(cfg, dataset):
         raise ValueError("IL 模型推理需要产生六个有限关节值")
     if losses is not None and any(not math.isfinite(float(value)) for value in losses.values()):
         raise ValueError("IL 模型 loss 分量包含非有限数值")
-    digest = hashlib.sha256()
-    for key, value in sorted(policy.state_dict().items()):
-        digest.update(key.encode())
-        digest.update(value.detach().contiguous().reshape(-1).view(torch.uint8).numpy().tobytes())
+    checkpoint = validate_checkpoint(policy, preprocessor, postprocessor, current, checkpoint_dir, cfg.seed)
     return {"status": "actual_cpu_model_graph_verified", "initialization": "lerobot_configured_model",
             "seed": cfg.seed, "batch_size": 1, "sampled_frame_index": 0,
             "parameters": sum(value.numel() for value in policy.parameters()),
             "gradient_parameters": gradient_parameters, "nonzero_gradient_tensors": nonzero_gradients,
             "maximum_gradient": maximum_gradient, "loss": float(loss.detach()), "loss_components": losses,
-            "inference_action": action.tolist(), "model_state_sha256": digest.hexdigest(),
+            "inference_action": action.tolist(), "model_state_sha256": model_state_digest(policy),
+            "checkpoint_roundtrip": checkpoint, "model_checkpoint_verified": True,
             "optimizer": type(optimizer).__name__,
             "optimizer_learning_rates": [group["lr"] for group in optimizer.param_groups],
             "scheduler": type(scheduler).__name__ if scheduler is not None else None,

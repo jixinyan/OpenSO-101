@@ -6,7 +6,47 @@ import sys
 from pathlib import Path
 
 from openso101.il.datasets import load_lerobot_dataset
+from openso101.il.policies.factory import load_policy
 from openso101.scenes.models import file_digest
+
+
+def check_checkpoint_inputs(checkpoint: Path, output: Path):
+    results = []
+    state_file = next(path.name for path in checkpoint.glob("policy_preprocessor*.safetensors"))
+    for missing in ("model.safetensors", "policy_preprocessor.json", "policy_postprocessor.json", state_file):
+        destination = output / missing
+        destination.mkdir(parents=True, exist_ok=False)
+        for source in checkpoint.iterdir():
+            if source.is_file() and source.name != missing:
+                os.link(source, destination / source.name)
+        try:
+            load_policy(destination, device="cpu")
+        except FileNotFoundError as error:
+            if missing not in str(error):
+                raise RuntimeError("checkpoint 文件检查没有定位实际缺少的文件") from error
+        else:
+            raise RuntimeError("checkpoint 缺少实际文件时需要终止加载")
+        for command in ("play", "eval"):
+            result = subprocess.run([sys.executable, "-m", "openso101.cli.main", "il", command,
+                "--task", "OpenSO101-PickPlace-v0", "--policy-path", str(destination)],
+                capture_output=True, text=True, timeout=30)
+            if result.returncode == 0 or missing not in result.stderr or "AppLauncher" in result.stderr:
+                raise RuntimeError("实际 IL 入口需要在启动 Isaac 前拒绝不完整 checkpoint")
+        results.append({"missing_file": missing, "rejected": True, "native_startup_prevented": True})
+    for path, device, error_type in (
+        (output / "absent/model", "cpu", FileNotFoundError),
+        (checkpoint / "config.json", "cpu", ValueError),
+        ("invalid name/model", "cpu", ValueError),
+        (checkpoint, "cuda:0", ValueError),
+    ):
+        try:
+            load_policy(path, device=device)
+        except error_type:
+            pass
+        else:
+            raise RuntimeError("checkpoint 输入检查需要终止无效加载")
+        results.append({"source": str(path), "device": device, "rejected": True})
+    return results
 
 
 def main():
@@ -39,11 +79,15 @@ def main():
                 or not report["model_graph"]["model_forward_verified"]
                 or not report["model_graph"]["model_backward_verified"]
                 or not report["model_graph"]["model_inference_verified"]
+                or not report["model_graph"]["model_checkpoint_verified"]
                 or not report["model_graph"]["optimizer_configuration_verified"]
                 or report["model_graph"]["optimizer_updates"] != 0 or training_output.exists()):
             raise RuntimeError("IL 实际模型和数据准备验收未通过")
+        checkpoint = Path(report["model_graph"]["checkpoint_roundtrip"]["directory"])
+        rejected_checkpoints = check_checkpoint_inputs(checkpoint, args.output / f"checkpoint_inputs_{policy}")
         reports[policy] = {"report": str(report_path), "sha256": file_digest(report_path),
                            "model_graph": report["model_graph"],
+                           "rejected_checkpoints": rejected_checkpoints,
                            "action_roundtrip_maximum_error": report["action_roundtrip_maximum_error"]}
     rejected = []
     cases = [
@@ -53,8 +97,8 @@ def main():
         ("diffusion", ["--policy.crop_shape=[4000,4000]"], "crop_shape"),
         ("act", ["--num_workers=-1"], "num_workers 必须为非负整数"),
         ("act", ["--save_checkpoint=false"], "需要保留模型和 optimizer checkpoint"),
-        ("act", ["--policy.optimizer_lr=-1"], "Invalid learning rate"),
-        ("diffusion", ["--policy.optimizer_lr=nan"], "optimizer lr 必须为有限数值"),
+        ("act", ["--policy.optimizer_lr=-1"], "optimizer lr 必须为有限正数"),
+        ("diffusion", ["--policy.optimizer_lr=nan"], "optimizer lr 必须为有限正数"),
     ]
     for index, (policy, extras, message) in enumerate(cases):
         destination = args.output / f"rejected_{index}"

@@ -41,7 +41,7 @@ def test_missing_policy_before_native_startup(tmp_path, command):
                             capture_output=True, text=True, timeout=30,
                             env={**os.environ, "CUDA_VISIBLE_DEVICES": "", "OPENSO101_SKIP_ISAAC": "1"})
     assert result.returncode != 0
-    assert "policy checkpoint not found" in result.stderr
+    assert "模型目录不存在" in result.stderr
     assert "AppLauncher" not in result.stderr
 
 

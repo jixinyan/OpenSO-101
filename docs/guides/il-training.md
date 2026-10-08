@@ -17,6 +17,8 @@ OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh native \
 
 Diffusion 使用相同命令并指定 `--policy diffusion`。检查使用完整模型结构、实际图像尺寸，以及配置指定的 torchvision backbone 权重。必需的权重通过 torchvision 下载到其 cache；文件与检查记录均予以保留。
 
+准备目录的 `pretrained_model/` 保存完整模型参数和 observation/action processors。模型使用实际 CPU 初始化权重，optimizer 更新次数为零，保存的模型配置包含计划使用的 `cuda:0`。检查通过共享加载入口明确指定 CPU，逐项核查模型状态 SHA256、normalization Tensor、processor device 和实际动作推理结果。`model_checkpoint_verified` 与 `checkpoint_roundtrip` 保存对应结果。该模型文件用于程序验证，任务成功需要训练及独立评估。
+
 `--preparation-output` 必须位于 `outputs/`，使用数据集和训练输出之外的新目录。检查报告保存 CPU 配置与计划使用的 GPU 参数。`model_forward_verified`、`model_backward_verified`、`model_inference_verified` 分别记录模型程序检查；任务成功需要独立运行验收。
 
 ## 训练参数与执行
@@ -43,3 +45,7 @@ report = prepare_il_policy(
 ```
 
 实现位置为 `il/runners/trainer.py`、`preparation.py`、`model_validation.py` 和 `worker.py`。真实数据与完整模型的批量 CPU 检查使用 `scripts/check_il_training.py`；统一验收中的阶段名称为 `il_training_preparation`。
+
+## 保存模型的读取
+
+`il/policies/factory.py` 接收 `pretrained_model/`、训练输出目录或 Hub repo_id。本地 `Path` 始终按照目录读取，Hub 名称通过 `huggingface_hub` 的官方检查。完整模型需要 `config.json`、`model.safetensors` 和两个 processor 配置及引用的状态文件。指定 `device` 时，模型构建、权重加载与 preprocessing 使用该设备；postprocessing 返回 CPU 动作。缺少文件或设备不可用时立即终止。
