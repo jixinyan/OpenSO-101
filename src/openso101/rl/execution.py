@@ -274,6 +274,7 @@ def evaluate(args, *, play=False, student_folder=None):
         import torch
 
         from .backends import get_backend
+        from .evaluation import episode_quotas, success_interval
 
         if recording_output is not None:
             from .recording import first_episode_recorder
@@ -302,8 +303,7 @@ def evaluate(args, *, play=False, student_folder=None):
         lengths = torch.zeros_like(returns, dtype=torch.int64)
         latched = torch.zeros_like(returns, dtype=torch.bool)
         records = []
-        quotas = torch.full_like(lengths, episodes_requested // env.unwrapped.num_envs)
-        quotas[:episodes_requested % env.unwrapped.num_envs] += 1
+        quotas = episode_quotas(episodes_requested, env.unwrapped.num_envs, env.unwrapped.device)
         completed = torch.zeros_like(lengths)
         progress = {}
         if args.task in ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0"):
@@ -360,6 +360,8 @@ def evaluate(args, *, play=False, student_folder=None):
                   "num_envs": env.unwrapped.num_envs, "episode_allocation": quotas.tolist(),
                   "progress_sampling": "before_control_step" if progress else None,
                   "progress_rates": {name: sum(record[name] for record in records) / len(records) for name in progress}}
+        result.update(success_rate_ci95_interval=success_interval(sum(record["success"] for record in records), len(records)),
+                      confidence_interval_method="Wilson_score")
         if student_folder is not None:
             result.update(student_sha256=student.metadata["files"]["student.pt"],
                           goal_input=student.metadata["goal_input"], camera_observation=True,

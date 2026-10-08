@@ -662,6 +662,8 @@ _REPLAY_COMMAND_FIELDS = (
 
 
 def _collect_replay_sim_state(unwrapped_env, scene, *, include_cohort=False) -> dict[str, Any]:
+    import numpy as np
+
     sim_state: dict[str, Any] = {"environment_origin": _tensor_to_numpy(scene.env_origins[0])}
     if getattr(unwrapped_env.cfg, "scene_spec", None) is not None:
         from openso101.scenes.isaaclab.runtime import scene_states

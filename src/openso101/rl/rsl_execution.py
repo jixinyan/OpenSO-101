@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 from contextlib import ExitStack
 from functools import wraps
 from pathlib import Path
@@ -531,6 +530,8 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
     'success' termination term, the contact-confirmed grasp, and the object
     lift height, then aggregate the completed episodes into a JSON report.
     """
+    if args.n_episodes < 1 or args.num_envs < 1:
+        raise ValueError("n_episodes 和 num_envs 必须为正整数")
     if (Path(args.checkpoint) / "checkpoint.json").is_file():
         from openso101.rl.execution import evaluate
 
@@ -552,14 +553,16 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
 
     import gymnasium as gym
     import json
-    import math
     import os
+    from datetime import UTC, datetime
 
     import torch
 
     from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
     from openso101.rl import cli_args as _cli_args
+    from openso101.rl.evaluation import episode_quotas, success_interval
+    from openso101.rl.config import digest
     from openso101.tasks.shared.grasp import object_grasped_by_jaws
 
     from isaaclab.envs import (
@@ -659,9 +662,11 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
         unwrapped = env.unwrapped
         term_mgr = unwrapped.termination_manager
         has_success_term = "success" in term_mgr.active_terms
+        if not has_success_term:
+            raise ValueError("任务缺少 success termination，无法计算成功率")
 
-        episodes_per_env = math.ceil(args.n_episodes / n_envs)
-        target_total = episodes_per_env * n_envs
+        quotas = episode_quotas(args.n_episodes, n_envs, device)
+        target_total = args.n_episodes
 
         # Per-env latches (reset on each episode boundary).
         ever_succeeded = torch.zeros(n_envs, dtype=torch.bool, device=device)
@@ -694,41 +699,28 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
 
         print(
             f"[INFO]: Evaluating {agent_cfg.experiment_name} over "
-            f"{target_total} episodes ({n_envs} envs x {episodes_per_env}).",
+            f"{target_total} episodes ({n_envs} envs).",
             flush=True,
         )
 
         obs = env.get_observations()
-        while int(completed.min().item()) < episodes_per_env:
-            with torch.inference_mode():
-                actions = policy(obs)
-                obs, _, dones, extras = env.step(actions)
-
-            steps_in_episode += 1
-
-            # --- Latch funnel signals from THIS step (pre-reset state). ---
+        while bool((completed < quotas).any()) and simulation_app.is_running():
+            # 在控制步骤之前读取接近、抓取和抬升状态。
             grasped_now = object_grasped_by_jaws(unwrapped)
             ever_grasped |= grasped_now
 
             lifted_now = (obj.data.root_pos_w[:, 2] - env_origin_z) > lift_threshold
             ever_lifted |= lifted_now
 
-            # Optional reach stage: ee->object distance. Best-effort — if the
-            # observation doesn't expose it cheaply, fall back to the grasp
-            # sensors' parent bodies via the cube being close to a jaw is
-            # already captured by grasp; here we approximate "reached" as
-            # "grasped or lifted or very close" using cube-to-origin proxy is
-            # unreliable, so we tie reach to a small ee->obj distance when the
-            # task exposes an 'ee_frame' transform; otherwise reach == grasped.
-            try:
-                ee_frame = unwrapped.scene["ee_frame"]
-                ee_pos_w = ee_frame.data.target_pos_w[:, 0, :]
-                ee_obj_dist = torch.linalg.vector_norm(
-                    ee_pos_w - obj.data.root_pos_w, dim=-1
-                )
-                ever_reached |= ee_obj_dist < reach_threshold
-            except (KeyError, AttributeError, IndexError):
-                ever_reached |= grasped_now
+            ee_frame = unwrapped.scene["ee_frame"]
+            ee_pos_w = ee_frame.data.target_pos_w[:, 0, :]
+            ee_obj_dist = torch.linalg.vector_norm(ee_pos_w - obj.data.root_pos_w, dim=-1)
+            ever_reached |= ee_obj_dist < reach_threshold
+
+            with torch.inference_mode():
+                actions = policy(obs)
+                obs, _, dones, extras = env.step(actions)
+            steps_in_episode += 1
 
             if has_success_term:
                 succ_now = term_mgr.get_term("success") & term_mgr.terminated
@@ -742,7 +734,7 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
                 idx = torch.nonzero(done_mask, as_tuple=False).flatten()
                 # Only count episodes up to the quota per env.
                 for i in idx.tolist():
-                    if completed[i] >= episodes_per_env:
+                    if completed[i] >= quotas[i]:
                         continue
                     completed[i] += 1
                     agg["total"] += 1
@@ -760,7 +752,7 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
                     # Timeout vs drop attribution from termination terms /
                     # time_outs. A success that coincides with timeout still
                     # counts as success in the success column above.
-                    is_timeout = bool(extras.get("time_outs", torch.zeros(n_envs, dtype=torch.bool, device=device))[i])
+                    is_timeout = bool(term_mgr.time_outs[i])
                     if has_drop_term and bool(term_mgr.get_term("object_dropping")[i]):
                         agg["dropped"] += 1
                     elif is_timeout and not bool(ever_succeeded[i]):
@@ -775,10 +767,10 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
                 steps_in_episode[done_mask] = 0
 
         # --- Aggregate ---
-        total = max(agg["total"], 1)
+        if agg["total"] != target_total:
+            raise RuntimeError("仿真在评估完成之前终止")
+        total = agg["total"]
         success_rate = agg["success"] / total
-        # Wald 95% CI on the success-rate proportion.
-        ci95 = 1.96 * math.sqrt(max(success_rate * (1 - success_rate), 0.0) / total)
         mean_steps_to_success = (
             agg["steps_to_success_sum"] / agg["steps_to_success_n"]
             if agg["steps_to_success_n"] > 0
@@ -789,7 +781,11 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
             "checkpoint": os.path.abspath(resume_path),
             "n_episodes": agg["total"],
             "success_rate": success_rate,
-            "success_rate_ci95": ci95,
+            "success_rate_ci95_interval": success_interval(agg["success"], total),
+            "confidence_interval_method": "Wilson_score",
+            "progress_sampling": "before_control_step",
+            "episode_allocation": quotas.tolist(),
+            "checkpoint_sha256": digest(Path(resume_path)),
             "mean_steps_to_success": mean_steps_to_success,
             "drop_rate": agg["dropped"] / total,
             "timeout_rate": agg["timeout"] / total,
@@ -799,22 +795,16 @@ def _cmd_eval(args: argparse.Namespace, cleanup: ExitStack) -> int:
             "seed": args.seed,
             "num_envs": n_envs,
         }
-        if not has_success_term:
-            report["warning"] = (
-                "no 'success' termination term active on this task; "
-                "success_rate is 0 and not meaningful."
-            )
 
         print("\n===== eval report =====", flush=True)
         for k, v in report.items():
             print(f"  {k}: {v}", flush=True)
 
-        out_path = os.path.join(os.path.dirname(resume_path), "eval_report.json")
-        with open(out_path, "w") as fh:
+        out_path = Path(resume_path).parent / f"evaluation-{datetime.now(UTC).strftime('%Y%m%dT%H%M%S%fZ')}.json"
+        with out_path.open("x") as fh:
             json.dump(report, fh, indent=2)
         print(f"[INFO] Saved -> {out_path}", flush=True)
 
     _run()
 
     return 0
-

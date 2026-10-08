@@ -1,5 +1,6 @@
 -r requirements-mujoco.txt
 pytest>=7
+ruff==0.12.0
 objaverse==0.1.7
 python-fcl==0.7.0.11
 Cython>=3,<4

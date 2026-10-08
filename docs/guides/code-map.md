@@ -10,6 +10,7 @@
 | RL 配置、backend、训练和评估 | `src/openso101/rl/` |
 | 统一 RL backend 执行与 RSL 原生执行 | `src/openso101/rl/execution.py`、`rsl_execution.py` |
 | 全部 TensorBoard event 读取与训练曲线 | `src/openso101/rl/plotting.py` |
+| 精确 episode 分配与成功率统计 | `src/openso101/rl/evaluation.py` |
 | 实际示范的连续监督 | `src/openso101/rl/sequence_supervision.py` |
 | GPU 空闲检查与进程监督 | `src/openso101/rl/gpu_guard.py`、`gpu_scope.py` |
 | 场景数据模型、bundle 和任务条件 | `src/openso101/scenes/models.py`、`bundle.py`、`program.py`、`bddl.py` |
@@ -79,6 +80,8 @@ GPU 阶段使用相同的源码、配置和输入文件，逐项检查 CPU 报�
 `.github/workflows/test.yml` 使用 `requirements-cpu-tests.txt` 安装实际运行所需的库。MuJoCo 相机使用 OSMesa。`scripts/fetch_cpu_assets.py` 根据固定 upstream commit 和 SHA256 下载官方 SO-101 XML；已有文件通过同一份 SHA256 检查。
 
 CI 分别保存源码检查、几何与进程检查、PTY 与 Torch 控制检查，以及 sdist、wheel 与 package 核查报告。所执行的检查不启动 Isaac Sim；原生物理和完整任务成功需要对应运行报告。
+
+Ruff 的 `F821`、`F822`、`F823` 检查覆盖源码、脚本和测试中的未定义名称。CPU 接口检查包含实际 PTY、控制数值、配置、RL 命令与 episode 统计。
 
 ## Python import
 

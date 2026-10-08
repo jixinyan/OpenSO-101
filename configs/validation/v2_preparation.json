@@ -21,12 +21,15 @@
       ]
     },
     {
-      "name": "terminal_keyboard", "resource": "cpu", "depends_on": ["cpu_geometry"],
-      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/terminal_keyboard"],
-      "requirements": [{"report": "terminal_keyboard/report.json", "pointer": "/status", "equals": "actual_terminal_keyboard_interface_verified"}]
+      "name": "cpu_interfaces", "resource": "cpu", "depends_on": ["cpu_geometry"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_cpu_interfaces.py", "--output", "{output}/cpu_interfaces"],
+      "requirements": [
+        {"report": "cpu_interfaces/report.json", "pointer": "/status", "equals": "actual_cpu_interfaces_verified"},
+        {"report": "cpu_interfaces/report.json", "pointer": "/counts/tests", "minimum": 34}
+      ]
     },
     {
-      "name": "keyboard_ik", "resource": "cpu", "depends_on": ["terminal_keyboard"],
+      "name": "keyboard_ik", "resource": "cpu", "depends_on": ["cpu_interfaces"],
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_keyboard_kinematics.py", "--native", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--output", "{output}/keyboard_ik.json"],
       "inputs": {"outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task/trajectory.hdf5": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739"},
       "requirements": [
@@ -52,7 +55,7 @@
       ]
     },
     {
-      "name": "lerobot_data", "resource": "cpu", "depends_on": ["terminal_keyboard"],
+      "name": "lerobot_data", "resource": "cpu", "depends_on": ["cpu_interfaces"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/validate_lerobot_dataset.py", "--source", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--require-success", "--output", "{output}/lerobot.json"],
       "requirements": [
         {"report": "lerobot.json", "pointer": "/status", "equals": "all_lerobot_frames_verified"},
