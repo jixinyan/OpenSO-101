@@ -1,0 +1,46 @@
+{
+  "status": "actual_recorded_teleop_controls_verified",
+  "rate_limits": [
+    {
+      "frames": 328,
+      "max_delta_rad": 0.005,
+      "maximum_actual_delta_rad": 0.005000025033950806,
+      "maximum_command_rate_rad_s": 0.2500012516975403,
+      "settling_steps": 131,
+      "settled_at_final_target": true
+    },
+    {
+      "frames": 328,
+      "max_delta_rad": 0.03,
+      "maximum_actual_delta_rad": 0.030000001192092896,
+      "maximum_command_rate_rad_s": 1.5000000596046448,
+      "settling_steps": 2,
+      "settled_at_final_target": true
+    }
+  ],
+  "holds": [
+    {
+      "device": "leader",
+      "actual_frame": 84,
+      "holding_error_rad": 1.4047330617904663,
+      "released_error_rad": 0.0,
+      "captured_target_preserved": true
+    },
+    {
+      "device": "keyboard",
+      "actual_frame": 84,
+      "holding_error_rad": 1.4047330617904663,
+      "released_error_rad": 0.0,
+      "captured_target_preserved": true
+    }
+  ],
+  "source_episode": "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5",
+  "source_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "source_unchanged": true,
+  "invalid_numeric_inputs_rejected": true,
+  "gpu_tests_started": false,
+  "physical_robot_control_verified": false,
+  "native_restore_verified": false,
+  "controls_source_sha256": "d71f371206d4bb680eee390368e5edb09d6725bed45f854ed3d4ae908a6209d6",
+  "validation_source_sha256": "57d353db9092a111ed162d0e8ca74036dfd2d33847a5df2061c03cec9f50b503"
+}
