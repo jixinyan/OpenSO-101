@@ -27,7 +27,7 @@ root = ET.parse(junit).getroot()
 suites = root.findall("testsuite") if root.tag == "testsuites" else [root]
 counts = {key: sum(int(suite.attrib[key]) for suite in suites)
           for key in ("tests", "failures", "errors", "skipped")}
-verified = result.returncode == 0 and counts["tests"] >= 30 and not any(
+verified = result.returncode == 0 and counts["tests"] >= 49 and not any(
     counts[key] for key in ("failures", "errors", "skipped"))
 report = {"status": "cpu_checks_verified" if verified else "cpu_checks_failed", "exit_code": result.returncode,
           "counts": counts, "junit_sha256": file_digest(junit), "source_sha256": file_digest(Path(__file__)),
