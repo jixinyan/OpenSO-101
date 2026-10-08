@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from numbers import Integral
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -69,8 +70,9 @@ def build_lerobot_features(cameras: Mapping[str, Mapping[str, int]], fps: int) -
     """Build LeRobotDataset features including wrist and overhead videos."""
 
     ensure_required_cameras(cameras)
-    if int(fps) <= 0:
-        raise ValueError(f"fps must be positive, got {fps}")
+    if isinstance(fps, bool) or not isinstance(fps, Integral) or fps <= 0:
+        raise ValueError("fps 必须为正整数")
+    fps = int(fps)
     features: dict[str, dict[str, Any]] = {
         "observation.state": {
             "dtype": "float32",
@@ -88,12 +90,11 @@ def build_lerobot_features(cameras: Mapping[str, Mapping[str, int]], fps: int) -
 
     for camera_name in REQUIRED_CAMERA_NAMES:
         camera = cameras[camera_name]
-        try:
-            height, width = int(camera["height"]), int(camera["width"])
-        except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(f"camera {camera_name!r} needs integer height and width") from exc
-        if height <= 0 or width <= 0:
-            raise ValueError(f"camera {camera_name!r} dimensions must be positive")
+        height, width = camera["height"], camera["width"]
+        if any(isinstance(value, bool) or not isinstance(value, Integral) or value < 16
+               for value in (height, width)):
+            raise ValueError(f"相机 {camera_name!r} 的 height 和 width 需要大于或等于 16 的整数")
+        height, width = int(height), int(width)
         features[f"observation.images.{camera_name}"] = {
             "dtype": "video",
             "fps": fps,
@@ -216,7 +217,7 @@ def _sim_radians_array_to_motor_units(values: Any) -> np.ndarray:
     so the downstream LeRobot writer can serialize it without further conversion.
     The remap matches the convention real STS3215 hardware reports/accepts.
     """
-    import torch  # local: avoid mandatory torch import at module load
+    import torch
 
     if isinstance(values, torch.Tensor):
         tensor = values.detach().to(torch.float32).cpu()
@@ -227,45 +228,47 @@ def _sim_radians_array_to_motor_units(values: Any) -> np.ndarray:
 
 
 class OpenSO101LeRobotRecorder:
-    """Small LeRobotDataset recorder for interactive teleop episodes."""
+    """使用 LeRobotDataset 采集双相机 episode。"""
 
     def __init__(self, repo_id: str, root: str, task_name: str, cameras: Mapping[str, Mapping[str, int]], fps: int):
         self.repo_id = repo_id
         self.root = root
         self.task_name = task_name
         self.cameras = dict(cameras)
-        self.fps = fps
         self.features = build_lerobot_features(self.cameras, fps=fps)
+        self.fps = int(fps)
         self._dataset = None
         self._recording = False
         self._frames_in_episode = 0
+        self._closed = False
 
     @property
     def recording(self) -> bool:
         return self._recording
 
     def init_dataset(self) -> None:
-        try:
-            from lerobot.datasets.lerobot_dataset import LeRobotDataset
-        except ImportError as exc:
-            raise RuntimeError(
-                "LeRobot is required for dataset recording. Install it via "
-                "`bash scripts/install.sh` from the repo root (or, manually, "
-                "`pip install \"lerobot[feetech]==0.4.0\" --no-deps` to bypass "
-                "the isaaclab/lerobot packaging version conflict)."
-            ) from exc
+        from lerobot.datasets.lerobot_dataset import LeRobotDataset
+
+        from openso101.il.datasets.validation import validate_lerobot_metadata
+
+        if self._closed or self._dataset is not None:
+            raise RuntimeError("LeRobot recorder 需要在尚未初始化的状态创建数据集")
 
         if has_lerobot_metadata(self.root):
+            validate_lerobot_metadata(Path(self.root))
             self._dataset = LeRobotDataset(self.repo_id, root=self.root)
-            print(f"[INFO]: Existing LeRobot dataset opened at {self.root}")
+            if self._dataset.fps != self.fps:
+                raise ValueError("已有 LeRobot 数据集的 FPS 与采集频率不一致")
+            for name, expected in self.features.items():
+                actual = self._dataset.features[name]
+                if any(actual[key] != expected[key] for key in ("dtype", "names")) or tuple(actual["shape"]) != expected["shape"]:
+                    raise ValueError(f"已有 LeRobot 数据集的 {name} 与采集配置不一致")
+            print(f"[INFO]: 已打开 LeRobot 数据集: {self.root}")
             return
 
         archived_root = prepare_lerobot_root_for_create(self.root)
         if archived_root is not None:
-            print(
-                "[WARN]: Archived incomplete local LeRobot dataset root "
-                f"from {self.root} to {archived_root}. A fresh local dataset will be created."
-            )
+            print(f"[INFO]: 已保存未完成的数据集: {archived_root}")
         self._dataset = LeRobotDataset.create(
             self.repo_id,
             fps=self.fps,
@@ -273,14 +276,20 @@ class OpenSO101LeRobotRecorder:
             root=self.root,
             robot_type="so101_follower",
         )
-        print(f"[INFO]: New LeRobot dataset created at {self.root}")
+        print(f"[INFO]: 已创建 LeRobot 数据集: {self.root}")
 
     def start_episode(self) -> None:
+        if self._closed or self._recording:
+            raise RuntimeError("开始 episode 需要未关闭且没有正在录制的 LeRobot recorder")
         if self._dataset is None:
             self.init_dataset()
+        if self._dataset.episode_buffer is None:
+            self._dataset.episode_buffer = self._dataset.create_episode_buffer()
+        if self._dataset.episode_buffer["size"]:
+            raise RuntimeError("LeRobot 开始 episode 时仍有未保存的数据")
         self._recording = True
         self._frames_in_episode = 0
-        print("[INFO]: Started LeRobot recording.")
+        print("[INFO]: 已开始 LeRobot 录制。")
 
     def add_frame(
         self,
@@ -292,76 +301,83 @@ class OpenSO101LeRobotRecorder:
         timestamp: float | None = None,
         sim_state: Mapping[str, "np.ndarray"] | None = None,
     ) -> None:
-        # ``sim_state`` is accepted for signature parity with
-        # :class:`OpenSO101HDF5TeleopRecorder.add_frame` but is silently
-        # dropped — the LeRobot dataset schema has no per-frame slot for
-        # arbitrary sim state and recording it inline would invalidate
-        # the upstream feature spec the policy trainer expects.
-        del sim_state  # noqa: F841 — intentionally unused
+        # LeRobot 保存 action、state 和 RGB；完整仿真状态使用 HDF5 采集。
+        del sim_state, qvel, timestamp
         if not self._recording:
             return
         if observation is None:
             observation = qpos
         if observation is None:
-            raise ValueError("LeRobot frame recording requires observation or qpos.")
+            raise ValueError("LeRobot 采集需要 observation 或 qpos")
         if camera_buffers is None:
-            raise ValueError("LeRobot frame recording requires camera buffers.")
+            raise ValueError("LeRobot 采集需要相机数据")
         ensure_required_cameras(camera_buffers)
-        # Remap sim-radian action/state to LeRobot STS3215 motor units [-100, 100].
-        # See openso101.teleop.so101_mapping for the per-joint linear map.
-        # Camera frames are not remapped.
         action_motor = _sim_radians_array_to_motor_units(action)
         observation_motor = _sim_radians_array_to_motor_units(observation)
+        if any(values.shape != (6,) or not np.isfinite(values).all()
+               for values in (action_motor, observation_motor)):
+            raise ValueError("LeRobot action 和 observation.state 需要六个有限数值")
         frame = {
             "action": action_motor,
             "observation.state": observation_motor,
             "task": self.task_name,
         }
         for camera_name in REQUIRED_CAMERA_NAMES:
-            frame[f"observation.images.{camera_name}"] = camera_buffers[camera_name]
+            key = f"observation.images.{camera_name}"
+            image = _as_numpy_rgb(camera_buffers[camera_name]).copy()
+            if image.shape != self.features[key]["shape"]:
+                raise ValueError(f"相机 {camera_name} 的 RGB 尺寸与采集配置不一致")
+            frame[key] = image
         self._dataset.add_frame(frame)
         self._frames_in_episode += 1
 
     def save_episode(self, success: bool = False) -> None:
         if not self._recording:
             return
-        self._recording = False
         if self._frames_in_episode == 0:
-            print("[WARN]: No frames recorded; skipping empty episode.")
+            self.cancel_episode()
             return
         self._dataset.save_episode()
-        print(f"[INFO]: Saved LeRobot episode with {self._frames_in_episode} frames.")
+        self._recording = False
+        print(f"[INFO]: 已保存 LeRobot episode: {self._frames_in_episode} 帧。")
 
     def cancel_episode(self) -> None:
         if not self._recording:
             return
+        self._dataset.clear_episode_buffer()
         self._recording = False
-        if hasattr(self._dataset, "clear_episode_buffer"):
-            self._dataset.clear_episode_buffer()
-        print("[INFO]: Cancelled LeRobot episode.")
+        self._frames_in_episode = 0
+        print("[INFO]: 已取消 LeRobot episode。")
 
-    # ----- Checkpoint API parity with OpenSO101HDF5TeleopRecorder -----
-    #
-    # LeRobotDataset doesn't have a native frame-level checkpoint
-    # facility, so these are intentional no-ops that return ``None`` /
-    # accept ``None``. The teleop checkpoint store still captures the
-    # sim state (robot pose + object pose + command stage), and the R
-    # key still restores from that — the only difference vs. HDF5
-    # recording is that the LeRobot episode itself isn't rewound. If
-    # you need replayable checkpoints, use ``--record-format hdf5``.
+    def create_checkpoint(self) -> int:
+        if not self._recording:
+            raise RuntimeError("创建 checkpoint 需要正在录制的 LeRobot episode")
+        if self._dataset.episode_buffer["size"] != self._frames_in_episode:
+            raise RuntimeError("LeRobot episode buffer 与 recorder 帧数不一致")
+        return self._frames_in_episode
 
-    def create_checkpoint(self):
-        """Return a sentinel handle the caller can later pass to
-        :meth:`restore_checkpoint`. The LeRobot recorder has no real
-        rewind concept; this exists purely so the teleop dispatcher's
-        capture path doesn't crash."""
-        if self._recording:
-            return self._frames_in_episode
-        return None
+    def restore_checkpoint(self, checkpoint: int) -> None:
+        self.create_checkpoint()
+        if isinstance(checkpoint, bool) or not isinstance(checkpoint, Integral):
+            raise ValueError("LeRobot checkpoint 需要整数帧数")
+        if checkpoint < 0 or checkpoint > self._frames_in_episode:
+            raise ValueError("LeRobot checkpoint 超出当前 episode 的记录范围")
+        buffer = self._dataset.episode_buffer
+        self._dataset._wait_image_writer()
+        for key in self._dataset.meta.camera_keys:
+            for index in range(checkpoint, self._frames_in_episode):
+                self._dataset._get_image_file_path(buffer["episode_index"], key, index).unlink()
+        for value in buffer.values():
+            if isinstance(value, list):
+                del value[checkpoint:]
+        buffer["size"] = int(checkpoint)
+        self._frames_in_episode = int(checkpoint)
 
-    def restore_checkpoint(self, checkpoint) -> None:
-        """No-op; see :meth:`create_checkpoint`. The sim state restore
-        is handled separately by :class:`_TeleopCheckpointStore` in
-        ``openso101.cli.il``."""
-        del checkpoint  # nothing to do
-        return None
+    def close(self) -> None:
+        if self._closed:
+            return
+        self.cancel_episode()
+        if self._dataset is not None:
+            self._dataset.stop_image_writer()
+            self._dataset.finalize()
+        self._closed = True

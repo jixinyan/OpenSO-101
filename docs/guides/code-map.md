@@ -21,6 +21,8 @@
 | USD 编译、Isaac Lab 场景和运行 worker | `src/openso101/scenes/isaaclab/` |
 | MP4 输入和米制位置恢复 | `src/openso101/scenes/video.py`、`metric_video.py` |
 | 键盘设备、命令类型和终端输入 | `src/openso101/teleop/devices/` |
+| 每步目标变化限制、恢复姿态保持 | `src/openso101/teleop/controls.py` |
+| 采集 checkpoint、完整场景与任务状态恢复 | `src/openso101/teleop/checkpoints.py` |
 | HDF5 与 LeRobot 录制 | `src/openso101/teleop/recorder/` |
 | LeRobot 动作单位转换 | `src/openso101/teleop/so101_mapping.py` |
 | IL 模型、数据读取与训练 | `src/openso101/il/` |

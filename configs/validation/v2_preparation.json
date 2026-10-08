@@ -51,7 +51,17 @@
       ]
     },
     {
-      "name": "keyboard_ik", "resource": "cpu", "depends_on": ["cpu_interfaces"],
+      "name": "teleop_controls", "resource": "cpu", "depends_on": ["recorded_state"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_teleop_controls.py", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/teleop_controls.json"],
+      "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
+      "requirements": [
+        {"report": "teleop_controls.json", "pointer": "/status", "equals": "actual_recorded_teleop_controls_verified"},
+        {"report": "teleop_controls.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "teleop_controls.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "keyboard_ik", "resource": "cpu", "depends_on": ["teleop_controls"],
       "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_keyboard_kinematics.py", "--native", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--output", "{output}/keyboard_ik.json"],
       "inputs": {"outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04", "outputs/rl_progress/v4_demonstrations_verified_858bc44_task/trajectory.hdf5": "b3aae1e2737381f23158427333aecd9cd72d96a6537145665307a500a588a739"},
       "requirements": [
@@ -100,7 +110,21 @@
       ]
     },
     {
-      "name": "il_training_preparation", "resource": "cpu", "depends_on": ["lerobot_export"],
+      "name": "lerobot_recorder", "resource": "cpu", "depends_on": ["lerobot_export", "teleop_controls"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_lerobot_recorder.py", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/lerobot_recorder"],
+      "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
+      "requirements": [
+        {"report": "lerobot_recorder/report.json", "pointer": "/status", "equals": "actual_lerobot_recorder_verified"},
+        {"report": "lerobot_recorder/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/cases/sync/frames", "minimum": 336},
+        {"report": "lerobot_recorder/report.json", "pointer": "/cases/async/frames", "minimum": 336},
+        {"report": "lerobot_recorder/report.json", "pointer": "/cases/sync/writers_closed", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/cases/async/writers_closed", "equals": true},
+        {"report": "lerobot_recorder/report.json", "pointer": "/gpu_tests_started", "equals": false}
+      ]
+    },
+    {
+      "name": "il_training_preparation", "resource": "cpu", "depends_on": ["lerobot_recorder"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--output", "{output}/il_training"],
       "requirements": [
         {"report": "il_training/report.json", "pointer": "/status", "equals": "actual_il_training_preparation_verified"},
@@ -172,7 +196,35 @@
       "requirements": [{"report": "native_regressions.json", "pointer": "/status", "equals": "native_program_checks_verified"}]
     },
     {
-      "name": "scene_runtime", "resource": "gpu", "depends_on": ["native_regressions"],
+      "name": "native_lift_checkpoint", "resource": "gpu", "depends_on": ["native_regressions", "recorder_checkpoint", "teleop_controls", "lerobot_recorder"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-Lift-v0", "--output", "{output}/native_lift_checkpoint"],
+      "requirements": [
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_lift_checkpoint/report.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
+      "name": "native_pick_place_checkpoint", "resource": "gpu", "depends_on": ["native_lift_checkpoint"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-PickPlace-v0", "--output", "{output}/native_pick_place_checkpoint"],
+      "requirements": [
+        {"report": "native_pick_place_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_pick_place_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_pick_place_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
+      ]
+    },
+    {
+      "name": "native_stack_checkpoint", "resource": "gpu", "depends_on": ["native_pick_place_checkpoint"],
+      "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_native_teleop_checkpoint.py", "--task", "OpenSO101-Stack-v0", "--output", "{output}/native_stack_checkpoint"],
+      "requirements": [
+        {"report": "native_stack_checkpoint/report.json", "pointer": "/status", "equals": "native_teleop_checkpoint_verified"},
+        {"report": "native_stack_checkpoint/report.json", "pointer": "/saved_frames", "equals": 8},
+        {"report": "native_stack_checkpoint/report.json", "pointer": "/native_resources_closed", "equals": true}
+      ]
+    },
+    {
+      "name": "scene_runtime", "resource": "gpu", "depends_on": ["native_stack_checkpoint"],
       "command": ["bash", "scripts/run_native_python.sh", "2", "scripts/check_scene_batch.py", "--cases", "configs/validation/scene_cases.json", "--phase", "gpu", "--cpu-report", "{output}/scene_batch/report.json", "--output", "{output}/scene_runtime"],
       "requirements": [{"report": "scene_runtime/report.json", "pointer": "/status", "equals": "scene_batch_runtime_verified"}]
     },

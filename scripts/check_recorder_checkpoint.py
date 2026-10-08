@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from openso101.scenes.models import file_digest
+from openso101.teleop.checkpoints import _TeleopCheckpointStore
 from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
 
 
@@ -35,11 +36,14 @@ def check_case(source, output, checkpoint_frames, written_frames, final_frames):
         for index in range(checkpoint_frames):
             add_frame(index)
         checkpoint = recorder.create_checkpoint()
+        store = _TeleopCheckpointStore()
+        store.capture(recorder)
         for index in range(checkpoint_frames, written_frames):
             add_frame(index)
         with pytest.raises(ValueError, match="整数帧数"):
             recorder.restore_checkpoint(True)
-        recorder.restore_checkpoint(checkpoint)
+        if store.restore(recorder) is not None:
+            raise RuntimeError("记录恢复需要保持独立的 CPU 验证范围")
         if recorder.total_frames != checkpoint_frames:
             raise RuntimeError("HDF5 checkpoint 恢复的帧数不一致")
         for index in range(checkpoint_frames, final_frames):
@@ -92,6 +96,7 @@ def main():
               "input_arrays_preserved": True, "invalid_fps_rejected": True,
               "inactive_checkpoint_rejected": True, "gpu_tests_started": False,
               "native_restore_verified": False, "task_success_verified": False,
+              "checkpoint_store_source_sha256": file_digest(Path("src/openso101/teleop/checkpoints.py")),
               "recorder_source_sha256": file_digest(Path("src/openso101/teleop/recorder/hdf5.py")),
               "validation_source_sha256": file_digest(Path(__file__))}
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")

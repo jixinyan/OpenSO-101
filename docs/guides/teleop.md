@@ -1,5 +1,9 @@
 # LeRobot SO101 Teleoperation
 
+遥操每步目标限制和恢复姿态保持位于 `teleop/controls.py`；checkpoint 位于 `teleop/checkpoints.py`。仿真状态使用 Isaac Lab `InteractiveScene.get_state`、`reset_to`，保存机器人、全部刚体、任务命令、命令计时、episode 时间、动作历史与 BDDL 进度。原生运行需要对应 GPU 报告。
+
+LeRobot 直接采集支持 checkpoint 后的帧数据和相机 PNG 裁剪，恢复前等待异步相机写入完成。相机输入在提交时复制，取消 episode 清理待保存相机文件；`close()` 关闭 image writer 和 Parquet writer。重新打开数据集需要 metadata、FPS、关节字段和双相机尺寸通过检查。完整仿真状态采集使用 HDF5，LeRobot 数据保存 action、observation.state 与双相机视频。
+
 This document captures the current working teleoperation setup for OpenSO-101.
 It is the handoff point for real SO101 leader-arm teleop, local HDF5 collection,
 and later LeRobot dataset/policy workflows.
