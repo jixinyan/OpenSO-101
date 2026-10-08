@@ -3,6 +3,7 @@ import math
 
 import torch
 from torch.utils.data._utils.collate import default_collate
+from lerobot.optim.factory import make_optimizer_and_scheduler
 from lerobot.policies.factory import make_policy, make_pre_post_processors
 
 
@@ -13,6 +14,9 @@ def validate_model_graph(cfg, dataset):
         raise ValueError("IL 模型程序检查需要指定 seed")
     torch.manual_seed(cfg.seed)
     policy = make_policy(cfg.policy, ds_meta=dataset.meta, rename_map=cfg.rename_map)
+    if not math.isfinite(cfg.optimizer.lr):
+        raise ValueError("IL optimizer lr 必须为有限数值")
+    optimizer, scheduler = make_optimizer_and_scheduler(cfg, policy)
     preprocessor, postprocessor = make_pre_post_processors(cfg.policy, dataset_stats=dataset.meta.stats)
     raw_batch = default_collate([dataset[0]])
     batch = preprocessor(raw_batch)
@@ -36,6 +40,8 @@ def validate_model_graph(cfg, dataset):
         maximum_gradient = max(maximum_gradient, magnitude)
     if gradient_parameters == 0 or nonzero_gradients == 0:
         raise ValueError("IL 模型没有产生实际 gradient")
+    if optimizer.state:
+        raise ValueError("IL 模型程序检查不能执行 optimizer 更新")
     current = {key: (raw_batch[key][:, -1] if cfg.policy.n_obs_steps > 1 else raw_batch[key])
                for key in cfg.policy.input_features}
     observation = preprocessor(current)
@@ -57,5 +63,9 @@ def validate_model_graph(cfg, dataset):
             "gradient_parameters": gradient_parameters, "nonzero_gradient_tensors": nonzero_gradients,
             "maximum_gradient": maximum_gradient, "loss": float(loss.detach()), "loss_components": losses,
             "inference_action": action.tolist(), "model_state_sha256": digest.hexdigest(),
+            "optimizer": type(optimizer).__name__,
+            "optimizer_learning_rates": [group["lr"] for group in optimizer.param_groups],
+            "scheduler": type(scheduler).__name__ if scheduler is not None else None,
+            "optimizer_configuration_verified": True,
             "optimizer_updates": 0, "model_forward_verified": True, "model_backward_verified": True,
             "model_inference_verified": True, "gpu_tests_started": False, "task_success_verified": False}

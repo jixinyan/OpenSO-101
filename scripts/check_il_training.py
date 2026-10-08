@@ -39,6 +39,7 @@ def main():
                 or not report["model_graph"]["model_forward_verified"]
                 or not report["model_graph"]["model_backward_verified"]
                 or not report["model_graph"]["model_inference_verified"]
+                or not report["model_graph"]["optimizer_configuration_verified"]
                 or report["model_graph"]["optimizer_updates"] != 0 or training_output.exists()):
             raise RuntimeError("IL 实际模型和数据准备验收未通过")
         reports[policy] = {"report": str(report_path), "sha256": file_digest(report_path),
@@ -52,6 +53,8 @@ def main():
         ("diffusion", ["--policy.crop_shape=[4000,4000]"], "crop_shape"),
         ("act", ["--num_workers=-1"], "num_workers 必须为非负整数"),
         ("act", ["--save_checkpoint=false"], "需要保留模型和 optimizer checkpoint"),
+        ("act", ["--policy.optimizer_lr=-1"], "Invalid learning rate"),
+        ("diffusion", ["--policy.optimizer_lr=nan"], "optimizer lr 必须为有限数值"),
     ]
     for index, (policy, extras, message) in enumerate(cases):
         destination = args.output / f"rejected_{index}"

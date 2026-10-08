@@ -4,7 +4,7 @@ ACT 与 Diffusion 使用 LeRobot 0.4.0 的训练入口。数据输入支持 Hub 
 
 ## CPU 准备
 
-`--prepare-only` 通过 LeRobot 与 Draccus 解析配置，读取实际 metadata、Parquet 和双相机视频，检查时间窗口、边界 padding 与 normalization。完整模型使用实际首帧数据执行 CPU forward、backward 和 inference；检查保存 loss、gradient、模型状态 SHA256、来源文件 SHA256 与配置。该流程执行零次 optimizer 更新，训练输出目录保持尚未创建状态。
+`--prepare-only` 通过 LeRobot 与 Draccus 解析配置，读取实际 metadata、Parquet 和双相机视频，检查时间窗口、边界 padding 与 normalization。完整模型使用实际首帧数据执行 CPU forward、backward 和 inference，并构造实际 optimizer 与 scheduler；检查保存 loss、gradient、模型状态 SHA256、来源文件 SHA256 与配置。该流程执行零次 optimizer 更新，训练输出目录保持尚未创建状态。
 
 ```bash
 OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh native \
