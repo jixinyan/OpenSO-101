@@ -8,6 +8,8 @@
 | SO-101 资产、关节、相机和 IK | `src/openso101/robots/so101/` |
 | Lift、PickPlace、Stack 与共享 MDP | `src/openso101/tasks/` |
 | RL 配置、backend、训练和评估 | `src/openso101/rl/` |
+| 统一 RL backend 执行与 RSL 原生执行 | `src/openso101/rl/execution.py`、`rsl_execution.py` |
+| 全部 TensorBoard event 读取与训练曲线 | `src/openso101/rl/plotting.py` |
 | 实际示范的连续监督 | `src/openso101/rl/sequence_supervision.py` |
 | GPU 空闲检查与进程监督 | `src/openso101/rl/gpu_guard.py`、`gpu_scope.py` |
 | 场景数据模型、bundle 和任务条件 | `src/openso101/scenes/models.py`、`bundle.py`、`program.py`、`bddl.py` |

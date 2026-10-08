@@ -7,6 +7,7 @@ import shutil
 import signal
 import subprocess
 from datetime import UTC, datetime
+from contextlib import ExitStack
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -66,21 +67,23 @@ def build_environment(args, *, training: bool, scene: Path | None = None, studen
 
         cfg.observations.student = StudentObservationsCfg()
     video = training and getattr(args, "video", False)
-    env = gym.make(args.task, cfg=cfg, render_mode="rgb_array" if video else None)
-    if video:
-        env = gym.wrappers.RecordVideo(
-            env, video_folder=str(args._video_dir), step_trigger=lambda step: step % args.video_interval == 0,
-            video_length=args.video_length, disable_logger=True,
-        )
-    if training and getattr(args, "_training_stop", None) is not None:
-        from .stopping import TrainingStopGuard
+    with ExitStack() as cleanup:
+        env = gym.make(args.task, cfg=cfg, render_mode="rgb_array" if video else None)
+        cleanup.callback(lambda: env.close())
+        if video:
+            env = gym.wrappers.RecordVideo(
+                env, video_folder=str(args._video_dir), step_trigger=lambda step: step % args.video_interval == 0,
+                video_length=args.video_length, disable_logger=True,
+            )
+        if training and getattr(args, "_training_stop", None) is not None:
+            from .stopping import TrainingStopGuard
 
-        env = TrainingStopGuard(env, args._training_stop)
+            env = TrainingStopGuard(env, args._training_stop)
+        cleanup.pop_all()
     return env
 
 
 def train(args):
-    configure_visible_gpu()
     if args.logger not in (None, "tensorboard"):
         raise ValueError("统一 backend 入口使用 --logger tensorboard；其他日志服务通过现有训练入口使用")
     config = TrainCfg.model_validate_json(Path(args.train_config).read_text()) if args.train_config else TrainCfg()
@@ -113,6 +116,7 @@ def train(args):
         raise ValueError("backend 训练通过 --load_run 加载 checkpoint.json 中的模型")
     if previous and (previous.task_id != args.task or previous.config.backend != config.backend or previous.config.algo != config.algo):
         raise ValueError("继续训练的任务、backend 或算法不匹配")
+    configure_visible_gpu()
     output = Path(args.output) if args.output else Path("logs") / config.backend / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     output.mkdir(parents=True, exist_ok=False)
     args._video_dir = output / "videos"
@@ -153,21 +157,24 @@ def train(args):
     from isaaclab.app import AppLauncher
 
     app = AppLauncher(headless=args.headless, enable_cameras=args.with_cameras or args.video).app
-    from .stopping import TrainingStopRequest
-
-    args._training_stop = TrainingStopRequest()
-    def terminate_training(signum, frame):
-        (output / "training_stop.json").write_text(json.dumps({
-            "status": "stop_requested", "signal": signum, "worker_pid": os.getpid(),
-            "training_git_sha": git_sha, "task": args.task, "seed": config.seed,
-            "requested_at": datetime.now(UTC).isoformat(),
-        }, indent=2) + "\n")
-        args._training_stop.signal = signum
-
-    signal.signal(signal.SIGTERM, terminate_training)
-    signal.signal(signal.SIGINT, terminate_training)
     env = None
+    previous_sigterm = signal.getsignal(signal.SIGTERM)
+    previous_sigint = signal.getsignal(signal.SIGINT)
     try:
+        from .stopping import TrainingStopRequest
+
+        args._training_stop = TrainingStopRequest()
+
+        def terminate_training(signum, frame):
+            (output / "training_stop.json").write_text(json.dumps({
+                "status": "stop_requested", "signal": signum, "worker_pid": os.getpid(),
+                "training_git_sha": git_sha, "task": args.task, "seed": config.seed,
+                "requested_at": datetime.now(UTC).isoformat(),
+            }, indent=2) + "\n")
+            args._training_stop.signal = signum
+
+        signal.signal(signal.SIGTERM, terminate_training)
+        signal.signal(signal.SIGINT, terminate_training)
         from isaaclab.utils.io import dump_yaml
 
         from .backends import get_backend
@@ -229,15 +236,18 @@ def train(args):
         print(json.dumps({"run": str(output.resolve()), "checkpoint": checkpoint.name, "status": "trained"}))
     finally:
         try:
-            if env is not None:
-                env.close()
+            try:
+                if env is not None:
+                    env.close()
+            finally:
+                app.close()
         finally:
-            app.close()
+            signal.signal(signal.SIGTERM, previous_sigterm)
+            signal.signal(signal.SIGINT, previous_sigint)
     return 0
 
 
 def evaluate(args, *, play=False, student_folder=None):
-    configure_visible_gpu()
     evaluation_git_sha = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=Path(__file__).resolve().parents[3],
         capture_output=True, text=True, check=True).stdout.strip()
@@ -253,6 +263,7 @@ def evaluate(args, *, play=False, student_folder=None):
     episodes_requested = getattr(args, "n_episodes", 10)
     if episodes_requested <= 0:
         raise ValueError("n_episodes 必须大于零")
+    configure_visible_gpu()
     from isaaclab.app import AppLauncher
 
     recording_output = getattr(args, "recording_output", None)
@@ -387,13 +398,13 @@ def evaluate_student(args):
 
 
 def distill(args):
-    configure_visible_gpu()
     teacher = Path(args.teacher_run).resolve()
     meta = CheckpointMeta.read(teacher)
     if meta.config.backend != "rsl_rl" or meta.config.algo != "ppo":
         raise ValueError("视觉蒸馏需要 rsl_rl PPO teacher")
     if args.iterations <= 0 or args.rollout_steps <= 0:
         raise ValueError("iterations 和 rollout_steps 必须大于零")
+    configure_visible_gpu()
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     args.task = meta.task_id

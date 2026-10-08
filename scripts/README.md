@@ -1,5 +1,7 @@
 # 脚本入口
 
+`check_training_curves.py` 从实际 TensorBoard event 读取全部 scalar，并与 TensorBoard 目录读取逐项比较，验证 `rl plot` 图表、来源 SHA256 与已有记录保护。
+
 | 操作 | 入口 |
 |---|---|
 | CPU 环境 | `run_cpu_python.sh native` 或 `run_cpu_python.sh mujoco` |
