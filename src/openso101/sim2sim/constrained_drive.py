@@ -1,7 +1,8 @@
+import json
+
 import mujoco
 import numpy as np
-import osqp
-from scipy import sparse
+from scipy.optimize import Bounds, NonlinearConstraint, minimize
 
 
 class ConstrainedImplicitDrive:
@@ -18,6 +19,7 @@ class ConstrainedImplicitDrive:
         self.max_actual_speed = np.zeros(len(actuator_ids))
         self.max_actual_force = np.zeros(len(actuator_ids))
         self.max_iterations = 0
+        self.torque = np.zeros(len(actuator_ids))
         model.opt.integrator = mujoco.mjtIntegrator.mjINT_EULER
         if np.any(model.dof_damping[self.dof_ids] != 0):
             raise ValueError("constrained drive 需要零被动关节 damping")
@@ -58,48 +60,66 @@ class ConstrainedImplicitDrive:
         timestep = self.model.opt.timestep
         metric = inertia + np.diag(timestep * self.damping + timestep**2 * self.stiffness)
         torque_bounds = self.model.actuator_forcerange[self.actuator_ids]
-        limits = self.limits - 1e-6
-        center = np.zeros(len(self.actuator_ids))
-        radius = np.max(np.abs(torque_bounds), axis=1)
-        for iteration in range(32):
-            base = self._predict(data, center)
-            jacobian = np.empty((len(center), len(center)))
-            for index in range(len(center)):
-                perturbation = center.copy()
-                delta = -1e-4 if center[index] + 1e-4 > torque_bounds[index, 1] else 1e-4
-                perturbation[index] += delta
-                jacobian[:, index] = (self._predict(data, perturbation) - base) / delta
-            intercept = base - jacobian @ center
-            error_force = self.stiffness * (targets - data.qpos[self.qpos_ids])
-            feedback = self.damping + timestep * self.stiffness
-            # 完整力矩反馈保留夹爪压紧力，实际速度约束通过物理响应矩阵求解。
-            response = np.eye(len(center)) + feedback[:, None] * jacobian
-            residual = feedback * intercept - error_force
-            quadratic = response.T @ np.linalg.solve(metric, response)
-            linear = response.T @ np.linalg.solve(metric, residual)
-            scale = np.max(np.abs(quadratic))
-            if not np.isfinite(scale) or scale <= 0:
-                raise RuntimeError("constrained drive 的控制响应矩阵无效")
-            solver = osqp.OSQP()
-            solver.setup(P=sparse.csc_matrix(quadratic / scale), q=linear / scale,
-                         A=sparse.csc_matrix(np.vstack([jacobian, np.eye(len(center))])),
-                         l=np.concatenate([-limits - intercept, np.maximum(torque_bounds[:, 0], center - radius)]),
-                         u=np.concatenate([limits - intercept, np.minimum(torque_bounds[:, 1], center + radius)]),
-                         verbose=False, eps_abs=1e-9, eps_rel=1e-9, max_iter=10000,
-                         adaptive_rho_interval=25)
-            solution = solver.solve(raise_error=True)
-            torque = solution.x
-            if not np.isfinite(torque).all() or np.any(torque < torque_bounds[:, 0] - 1e-8) or np.any(torque > torque_bounds[:, 1] + 1e-8):
-                raise RuntimeError("constrained drive 的力矩解无效")
-            predicted = self._predict(data, torque)
-            if np.all(np.abs(predicted) <= limits + 1e-8):
-                self.predicted_velocity = predicted
-                self.max_iterations = max(self.max_iterations, iteration + 1)
-                data.ctrl[self.actuator_ids] = torque
-                return predicted.copy()
-            center = torque
-            radius *= .5
-        raise RuntimeError(f"constrained drive 未找到满足实际速度限制的力矩: time={data.time}, velocity={predicted}")
+        limits = self.limits - 1e-5
+        weight = np.linalg.solve(metric, np.eye(len(self.actuator_ids)))
+        weight /= np.max(np.abs(weight))
+        error_force = self.stiffness * (targets - data.qpos[self.qpos_ids])
+        feedback = self.damping + timestep * self.stiffness
+        cached_torque, cached_velocity, cached_jacobian = None, None, None
+
+        def velocity(torque):
+            nonlocal cached_torque, cached_velocity, cached_jacobian
+            if cached_torque is None or not np.array_equal(torque, cached_torque):
+                cached_torque = torque.copy()
+                cached_velocity = self._predict(data, torque)
+                cached_jacobian = None
+            return cached_velocity
+
+        def response_jacobian(torque):
+            nonlocal cached_jacobian
+            base = velocity(torque)
+            if cached_jacobian is None:
+                cached_jacobian = np.empty((len(torque), len(torque)))
+                for index in range(len(torque)):
+                    lower, upper = torque.copy(), torque.copy()
+                    lower[index] = max(torque[index] - 1e-4, torque_bounds[index, 0])
+                    upper[index] = min(torque[index] + 1e-4, torque_bounds[index, 1])
+                    width = upper[index] - lower[index]
+                    if width <= 0:
+                        raise ValueError("实际 actuator 的力矩范围需要具有正数宽度")
+                    below = base if np.array_equal(lower, torque) else self._predict(data, lower)
+                    above = base if np.array_equal(upper, torque) else self._predict(data, upper)
+                    cached_jacobian[:, index] = (above - below) / width
+            return cached_jacobian
+
+        def objective(torque):
+            residual = torque + feedback * velocity(torque) - error_force
+            return float(.5 * residual @ weight @ residual)
+
+        def gradient(torque):
+            residual = torque + feedback * velocity(torque) - error_force
+            response = np.eye(len(torque)) + feedback[:, None] * response_jacobian(torque)
+            return response.T @ weight @ residual
+
+        # 约束直接使用实际 MuJoCo 预测步骤的关节速度。
+        solution = minimize(objective, self.torque, jac=gradient, method="SLSQP",
+            bounds=Bounds(torque_bounds[:, 0], torque_bounds[:, 1]),
+            constraints=NonlinearConstraint(velocity, -limits, limits, jac=response_jacobian),
+            options={"ftol": 1e-6, "maxiter": 100, "disp": False})
+        torque = solution.x
+        predicted = self._predict(data, torque)
+        if (not solution.success or not np.isfinite(torque).all()
+                or np.any(torque < torque_bounds[:, 0] - 1e-8) or np.any(torque > torque_bounds[:, 1] + 1e-8)
+                or np.any(np.abs(predicted) > self.limits)):
+            raise RuntimeError(json.dumps({"status": solution.message, "time": data.time,
+                "iterations": int(solution.nit), "predicted_velocity": predicted.tolist(),
+                "actual_velocity": data.qvel[self.dof_ids].tolist(), "limits": self.limits.tolist(),
+                "torque": torque.tolist(), "torque_bounds": torque_bounds.tolist()}, indent=2))
+        self.torque = torque.copy()
+        self.predicted_velocity = predicted
+        self.max_iterations = max(self.max_iterations, int(solution.nit))
+        data.ctrl[self.actuator_ids] = torque
+        return predicted.copy()
 
     def verify(self, data):
         velocity = data.qvel[self.dof_ids]
@@ -127,5 +147,6 @@ class ConstrainedImplicitDrive:
                 "maximum_optimization_iterations": self.max_iterations,
                 "actual_velocity_limits_verified": self.steps > 0,
                 "actual_torque_limits_verified": self.steps > 0,
-                "controller": "OSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+                "controller": "SLSQP_implicit_PD_with_actual_MuJoCo_step_constraints",
+                "optimizer_ftol": 1e-6, "constraint_speed_reserve_rad_s": 1e-5,
                 "integrator": "semi_implicit_Euler", "state_velocity_modified": False}
