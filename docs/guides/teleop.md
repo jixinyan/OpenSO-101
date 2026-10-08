@@ -32,14 +32,7 @@ robot visuals/colliders. The wrist sensor is spawned under:
 {ENV_REGEX_NS}/Robot/gripper/gripper_cam
 ```
 
-OpenSO-101 uses the USD's authored colliders verbatim (no custom spawn-time
-collision rewrites). The robot config matches
-[liorbenhorin/lerobot_so101_teleop](https://github.com/liorbenhorin/lerobot_so101_teleop)
-in trusting the upstream asset; combined with compliant low-stiffness PD
-gains (e.g. gripper `k=4 / d=0.3`), the jaws pinch the cube reliably without
-silently disabled colliders. Earlier custom collision-spawn functions caused
-PhysX `MeshMergeCollisionAPI`-vs-standalone-`CollisionAPI` conflicts that
-silently dropped gripper collision.
+遥操使用 `SO_ARM101_TELEOP_CFG` 的 USD collision 和 physics material。夹爪 stiffness 为 `4`，damping 为 `0.3`；全部参数位于 `robots/so101/so_arm101.py`。抓取与任务成功需要原生运行报告。
 
 ## Cameras
 
@@ -197,39 +190,19 @@ openso101 il replay \
 
 实际运行覆盖 PickPlace 的第 120–179 帧、自定义场景全部 12 帧及旧键盘数据的前 60 帧；三项进程均正常退出，动作和状态恢复误差均为零。报告见 [回放运行记录](../validation/2026-09-29/README.md)。
 
-## Diagnostics
+## 运行检查
 
-If contact errors appear again:
+`--profile-teleop` 保存 leader 读取、仿真步骤、采集和循环耗时，以及关节跟踪误差。GPU 进程、设备空闲和停止控制使用 [GPU 使用指南](gpu-usage.md) 中的入口。
 
-1. Check stale Isaac processes first:
-
-   ```bash
-   nvidia-smi
-   ```
-
-   Old `openso101/bin/python` or Isaac processes can keep several GB of GPU
-   memory and trigger PhysX allocation failures at first contact.
-
-2. Confirm gripper/jaw collision approximation after spawn:
-
-   ```text
-   /World/envs/env_0/Robot/gripper/collisions approximation=convexDecomposition
-   /World/envs/env_0/Robot/jaw/collisions approximation=convexDecomposition
-   ```
-
-3. Use `--profile-teleop` to inspect leader read time, sim step time, recording
-   time, loop time, and joint tracking error.
-
-Known useful validation commands:
+实际采集恢复检查读取保存的双相机 HDF5 episode：
 
 ```bash
-conda run -n openso101 env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest \
-  tests/test_so101_teleop_scene_cfg.py \
-  tests/test_lerobot_so101_mapping.py \
-  tests/test_hdf5_teleop_recorder.py \
-  tests/test_teleop_agent_keyboard.py \
-  -q
-
-python3 -m compileall -q src/openso101 tests
-git diff --check
+OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh native \
+  scripts/check_recorder_checkpoint.py \
+  --episode outputs/my_dataset/episodes/episode_000000.hdf5 \
+  --output outputs/rl_progress/hdf5_checkpoint_check
 ```
+
+`check_teleop_controls.py` 检查实际记录目标的每步变化限制和姿态保持。`check_lerobot_recorder.py` 使用指定的 328 帧来源检查同步、异步直接采集、checkpoint 裁剪、取消、追加采集和 writer 关闭。统一 CPU 流程通过配置中保存的来源 SHA256 验证输入。
+
+原生恢复使用 `check_native_teleop_checkpoint.py` 检查场景、任务命令、episode 时间和动作历史。该入口通过项目 GPU 使用检查执行，报告分别保存原生恢复、资源关闭和任务成功状态。

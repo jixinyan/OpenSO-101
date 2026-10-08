@@ -73,7 +73,7 @@ v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL b
 OpenSO-101 is an end-to-end unified robot learning framework for the [LeRobot SO-101][so101-url] 6-DoF arm built on [NVIDIA Isaac Lab][isaaclab-url]. It bundles three pillars of modern robot learning behind one CLI and one Python API:
 
 1. **Reinforcement Learning** — PPO via [`rsl_rl`][rsl-rl-url] plus rsl_rl's `Distillation` for teacher → student knowledge transfer.
-2. **Imitation Learning** — leader-arm teleop and record data with [LeRobot dataset][lerobot-url] compatible format, and training via the official `lerobot.scripts.train` CLI (ACT, Diffusion).
+2. **Imitation Learning** — 使用 LeRobot 兼容数据集采集示范，ACT、Diffusion 使用官方 `lerobot.scripts.lerobot_train` 入口。配置与完整模型检查见 [IL 指南](docs/guides/il-training.md)。
 3. **Sim-to-Real Robustness** — visual, observation, and physics domain randomization shared across all three built-in tasks; a real-arm deploy bridge that drives the Feetech follower via LeRobot's `SO101Follower` while streaming OpenCV camera frames into the policy.
 
 The project is organized so a researcher can clone, install, and reach a working `openso101 envs list` in well under an hour — and so a downstream contributor can register a custom task with one decorator. Each pillar exposes a stable CLI verb and a stable Python entry point; swapping in a custom algorithm or task does not require forking the framework.
@@ -211,26 +211,29 @@ openso101 il push \
   --repo-id <your-hf-username>/openso101_pickplace
 ```
 
-**Train an IL policy via LeRobot** (delegates to `lerobot.scripts.train`):
+**LeRobot 配置与模型检查**：`--prepare-only` 使用实际数据完成 CPU 检查。当前 GPU 计算保持停止，训练需要重新授权。
 
 ```bash
-openso101 il train --policy act --dataset <your-hf-username>/openso101_pickplace
-# or
-openso101 il train --policy diffusion --dataset <your-hf-username>/openso101_pickplace
+openso101 il train --policy act \
+  --dataset outputs/my_lerobot_dataset --prepare-only \
+  --preparation-output outputs/rl_progress/il_preparation/act_check
+openso101 il train --policy diffusion \
+  --dataset outputs/my_lerobot_dataset --prepare-only \
+  --preparation-output outputs/rl_progress/il_preparation/diffusion_check
 ```
 
-**Play the IL checkpoint in sim** (`il train` writes to `logs/lerobot/openso101_<policy>/<timestamp>/`; the trained weights land under `checkpoints/last/pretrained_model`):
+**IL 策略回放**：训练默认保存到 `outputs/rl_progress/il/<policy>/<timestamp>/`，模型位于 `checkpoints/last/pretrained_model`。
 
 ```bash
 openso101 il play --task OpenSO101-PickPlace-v0 \
-  --policy-path logs/lerobot/openso101_act/<timestamp>/checkpoints/last/pretrained_model
+  --policy-path outputs/rl_progress/il/act/<timestamp>/checkpoints/last/pretrained_model
 ```
 
 **Deploy the same checkpoint on the real robot:**
 
 ```bash
 openso101 sim2real deploy \
-  --policy-path logs/lerobot/openso101_act/<timestamp>/checkpoints/last/pretrained_model \
+  --policy-path outputs/rl_progress/il/act/<timestamp>/checkpoints/last/pretrained_model \
   --follower-port /dev/ttyACM1 \
   --follower-id follower_arm_1 \
   --wrist-camera-index 0 --overhead-camera-index 2
@@ -254,7 +257,7 @@ The full CLI surface:
 |      | `plot` | Plot training curves from a run dir |
 | `il` | `record` | Record teleop demos to HDF5 + LeRobot, with async leader polling |
 |      | `push` | Push a LeRobot dataset to the Hugging Face Hub |
-|      | `train` | Shell out to `lerobot.scripts.train` (ACT, Diffusion, ...) |
+|      | `train` | ACT、Diffusion 的 CPU 准备与受 GPU 使用检查管理的 LeRobot 训练 |
 |      | `play` | Load a LeRobot checkpoint and roll it out in sim |
 |      | `replay` | Replay a recorded teleop episode |
 | `sim2real` | `deploy` | Drive the real SO-101 from a LeRobot checkpoint |

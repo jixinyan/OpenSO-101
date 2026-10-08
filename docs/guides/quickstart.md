@@ -1,109 +1,54 @@
-# Quickstart
+# 快速操作
 
-Get from a fresh OpenSO-101 install to a trained PPO checkpoint in
-under 20 minutes.
+安装与环境要求见 [安装指南](install.md)。当前 GPU 计算与 RL 训练保持停止，实际验收记录见 [v2 状态](v2-status-2026-10-08.md)。在仓库根目录运行命令；每次验证使用尚未存在的输出目录，保存全部报告与来源文件。
 
-> Assumes you've completed [`install.md`](install.md) and can run
-> `openso101 envs list` successfully.
+## CPU 验证
 
-## 1. Smoke Test the Sim (1 min)
-
-Open `OpenSO101-PickPlace-v0` with a random policy:
+`jd_B300` 的 `native` 与 `mujoco` 环境支持以下操作。源码检查验证 Python import、Shell 语法和命令帮助。
 
 ```bash
-openso101 envs random --task OpenSO101-PickPlace-v0 --steps 200
+OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh mujoco \
+  -m openso101.cli.main validate source \
+  --output outputs/rl_progress/source_check
 ```
 
-Expected: an Isaac Sim window opens, you see the SO-101 flailing
-randomly above a green cube on a table, and the script exits.
-This confirms Isaac Lab + the OpenSO-101 task registration both work.
-
-## 2. Train PPO (10–15 min on RTX 4080)
+统一 CPU 流程读取 `configs/validation/v2_preparation.json` 中指定的实际模型、数据与资产，完成场景、视频标定、键盘 IK、采集恢复、LeRobot、IL 模型和 MuJoCo 检查。
 
 ```bash
-openso101 rl train \
-  --task OpenSO101-PickPlace-v0 \
-  --algo ppo \
-  --headless \
-  --max_iterations 1500
+OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh mujoco \
+  -m openso101.cli.main validate run configs/validation/v2_preparation.json \
+  --phase cpu --output outputs/rl_progress/v2_cpu_validation
 ```
 
-> **Smaller GPU?** Default `num_envs=4096` assumes a workstation GPU. On
-> consumer hardware (≤ 8 GB VRAM or ≤ 32 GB RAM), add `--num_envs 128`
-> (state-only) or `--num_envs 64` (with `--visual-dr`) to avoid getting
-> OOM-killed. See `docs/guides/install.md` for the full memory budget
-> table.
-
-Watch the W&B dashboard (`Episode/Reward/total`) climb from −2.0 to
-+8.0 over ~1500 iterations.
-
-Output logs land under `logs/rsl_rl/pick_place/<timestamp>/`.
-The runner saves both `model_<iter>.pt` (every N iters) and
-`model_best.pt` (whenever 100-episode mean reward hits a new high).
-
-## 3. Replay the Best Checkpoint (1 min)
+本地 LeRobot 数据可以独立检查完整 ACT 或 Diffusion 模型：
 
 ```bash
-openso101 rl play \
-  --task OpenSO101-PickPlace-v0 \
-  --checkpoint logs/rsl_rl/pick_place/<run>/model_best.pt
+OPENSO101_REPO="$PWD" bash scripts/run_cpu_python.sh native \
+  -m openso101.cli.main il train --policy act \
+  --dataset outputs/my_lerobot_dataset --prepare-only \
+  --preparation-output outputs/rl_progress/il_preparation/act_check
 ```
 
-Isaac Sim opens and runs the trained policy. You should see the arm
-pinch the cube, lift, and drop it on the goal marker.
+## GPU 验收与训练
 
-## 4. (Optional) Record a Teleop Demo
+GPU 启动与进程检查见 [GPU 使用](gpu-usage.md)。重新授权后，统一 GPU 验收使用通过 CPU 检查的相同源码、配置、数据与输出目录；每个程序最多使用一张空闲的物理 GPU 2。原生验收包含场景、Lift、PickPlace、Stack checkpoint 和保存策略的独立运行。
 
-If you have a real SO-101 leader arm plugged in:
+训练入口见 [训练与视觉策略](v2-training.md) 和 [IL 配置与模型](il-training.md)。成功率读取实际任务 termination，训练曲线、模型文件和独立评估分别保存。当前已有 PPO 的独立评估结果为 0/100；MuJoCo 已保存策略的验证结果为 0/4。
+
+## 键盘与采集
+
+图形界面的键盘采集方式如下，需要已授权的 GPU 运行环境：
 
 ```bash
-openso101 il record \
-  --task OpenSO101-PickPlace-v0 \
-  --leader-port /dev/ttyACM0 \
-  --leader-id leader_arm_1 \
-  --repo-root teleop_data/my_first_demo
+openso101 il record --task OpenSO101-PickPlace-v0 \
+  --teleop-device keyboard --keyboard-input window \
+  --repo-root outputs/rl_progress/keyboard_pick_place
 ```
 
-- Move the leader arm to teleoperate the simulated follower.
-- Press `S` to mark the current episode SUCCESS, save, and exit.
-- Press `Q` to discard the episode and exit.
-- Press `C` to checkpoint the current frame; press `R` to restore
-  robot + env state to the most recent checkpoint (leader takes over
-  from there).
+`S` 保存成功记录并退出，`Q` 取消记录并退出，`C` 保存 checkpoint，`R` 恢复 checkpoint 与姿态保持。SSH 终端的控制方式、按键和双相机设置见 [遥操作指南](teleop.md)。
 
-## 5. (Optional) Push the Dataset
+HDF5 采集保存双相机、动作、本体观测与仿真状态。LeRobot 导出、数据读取和策略模型使用统一的关节动作转换。CPU 程序验证、人工键盘成功采集和原生状态恢复分别保存验收结果。
 
-```bash
-openso101 il push \
-  --repo-root teleop_data/my_first_demo \
-  --repo-id <your-hf-username>/my-first-so101-demo
-```
+## 功能入口
 
-The dataset will appear at `https://huggingface.co/datasets/<your-hf-username>/my-first-so101-demo`.
-
-## Next Steps
-
-- [Add a custom task](add_a_task.md) — write your own.
-- [Teleop guide](teleop.md) — full teleop setup and dataset workflow.
-- Tasks & envs — how the framework is organized: see `OpenSO101EnvCfg` and the
-  `register_task` decorator in `src/openso101/envs/`.
-- RL algorithms — PPO via RSL-RL; see the runner cfgs under
-  `src/openso101/tasks/*/agents/`.
-
-## CLI Cheat Sheet
-
-```bash
-# Discovery
-openso101 envs list
-openso101 envs preview --task OpenSO101-PickPlace-v0   # with cameras
-
-# RL
-openso101 rl train --task <gym-id> --algo ppo [--headless --max_iterations N]
-openso101 rl play  --task <gym-id> --checkpoint <path>
-openso101 rl plot  --task pick_place [--save]
-
-# IL
-openso101 il record --task <gym-id> --leader-port <port> --leader-id <id> --repo-root <dir>
-openso101 il push   --repo-root <dir> --repo-id <hf-id>
-openso101 il replay --episode <hdf5-path>
-```
+[代码目录](code-map.md) 与 [脚本目录](../../scripts/README.md) 列出各功能的位置。场景入口见 [场景管理](scene-management.md) 和 [自定义场景](custom-scenes.md)；策略迁移见 [sim2sim](sim2sim.md)。
