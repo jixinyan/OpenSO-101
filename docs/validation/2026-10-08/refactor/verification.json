@@ -1,0 +1,31 @@
+{
+  "status": "current_source_cpu_ci_and_package_verified",
+  "git_sha": "c5daa915a7b4ec1bef297a9769b6bcb53c399949",
+  "cpu_stages": 11,
+  "ci_tests": 60,
+  "source_modules": 176,
+  "project_imports": 769,
+  "reports": {
+    "suite.json": "1c8f14253b759f27404eba66ad0993715e474e982a6f74563a2676217bfc07f0",
+    "ci_run.json": "2604a9cd228c6a915532ccdf553d941cedc38c915bac8a40303c2099d60ce889",
+    "ci_source.json": "91b37c4196b845a8a6abdaa9b6e3dd93586d105d6d9e112a92cd93095d8b8dd6",
+    "ci_geometry.json": "49116ae13f8cc90222451e66774c816c43144420dc10eb1f2accbb524554bf40",
+    "ci_interfaces.xml": "41d53ed409941a2681d1e9d63e202e56aa49249662920baceb6baaa7a196bd02",
+    "package.json": "500ce307f24dd8c1d809b01fc1506493f033c6c150247d11eb0c6e7eeb571a43",
+    "ci_package.json": "7d63cfda8f65d94749b46964a77a6d51f879b4062c07fa8679a666647e01cc65",
+    "suite/source_layout/report.json": "91b37c4196b845a8a6abdaa9b6e3dd93586d105d6d9e112a92cd93095d8b8dd6",
+    "suite/cpu_geometry/report.json": "0c1704b89f34c3e33ea4a2d78a8fc724e61e832bab747c3cfe76dea6ffa360ee",
+    "suite/terminal_keyboard/report.json": "085ef040d9d03b94b3af243b48c0840debb2beaa30892475ad5c38ff1bde4432",
+    "suite/keyboard_ik.json": "4b890fdb567c6a5bd8e260b86f8474d5b0fc1051dae18e888ea79c36a02e03b9",
+    "suite/metric_video/report.json": "11b4a20d9444a0e4e1840489faba9ee1a3daebd6cf392df205cacfe6d192e552",
+    "suite/scene_batch/report.json": "0a410fbb53b370f43cdadb7ab5046e209697e1d6bd1a729c12d4773a017ef7b2",
+    "suite/lerobot.json": "184a27e4beb241dc2109bdb2e2c5e0be14d9500024cf066aa1aa97d76c9c90fd",
+    "suite/policy_history/report.json": "24e8a75bdb999803c26aa331d0945226ed474688a3e1a0ffe0d34fb4ee319d6b",
+    "suite/demonstration_updates/report.json": "3a87479f59591744e94aede5817fcee8ee9201b8edad63e1384663a27e3db98e",
+    "suite/mujoco_policy/report.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+    "suite/gpu_inventory.json": "1bb36af56afc64eb2566ed955dfc47de3275024332d9a76f7f060df76c24c161"
+  },
+  "gpu_tests_started": false,
+  "native_physics_verified": false,
+  "full_v2_verified": false
+}

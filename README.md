@@ -66,7 +66,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About the Project
 
-v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL backend、键盘采集和视觉蒸馏。当前功能、实际检查范围及尚未完成的验收见 [v2 状态记录](docs/guides/v2-status-2026-10-07.md)；使用方法见 [自定义场景](docs/guides/custom-scenes.md) 和 [训练与蒸馏](docs/guides/v2-training.md)。生成场景的成功采集、策略收敛与真机任务仍需验收。
+v2 已提供资产与场景工具、RGB 视频 real2sim agent loop、四个 RL backend、键盘采集和视觉蒸馏。当前功能、实际检查范围及尚未完成的验收见 [v2 状态记录](docs/guides/v2-status-2026-10-08.md)；使用方法见 [自定义场景](docs/guides/custom-scenes.md) 和 [训练与蒸馏](docs/guides/v2-training.md)。生成场景的成功采集、策略收敛与真机任务仍需验收。
 
 当前优先验收 MuJoCo sim2sim 的实际动力学、夹爪接触与策略反馈，键盘遥操作和 agentic real2sim 同步推进。RL 训练保持停止，真机工作暂缓。验收条件见 [v2 迭代安排](docs/guides/v2-priorities.md)。
 

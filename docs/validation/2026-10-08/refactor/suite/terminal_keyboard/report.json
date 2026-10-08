@@ -1,0 +1,13 @@
+{
+  "status": "actual_terminal_keyboard_interface_verified",
+  "counts": {
+    "tests": 4,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 0
+  },
+  "junit_sha256": "4e0921db8027b1344274031f6ba20d9dc89c053170856dea169d2bc2d9f7bab3",
+  "source_sha256": "bc7682cc8246c46fac9c31bd75be1bae22777cafede088327bd33cda451a19fb",
+  "gpu_tests_started": false,
+  "physics_keyboard_collection_verified": false
+}
