@@ -15,6 +15,8 @@ from .lerobot import REQUIRED_CAMERA_NAMES, ensure_required_cameras
 from openso101.robots import SO101_SIM_JOINT_NAMES
 
 from ..so101_mapping import LEROBOT_SO101_ACTION_NAMES, SO101_TELEOP_CONTROL_JOINT_NAMES
+from ..simulation import RecordedSimulation, recorded_simulation
+from ..timing import control_rate_fps
 
 HDF5_EPISODE_GLOB = "episode_*.hdf5"
 REQUIRED_HDF5_DATASETS: tuple[str, ...] = (
@@ -83,6 +85,7 @@ def validate_hdf5_episode(path: str | Path) -> None:
     """Validate the HDF5 layout used by local teleop recording."""
 
     with h5py.File(path, "r") as h5:
+        recorded_simulation(h5.attrs)
         for dataset_name in REQUIRED_HDF5_DATASETS:
             if dataset_name not in h5:
                 raise ValueError(f"{path} is missing required dataset: {dataset_name}")
@@ -198,6 +201,7 @@ class OpenSO101HDF5TeleopRecorder:
         compression: str | None = "lzf",
         env_id: str | None = None,
         scene_metadata: Mapping[str, str] | None = None,
+        simulation: RecordedSimulation | None = None,
     ):
         self.root = Path(root)
         self.task_name = task_name
@@ -209,6 +213,11 @@ class OpenSO101HDF5TeleopRecorder:
         self.scene_metadata = dict(scene_metadata or {})
         if set(self.scene_metadata) - {"scene_sha256", "scene_relative_path"}:
             raise ValueError("scene_metadata 包含未知字段")
+        if simulation is not None and (simulation.env_id != env_id or
+                control_rate_fps(simulation.physics_dt, simulation.decimation) != fps or
+                simulation.scene_sha256 != self.scene_metadata.get("scene_sha256")):
+            raise ValueError("HDF5 仿真参数与 env_id、FPS 或场景不一致")
+        self.simulation = simulation
         self.cameras = dict(cameras)
         self.fps = fps
         self.dataset_id = dataset_id or "local/openso101_pickplace_teleop"
@@ -303,6 +312,9 @@ class OpenSO101HDF5TeleopRecorder:
             h5.attrs["env_id"] = self.env_id
         for key, value in self.scene_metadata.items():
             h5.attrs[key] = value
+        if self.simulation is not None:
+            for key, value in self.simulation.model_dump(exclude_none=True).items():
+                h5.attrs[key] = value
         h5.attrs["fps"] = int(self.fps)
         h5.attrs["success"] = bool(success)
         h5.attrs["joint_names"] = np.asarray(SO101_TELEOP_CONTROL_JOINT_NAMES, dtype=h5py.string_dtype())

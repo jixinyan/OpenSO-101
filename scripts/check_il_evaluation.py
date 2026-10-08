@@ -1,6 +1,8 @@
 import argparse
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import h5py
@@ -14,6 +16,7 @@ from openso101.il.policies.validation import model_state_digest
 from openso101.il.policies.simulation import load_simulation_settings, attach_simulation_settings, SIMULATION_SETTINGS_FILE
 from openso101.scenes.models import file_digest
 from openso101.teleop.recorder.hdf5 import validate_hdf5_episode
+from openso101.teleop.simulation import recorded_simulation
 from openso101.teleop.so101_mapping import batched_action_to_motor_units, batched_motor_units_to_action
 
 
@@ -79,6 +82,8 @@ def policy_actions(checkpoint: Path, episode: Path) -> dict:
     with h5py.File(episode) as stream:
         source_fps = int(stream.attrs["fps"])
         settings = load_simulation_settings(checkpoint, source_fps)
+        if settings.recorded_simulation != recorded_simulation(stream.attrs):
+            raise ValueError("IL 模型保存的来源物理参数与实际 episode 不一致")
         for step in range(16):
             indices = list(range(step * 3, step * 3 + 3))
             positions = torch.from_numpy(stream["observations/qpos"][indices]).float()
@@ -141,6 +146,19 @@ def main():
         result = policy_actions(args.checkpoints / name / "pretrained_model", args.episode)
         policies[name] = result
         (args.output / f"{name}.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
+    rejected_requests = []
+    checkpoint = args.checkpoints / "act/pretrained_model"
+    requests = [([command, "--task", "OpenSO101-Lift-v0"], "采集任务不一致") for command in ("play", "eval")]
+    requests.append((["eval", "--task", "OpenSO101-PickPlace-v0", "--output", str(checkpoint / "evaluation.json")],
+                     "模型目录之外"))
+    for arguments, expected_message in requests:
+        result = subprocess.run([sys.executable, "-m", "openso101.cli.main", "il", *arguments,
+                                 "--policy-path", str(checkpoint)], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0 or expected_message not in result.stderr or "AppLauncher" in result.stderr:
+            raise RuntimeError("实际 IL 入口需要在启动 Isaac 前拒绝来源参数或报告路径不一致的请求")
+        rejected_requests.append({"arguments": arguments, "native_startup_prevented": True})
+    if (checkpoint / "evaluation.json").exists():
+        raise ValueError("IL 输入检查期间创建了模型目录中的评估报告")
     runtime_settings = args.checkpoints / "act/pretrained_model" / SIMULATION_SETTINGS_FILE
     if runtime_settings.is_file():
         checkpoint = args.output / "checkpoint_settings/checkpoints/last/pretrained_model"
@@ -167,10 +185,12 @@ def main():
     result = {"status": "actual_recorded_il_evaluation_verified", "statistics": statistics, "policies": policies,
               "source_episode_sha256": episode_digest, "source_unchanged": True,
               "checkpoint_simulation_settings_verified": runtime_settings_verified,
+              "recorded_simulation_preserved": True, "rejected_requests": rejected_requests,
               "source_files": {path: file_digest(Path(path)) for path in (
                   "src/openso101/il/evaluation.py", "src/openso101/il/policies/inference.py",
                   "src/openso101/il/policies/simulation.py",
-                  "src/openso101/il/runners/evaluator.py", "src/openso101/teleop/success.py")},
+                  "src/openso101/il/runners/evaluator.py", "src/openso101/teleop/success.py",
+                  "src/openso101/teleop/simulation.py")},
               "validator_sha256": file_digest(Path(__file__)), "gpu_tests_started": False,
               "native_physics_verified": False, "new_policy_task_success_verified": False,
               "training_started": False}

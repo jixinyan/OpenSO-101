@@ -239,6 +239,7 @@ def _cmd_record(args: argparse.Namespace, cleanup: ExitStack) -> int:
     import openso101.tasks  # noqa: F401
     from openso101.teleop.camera_viewports import open_teleop_viewports
     from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder
+    from openso101.teleop.simulation import runtime_simulation
     from openso101.teleop.lerobot_interface import LeRobotSO101Leader
     from openso101.teleop.recorder.lerobot import (
         OpenSO101LeRobotRecorder,
@@ -347,6 +348,7 @@ def _cmd_record(args: argparse.Namespace, cleanup: ExitStack) -> int:
                     sim_joint_names=sim_joint_names,
                     env_id=args.task,
                     scene_metadata=scene_metadata,
+                    simulation=runtime_simulation(unwrapped_env, args.task, scene_metadata),
                 )
             else:
                 # Direct-LeRobot record path (programmatic, not exposed on the
@@ -782,10 +784,13 @@ def _cmd_replay(args: argparse.Namespace, cleanup: ExitStack) -> int:
     import h5py
 
     with h5py.File(episode_path, "r") as h5:
+        from openso101.teleop.simulation import recorded_simulation
+
+        source_simulation = recorded_simulation(h5.attrs)
         task_profile = h5.attrs.get("task_profile")
-        native_recording = task_profile is not None
-        if native_recording and task_profile != "grasp_v4":
-            raise ValueError("原生任务回放需要 grasp_v4")
+        if task_profile not in (None, "teleop", "grasp_v3", "grasp_v4"):
+            raise ValueError("原生回放支持 teleop、grasp_v3 和 grasp_v4 来源")
+        native_recording = task_profile in ("grasp_v3", "grasp_v4")
         if native_recording and "sim/environment_origin" not in h5:
             raise ValueError("原生采集需要记录 environment_origin，才能恢复到当前并行环境")
         environment_mode = h5.attrs.get("environment_mode")
@@ -879,9 +884,10 @@ def _cmd_replay(args: argparse.Namespace, cleanup: ExitStack) -> int:
         )
         if native_recording:
             from openso101.tasks.shared.grasp_v4 import configure_grasp_v4
-            from openso101.tasks.shared.grasp_v3 import configure_environment_mode
+            from openso101.tasks.shared.grasp_v3 import configure_grasp_v3, configure_environment_mode
 
-            configure_grasp_v4(env_cfg, args.task)
+            configure_profile = configure_grasp_v4 if task_profile == "grasp_v4" else configure_grasp_v3
+            configure_profile(env_cfg, args.task)
             configure_environment_mode(env_cfg, environment_mode)
             env_cfg.reward_discount = float(reward_discount)
             if not np.isclose(env_cfg.sim.dt, physics_dt) or not np.isclose(
@@ -902,6 +908,11 @@ def _cmd_replay(args: argparse.Namespace, cleanup: ExitStack) -> int:
             camera.height, camera.width = height, width
         if getattr(args, "scene", None):
             env_cfg.configure_scene(args.scene)
+
+        if source_simulation is not None:
+            env_cfg.sim.dt = source_simulation.physics_dt
+            env_cfg.decimation = source_simulation.decimation
+            env_cfg.sim.render_interval = env_cfg.decimation
 
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
@@ -1043,9 +1054,10 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
     if getattr(args, "action_mode", "teleop") != "teleop":
         raise ValueError("LeRobot 绝对关节位置控制需要 teleop action mode")
     args.policy_path = str(resolve_policy_path(args.policy_path))
-    from openso101.il.policies.simulation import load_simulation_settings, apply_simulation_settings
+    from openso101.il.policies.simulation import load_simulation_settings, configure_policy_simulation, validate_simulation_request
 
     settings = load_simulation_settings(Path(args.policy_path), getattr(args, "control_fps", None))
+    validate_simulation_request(settings, args.task, getattr(args, "scene", None))
 
     simulation_app = _launch_isaac_app(args, cleanup, enable_cameras=True)
 
@@ -1068,11 +1080,7 @@ def _cmd_play(args: argparse.Namespace, cleanup: ExitStack) -> int:
             use_fabric=not args.disable_fabric,
         )
         # LeRobot 使用六个关节的绝对位置控制。
-        env_cfg.configure_action_mode(getattr(args, "action_mode", "teleop"))
-        env_cfg.configure_cameras(True)
-        if getattr(args, "scene", None):
-            env_cfg.configure_scene(args.scene)
-        apply_simulation_settings(env_cfg, settings)
+        configure_policy_simulation(env_cfg, settings, args.task, getattr(args, "scene", None))
         if args.num_envs is None and hasattr(env_cfg, "scene"):
             env_cfg.scene.num_envs = 1
 

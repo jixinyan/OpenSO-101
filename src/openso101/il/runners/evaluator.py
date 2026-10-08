@@ -6,24 +6,26 @@ from pathlib import Path
 
 from openso101.il.runtime import _launch_isaac_app, resolve_policy_path, validate_positive_count
 from openso101.scenes.models import file_digest
-from openso101.il.policies.simulation import load_simulation_settings, apply_simulation_settings
+from openso101.il.policies.simulation import load_simulation_settings, configure_policy_simulation, validate_simulation_request
 
 
-def configure_evaluation(cfg, *, environments: int, seconds: float, scene=None, settings=None):
+def configure_evaluation(cfg, *, task: str, environments: int, seconds: float, scene=None, settings=None):
     from isaaclab.envs.mdp import time_out
     from isaaclab.managers import TerminationTermCfg
     from openso101.teleop.success import task_success_vector
 
-    cfg.configure_action_mode("teleop")
-    cfg.configure_cameras(True)
-    if scene is not None:
-        cfg.configure_scene(scene)
-    apply_simulation_settings(cfg, settings)
+    configure_policy_simulation(cfg, settings, task, scene)
     cfg.scene.num_envs = environments
     cfg.episode_length_s = seconds
     if hasattr(cfg.scene, "ee_frame") and cfg.scene.ee_frame is not None:
         cfg.scene.ee_frame.debug_vis = False
     success = TerminationTermCfg(func=task_success_vector)
+    source = settings.recorded_simulation if settings is not None else None
+    if source is not None and source.task_profile.startswith("grasp_") and task == "OpenSO101-Lift-v0":
+        from openso101.tasks.shared.grasp_profile import HeldLiftSuccess
+
+        success = TerminationTermCfg(func=HeldLiftSuccess, params={"minimal_height": 0.04, "goal_radius": 0.05,
+            "command_name": "object_pose", "settle_seconds": 0.25, "force_threshold": 0.5})
     if getattr(cfg, "scene_spec", None) is not None:
         from openso101.scenes.isaaclab.runtime import task_failure
 
@@ -84,12 +86,15 @@ def evaluate_il_policy(args) -> int:
         raise ValueError("episode_length_s 必须为有限的正数")
     folder = resolve_policy_path(args.policy_path)
     settings = load_simulation_settings(folder, getattr(args, "control_fps", None))
+    validate_simulation_request(settings, args.task, getattr(args, "scene", None))
     args.policy_path = str(folder)
     requested_output = getattr(args, "output", None)
     output = Path(requested_output).expanduser().resolve() if requested_output else Path(
         f"outputs/rl_progress/il_eval_{time.time_ns()}.json").resolve()
     if output.exists():
         raise FileExistsError(output)
+    if output.is_relative_to(folder):
+        raise ValueError("IL 评估报告需要保存在模型目录之外")
     sources = {str(path.relative_to(folder)): file_digest(path)
                for path in sorted(folder.rglob("*")) if path.is_file()}
     actual_envs = min(num_envs, n_episodes)
@@ -110,7 +115,7 @@ def evaluate_il_policy(args) -> int:
 
         cfg = parse_env_cfg(args.task, device=args.device, num_envs=actual_envs,
                             use_fabric=not args.disable_fabric)
-        configure_evaluation(cfg, environments=actual_envs, seconds=seconds,
+        configure_evaluation(cfg, task=args.task, environments=actual_envs, seconds=seconds,
                              scene=getattr(args, "scene", None), settings=settings)
         if getattr(args, "seed", None) is not None:
             cfg.seed = int(args.seed)
@@ -158,6 +163,8 @@ def evaluate_il_policy(args) -> int:
                   "task": args.task, "scene": getattr(args, "scene", None), "seed": getattr(args, "seed", None),
                   "requested_environments": num_envs, "actual_environments": actual_envs,
                   "episode_length_s": seconds, "control_dt": float(runtime.step_dt), "policy_resets": policy_resets,
+                  "physics_dt": float(runtime.physics_dt), "decimation": int(runtime.cfg.decimation),
+                  "recorded_profile_configured": settings is not None and settings.recorded_simulation is not None,
                   "termination_terms": list(runtime.termination_manager.active_terms),
                   "simulation_settings": settings.model_dump(mode="json") if settings is not None else None,
                   "maximum_episode_steps": int(runtime.max_episode_length),

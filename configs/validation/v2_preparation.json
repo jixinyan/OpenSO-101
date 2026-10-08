@@ -58,6 +58,7 @@
         {"report": "recorder_checkpoint/report.json", "pointer": "/status", "equals": "actual_hdf5_checkpoint_verified"},
         {"report": "recorder_checkpoint/report.json", "pointer": "/input_arrays_preserved", "equals": true},
         {"report": "recorder_checkpoint/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "recorder_checkpoint/report.json", "pointer": "/recorded_simulation_preserved", "equals": true},
         {"report": "recorder_checkpoint/report.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
@@ -117,6 +118,7 @@
         {"report": "lerobot_export/report.json", "pointer": "/modes/sync/frames", "minimum": 328},
         {"report": "lerobot_export/report.json", "pointer": "/metadata_frame_ranges_and_files_verified", "equals": true},
         {"report": "lerobot_export/report.json", "pointer": "/missing_actual_video_rejected", "equals": true},
+        {"report": "lerobot_export/report.json", "pointer": "/recorded_simulation_preserved", "equals": true},
         {"report": "lerobot_export/report.json", "pointer": "/gpu_tests_started", "equals": false}
       ]
     },
@@ -136,7 +138,7 @@
     },
     {
       "name": "il_training_preparation", "resource": "cpu", "depends_on": ["lerobot_recorder"],
-      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--output", "{output}/il_training"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/check_il_training.py", "--dataset", "{output}/lerobot_export/sync", "--output", "{output}/il_training"],
       "requirements": [
         {"report": "il_training/report.json", "pointer": "/status", "equals": "actual_il_training_preparation_verified"},
         {"report": "il_training/report.json", "pointer": "/source_files_unchanged", "equals": true},
@@ -159,6 +161,7 @@
         {"report": "il_evaluation/report.json", "pointer": "/policies/diffusion/maximum_action_error_rad", "maximum": 0.000001},
         {"report": "il_evaluation/report.json", "pointer": "/source_unchanged", "equals": true},
         {"report": "il_evaluation/report.json", "pointer": "/checkpoint_simulation_settings_verified", "equals": true},
+        {"report": "il_evaluation/report.json", "pointer": "/recorded_simulation_preserved", "equals": true},
         {"report": "il_evaluation/report.json", "pointer": "/gpu_tests_started", "equals": false},
         {"report": "il_evaluation/report.json", "pointer": "/training_started", "equals": false}
       ]
@@ -254,6 +257,9 @@
         {"report": "native_act_inference.json", "pointer": "/n", "equals": 3},
         {"report": "native_act_inference.json", "pointer": "/policy_resets", "equals": 2},
         {"report": "native_act_inference.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_act_inference.json", "pointer": "/physics_dt", "equals": 0.001},
+        {"report": "native_act_inference.json", "pointer": "/decimation", "equals": 20},
+        {"report": "native_act_inference.json", "pointer": "/recorded_profile_configured", "equals": true},
         {"report": "native_act_inference.json", "pointer": "/training_started", "equals": false}
       ]
     },
@@ -265,6 +271,9 @@
         {"report": "native_diffusion_inference.json", "pointer": "/n", "equals": 3},
         {"report": "native_diffusion_inference.json", "pointer": "/policy_resets", "equals": 2},
         {"report": "native_diffusion_inference.json", "pointer": "/native_resources_closed", "equals": true},
+        {"report": "native_diffusion_inference.json", "pointer": "/physics_dt", "equals": 0.001},
+        {"report": "native_diffusion_inference.json", "pointer": "/decimation", "equals": 20},
+        {"report": "native_diffusion_inference.json", "pointer": "/recorded_profile_configured", "equals": true},
         {"report": "native_diffusion_inference.json", "pointer": "/training_started", "equals": false}
       ]
     },

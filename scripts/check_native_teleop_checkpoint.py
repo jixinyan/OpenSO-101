@@ -53,6 +53,7 @@ def main():
         from openso101.teleop.sim_state import _collect_replay_sim_state, _replay_restore_sim_state_from_episode
         from openso101.teleop.replay_validation import ReplayValidation
         from openso101.teleop.state_records import validate_replay_task_state
+        from openso101.teleop.simulation import runtime_simulation, recorded_simulation
 
         if args.scene is not None:
             from openso101.scenes.isaaclab.runtime import register_custom_scene
@@ -80,7 +81,8 @@ def main():
         recorder = OpenSO101HDF5TeleopRecorder(args.output / "dataset", args.task,
                                              discover_camera_metadata(scene), _env_control_rate_fps(runtime),
                                              sim_joint_names=SO101_SIM_JOINT_NAMES, env_id=args.task, flush_steps=4,
-                                             scene_metadata=scene_metadata)
+                                             scene_metadata=scene_metadata,
+                                             simulation=runtime_simulation(runtime, args.task, scene_metadata))
         recorder.start_episode()
 
         def record_step(action):
@@ -134,6 +136,8 @@ def main():
         validate_hdf5_episode(episode)
         recorded_errors = {}
         with h5py.File(episode, "r") as recording:
+            if recorded_simulation(recording.attrs) != recorder.simulation:
+                raise ValueError("原生 HDF5 的物理周期与实际录制配置不一致")
             validate_replay_task_state(recording, args.task)
             replay = ReplayValidation(episode, args.output / "recorded_restore.json", args.task,
                                       recording, runtime, range(saved_frames), 0)

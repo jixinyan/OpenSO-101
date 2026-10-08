@@ -31,7 +31,7 @@
 | LeRobot 权重、processors 与明确 device 加载 | `src/openso101/il/policies/factory.py` |
 | 完整模型 checkpoint 保存、加载与实际动作比较 | `src/openso101/il/policies/validation.py` |
 | IL 仿真中的 processors、动作格式与单位转换 | `src/openso101/il/policies/inference.py` |
-| IL 模型的采集频率、图像尺寸与 checkpoint 保存 | `src/openso101/il/policies/simulation.py` |
+| IL 模型的采集频率、来源物理设置、图像尺寸与 checkpoint 保存 | `src/openso101/il/policies/simulation.py` |
 | IL 逐批评估、结束条件与原生资源关闭 | `src/openso101/il/runners/evaluator.py` |
 | IL 精确 episode 数量和逐环境记录 | `src/openso101/il/evaluation.py` |
 | 遥操作与 IL 的任务成功条件 | `src/openso101/teleop/success.py` |
@@ -43,6 +43,7 @@
 | 窗口与终端录制按键 | `src/openso101/teleop/devices/recording_keys.py` |
 | 采集状态、关节恢复与场景回放 | `src/openso101/teleop/sim_state.py` |
 | 仿真控制周期与录制 FPS | `src/openso101/teleop/timing.py` |
+| 录制物理周期、任务 profile 与场景来源 | `src/openso101/teleop/simulation.py` |
 | MuJoCo 模型、驱动与比较 | `src/openso101/sim2sim/` |
 | Domain randomization、student 验证与部署 | `src/openso101/sim2real/` |
 | 源码、wheel 和阶段验证 | `src/openso101/validation/` |

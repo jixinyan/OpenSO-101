@@ -10,12 +10,25 @@ from openso101.teleop.sim_state import _collect_replay_sim_state
 from openso101.robots import SO101_SIM_JOINT_NAMES
 from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
 from openso101.teleop.recorder.lerobot import collect_camera_buffers
+from openso101.teleop.simulation import runtime_simulation
 
 
 def first_episode_recorder(output: Path, task_id: str, task_profile: str, source_sha256: str,
-                           *, controller="actual_policy_joint_targets"):
+                           *, controller="actual_policy_joint_targets", scene: Path | None = None):
     output = output.resolve()
+    if (task_id == "OpenSO101-CustomScene-v0") != (scene is not None):
+        raise ValueError("CustomScene 策略录制需要来源 scene bundle")
+    if scene is not None:
+        from openso101.scenes.isaaclab.usd import verify_compilation
+
+        verify_compilation(scene)
     output.mkdir(parents=True, exist_ok=False)
+    capture_cohort = scene is None and task_id in ("OpenSO101-Lift-v0", "OpenSO101-PickPlace-v0")
+    scene_metadata = None
+    if scene is not None:
+        from openso101.scenes.recording import store_recording_scene
+
+        scene_metadata = store_recording_scene(scene, output)
 
     class PolicyRecorder(RecorderTerm):
         def __init__(self, cfg, env):
@@ -34,27 +47,23 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, source
                 if not np.isclose(1 / fps, runtime.step_dt, atol=1e-9, rtol=0):
                     raise ValueError("HDF5 采集需要整数控制频率")
                 cameras = {name: {"height": image.shape[0], "width": image.shape[1]} for name, image in images.items()}
-                scene_metadata = ({"scene_sha256": runtime.cfg.scene_spec.digest()}
-                                  if hasattr(runtime.cfg, "scene_spec") else None)
+                if scene_metadata is not None and runtime.cfg.scene_spec.digest() != scene_metadata["scene_sha256"]:
+                    raise ValueError("策略录制的来源场景与实际运行场景不一致")
                 self.recording = OpenSO101HDF5TeleopRecorder(
                     output, task_name=task_id, env_id=task_id, cameras=cameras, fps=fps,
                     dataset_id="local/openso101_policy_evaluation", scene_metadata=scene_metadata,
-                    sim_joint_names=SO101_SIM_JOINT_NAMES)
+                    sim_joint_names=SO101_SIM_JOINT_NAMES,
+                    simulation=runtime_simulation(runtime, task_id, scene_metadata, task_profile=task_profile))
                 self.recording.start_episode()
                 source_field = "policy_sha256" if controller == "actual_policy_joint_targets" else "controller_sha256"
                 self.recording._h5.attrs[source_field] = source_sha256
                 self.recording._h5.attrs["time_base"] = "simulation"
                 self.recording._h5.attrs["controller"] = controller
-                self.recording._h5.attrs["task_profile"] = task_profile
-                self.recording._h5.attrs["environment_mode"] = runtime.cfg.environment_mode
-                self.recording._h5.attrs["physics_dt"] = runtime.physics_dt
-                if scene_metadata is None:
+                if capture_cohort:
                     self.recording._h5.attrs["source_num_envs"] = runtime.num_envs
                     self.recording._h5.attrs["source_seed"] = runtime.cfg.seed
                     self.recording._h5.attrs["source_env_spacing"] = runtime.cfg.scene.env_spacing
                     self.recording._h5.attrs["source_replicate_physics"] = runtime.cfg.scene.replicate_physics
-                if task_profile in ("grasp_v3", "grasp_v4"):
-                    self.recording._h5.attrs["reward_discount"] = runtime.cfg.reward_discount
             ids = [robot.joint_names.index(name) for name in SO101_SIM_JOINT_NAMES]
             targets = torch.cat([runtime.action_manager.get_term(name).processed_actions
                                  for name in runtime.action_manager.active_terms], dim=-1)
@@ -63,7 +72,7 @@ def first_episode_recorder(output: Path, task_id: str, task_profile: str, source
                 qvel=robot.data.joint_vel[0, ids].cpu().numpy(), camera_buffers=images,
                 timestamp=runtime.common_step_counter * runtime.step_dt,
                 sim_state=_collect_replay_sim_state(
-                    runtime, runtime.scene, include_cohort=getattr(runtime.cfg, "scene_spec", None) is None))
+                    runtime, runtime.scene, include_cohort=capture_cohort))
             return None, None
 
         def record_post_step(self):

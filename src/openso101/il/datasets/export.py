@@ -118,6 +118,7 @@ def _push_convert_hdf5_to_lerobot(
 
     from openso101.scenes.recording import resolve_recording_scene, store_recording_scene
     from openso101.teleop.recorder.hdf5 import validate_hdf5_dataset
+    from openso101.teleop.simulation import recorded_simulation
 
     if skip_leading_frames < 0 or min_episode_frames < 1:
         raise ValueError("skip_leading_frames 需要大于或等于零，min_episode_frames 需要大于零")
@@ -149,13 +150,15 @@ def _push_convert_hdf5_to_lerobot(
                 raise ValueError(f"episode 的 FPS 或双相机尺寸不一致: {episode}")
             fps, cameras = int(source_fps), source_cameras
             scene = resolve_recording_scene(episode, h5.attrs) if "scene_sha256" in h5.attrs else None
+            simulation = recorded_simulation(h5.attrs)
             if scene is not None and scene.resolve().is_relative_to(lerobot_root):
                 raise ValueError("导出目录不能包含来源场景")
             records.append({"episode_index": len(records), "source_episode": episode.name,
                             "source_sha256": file_digest(episode), "source_frames": count,
                             "exported_frames": usable, "success": success,
                             "task": str(h5.attrs.get("task", "OpenSO-101 teleoperation")),
-                            "env_id": str(h5.attrs.get("env_id", "")), "scene": scene})
+                            "env_id": str(h5.attrs.get("env_id", "")), "scene": scene,
+                            "simulation": simulation.model_dump(mode="json") if simulation is not None else None})
     if not records:
         raise ValueError("全部 episode 均未满足成功标记与帧数要求")
 

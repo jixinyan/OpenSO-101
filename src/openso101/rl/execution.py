@@ -284,7 +284,7 @@ def evaluate(args, *, play=False, student_folder=None):
                 student_metadata = json.loads((student_folder / "student.json").read_text())
                 policy_sha256 = student_metadata["files"]["student.pt"]
             args.recorder_cfg = first_episode_recorder(Path(recording_output), args.task, meta.task_profile,
-                                                       policy_sha256)
+                                                       policy_sha256, scene=scene)
         env = build_environment(args, training=False, scene=scene)
         if student_folder is None:
             policy = get_backend(meta.config.backend).load(env, folder)

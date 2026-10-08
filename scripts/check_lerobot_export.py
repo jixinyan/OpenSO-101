@@ -7,8 +7,11 @@ import sys
 import threading
 from pathlib import Path
 
+import h5py
+
 from openso101.il.datasets.export import _push_convert_hdf5_to_lerobot, _push_validate_local_dataset
 from openso101.scenes.models import file_digest
+from openso101.teleop.simulation import recorded_simulation
 
 
 parser = argparse.ArgumentParser()
@@ -26,6 +29,13 @@ for mode, async_flush in (("async", True), ("sync", False)):
     _push_convert_hdf5_to_lerobot(args.source, root, f"local/export_{mode}",
                                 skip_leading_frames=0, min_episode_frames=1, async_flush=async_flush)
     _push_validate_local_dataset(root, input_format="lerobot")
+    export = json.loads((root / "meta/openso101_export.json").read_text())
+    for episode in export["episodes"]:
+        with h5py.File(args.source / "episodes" / episode["source_episode"]) as stream:
+            simulation = recorded_simulation(stream.attrs)
+        expected = simulation.model_dump(mode="json") if simulation is not None else None
+        if episode["simulation"] != expected:
+            raise ValueError("LeRobot 导出的实际来源仿真参数不一致")
     subprocess.run([sys.executable, "scripts/validate_lerobot_dataset.py", "--source", str(args.source),
                     "--dataset", str(root), "--require-success", "--output", str(args.output / f"{mode}.json")],
                    check=True)
@@ -68,6 +78,7 @@ result = {"status": "actual_sync_async_export_verified", "modes": results,
           "exporter_sha256": file_digest(Path("src/openso101/il/datasets/export.py")),
           "metadata_validation_sha256": file_digest(Path("src/openso101/il/datasets/validation.py")),
           "metadata_frame_ranges_and_files_verified": True,
+          "recorded_simulation_preserved": True,
           "missing_actual_video_rejected": True}
 (args.output / "report.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps(result, ensure_ascii=False), flush=True)

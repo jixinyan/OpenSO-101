@@ -10,6 +10,7 @@ import pytest
 from openso101.scenes.models import file_digest
 from openso101.teleop.checkpoints import _TeleopCheckpointStore
 from openso101.teleop.recorder.hdf5 import OpenSO101HDF5TeleopRecorder, validate_hdf5_episode
+from openso101.teleop.simulation import recorded_simulation
 
 
 def check_case(source, output, checkpoint_frames, written_frames, final_frames):
@@ -17,7 +18,9 @@ def check_case(source, output, checkpoint_frames, written_frames, final_frames):
                       "width": source[f"observations/images/{name}"].shape[2]}
                for name in ("wrist_camera", "overhead_camera")}
     recorder = OpenSO101HDF5TeleopRecorder(output, str(source.attrs["task"]), cameras,
-                                         int(source.attrs["fps"]), flush_steps=16)
+                                         int(source.attrs["fps"]), flush_steps=16,
+                                         env_id=str(source.attrs["env_id"]),
+                                         simulation=recorded_simulation(source.attrs))
     paths = ("action", "observations/qpos", "observations/qvel", "timestamps",
              "observations/images/wrist_camera", "observations/images/overhead_camera",
              *(f"sim/{name}" for name in source["sim"]))
@@ -56,6 +59,8 @@ def check_case(source, output, checkpoint_frames, written_frames, final_frames):
         recorder._close_file()
     validate_hdf5_episode(path)
     with h5py.File(path, "r") as saved:
+        if recorded_simulation(saved.attrs) != recorded_simulation(source.attrs):
+            raise ValueError("HDF5 checkpoint 后的仿真参数与实际来源不一致")
         for key in paths:
             if saved[key].shape[0] != final_frames or not np.array_equal(saved[key][:], source[key][:final_frames]):
                 raise RuntimeError(f"HDF5 checkpoint 后的实际数据不一致: {key}")
@@ -97,6 +102,7 @@ def main():
               "inactive_checkpoint_rejected": True, "gpu_tests_started": False,
               "native_restore_verified": False, "task_success_verified": False,
               "checkpoint_store_source_sha256": file_digest(Path("src/openso101/teleop/checkpoints.py")),
+              "recorded_simulation_preserved": True,
               "recorder_source_sha256": file_digest(Path("src/openso101/teleop/recorder/hdf5.py")),
               "validation_source_sha256": file_digest(Path(__file__))}
     (args.output / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")

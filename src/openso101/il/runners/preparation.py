@@ -26,6 +26,7 @@ def prepare(arguments: list[str], report_dir: Path, physical_gpu: int):
 
     from openso101.il.datasets.validation import validate_lerobot_metadata
     from openso101.il.runners.model_validation import validate_model_graph
+    from openso101.il.policies.simulation import dataset_simulation
 
     cpu_arguments = ["--policy.device=cpu" if value == "--policy.device=cuda:0" else value
                      for value in arguments]
@@ -54,6 +55,7 @@ def prepare(arguments: list[str], report_dir: Path, physical_gpu: int):
         raise ValueError("LeRobot 数据集必须包含实际数据帧")
     root = Path(dataset.root)
     validate_lerobot_metadata(root)
+    dataset_simulation(root, dataset.meta.fps, dataset.num_episodes)
     source_files = sorted(path for folder in ("meta", "data", "videos")
                           for path in (root / folder).rglob("*") if path.is_file())
     source_hashes = {str(path.relative_to(root)): file_digest(path) for path in source_files}
