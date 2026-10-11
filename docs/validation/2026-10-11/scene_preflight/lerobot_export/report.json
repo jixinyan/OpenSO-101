@@ -1,0 +1,70 @@
+{
+  "status": "actual_sync_async_export_verified",
+  "modes": {
+    "async": {
+      "status": "all_lerobot_frames_verified",
+      "frames": 328,
+      "episodes": 1,
+      "source_task_successes": 1,
+      "maximum_action_error_motor_units": 0.0,
+      "maximum_state_error_motor_units": 0.0,
+      "maximum_timestamp_error_seconds": 2.2888183615066282e-07,
+      "camera_checks": {
+        "wrist_camera": {
+          "frames": 328,
+          "minimum_pixel_std": 0.22388872504234314,
+          "maximum_encoding_mae": 0.008717655204236507
+        },
+        "overhead_camera": {
+          "frames": 328,
+          "minimum_pixel_std": 0.06344100087881088,
+          "maximum_encoding_mae": 0.005949870217591524
+        }
+      },
+      "maximum_encoding_mae_allowed": 0.05,
+      "policy_observation_uint8_and_float_verified": true,
+      "export_manifest_sha256": "1dcb971930be085671c634e401b4d29bdda5f9f4f33f85bc5b75c8dc7a8c9071",
+      "validator_sha256": "a5db6ac3b96a6c4e1bf8cfb4ec03c44a2910621a92c7e45cfb61d44079bc7dce",
+      "rl_policy_success_verified": false
+    },
+    "sync": {
+      "status": "all_lerobot_frames_verified",
+      "frames": 328,
+      "episodes": 1,
+      "source_task_successes": 1,
+      "maximum_action_error_motor_units": 0.0,
+      "maximum_state_error_motor_units": 0.0,
+      "maximum_timestamp_error_seconds": 2.2888183615066282e-07,
+      "camera_checks": {
+        "wrist_camera": {
+          "frames": 328,
+          "minimum_pixel_std": 0.22388872504234314,
+          "maximum_encoding_mae": 0.008717655204236507
+        },
+        "overhead_camera": {
+          "frames": 328,
+          "minimum_pixel_std": 0.06344100087881088,
+          "maximum_encoding_mae": 0.005949870217591524
+        }
+      },
+      "maximum_encoding_mae_allowed": 0.05,
+      "policy_observation_uint8_and_float_verified": true,
+      "export_manifest_sha256": "085e9a3af639af59747f7d74ab79bb79b6c851fe21a76fba09f563b499813817",
+      "validator_sha256": "a5db6ac3b96a6c4e1bf8cfb4ec03c44a2910621a92c7e45cfb61d44079bc7dce",
+      "rl_policy_success_verified": false
+    }
+  },
+  "source_files": {
+    "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"
+  },
+  "worker_threads_closed": true,
+  "gpu_tests_started": false,
+  "invalid_export_preserves_existing_data": true,
+  "rl_policy_success_verified": false,
+  "source_sha256": "56b803349c56c148db6eb0488761c993b532ab250e22129ea0719f636c22e5b7",
+  "exporter_sha256": "a935f3d207bacfa22525734b7224d8dff7396860e55b702408438f6573b4be26",
+  "metadata_validation_sha256": "6ce2ab87a6f462fb7e78126dc52a046e73b31924951ebb7f6aff3b11ce038792",
+  "metadata_frame_ranges_and_files_verified": true,
+  "recorded_simulation_preserved": true,
+  "missing_actual_video_rejected": true
+}
