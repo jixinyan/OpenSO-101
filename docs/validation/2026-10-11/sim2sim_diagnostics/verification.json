@@ -36,6 +36,7 @@
   "wheel_sha256": "0113a0f61e99f530da9afd74f12f6bbba6f65e40e8b0eb080cf0151a4ea36062",
   "wheel_modules": 202,
   "figure_sha256": "74bcab81fbeb0eeb6a28b54e9cb9d60dda7d9bdc34d4e24aef336bd851c12086",
+  "gpu_readiness_sha256": "63d10381f42027e0aec1d566f92b7c8431e2d76c308ff8d4af3571c60f472749",
   "gpu_tests_started": false,
   "native_tests_started": false,
   "full_v2_verified": false,

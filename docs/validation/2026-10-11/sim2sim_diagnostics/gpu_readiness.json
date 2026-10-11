@@ -1,0 +1,202 @@
+{
+  "status": "gpu_input_preconditions_verified_without_launch",
+  "source_commit": "04f3bfb840cfad5b34e303e6170ec891dc4b99ae",
+  "source_files_matched": 377,
+  "cpu_stages_verified": 22,
+  "gpu_stages_prepared": 9,
+  "stages": [
+    {
+      "name": "native_regressions",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/run_native_regressions.py",
+        "--worker-report",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_regressions.json"
+      ],
+      "input_paths": {},
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_lift_checkpoint",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_native_teleop_checkpoint.py",
+        "--task",
+        "OpenSO101-Lift-v0",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_lift_checkpoint"
+      ],
+      "input_paths": {},
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_pick_place_checkpoint",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_native_teleop_checkpoint.py",
+        "--task",
+        "OpenSO101-PickPlace-v0",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_pick_place_checkpoint"
+      ],
+      "input_paths": {},
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_act_inference",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "-m",
+        "openso101.cli.main",
+        "il",
+        "eval",
+        "--task",
+        "OpenSO101-PickPlace-v0",
+        "--policy-path",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/il_training/act/pretrained_model",
+        "--num-envs",
+        "2",
+        "--n-episodes",
+        "3",
+        "--episode-length-s",
+        "0.1",
+        "--seed",
+        "42",
+        "--headless",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_act_inference.json"
+      ],
+      "input_paths": {
+        "--policy-path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/il_training/act/pretrained_model"
+      },
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_diffusion_inference",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "-m",
+        "openso101.cli.main",
+        "il",
+        "eval",
+        "--task",
+        "OpenSO101-PickPlace-v0",
+        "--policy-path",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/il_training/diffusion/pretrained_model",
+        "--num-envs",
+        "2",
+        "--n-episodes",
+        "3",
+        "--episode-length-s",
+        "0.1",
+        "--seed",
+        "42",
+        "--headless",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_diffusion_inference.json"
+      ],
+      "input_paths": {
+        "--policy-path": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/il_training/diffusion/pretrained_model"
+      },
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_stack_checkpoint",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_native_teleop_checkpoint.py",
+        "--task",
+        "OpenSO101-Stack-v0",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_stack_checkpoint"
+      ],
+      "input_paths": {},
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "native_custom_checkpoint",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_native_teleop_checkpoint.py",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--scene",
+        "outputs/rl_progress/agent_runtime_bundle",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/native_custom_checkpoint"
+      ],
+      "input_paths": {
+        "--scene": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle"
+      },
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "scene_runtime",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_scene_batch.py",
+        "--cases",
+        "configs/validation/scene_cases.json",
+        "--phase",
+        "gpu",
+        "--cpu-report",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_batch/report.json",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_runtime"
+      ],
+      "input_paths": {
+        "--cases": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/configs/validation/scene_cases.json",
+        "--cpu-report": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_batch/report.json"
+      },
+      "declared_input_sha256": {}
+    },
+    {
+      "name": "recorded_initial_policy",
+      "command": [
+        "bash",
+        "scripts/run_native_python.sh",
+        "2",
+        "scripts/check_recorded_initial_policy.py",
+        "--checkpoint",
+        "outputs/rl_progress/lift_corrective_coverage_continue_20261007",
+        "--native",
+        "outputs/rl_progress/lift_success_dataset_verified_20261006",
+        "--episode",
+        "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/recorded_initial_policy.json"
+      ],
+      "input_paths": {
+        "--checkpoint": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/lift_corrective_coverage_continue_20261007",
+        "--native": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/lift_success_dataset_verified_20261006",
+        "--episode": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5"
+      },
+      "declared_input_sha256": {
+        "outputs/rl_progress/lift_success_dataset_verified_20261006/dataset/episodes/episode_000000.hdf5": "e87c5375ae29b4064654f5f17b6123c22df32682d99c2a3cafb14edb8a0f84e5"
+      }
+    }
+  ],
+  "cpu_receipt_sha256": "0eaebd4c84db03b80f6838a277bf101e6acd4920a5d4aaa0f4307e89e137f7b8",
+  "manifest_sha256": "d3604f897df5b1d8890cd9f1b3536ce1ee38c88d455517870d2b8b4e969dc877",
+  "source_sha256": "a8fc0535471b0e03c25090b75f5933b2fd3351a445a685d458dce7e1c8dfa33d",
+  "cpu_receipt_unchanged": true,
+  "gpu_tests_started": false,
+  "native_tests_started": false,
+  "training_started": false
+}
