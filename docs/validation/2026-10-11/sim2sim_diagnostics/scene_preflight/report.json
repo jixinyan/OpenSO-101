@@ -1,0 +1,501 @@
+{
+  "status": "actual_scene_preflight_verified",
+  "source_commit": "04f3bfb840cfad5b34e303e6170ec891dc4b99ae",
+  "bundle": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+  "scene_sha256": "f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537",
+  "bundle_manifest_sha256": "3917a983bc4f226203061e2d1a09ef025eb796f2489d658d31219901f7eca80a",
+  "compiled_scene": "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+  "compiled_scene_sha256": "f78efad8d55471727dd61b8db9dfc98ce68d8984aa9c305cfe3e68dc1ce1c537",
+  "compilation_sha256": "9fc9c5d4ecb1000bbce66ea8109badf5b0b8f5704f67e240beb0ea14ff37fab5",
+  "source_file_count": 14,
+  "source_files_unchanged": true,
+  "episode_sha256": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75",
+  "existing_trace_preserved": true,
+  "api_count": 28,
+  "api_checks": [
+    {
+      "field": "num_envs",
+      "value": true,
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": false,
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": 0,
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": -1,
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": 1.5,
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": "4",
+      "output_created": false
+    },
+    {
+      "field": "num_envs",
+      "value": null,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": true,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": false,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": 0,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": -1,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": 1.5,
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": "4",
+      "output_created": false
+    },
+    {
+      "field": "steps",
+      "value": null,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": true,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": false,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": 0,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": -1,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": 1.5,
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": "4",
+      "output_created": false
+    },
+    {
+      "field": "resets",
+      "value": null,
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "True",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "False",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "0",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "-1",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "inf",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "nan",
+      "output_created": false
+    },
+    {
+      "field": "timeout_seconds",
+      "value": "1",
+      "output_created": false
+    }
+  ],
+  "process_count": 18,
+  "process_checks": [
+    {
+      "name": "compile_missing_bundle",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/absent",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/missing_bundle_output"
+      ],
+      "exit_code": 1,
+      "expected_error": "bundle 缺少 manifest.json",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "237ff56bc396ac8063b3acc20f4aeb4932222584bd865e95f2a6956545185dc6"
+    },
+    {
+      "name": "compile_output_inside_source",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle/forbidden_output"
+      ],
+      "exit_code": 1,
+      "expected_error": "场景输出目录与输入目录必须独立",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "5da88961cfca0b3f1832c1c9ec4c3dc6ef7add9fc297aae11aebd60128500787"
+    },
+    {
+      "name": "compile_existing_output",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compiled_without_environment_manifest"
+      ],
+      "exit_code": 1,
+      "expected_error": "FileExistsError",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "839fc4dc4435437102738ce773d4b378bcc5c82c7d33c4725bef691485716d60"
+    },
+    {
+      "name": "compile_cuda_disabled",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compile_cuda_output"
+      ],
+      "exit_code": 1,
+      "expected_error": "请求的 GPU [] 超出允许范围",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "5dc3e6fb8e0862997ecaac08839fe0f4b54c7e1fa02635755c07e2fa50bdb320"
+    },
+    {
+      "name": "runtime_missing_scene",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.validation_worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/absent",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/missing_scene.json"
+      ],
+      "exit_code": 1,
+      "expected_error": "FileNotFoundError",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "3b5f7a51a790cad3013c02cbecafb6f3ea86d8be110ab6cb9c09f24e27555fac"
+    },
+    {
+      "name": "runtime_missing_environment_manifest",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.validation_worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compiled_without_environment_manifest",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/manifest.json"
+      ],
+      "exit_code": 1,
+      "expected_error": "原生场景需要通过 SHA256 检查的 environment.usda",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "40f5f260fae69930e6b3fa4bd87c698628c5420b80735cee02a16f2fb7b51b9b"
+    },
+    {
+      "name": "runtime_existing_trace",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.validation_worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/existing_trace.json"
+      ],
+      "exit_code": 1,
+      "expected_error": "FileExistsError",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "5543df194246e9bdeb8dd6f52f17371dc3243b4d19ae1480b1300896f51f9985"
+    },
+    {
+      "name": "runtime_invalid_steps",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.validation_worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/steps.json",
+        "--steps",
+        "0"
+      ],
+      "exit_code": 1,
+      "expected_error": "steps 必须为正整数",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "7c628df2b7b7c05ec3400ce02313bc3e06b3f029a3fa166f1df96b0d7a52938d"
+    },
+    {
+      "name": "runtime_cuda_disabled",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.scenes.isaaclab.validation_worker",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/cuda_disabled.json"
+      ],
+      "exit_code": 1,
+      "expected_error": "请求的 GPU [] 超出允许范围",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "285c0a50e2442b10f0a313b1d2de785d22e7e6051303da5b76619344a70199da"
+    },
+    {
+      "name": "cli_prepare_invalid_resets",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "scenes",
+        "prepare",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/prepare",
+        "--resets",
+        "0"
+      ],
+      "exit_code": 1,
+      "expected_error": "resets 必须为正整数",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "ee97de98c17bbd71612eb1710b613bef2e81205a9b063e1e42480e408b01b072"
+    },
+    {
+      "name": "cli_compile_output_inside_source",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "scenes",
+        "compile",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_bundle/forbidden_output"
+      ],
+      "exit_code": 1,
+      "expected_error": "场景输出目录与输入目录必须独立",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "bf31fda49b41172da8da3fbe9f8e36b6b8a0a16910f14a2226c06cdb0788b403"
+    },
+    {
+      "name": "cli_runtime_existing_trace",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "scenes",
+        "validate-runtime",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/existing_trace.json"
+      ],
+      "exit_code": 1,
+      "expected_error": "FileExistsError",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "2b86e9952ce366fe88dd5203a40db05c664e07328ce1981130f64e52c98d0e75"
+    },
+    {
+      "name": "cli_envs_missing_environment_manifest",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "envs",
+        "zero",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--scene",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compiled_without_environment_manifest",
+        "--headless"
+      ],
+      "exit_code": 1,
+      "expected_error": "原生场景需要通过 SHA256 检查的 environment.usda",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "9f0ebf450da288f1a8fb075298f97b9fc3b364f15f15c31d56daa3c48c99c537"
+    },
+    {
+      "name": "cli_il_missing_environment_manifest",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "il",
+        "record",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--scene",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compiled_without_environment_manifest",
+        "--repo-root",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/il_record",
+        "--teleop-device",
+        "keyboard",
+        "--keyboard-input",
+        "window"
+      ],
+      "exit_code": 1,
+      "expected_error": "原生场景需要通过 SHA256 检查的 environment.usda",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e8f8e2564f92ed7f4c5ed3f0846ce725baeff390749c3b1184527e7702afbbc3"
+    },
+    {
+      "name": "cli_rl_missing_environment_manifest",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "train",
+        "--backend",
+        "rsl_rl",
+        "--algo",
+        "ppo",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--scene",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/compiled_without_environment_manifest",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/rl_missing_manifest"
+      ],
+      "exit_code": 1,
+      "expected_error": "原生场景需要通过 SHA256 检查的 environment.usda",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "bd2984e110d995ddeb69a869fa8197fd8ab28de5b743ee29104303f099a3aec4"
+    },
+    {
+      "name": "cli_rl_output_inside_source",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "train",
+        "--backend",
+        "rsl_rl",
+        "--algo",
+        "ppo",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--scene",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled/forbidden_output"
+      ],
+      "exit_code": 1,
+      "expected_error": "场景输出目录与输入目录必须独立",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "c71cc72df35f4a25f5d0170bfd61c34d7662555dfe6d0dc97f5dcecdd9ae0240"
+    },
+    {
+      "name": "cli_rl_task_scene_mismatch",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "train",
+        "--backend",
+        "rsl_rl",
+        "--algo",
+        "ppo",
+        "--task",
+        "OpenSO101-Lift-v0",
+        "--scene",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/agent_runtime_prepared/compiled",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/rl_task_mismatch"
+      ],
+      "exit_code": 1,
+      "expected_error": "CustomScene 请求需要对应场景",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "06d7d5d8287b7cc29608d4d02cb45107ad5b79d3de64741be5f07ddc220f2eb8"
+    },
+    {
+      "name": "cli_rl_missing_scene",
+      "command": [
+        "/home/jixin/workspace/envs/openso101-mujoco/bin/python",
+        "-u",
+        "-m",
+        "openso101.cli.main",
+        "rl",
+        "train",
+        "--backend",
+        "rsl_rl",
+        "--algo",
+        "ppo",
+        "--task",
+        "OpenSO101-CustomScene-v0",
+        "--output",
+        "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/scene_preflight/requests/rl_missing_scene"
+      ],
+      "exit_code": 1,
+      "expected_error": "CustomScene 请求需要对应场景",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "06d7d5d8287b7cc29608d4d02cb45107ad5b79d3de64741be5f07ddc220f2eb8"
+    }
+  ],
+  "source_sha256": "cb6702773422e88521433d74a94cb1a9ec9dda02a04e43aca981ac0245110f2c",
+  "gpu_tests_started": false,
+  "native_tests_started": false,
+  "training_started": false,
+  "physical_task_verified": false
+}

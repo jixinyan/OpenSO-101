@@ -1,0 +1,72 @@
+{
+  "status": "actual_cpu_sim2sim_diagnostics_verified",
+  "process_checks": [
+    {
+      "name": "report_hash",
+      "exit_code": 1,
+      "expected_error": "diagnostics 来源 SHA256 不一致：policy_metadata_sha256",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "b718a3378270033e3e46c5dc8b14b75d17d8bffe6fdbeaeedb89011dc86e6a21"
+    },
+    {
+      "name": "action_targets",
+      "exit_code": 1,
+      "expected_error": "实际 action 与保存的 joint_targets 不一致",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "ecd8a9f47e9c210dd2fae43bb0e903c493927575561e9d4f098504c3806c31a7"
+    },
+    {
+      "name": "field_length",
+      "exit_code": 1,
+      "expected_error": "实际轨迹的字段形状无效：jaw_forces",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "9181f92a8af1a1581a7446ab74b26d9764c60cb2dcd934825dd7bf915b118d26"
+    },
+    {
+      "name": "initial_state",
+      "exit_code": 1,
+      "expected_error": "Isaac 与 MuJoCo 的实际初始状态不一致",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "60db072ea0292883837923d2f61be06d810174313ca5046b490d1242c7920069"
+    },
+    {
+      "name": "existing_output",
+      "exit_code": 1,
+      "expected_error": "FileExistsError",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3898451a9409a068c18e64493c1609c1f8d9608385e89290cd8ca122ecc2eda"
+    },
+    {
+      "name": "source_overlap",
+      "exit_code": 1,
+      "expected_error": "输出目录需要与来源目录独立",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "81f836a09c4ca51a7708ea986cd532c6b14a444e506e81689e5c8c74ded8335d"
+    }
+  ],
+  "process_check_count": 6,
+  "diagnostics_created": true,
+  "environments": 4,
+  "source_unchanged": true,
+  "diagnostics_sha256": "cb1015e213623ead1d6b45f362ba45513e47d2dd37f17c795797a9a895646abd",
+  "figure_dimensions": [
+    2250,
+    1800
+  ],
+  "figure_sha256": "74bcab81fbeb0eeb6a28b54e9cb9d60dda7d9bdc34d4e24aef336bd851c12086",
+  "inputs": {
+    "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.json": "3e78897b1725799db915031972d920cd1c9a8a443acae147e8c37dea609ff5c3",
+    "outputs/rl_progress/v4_seed44_99_b49353f_portable/policy.pt": "d223b06e6368889239d0c306bd5dcee768c4696a37ba3fbb8a44f9a98892d158",
+    "outputs/rl_progress/v4_seed44_99_b49353f_portable/validation.json": "b6b6c2082a75cd423af9dd36edf35845c7481d211c4d5856245475c102ce17d0",
+    "outputs/rl_progress/v4_seed44_99_b49353f_portable/isaac_validation.hdf5": "e995154c74facc8f7ee7b11a75930d2b0c6b698ac34252d1d7f4375a0b3e3a03",
+    "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+    "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/mujoco_policy/trajectory.hdf5": "cbc683fb050636d927b476ef26736b955c7285dd310c41a7512ea13278f6d1b5",
+    "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/mujoco_policy/report.json": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+    "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/mujoco_diagnostics/diagnostics/report.json": "cb1015e213623ead1d6b45f362ba45513e47d2dd37f17c795797a9a895646abd",
+    "/mnt/data/users/jixin/workspace/code/OpenSO-101-v2/outputs/rl_progress/sim2sim_diagnostics_20261011/suite/mujoco_diagnostics/diagnostics/diagnostics.png": "74bcab81fbeb0eeb6a28b54e9cb9d60dda7d9bdc34d4e24aef336bd851c12086"
+  },
+  "source_sha256": "0b40f39627f614ecd2c0cfe6196117a9fadccd0a6f3ceec8f9238500b152c592",
+  "gpu_tests_started": false,
+  "training_started": false,
+  "rl_task_success_verified": false
+}

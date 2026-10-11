@@ -1,0 +1,308 @@
+{
+  "status": "actual_sim2sim_diagnostics_verified",
+  "task": "OpenSO101-Lift-v0",
+  "task_profile": "grasp_v4",
+  "environments": [
+    {
+      "source_env_index": 0,
+      "mujoco_task_success": false,
+      "isaac_first_episode_boundary_recorded": true,
+      "initial_joint_error_rad": 0.0,
+      "initial_object_error_m": 0.0,
+      "native_ee_distance_maximum_error_m": 1.1950798523285844e-06,
+      "isaac": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 8.344650268554688e-07,
+        "action_conversion_tolerance_rad": 1e-05,
+        "jaw_target_range_rad": [
+          0.49107712507247925,
+          0.7715438604354858
+        ],
+        "jaw_actual_range_rad": [
+          0.5472930073738098,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.8325040936470032,
+          0.4607519209384918,
+          0.6047429442405701,
+          0.1251261681318283,
+          0.9912167191505432,
+          0.0333033986389637
+        ],
+        "reached_frames": 202,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.6722417864739214,
+        "minimum_ee_object_distance_m": 0.01598287351780929,
+        "object_height_range_root_m": [
+          0.04208141192793846,
+          0.050018567591905594
+        ]
+      },
+      "mujoco": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 0.0,
+        "action_conversion_tolerance_rad": 1e-06,
+        "jaw_target_range_rad": [
+          0.40777578949928284,
+          0.7715438604354858
+        ],
+        "jaw_actual_range_rad": [
+          0.5569939247170466,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.8014564864257503,
+          0.9089812685191634,
+          0.3790112623417673,
+          0.13026712021785267,
+          0.9796879530429092,
+          0.03379773496921686
+        ],
+        "reached_frames": 200,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.9999101144548972,
+        "minimum_ee_object_distance_m": 0.0003253140290882435,
+        "object_height_range_root_m": [
+          0.03801016896895554,
+          0.04867404439272721
+        ]
+      }
+    },
+    {
+      "source_env_index": 1,
+      "mujoco_task_success": false,
+      "isaac_first_episode_boundary_recorded": true,
+      "initial_joint_error_rad": 0.0,
+      "initial_object_error_m": 0.0,
+      "native_ee_distance_maximum_error_m": 1.3863984694075654e-06,
+      "isaac": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 1.0132789611816406e-06,
+        "action_conversion_tolerance_rad": 1e-05,
+        "jaw_target_range_rad": [
+          0.482413113117218,
+          0.7123299837112427
+        ],
+        "jaw_actual_range_rad": [
+          0.5528099536895752,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.5931211709976196,
+          1.1223337650299072,
+          0.3059402108192444,
+          0.20925168693065643,
+          0.4458135962486267,
+          0.038647010922431946
+        ],
+        "reached_frames": 246,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.9936808371123441,
+        "minimum_ee_object_distance_m": 0.002343482711289562,
+        "object_height_range_root_m": [
+          0.042080629616975784,
+          0.0530412532389164
+        ]
+      },
+      "mujoco": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 0.0,
+        "action_conversion_tolerance_rad": 1e-06,
+        "jaw_target_range_rad": [
+          0.4782038927078247,
+          0.7122933864593506
+        ],
+        "jaw_actual_range_rad": [
+          0.5466844623888921,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.6540519809419862,
+          0.9753649673349579,
+          0.4016107472770323,
+          0.3164600993599285,
+          0.6596840891836766,
+          0.04760477215920524
+        ],
+        "reached_frames": 246,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.9860774200405772,
+        "minimum_ee_object_distance_m": 0.003496574668906258,
+        "object_height_range_root_m": [
+          0.04036774202383615,
+          0.045081447809934616
+        ]
+      }
+    },
+    {
+      "source_env_index": 2,
+      "mujoco_task_success": false,
+      "isaac_first_episode_boundary_recorded": true,
+      "initial_joint_error_rad": 0.0,
+      "initial_object_error_m": 0.0,
+      "native_ee_distance_maximum_error_m": 6.193182338631864e-07,
+      "isaac": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 8.344650268554688e-07,
+        "action_conversion_tolerance_rad": 1e-05,
+        "jaw_target_range_rad": [
+          0.5495436787605286,
+          0.6958644390106201
+        ],
+        "jaw_actual_range_rad": [
+          0.5824578404426575,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.6649205684661865,
+          0.3214623034000397,
+          0.4278321862220764,
+          0.02721277065575123,
+          0.48775967955589294,
+          0.03440660983324051
+        ],
+        "reached_frames": 19,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.07462346803160383,
+        "minimum_ee_object_distance_m": 0.0551984207824263,
+        "object_height_range_root_m": [
+          0.04208141192793846,
+          0.045081447809934616
+        ]
+      },
+      "mujoco": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 0.0,
+        "action_conversion_tolerance_rad": 1e-06,
+        "jaw_target_range_rad": [
+          0.5456757545471191,
+          0.7097923755645752
+        ],
+        "jaw_actual_range_rad": [
+          0.5796191061879076,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.7403110735745785,
+          0.32096244289245623,
+          0.41896456240662944,
+          0.028209839002674455,
+          0.6056853123149003,
+          0.03741559592675253
+        ],
+        "reached_frames": 19,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.06766698891069205,
+        "minimum_ee_object_distance_m": 0.05640168646710023,
+        "object_height_range_root_m": [
+          0.04036774202383615,
+          0.045081447809934616
+        ]
+      }
+    },
+    {
+      "source_env_index": 3,
+      "mujoco_task_success": false,
+      "isaac_first_episode_boundary_recorded": true,
+      "initial_joint_error_rad": 0.0,
+      "initial_object_error_m": 0.0,
+      "native_ee_distance_maximum_error_m": 1.5695663245808567e-06,
+      "isaac": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 8.344650268554688e-07,
+        "action_conversion_tolerance_rad": 1e-05,
+        "jaw_target_range_rad": [
+          0.5566238164901733,
+          0.7324212193489075
+        ],
+        "jaw_actual_range_rad": [
+          0.569664478302002,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          1.0147420167922974,
+          0.7938539981842041,
+          0.24329997599124908,
+          0.8076286315917969,
+          0.7401248812675476,
+          0.02780097909271717
+        ],
+        "reached_frames": 245,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.8453056977673412,
+        "minimum_ee_object_distance_m": 0.015007740798669336,
+        "object_height_range_root_m": [
+          0.04208141937851906,
+          0.045081447809934616
+        ]
+      },
+      "mujoco": {
+        "frames": 250,
+        "action_conversion_maximum_error_rad": 0.0,
+        "action_conversion_tolerance_rad": 1e-06,
+        "jaw_target_range_rad": [
+          0.5432127714157104,
+          0.7324212789535522
+        ],
+        "jaw_actual_range_rad": [
+          0.5897154130686098,
+          0.800000011920929
+        ],
+        "joint_target_tracking_rmse_rad": [
+          0.7943245417101777,
+          1.294825479837705,
+          0.33453068080702825,
+          0.2391820245951692,
+          0.7511075699152935,
+          0.03344950330408876
+        ],
+        "reached_frames": 245,
+        "bilateral_contact_frames": 0,
+        "reached_bilateral_contact_frames": 0,
+        "maximum_bilateral_force_n": 0.0,
+        "maximum_grasp_alignment": 0.999433204316067,
+        "minimum_ee_object_distance_m": 0.0009310289340150085,
+        "object_height_range_root_m": [
+          0.04036774202383615,
+          0.0459879462893882
+        ]
+      }
+    }
+  ],
+  "kinematics": {
+    "poses": 1200,
+    "maximum_position_error_m": 2.6935910366136834e-06,
+    "maximum_rotation_error_rad": 1.2779236748480398e-05
+  },
+  "control_dt": 0.02,
+  "grasp_force_threshold_newtons": 0.5,
+  "inputs": {
+    "policy_metadata_sha256": "3e78897b1725799db915031972d920cd1c9a8a443acae147e8c37dea609ff5c3",
+    "policy_sha256": "d223b06e6368889239d0c306bd5dcee768c4696a37ba3fbb8a44f9a98892d158",
+    "robot_model_sha256": "2e2c8453613edc7291931dd12e236721d6520a0e0766afc2fccc399cd21b5d04",
+    "isaac_trace_sha256": "e995154c74facc8f7ee7b11a75930d2b0c6b698ac34252d1d7f4375a0b3e3a03",
+    "trajectory_sha256": "cbc683fb050636d927b476ef26736b955c7285dd310c41a7512ea13278f6d1b5"
+  },
+  "evaluation_report_sha256": "e152272f3724426797f4be0fd3c027c05c5639e3047bc2cf16c1f5eeb50ca7f5",
+  "source_sha256": "bed0de0435cbd375846c8065a7011e08dc7133ddef72f8a6481bc2f812b5f955",
+  "figure_sha256": "74bcab81fbeb0eeb6a28b54e9cb9d60dda7d9bdc34d4e24aef336bd851c12086",
+  "training_started": false,
+  "gpu_tests_started": false,
+  "physics_equivalence_verified": false,
+  "rl_task_success_verified": false
+}
