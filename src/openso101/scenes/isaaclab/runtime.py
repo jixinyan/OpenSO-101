@@ -24,7 +24,7 @@ from openso101.envs.base import OpenSO101EnvCfg, TeleopActionsCfg
 from openso101.robots.so101.so_arm101 import SO101_USD_TABLETOP_ROOT_Z, SO_ARM101_CFG
 
 from ..models import Goal, SceneSpec
-from .usd import verify_compilation
+from .preflight import validate_runtime_scene
 
 
 def scene_states(env):
@@ -314,9 +314,7 @@ class CustomSceneEnvCfg(OpenSO101EnvCfg):
 
     def configure_scene(self, path):
         folder = Path(path).resolve()
-        verify_compilation(folder)
-        if not (folder / "environment.usda").is_file():
-            raise ValueError("场景缺少 environment.usda，请重新编译 scene bundle")
+        validate_runtime_scene(folder)
         self.scene_spec = spec = SceneSpec.read(folder / "scene.json")
         self.compiled_scene = str(folder)
         self.bddl_report = None

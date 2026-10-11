@@ -19,6 +19,7 @@
 | 布局约束与实际 mesh 检查 | `src/openso101/scenes/layout/` |
 | 场景修改、版本保存与交互预览 | `src/openso101/scenes/editor/` |
 | USD 编译、Isaac Lab 场景和运行 worker | `src/openso101/scenes/isaaclab/` |
+| 场景参数、文件完整性和输出路径的 CPU 启动检查 | `src/openso101/scenes/isaaclab/preflight.py` |
 | MP4 输入和米制位置恢复 | `src/openso101/scenes/video.py`、`metric_video.py` |
 | 键盘设备、命令类型和终端输入 | `src/openso101/teleop/devices/` |
 | 每步目标变化限制、恢复姿态保持 | `src/openso101/teleop/controls.py` |

@@ -99,6 +99,21 @@
       ]
     },
     {
+      "name": "scene_preflight", "resource": "cpu", "depends_on": ["scene_batch"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_scene_preflight.py", "--bundle", "outputs/rl_progress/agent_runtime_bundle", "--scene", "outputs/rl_progress/agent_runtime_prepared/compiled", "--episode", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5", "--output", "{output}/scene_preflight"],
+      "inputs": {"outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset/episodes/episode_000000.hdf5": "0f3d74c0587189d295bf30151e64e40c6c6640dd2ad2daad16430dd4ac75dc75"},
+      "requirements": [
+        {"report": "scene_preflight/report.json", "pointer": "/status", "equals": "actual_scene_preflight_verified"},
+        {"report": "scene_preflight/report.json", "pointer": "/api_count", "equals": 28},
+        {"report": "scene_preflight/report.json", "pointer": "/process_count", "equals": 18},
+        {"report": "scene_preflight/report.json", "pointer": "/source_files_unchanged", "equals": true},
+        {"report": "scene_preflight/report.json", "pointer": "/existing_trace_preserved", "equals": true},
+        {"report": "scene_preflight/report.json", "pointer": "/gpu_tests_started", "equals": false},
+        {"report": "scene_preflight/report.json", "pointer": "/native_tests_started", "equals": false},
+        {"report": "scene_preflight/report.json", "pointer": "/training_started", "equals": false}
+      ]
+    },
+    {
       "name": "lerobot_data", "resource": "cpu", "depends_on": ["cpu_interfaces"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/validate_lerobot_dataset.py", "--source", "outputs/rl_progress/pickplace_cohort_dataset_20261007/dataset", "--dataset", "outputs/rl_progress/pickplace_cohort_dataset_20261007/lerobot", "--require-success", "--output", "{output}/lerobot.json"],
       "requirements": [

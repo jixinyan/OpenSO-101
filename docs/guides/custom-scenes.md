@@ -167,6 +167,10 @@ openso101 il record --task OpenSO101-CustomScene-v0 \
 
 `prepare` 检查源 bundle、编译产物和场景 SHA256，执行全部 reset 范围检查，以及每个控制步骤的关节、实体、观测、reward 和双相机图像检查。相机报告包含形状、检查帧数和最小像素标准差；另行记录 episode 终止数量、控制周期及检查代码 SHA256。四个环境执行 200 个步骤时，每个相机检查 800 帧。
 
+场景命令与独立 worker 在启动 Isaac 之前检查输入文件、正整数数量、输出路径和已有文件。`prepare_scene` 的 `timeout_seconds` 接受正数有限数值，检查通过之后创建输出目录。运行场景需要文件清单中的 `environment.usda` 通过 SHA256 检查；报告与 HDF5 轨迹使用独立路径，已有输出文件保持原有内容。共享检查代码位于 `scenes/isaaclab/preflight.py`。
+
+IL、RL 与环境运行入口共用场景完整性检查。RL 的场景任务、恢复模型的场景 SHA256 和场景输出路径在 GPU 配置之前完成验证，来源场景与模型输出使用独立目录。
+
 `preparation.json` 保留源 manifest、编译清单与 runtime 报告的 SHA256，并验证请求数量与实际数量一致。`runtime_verified` 表示上述程序检查通过；动态稳定性、完整路径、接触几何、任务物体可见性、任务完成和成功采集保留在 `pending_checks`，`task_success_verified` 与 `dataset_verified` 保持 `false`。
 
 实际验证覆盖已有 Apple bundle 和真实 Astra 调用生成的 `so101_apple_move_right`。每项均完成四环境、100 次 reset、200 个控制步骤，每个相机检查 800 帧，关节、实体、观测和 reward 数值有效。生成场景的模型状态保持 `needs_review`；输入来自已保存仿真视频，度量重建与成功任务仍需验收。该生成场景另行录制双相机各 720 帧、512×512、60 FPS，供完整流程 MP4 演示使用；报告见 [运行记录](../validation/2026-09-29/README.md)。

@@ -116,24 +116,34 @@ def train(args):
         raise ValueError("backend 训练通过 --load_run 加载 checkpoint.json 中的模型")
     if previous and (previous.task_id != args.task or previous.config.backend != config.backend or previous.config.algo != config.algo):
         raise ValueError("继续训练的任务、backend 或算法不匹配")
-    configure_visible_gpu()
-    output = Path(args.output) if args.output else Path("logs") / config.backend / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
-    output.mkdir(parents=True, exist_ok=False)
-    args._video_dir = output / "videos"
-    scene = Path(args.scene).resolve() if args.scene else None
+    scene = Path(args.scene).expanduser().resolve() if args.scene else None
     if previous and previous.scene_sha256:
         recorded = resume / "scene"
         if scene is None:
             scene = recorded
     scene_sha = None
     if scene:
-        from openso101.scenes.isaaclab.usd import verify_compilation
+        from openso101.scenes.isaaclab.preflight import validate_runtime_scene
 
-        scene_sha = verify_compilation(scene)["scene_sha256"]
-        shutil.copytree(scene, output / "scene")
-        scene = output / "scene"
+        scene_sha = validate_runtime_scene(scene)["scene_sha256"]
+    if (args.task == "OpenSO101-CustomScene-v0") != (scene is not None):
+        raise ValueError("CustomScene 请求需要对应场景，--scene 需要使用 OpenSO101-CustomScene-v0")
     if previous and previous.scene_sha256 != scene_sha:
         raise ValueError("继续训练的场景版本不匹配")
+    output = (Path(args.output).expanduser() if args.output else
+              Path("logs") / config.backend / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
+    if scene:
+        from openso101.scenes.isaaclab.preflight import validate_scene_output
+
+        output = validate_scene_output(scene, output)
+    elif output.exists():
+        raise FileExistsError(output)
+    configure_visible_gpu()
+    output.mkdir(parents=True, exist_ok=False)
+    args._video_dir = output / "videos"
+    if scene:
+        shutil.copytree(scene, output / "scene")
+        scene = output / "scene"
     (output / "train.json").write_text(config.model_dump_json(indent=2))
     if previous:
         parent = output / "parent"

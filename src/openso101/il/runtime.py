@@ -14,10 +14,10 @@ def _with_cleanup(command):
 
 def _launch_isaac_app(args, cleanup: ExitStack, enable_cameras: bool = True):
     if getattr(args, "scene", None):
-        from openso101.scenes.isaaclab.usd import verify_compilation
+        from openso101.scenes.isaaclab.preflight import validate_runtime_scene
 
         scene = Path(args.scene).expanduser().resolve()
-        verify_compilation(scene)
+        validate_runtime_scene(scene)
         args.scene = str(scene)
     from openso101.rl.gpu_scope import configure_visible_gpu
 

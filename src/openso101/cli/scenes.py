@@ -270,11 +270,11 @@ def add_subparsers(parser: argparse.ArgumentParser):
 
 def _compile(args):
     from openso101.scenes.bundle import verify_bundle
+    from openso101.scenes.isaaclab.preflight import validate_scene_output
     from openso101.scenes.isaaclab.usd import verify_compilation
 
+    args.output = validate_scene_output(args.bundle, args.output)
     verify_bundle(args.bundle)
-    if args.output.exists():
-        raise FileExistsError(args.output)
 
     subprocess.run([
         sys.executable, "-m", "openso101.scenes.isaaclab.worker",
@@ -609,11 +609,13 @@ def _read(args):
 
 
 def _validate_runtime(args):
-    from openso101.scenes.isaaclab.usd import verify_compilation
+    from openso101.scenes.isaaclab.preflight import (
+        validate_runtime_output, validate_runtime_parameters, validate_runtime_scene,
+    )
 
-    compilation = verify_compilation(args.scene)
-    if args.output.exists():
-        raise FileExistsError(args.output)
+    validate_runtime_parameters(num_envs=args.num_envs, steps=args.steps, resets=args.resets)
+    args.output = validate_runtime_output(args.scene, args.output)
+    compilation = validate_runtime_scene(args.scene)
     command = [sys.executable, "-u", "-m", "openso101.scenes.isaaclab.validation_worker",
                str(args.scene.resolve()), str(args.output.resolve()), "--num-envs", str(args.num_envs),
                "--steps", str(args.steps), "--resets", str(args.resets)]

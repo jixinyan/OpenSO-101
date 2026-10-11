@@ -10,6 +10,7 @@
 | 源码检查 | `openso101 validate source` |
 | 实际 wheel 检查 | `openso101 validate package` |
 | 场景批量检查 | `check_scene_batch.py` |
+| 实际场景的启动参数、输出文件和 CUDA 停止检查 | `check_scene_preflight.py` |
 | 自然语言场景修改检查 | `check_scene_edits.py` |
 | 实际 MP4 标定检查 | `check_metric_video.py` |
 | 实际 SO-101 键盘 IK 检查 | `check_keyboard_kinematics.py` |

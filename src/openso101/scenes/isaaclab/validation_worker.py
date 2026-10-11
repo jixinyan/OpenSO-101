@@ -5,6 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
+from .preflight import validate_runtime_output, validate_runtime_parameters, validate_runtime_scene
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -15,10 +17,10 @@ def main():
     parser.add_argument("--resets", type=int, default=100)
     parser.add_argument("--cameras", action="store_true")
     args = parser.parse_args()
-    if min(args.num_envs, args.steps, args.resets) <= 0:
-        raise ValueError("环境数量、步骤数量和 reset 次数必须大于零")
-    if args.output.exists():
-        raise FileExistsError(args.output)
+    validate_runtime_parameters(num_envs=args.num_envs, steps=args.steps, resets=args.resets)
+    args.scene = args.scene.resolve()
+    args.output = validate_runtime_output(args.scene, args.output)
+    validate_runtime_scene(args.scene)
 
     from openso101.rl.gpu_scope import configure_visible_gpu
 
@@ -43,10 +45,9 @@ def _validate(args):
 
     from .runtime import CustomSceneEnvCfg, register_custom_scene, scene_states, scene_jaw_forces
     from ..program import TaskProgramTracker
-    from .usd import verify_compilation
     from ..models import file_digest
 
-    compilation = verify_compilation(args.scene)
+    compilation = validate_runtime_scene(args.scene)
     register_custom_scene()
     cfg = CustomSceneEnvCfg()
     cfg.configure_play(True)

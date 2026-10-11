@@ -2,33 +2,27 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 from ..bundle import verify_bundle
 from ..models import file_digest
-from .usd import verify_compilation
+from .preflight import validate_runtime_parameters, validate_runtime_scene, validate_scene_output
 
 
 def prepare_scene(bundle: Path, output: Path, *, num_envs: int = 4, steps: int = 200, resets: int = 100,
                   timeout_seconds: float | None = None) -> dict:
-    if min(num_envs, steps, resets) <= 0:
-        raise ValueError("环境数量、步骤数量和 reset 次数必须大于零")
+    validate_runtime_parameters(num_envs=num_envs, steps=steps, resets=resets,
+                                timeout_seconds=timeout_seconds)
     bundle = bundle.resolve()
-    output = output.resolve()
+    output = validate_scene_output(bundle, output)
     spec = verify_bundle(bundle)
-    if output.is_relative_to(bundle):
-        raise ValueError("场景准备输出需要位于源 bundle 目录以外")
     output.mkdir(parents=True, exist_ok=False)
     compiled = output / "compiled"
     runtime_path = output / "runtime.json"
-    import math
-    import time
-
-    if timeout_seconds is not None and (not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
-        raise ValueError("场景运行预算必须为正数有限数值")
     started = time.monotonic()
     subprocess.run([sys.executable, "-u", "-m", "openso101.scenes.isaaclab.worker", str(bundle), str(compiled)],
                    check=True, timeout=timeout_seconds)
-    compilation = verify_compilation(compiled)
+    compilation = validate_runtime_scene(compiled)
     remaining = None if timeout_seconds is None else timeout_seconds - (time.monotonic() - started)
     if remaining is not None and remaining <= 0:
         raise TimeoutError("场景编译已达到运行预算上限")

@@ -101,10 +101,10 @@ def _run_smoke(args, *, force_cameras: bool, action_fn) -> int:
     if args.steps < 1 or args.num_envs < 1:
         raise ValueError("steps 和 num_envs 必须为正整数")
     if getattr(args, "scene", None):
-        from openso101.scenes.isaaclab.usd import verify_compilation
+        from openso101.scenes.isaaclab.preflight import validate_runtime_scene
 
         args.scene = str(Path(args.scene).expanduser().resolve())
-        verify_compilation(Path(args.scene))
+        validate_runtime_scene(Path(args.scene))
     cameras = bool(force_cameras or getattr(args, "with_cameras", False))
     headless = getattr(args, "headless", False)
     with ExitStack() as cleanup:

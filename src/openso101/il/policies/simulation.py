@@ -136,9 +136,9 @@ def validate_simulation_request(settings, task: str, scene=None) -> None:
     if task != source.env_id:
         raise ValueError("IL 请求的任务与模型保存的采集任务不一致")
     if source.scene_sha256 is not None:
-        from openso101.scenes.isaaclab.usd import verify_compilation
+        from openso101.scenes.isaaclab.preflight import validate_runtime_scene
 
-        if scene is None or verify_compilation(Path(scene).expanduser().resolve())["scene_sha256"] != source.scene_sha256:
+        if scene is None or validate_runtime_scene(Path(scene).expanduser().resolve())["scene_sha256"] != source.scene_sha256:
             raise ValueError("IL 请求的场景与模型保存的采集场景不一致")
     elif scene is not None:
         raise ValueError("IL 标准任务模型需要对应的标准场景")
