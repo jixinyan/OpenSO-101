@@ -47,6 +47,7 @@
 | 仿真控制周期与录制 FPS | `src/openso101/teleop/timing.py` |
 | 录制物理周期、任务 profile 与场景来源 | `src/openso101/teleop/simulation.py` |
 | MuJoCo 模型、驱动与比较 | `src/openso101/sim2sim/` |
+| 实际 Isaac 与 MuJoCo 轨迹的动作转换、夹爪接触和控制误差 | `src/openso101/sim2sim/diagnostics.py` |
 | Domain randomization、student 验证与部署 | `src/openso101/sim2real/` |
 | 源码、wheel 和阶段验证 | `src/openso101/validation/` |
 | 已保存数据与模型的图表 | `scripts/visualization/` |
@@ -69,6 +70,8 @@ flowchart LR
 ```
 
 ## CPU 操作
+
+保存策略的轨迹诊断与图表见 [sim2sim 轨迹诊断](sim2sim-diagnostics.md)。
 
 在仓库根目录设置 `PYTHONPATH=src`，将 `CUDA_VISIBLE_DEVICES` 设置为空字符串。`validate source` 检查全部 Python 文件、项目 import、package 文件、Shell 语法和各命令组的实际帮助入口。
 

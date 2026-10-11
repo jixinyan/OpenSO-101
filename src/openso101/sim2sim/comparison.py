@@ -257,7 +257,6 @@ def compare(args):
         "kinematics": kinematics, "mujoco_version": mujoco.__version__,
         "policy_sha256": metadata["files"]["policy.pt"], "policy_metadata_sha256": digest(policy_folder / "policy.json"),
         "robot_model_sha256": digest(robot_model),
-        "policy_metadata_sha256": digest(policy_folder / "policy.json"),
         "table_geometry_source": "native_USD_collision_mesh" if "table_geometry" in metadata else "legacy_metadata_plane",
         "table_geometry": metadata.get("table_geometry"),
         "table_geometry_mujoco": {"type": int(model.geom_type[model.geom("table").id]),

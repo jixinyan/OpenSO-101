@@ -236,7 +236,23 @@
       ]
     },
     {
-      "name": "gpu_process_inventory", "resource": "cpu", "depends_on": ["demonstration_updates", "mujoco_policy"],
+      "name": "mujoco_diagnostics", "resource": "cpu", "depends_on": ["mujoco_policy"],
+      "command": ["bash", "scripts/run_cpu_python.sh", "mujoco", "scripts/check_sim2sim_diagnostics.py", "--policy", "outputs/rl_progress/v4_seed44_99_b49353f_portable", "--robot-model", "outputs/so-arm100/Simulation/SO101/so101_old_calib.xml", "--evaluation", "{output}/mujoco_policy", "--output", "{output}/mujoco_diagnostics"],
+      "requirements": [
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/status", "equals": "actual_cpu_sim2sim_diagnostics_verified"},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/diagnostics_created", "equals": true},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/process_check_count", "equals": 6},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/environments", "equals": 4},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/source_unchanged", "equals": true},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/training_started", "equals": false},
+        {"report": "mujoco_diagnostics/report.json", "pointer": "/gpu_tests_started", "equals": false},
+        {"report": "mujoco_diagnostics/diagnostics/report.json", "pointer": "/status", "equals": "actual_sim2sim_diagnostics_verified"},
+        {"report": "mujoco_diagnostics/diagnostics/report.json", "pointer": "/kinematics/maximum_position_error_m", "maximum": 0.001},
+        {"report": "mujoco_diagnostics/diagnostics/report.json", "pointer": "/kinematics/maximum_rotation_error_rad", "maximum": 0.001}
+      ]
+    },
+    {
+      "name": "gpu_process_inventory", "resource": "cpu", "depends_on": ["demonstration_updates", "mujoco_diagnostics"],
       "command": ["bash", "scripts/run_cpu_python.sh", "native", "scripts/audit_project_gpu.py", "--output", "{output}/gpu_inventory.json"],
       "requirements": [
         {"report": "gpu_inventory.json", "pointer": "/status", "equals": "project_gpu_processes_absent"},

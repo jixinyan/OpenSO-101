@@ -27,6 +27,12 @@ def add_subparsers(parser):
     physics.add_argument("--robot-model", required=True)
     physics.add_argument("--output", required=True)
     physics.set_defaults(func=_physics)
+    diagnostics = sub.add_parser("diagnose", help="检查实际 Isaac 与 MuJoCo 轨迹中的动作、夹爪接触和控制误差")
+    diagnostics.add_argument("--policy", required=True)
+    diagnostics.add_argument("--robot-model", required=True)
+    diagnostics.add_argument("--evaluation", required=True, help="实际 MuJoCo 评估目录")
+    diagnostics.add_argument("--output", required=True)
+    diagnostics.set_defaults(func=_diagnose)
 
 
 def _evaluate(args):
@@ -45,3 +51,9 @@ def _physics(args):
     from openso101.sim2sim.body_physics import compare_body_physics
 
     return compare_body_physics(args)
+
+
+def _diagnose(args):
+    from openso101.sim2sim.diagnostics import diagnose
+
+    return diagnose(args)

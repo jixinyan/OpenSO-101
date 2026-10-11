@@ -26,6 +26,8 @@
 | 保存的 student 在实际记录上的 CPU 推理 | `openso101 sim2real validate --device cpu` |
 | 保存模型的 previous actions 分析 | `audit_policy_history.py` |
 | 保存 optimizer 的 CPU 更新检查 | `check_demonstration_updates.py` |
+| 实际 Isaac 与 MuJoCo 轨迹的动作、接触与控制误差 | `openso101 sim2sim diagnose` |
+| 实际轨迹诊断、输入完整性和输出保护 | `check_sim2sim_diagnostics.py` |
 | 项目 GPU 查询与停止 | `audit_project_gpu.py` |
 | 图表与运行记录可视化 | `visualization/` |
 
